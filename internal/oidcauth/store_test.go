@@ -256,6 +256,19 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if err := conn.QueryRow(ctx, "SELECT count(*) FROM audit_events WHERE action='directory_name_search' AND outcome='allow' AND actor_user_id=$1", storeUserA).Scan(&auditCount); err != nil || auditCount != 1 {
 		t.Fatalf("ordinary name search audit: %d %v", auditCount, err)
 	}
+	orgReq := httptest.NewRequest(http.MethodGet, "/api/v1/directory/organizations", nil)
+	orgReq.Header.Set("Authorization", "Bearer "+accessToken)
+	orgReq.Header.Set("X-Acting-Membership-ID", actorMembership)
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, orgReq)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"organizations":[`) ||
+		!strings.Contains(res.Body.String(), `"id":"`+orgID+`"`) ||
+		!strings.Contains(res.Body.String(), `"has_visible_members":true`) {
+		t.Fatalf("ordinary organization response: %d %s", res.Code, res.Body.String())
+	}
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM audit_events WHERE action='directory_organization_list' AND outcome='allow' AND actor_user_id=$1", storeUserA).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("ordinary organization audit: %d %v", auditCount, err)
+	}
 	if _, err := conn.Exec(ctx, "UPDATE user_organizations SET status='ended' WHERE id=$1", actorMembership); err != nil {
 		t.Fatal(err)
 	}
@@ -275,6 +288,11 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if res.Code != http.StatusForbidden {
 		t.Fatalf("ended acting membership name search: %d %s", res.Code, res.Body.String())
 	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, orgReq)
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("ended acting membership organization list: %d %s", res.Code, res.Body.String())
+	}
 	if _, err := conn.Exec(ctx, "UPDATE users SET status='frozen' WHERE id=$1", storeUserA); err != nil {
 		t.Fatal(err)
 	}
@@ -287,5 +305,10 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	handler.ServeHTTP(res, searchReq)
 	if res.Code != http.StatusUnauthorized {
 		t.Fatalf("frozen account name search authentication: %d %s", res.Code, res.Body.String())
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, orgReq)
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("frozen account organization authentication: %d %s", res.Code, res.Body.String())
 	}
 }
