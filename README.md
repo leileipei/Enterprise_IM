@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话发起。配置有效的身份提供方后，可显式启用这些受保护接口。**尚无浏览器登录流程、聊天界面或消息收发功能；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话发起和 P2-02 文本消息可靠写入。配置有效的身份提供方后，可显式启用这些受保护接口。**尚无浏览器登录流程、聊天界面、WebSocket 推送、Outbox 发布 Worker 或离线补拉；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -28,7 +28,9 @@
 
 普通员工可用 `GET /api/v1/directory/organizations/{organization_id}/members?limit={1..20}&after={membership_id}` 分页查看某组织的可见成员。`limit` 默认 20；`after` 省略时从第一页开始，后续传入上一页的 `next_after`。响应包含 `people`、`has_more` 和 `next_after`；末页的 `next_after` 为 `null`。人员只带该组织下可见的当前任职与部门；分页锚点每次都会重新校验。组织、锚点不存在或不可见统一返回 404；无效 UUID 或分页参数返回 400。策略决策与请求审计在同一事务内完成。大组织且大量成员不可见时，接口可能扫描较多候选；上线前需按目标规模验证查询耗时及容量。
 
-普通员工可用 `POST /api/v1/conversations` 发起或复用单聊。请求须有相同的 Bearer 令牌和 `X-Acting-Membership-ID`，`Content-Type: application/json`，请求体为 `{ "target_membership_id": "<uuid>" }`。服务端只按当前 `start_chat` 策略授权，集团内同一对用户只保留一个单聊会话；换组织任职后经授权仍复用原会话。成功返回 200，包含 `id`、`type`、`last_seq`、`policy_version`、`cross_legal` 和 `decision_reason`。目标任职不存在、跨租户、自聊或当前不允许通信都返回 404；本人任职失效返回 403。已有会话不会绕过新发布的拒绝规则。会话创建、策略决策和请求审计同事务提交；本阶段不能发送消息。
+普通员工可用 `POST /api/v1/conversations` 发起或复用单聊。请求须有相同的 Bearer 令牌和 `X-Acting-Membership-ID`，`Content-Type: application/json`，请求体为 `{ "target_membership_id": "<uuid>" }`。服务端只按当前 `start_chat` 策略授权，集团内同一对用户只保留一个单聊会话；换组织任职后经授权仍复用原会话。成功返回 200，包含 `id`、`type`、`last_seq`、`policy_version`、`cross_legal` 和 `decision_reason`。目标任职不存在、跨租户、自聊或当前不允许通信都返回 404；本人任职失效返回 403。已有会话不会绕过新发布的拒绝规则。会话创建、策略决策和请求审计同事务提交。
+
+普通员工可用 `POST /api/v1/conversations/{id}/messages` 写入单聊文本消息。沿用上述身份头，请求体仅含 `{ "client_msg_id": "<uuidv7>", "text": "消息正文" }`。UUIDv7 的时间须在服务端当前时间之前 7 天至之后 5 分钟内；正文须为有效 UTF-8、非空白，最多 16 KiB。成功返回 200，包含 `message_id`、`conversation_id`、`seq` 与 `server_time`。同一租户、会话、发送用户和客户端消息 ID 重试，若正文相同则返回原 ACK，不重复占用序号、限流额度或 Outbox；正文不同返回 409。服务端在一个事务中复核双方任职和当前 `send_message` 策略，分配连续序号，保存消息、幂等记录、待发布 Outbox 和审计，提交后才返回 ACK。本人身份失效返回 403；会话、目标或通信边界不可用返回 404；会话任职上下文变化返回 409；客户端消息 ID 过期返回 410；超出每秒发送上限返回 429；数据库或审计故障返回 503。默认每用户每秒 10 条，可用 `IM_MESSAGE_RATE_PER_SECOND` 配置 1～10000 的正整数。当前 ACK 只表示服务端持久化接收，不表示收件人已送达或已读；待发布 Outbox 尚需后续 Worker 投递。
 
 ## 本地运行
 
@@ -43,6 +45,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000003_policy_store.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000004_external_identities.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000005_direct_conversations.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000006_message_write.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -64,6 +67,7 @@ export IM_OIDC_ISSUER='https://sso.example.com/group'
 export IM_OIDC_AUDIENCE='enterprise-im-api'
 export IM_OIDC_JWKS_URL='https://sso.example.com/group/keys'
 export IM_OIDC_ALLOWED_CLIENT_IDS='enterprise-im-web,enterprise-im-desktop'
+export IM_MESSAGE_RATE_PER_SECOND=10
 ```
 
 这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。当前仅验证外部签发的访问令牌，不提供授权码回调或客户端登录页面；非标准或不透明令牌需另建适配器。
@@ -76,4 +80,4 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000005`、`000004`、`000003`、`000002`、`000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000006`、`000005`、`000004`、`000003`、`000002`、`000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。

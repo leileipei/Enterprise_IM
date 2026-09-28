@@ -68,6 +68,13 @@ func TestDirectConversationSchemaRejectsUnsupportedGroupRow(t *testing.T) {
 func TestDirectConversationMigrationRollsBackAndReapplies(t *testing.T) {
 	conn := db(t)
 	ctx := context.Background()
+	messageDown, err := os.ReadFile("../../db/migrations/000006_message_write.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(ctx, string(messageDown)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
 	down, err := os.ReadFile("../../db/migrations/000005_direct_conversations.down.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -84,6 +91,13 @@ func TestDirectConversationMigrationRollsBackAndReapplies(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := conn.PgConn().Exec(ctx, string(up)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
+	messageUp, err := os.ReadFile("../../db/migrations/000006_message_write.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(ctx, string(messageUp)).ReadAll(); err != nil {
 		t.Fatal(err)
 	}
 	seed(t, conn)

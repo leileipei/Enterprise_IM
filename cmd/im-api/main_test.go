@@ -32,3 +32,19 @@ func TestOIDCAdminConfigRequiresExplicitEnableAndCompleteSettings(t *testing.T) 
 		}
 	}
 }
+
+func TestMessageRateConfigRequiresPositiveInteger(t *testing.T) {
+	for _, tc := range []struct {
+		raw   string
+		want  int
+		valid bool
+	}{
+		{"", 10, true}, {"1", 1, true}, {"25", 25, true},
+		{"0", 0, false}, {"-1", 0, false}, {"1.5", 0, false}, {"abc", 0, false},
+	} {
+		got, err := messageRateFromEnv(env(map[string]string{"IM_MESSAGE_RATE_PER_SECOND": tc.raw}))
+		if (err == nil) != tc.valid || (tc.valid && got != tc.want) {
+			t.Fatalf("rate %q: %d %v", tc.raw, got, err)
+		}
+	}
+}

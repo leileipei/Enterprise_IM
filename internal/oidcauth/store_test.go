@@ -2,6 +2,7 @@ package oidcauth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -46,7 +47,7 @@ func identityDB(t *testing.T) *pgx.Conn {
 	if _, err := conn.Exec(ctx, "SET search_path TO "+schema+", public"); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql", "../../db/migrations/000003_policy_store.up.sql", "../../db/migrations/000004_external_identities.up.sql", "../../db/migrations/000005_direct_conversations.up.sql"} {
+	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql", "../../db/migrations/000003_policy_store.up.sql", "../../db/migrations/000004_external_identities.up.sql", "../../db/migrations/000005_direct_conversations.up.sql", "../../db/migrations/000006_message_write.up.sql"} {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
@@ -299,6 +300,38 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 		!strings.Contains(res.Body.String(), `"decision_reason":"allowed_same_organization"`) {
 		t.Fatalf("signed-token direct conversation response: %d %s", res.Code, res.Body.String())
 	}
+	var chat struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &chat); err != nil || chat.ID == "" {
+		t.Fatalf("decode conversation: %v %s", err, res.Body.String())
+	}
+	nowMillis := uint64(time.Now().UnixMilli())
+	clientID := fmt.Sprintf("%08x-%04x-7000-8000-000000000001", nowMillis>>16, nowMillis&0xffff)
+	messageRequest := func() *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/"+chat.ID+"/messages",
+			strings.NewReader(`{"client_msg_id":"`+clientID+`","text":"你好"}`))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("X-Acting-Membership-ID", actorMembership)
+		req.Header.Set("Content-Type", "application/json")
+		return req
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, messageRequest())
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"seq":1`) || !strings.Contains(res.Body.String(), `"conversation_id":"`+chat.ID+`"`) {
+		t.Fatalf("signed-token message ACK: %d %s", res.Code, res.Body.String())
+	}
+	firstACK := res.Body.String()
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, messageRequest())
+	if res.Code != http.StatusOK || res.Body.String() != firstACK {
+		t.Fatalf("signed-token idempotent ACK: %d %s vs %s", res.Code, res.Body.String(), firstACK)
+	}
+	for _, table := range []string{"messages", "outbox_events", "message_idempotency"} {
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM "+table+" WHERE tenant_id=$1", storeTenantA).Scan(&auditCount); err != nil || auditCount != 1 {
+			t.Fatalf("signed-token %s row: %d %v", table, auditCount, err)
+		}
+	}
 	if err := conn.QueryRow(ctx, "SELECT count(*) FROM conversations WHERE tenant_id=$1 AND kind='direct'", storeTenantA).Scan(&auditCount); err != nil || auditCount != 1 {
 		t.Fatalf("signed-token direct conversation row: %d %v", auditCount, err)
 	}
@@ -339,6 +372,11 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if res.Code != http.StatusForbidden {
 		t.Fatalf("ended acting membership direct conversation: %d %s", res.Code, res.Body.String())
 	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, messageRequest())
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("ended membership message replay: %d %s", res.Code, res.Body.String())
+	}
 	if _, err := conn.Exec(ctx, "UPDATE users SET status='frozen' WHERE id=$1", storeUserA); err != nil {
 		t.Fatal(err)
 	}
@@ -366,5 +404,10 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	handler.ServeHTTP(res, chatRequest())
 	if res.Code != http.StatusUnauthorized {
 		t.Fatalf("frozen account direct conversation authentication: %d %s", res.Code, res.Body.String())
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, messageRequest())
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("frozen account message authentication: %d %s", res.Code, res.Body.String())
 	}
 }

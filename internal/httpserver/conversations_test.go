@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/policy"
@@ -18,6 +19,19 @@ type conversationStub func(context.Context, access.TrustedIdentity, string) (pol
 
 func (f conversationStub) StartDirectConversation(ctx context.Context, id access.TrustedIdentity, target string) (policystore.DirectConversation, error) {
 	return f(ctx, id, target)
+}
+
+func (conversationStub) SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
+	panic("unexpected message send")
+}
+
+type messageStub struct {
+	conversationStub
+	send func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
+}
+
+func (m messageStub) SendTextMessage(ctx context.Context, id access.TrustedIdentity, conversationID, clientID, body string) (policystore.MessageACK, error) {
+	return m.send(ctx, id, conversationID, clientID, body)
 }
 
 func conversationRequest(body string) *http.Request {
@@ -138,6 +152,142 @@ func TestConversationRouteAuthenticationAndErrorMapping(t *testing.T) {
 		failed.ServeHTTP(res, conversationRequest(`{"target_membership_id":"`+targetMemID+`"}`))
 		if res.Code != failure.status || !strings.Contains(res.Body.String(), failure.code) || strings.Contains(res.Body.String(), "private SQL detail") {
 			t.Fatalf("conversation error mapping: %d %s", res.Code, res.Body.String())
+		}
+	}
+}
+
+func messageRequest(path, body string) *http.Request {
+	req := adminRequest(http.MethodPost, path)
+	req.Body = io.NopCloser(strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func TestMessageRouteUsesVerifiedActorAndReturnsCommittedACK(t *testing.T) {
+	conversationID := "00000000-0000-4000-8000-000000000471"
+	clientID := "0199f04a-0000-7000-8000-000000000471"
+	path := "/api/v1/conversations/" + conversationID + "/messages"
+	service := messageStub{send: func(_ context.Context, id access.TrustedIdentity, chat, client, body string) (policystore.MessageACK, error) {
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) ||
+			chat != conversationID || client != clientID || body != "你好" {
+			t.Fatalf("untrusted message arguments: %+v %q %q %q", id, chat, client, body)
+		}
+		return policystore.MessageACK{MessageID: targetUserID, ConversationID: chat, Seq: 7,
+			ServerTime: time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)}, nil
+	}}
+	handler, err := HandlerWithConversations(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"你好"}`)
+	req.Header.Set("X-Tenant-ID", "99999999-9999-4999-8999-999999999999")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"message_id":"`+targetUserID+`"`) ||
+		!strings.Contains(res.Body.String(), `"conversation_id":"`+conversationID+`"`) ||
+		!strings.Contains(res.Body.String(), `"seq":7`) || !strings.Contains(res.Body.String(), `"server_time":"2026-09-28T10:00:00Z"`) {
+		t.Fatalf("message ACK: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestMessageRouteAcceptsEscapedTextByDecodedByteLength(t *testing.T) {
+	conversationID := "00000000-0000-4000-8000-000000000471"
+	clientID := "0199f04a-0000-7000-8000-000000000471"
+	service := messageStub{send: func(_ context.Context, _ access.TrustedIdentity, _, _, body string) (policystore.MessageACK, error) {
+		if len(body) != 16*1024 || body != strings.Repeat("a", 16*1024) {
+			t.Fatalf("escaped text changed: %d bytes", len(body))
+		}
+		return policystore.MessageACK{MessageID: targetUserID, ConversationID: conversationID, Seq: 1,
+			ServerTime: time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)}, nil
+	}}
+	handler, err := HandlerWithConversations(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := `{"client_msg_id":"` + clientID + `","text":"` + strings.Repeat(`\u0061`, 16*1024) + `"}`
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, messageRequest("/api/v1/conversations/"+conversationID+"/messages", body))
+	if res.Code != http.StatusOK {
+		t.Fatalf("valid escaped text: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestMessageRouteRejectsInvalidRequestAndMapsErrors(t *testing.T) {
+	conversationID := "00000000-0000-4000-8000-000000000471"
+	clientID := "0199f04a-0000-7000-8000-000000000471"
+	path := "/api/v1/conversations/" + conversationID + "/messages"
+	service := messageStub{send: func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
+		t.Fatal("service called for malformed request")
+		return policystore.MessageACK{}, nil
+	}}
+	handler, err := HandlerWithConversations(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, body := range []string{"", "null", "[]", `{}`, `{"client_msg_id":"bad","text":"ok"}`,
+		`{"client_msg_id":"` + clientID + `","text":""}`,
+		`{"client_msg_id":"` + clientID + `","text":"x","tenant_id":"` + tenantID + `"}`,
+		`{"client_msg_id":"` + clientID + `","text":"x"} true`,
+		"{\"client_msg_id\":\"" + clientID + "\",\"text\":\"\xff\"}",
+		`{"client_msg_id":"` + clientID + `","text":"` + strings.Repeat("x", 16*1024+1) + `"}`,
+	} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, messageRequest(path, body))
+		if res.Code != http.StatusBadRequest {
+			t.Fatalf("invalid body: %d %s", res.Code, res.Body.String())
+		}
+	}
+	for _, path := range []string{"/api/v1/conversations/not-uuid/messages", "/api/v1/conversations/" + conversationID + "/messages/extra"} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`))
+		if res.Code != http.StatusNotFound {
+			t.Fatalf("bad path: %d %s", res.Code, res.Body.String())
+		}
+	}
+	req := messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`)
+	req.Method = http.MethodGet
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != http.MethodPost {
+		t.Fatalf("method: %d %s", res.Code, res.Body.String())
+	}
+	req = messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`)
+	req.Header.Set("Content-Type", "text/plain")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("content type: %d %s", res.Code, res.Body.String())
+	}
+	req = httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"client_msg_id":"`+clientID+`","text":"ok"}`))
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous: %d %s", res.Code, res.Body.String())
+	}
+	for _, tc := range []struct {
+		err    error
+		status int
+		code   string
+	}{
+		{policystore.ErrInvalidClientMessageID, 400, "invalid_request"},
+		{policystore.ErrRetryExpired, 410, "retry_window_expired"},
+		{policystore.ErrForbidden, 403, "invalid_identity"},
+		{policystore.ErrMessageNotAvailable, 404, "not_found"},
+		{policystore.ErrIdempotencyConflict, 409, "idempotency_conflict"},
+		{policystore.ErrConversationContextChanged, 409, "conversation_context_changed"},
+		{policystore.ErrMessageRateLimited, 429, "rate_limited"},
+		{errors.New("private SQL error"), 503, "unavailable"},
+	} {
+		failed, err := HandlerWithConversations(Handler(nil), authFunc(verified), messageStub{send: func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
+			return policystore.MessageACK{}, tc.err
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		res := httptest.NewRecorder()
+		failed.ServeHTTP(res, messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`))
+		if res.Code != tc.status || !strings.Contains(res.Body.String(), tc.code) || strings.Contains(res.Body.String(), "private SQL error") {
+			t.Fatalf("error mapping %v: %d %s", tc.err, res.Code, res.Body.String())
 		}
 	}
 }

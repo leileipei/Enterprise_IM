@@ -34,10 +34,10 @@
 
 **Interfaces:** `messages`、`message_idempotency`、`outbox_events`、`message_rate_windows`。
 
-- [ ] 写失败测试：租户、会话、发送任职复合外键，seq 与幂等唯一性，Outbox 消息归属，迁移回滚。
-- [ ] 运行定向测试确认表缺失。
-- [ ] 添加前后向迁移和测试装载，验证数据库约束。
-- [ ] 提交迁移增量。
+- [x] 写失败测试：租户、会话、发送任职复合外键，seq 与幂等唯一性，Outbox 消息归属，迁移回滚。
+- [x] 运行定向测试确认表缺失。
+- [x] 添加前后向迁移和测试装载，验证数据库约束。
+- [x] 提交迁移增量。
 
 ### Task 2: UUIDv7 与事务写入
 
@@ -45,10 +45,10 @@
 
 **Interfaces:** `Service.SendTextMessage(ctx,id,conversationID,clientMessageID,text) (MessageACK,error)`；`Service.MessageRatePerSecond` 可选配置，默认 10。
 
-- [ ] 写失败测试：UUIDv7 7 天/未来 5 分钟、正文限制、同键重试和异正文冲突。
-- [ ] 运行定向测试确认服务缺失；实现验证与原 ACK 查询。
-- [ ] 写失败测试：新消息授权、限流、审计/Outbox 回滚、并发 seq 和任职重选。
-- [ ] 实现单事务写入及错误类型；运行 PostgreSQL 全量测试并提交。
+- [x] 写失败测试：UUIDv7 7 天/未来 5 分钟、正文限制、同键重试和异正文冲突。
+- [x] 运行定向测试确认服务缺失；实现验证与原 ACK 查询。
+- [x] 写失败测试：新消息授权、限流、审计/Outbox 回滚、并发 seq 和任职重选。
+- [x] 实现单事务写入及错误类型；运行 PostgreSQL 全量测试并提交。
 
 ### Task 3: 受保护消息 API
 
@@ -56,7 +56,7 @@
 
 **Interfaces:** `POST /api/v1/conversations/{id}/messages`，成功返回 ACK JSON。
 
-- [ ] 写失败测试：签名身份、严格 JSON、正文边界、UUIDv7、路径、方法及错误映射。
-- [ ] 运行定向测试确认路由缺失；接入服务并补真实签名令牌到数据库用例。
-- [ ] 运行全量 PostgreSQL 测试、`go vet ./...`、`go build ./...`、差异检查。
+- [x] 写失败测试：签名身份、严格 JSON、正文边界、UUIDv7、路径、方法及错误映射。
+- [x] 运行定向测试确认路由缺失；接入服务并补真实签名令牌到数据库用例。
+- [x] 运行全量 PostgreSQL 测试、`go vet ./...`、`go build ./...`、差异检查。
 - [ ] 独立审阅、修正、提交、推送并创建草稿 PR。
