@@ -1,0 +1,220 @@
+package httpserver
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"log/slog"
+	"net/http"
+	"regexp"
+	"strings"
+
+	"github.com/leileipei/Enterprise_IM/internal/access"
+)
+
+var (
+	// ErrAuthUnavailable lets an authentication adapter distinguish an outage
+	// from an invalid credential without exposing adapter details to clients.
+	ErrAuthUnavailable = errors.New("authentication unavailable")
+	uuidPattern        = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+)
+
+// VerifiedIdentity is issued by an authentication adapter after token
+// verification and local user mapping. It must never be built from HTTP fields.
+type VerifiedIdentity struct {
+	TenantID string
+	UserID   string
+}
+
+type Authenticator interface {
+	Authenticate(context.Context, string) (VerifiedIdentity, error)
+}
+
+type AdminService interface {
+	GetManagedPerson(context.Context, access.TrustedIdentity, string) (access.Person, error)
+	EndMembership(context.Context, access.TrustedIdentity, string) error
+}
+
+// HandlerWithAdmin installs management routes only when both dependencies are
+// supplied. Production does not call it until a real identity source exists.
+func HandlerWithAdmin(database Pinger, authenticator Authenticator, admin AdminService) (http.Handler, error) {
+	if authenticator == nil || admin == nil {
+		return nil, errors.New("admin authentication and service are required")
+	}
+	health := newMux(database)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/admin" && !strings.HasPrefix(r.URL.Path, "/api/v1/admin/") {
+			health.ServeHTTP(w, r)
+			return
+		}
+		identity, ok := authenticateAdmin(w, r, authenticator)
+		if !ok {
+			return
+		}
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/api/v1/admin/users/"):
+			if r.Method != http.MethodGet {
+				w.Header().Set("Allow", http.MethodGet)
+				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+				return
+			}
+			getAdminPerson(w, r, identity, admin)
+		case strings.HasPrefix(r.URL.Path, "/api/v1/admin/memberships/"):
+			if r.Method != http.MethodPost {
+				w.Header().Set("Allow", http.MethodPost)
+				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+				return
+			}
+			endAdminMembership(w, r, identity, admin)
+		default:
+			rejectAdmin(w, r, http.StatusNotFound, "not_found")
+		}
+	}), nil
+}
+
+func getAdminPerson(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, admin AdminService) {
+	target := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/users/")
+	if strings.Contains(target, "/") {
+		rejectAdmin(w, r, http.StatusNotFound, "not_found")
+		return
+	}
+	if !validUUID(target) {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_id")
+		return
+	}
+	person, err := admin.GetManagedPerson(r.Context(), identity, target)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, personResponse(person))
+}
+
+func endAdminMembership(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, admin AdminService) {
+	segment := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/memberships/")
+	if strings.Contains(segment, "/") {
+		rejectAdmin(w, r, http.StatusNotFound, "not_found")
+		return
+	}
+	if !strings.HasSuffix(segment, ":end") {
+		rejectAdmin(w, r, http.StatusNotFound, "not_found")
+		return
+	}
+	target := strings.TrimSuffix(segment, ":end")
+	if !validUUID(target) {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_id")
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1))
+	if err != nil || len(body) != 0 {
+		rejectAdmin(w, r, http.StatusBadRequest, "unexpected_body")
+		return
+	}
+	if err := admin.EndMembership(r.Context(), identity, target); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func validUUID(value string) bool { return uuidPattern.MatchString(value) }
+
+func authenticateAdmin(w http.ResponseWriter, r *http.Request, authenticator Authenticator) (access.TrustedIdentity, bool) {
+	w.Header().Set("Cache-Control", "no-store")
+	values := r.Header.Values("Authorization")
+	if len(values) != 1 {
+		return denyAuthentication(w, r, http.StatusUnauthorized, "unauthorized")
+	}
+	scheme, token, found := strings.Cut(values[0], " ")
+	if !found || !strings.EqualFold(scheme, "Bearer") || token == "" || strings.ContainsAny(token, " \t\r\n") || len(token) > 8192 {
+		return denyAuthentication(w, r, http.StatusUnauthorized, "unauthorized")
+	}
+	verified, err := authenticator.Authenticate(r.Context(), token)
+	if errors.Is(err, ErrAuthUnavailable) {
+		return denyAuthentication(w, r, http.StatusServiceUnavailable, "unavailable")
+	}
+	if err != nil || !validUUID(verified.TenantID) || !validUUID(verified.UserID) {
+		return denyAuthentication(w, r, http.StatusUnauthorized, "unauthorized")
+	}
+	memberships := r.Header.Values("X-Acting-Membership-ID")
+	if len(memberships) != 1 || !validUUID(memberships[0]) {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_acting_membership")
+		return access.TrustedIdentity{}, false
+	}
+	return access.TrustedIdentity{TenantID: verified.TenantID, UserID: verified.UserID, ActingMembershipID: memberships[0]}, true
+}
+
+func denyAuthentication(w http.ResponseWriter, r *http.Request, status int, code string) (access.TrustedIdentity, bool) {
+	if status == http.StatusUnauthorized {
+		w.Header().Set("WWW-Authenticate", "Bearer")
+	}
+	rejectAdmin(w, r, status, code)
+	return access.TrustedIdentity{}, false
+}
+
+func rejectAdmin(w http.ResponseWriter, r *http.Request, status int, code string) {
+	slog.WarnContext(r.Context(), "admin request rejected", "path", r.URL.Path, "error_code", code)
+	writeAdminError(w, status, code)
+}
+
+func writeServiceError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, access.ErrInvalidIdentity):
+		writeAdminError(w, http.StatusForbidden, "invalid_identity")
+	case errors.Is(err, access.ErrNotFound):
+		writeAdminError(w, http.StatusNotFound, "not_found")
+	case errors.Is(err, access.ErrConflict):
+		writeAdminError(w, http.StatusConflict, "conflict")
+	default:
+		slog.Error("admin service unavailable", "error", err)
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable")
+	}
+}
+
+func writeAdminError(w http.ResponseWriter, status int, code string) {
+	writeAdminJSON(w, status, struct {
+		ErrorCode string `json:"error_code"`
+		Message   string `json:"message"`
+	}{ErrorCode: code, Message: http.StatusText(status)})
+}
+
+func writeAdminJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
+}
+
+type departmentDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type membershipDTO struct {
+	ID               string          `json:"id"`
+	OrganizationID   string          `json:"organization_id"`
+	OrganizationName string          `json:"organization_name"`
+	Title            string          `json:"title"`
+	IsPrimary        bool            `json:"is_primary"`
+	Departments      []departmentDTO `json:"departments"`
+}
+
+type personDTO struct {
+	ID          string          `json:"id"`
+	DisplayName string          `json:"display_name"`
+	Memberships []membershipDTO `json:"memberships"`
+}
+
+func personResponse(person access.Person) personDTO {
+	result := personDTO{ID: person.ID, DisplayName: person.DisplayName, Memberships: make([]membershipDTO, 0, len(person.Memberships))}
+	for _, membership := range person.Memberships {
+		item := membershipDTO{ID: membership.ID, OrganizationID: membership.OrganizationID, OrganizationName: membership.OrganizationName, Title: membership.Title, IsPrimary: membership.IsPrimary, Departments: make([]departmentDTO, 0, len(membership.Departments))}
+		for _, department := range membership.Departments {
+			item.Departments = append(item.Departments, departmentDTO{ID: department.ID, Name: department.Name})
+		}
+		result.Memberships = append(result.Memberships, item)
+	}
+	return result
+}

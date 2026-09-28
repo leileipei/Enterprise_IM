@@ -13,6 +13,10 @@ type Pinger interface {
 
 // Handler exposes only operational probes until authenticated business APIs exist.
 func Handler(database Pinger) http.Handler {
+	return newMux(database)
+}
+
+func newMux(database Pinger) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		respond(w, http.StatusOK, "ok")
