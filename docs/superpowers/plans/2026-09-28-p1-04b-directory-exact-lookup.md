@@ -32,10 +32,10 @@
 
 **Interfaces:** `FindVisiblePersonByEmployeeNo(context.Context, access.TrustedIdentity, string) (DirectoryPerson, error)`; `ErrInvalidEmployeeNo`; reuse `ErrDirectoryNotVisible`, `ErrForbidden`, `ErrAuditUnavailable`.
 
-- [ ] Write failing PostgreSQL tests for split visibility, allow/hard deny, absent/cross tenant/frozen, audit events and audit failure.
-- [ ] Run `go test ./internal/policystore -run TestDirectoryLookup -count=1` with test database; confirm missing interface failure.
-- [ ] Implement ordered locking, one policy snapshot, per-membership decisions and atomic audits.
-- [ ] Run targeted tests and commit the domain increment.
+- [x] Write failing PostgreSQL tests for split visibility, allow/hard deny, absent/cross tenant/frozen, audit events and audit failure.
+- [x] Run `go test ./internal/policystore -run TestDirectoryLookup -count=1` with test database; confirm missing interface failure.
+- [x] Implement ordered locking, one policy snapshot, per-membership decisions and atomic audits.
+- [x] Run targeted tests and commit the domain increment.
 
 ### Task 2: Protected route and OIDC integration
 
@@ -43,7 +43,7 @@
 
 **Interfaces:** `GET /api/v1/directory/users?employee_no=...`; stable JSON containing only visible memberships.
 
-- [ ] Write failing HTTP tests for identity, response and strict parameter/error mapping.
-- [ ] Run `go test ./internal/httpserver -run TestDirectoryLookup -count=1`; confirm missing route.
-- [ ] Implement route and document its exact-match behavior; add signed-token to database audit test.
-- [ ] Run full PostgreSQL-backed `go test ./... -count=1`, `go vet ./...`, `go build ./cmd/im-api`, `git diff --check`; request independent review and commit.
+- [x] Write failing HTTP tests for identity, response and strict parameter/error mapping.
+- [x] Run `go test ./internal/httpserver -run TestDirectoryLookup -count=1`; confirm missing route.
+- [x] Implement route and document its exact-match behavior; add signed-token to database audit test.
+- [x] Run full PostgreSQL-backed `go test ./... -count=1`, `go vet ./...`, `go build ./cmd/im-api`, `git diff --check`; request independent review and commit.

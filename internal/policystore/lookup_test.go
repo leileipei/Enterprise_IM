@@ -3,13 +3,99 @@ package policystore_test
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leileipei/Enterprise_IM/internal/policy"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
+
+type candidateGateDB struct {
+	conn    *pgx.Conn
+	reached chan struct{}
+	resume  chan struct{}
+}
+
+func (db candidateGateDB) Begin(ctx context.Context) (pgx.Tx, error) {
+	tx, err := db.conn.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return candidateGateTx{Tx: tx, reached: db.reached, resume: db.resume}, nil
+}
+
+type candidateGateTx struct {
+	pgx.Tx
+	reached chan struct{}
+	resume  chan struct{}
+}
+
+func (tx candidateGateTx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	if strings.Contains(sql, "SELECT id FROM user_organizations") && strings.Contains(sql, "user_id=$2") {
+		close(tx.reached)
+		select {
+		case <-tx.resume:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return tx.Tx.Query(ctx, sql, args...)
+}
+
+func TestDirectoryLookupPinsEmployeeIdentityBeforeListingMemberships(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	ctx := context.Background()
+	var searchPath string
+	if err := conn.QueryRow(ctx, "SHOW search_path").Scan(&searchPath); err != nil {
+		t.Fatal(err)
+	}
+	updater, err := pgx.Connect(ctx, os.Getenv("IM_TEST_DATABASE_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { updater.Close(ctx) })
+	if _, err := updater.Exec(ctx, "SET search_path TO "+searchPath); err != nil {
+		t.Fatal(err)
+	}
+	reached, resume := make(chan struct{}), make(chan struct{})
+	svc := policystore.Service{DB: candidateGateDB{conn: conn, reached: reached, resume: resume}, Now: func() time.Time { return at }}
+	type result struct {
+		person policystore.DirectoryPerson
+		err    error
+	}
+	finished := make(chan result, 1)
+	go func() {
+		person, err := svc.FindVisiblePersonByEmployeeNo(ctx, publisher(), "A002")
+		finished <- result{person: person, err: err}
+	}()
+	select {
+	case <-reached:
+	case <-time.After(5 * time.Second):
+		close(resume)
+		t.Fatal("lookup did not reach candidate enumeration")
+	}
+	_, updateErr := updater.Exec(ctx, "SET statement_timeout='150ms'")
+	if updateErr == nil {
+		_, updateErr = updater.Exec(ctx, "UPDATE users SET global_employee_no='A099' WHERE id=$1", personA)
+	}
+	close(resume)
+	got := <-finished
+	if updateErr == nil {
+		t.Fatal("employee number changed while lookup was selecting memberships")
+	}
+	var pgErr *pgconn.PgError
+	if !errors.As(updateErr, &pgErr) || pgErr.Code != "57014" {
+		t.Fatalf("expected blocked update timeout, got %v", updateErr)
+	}
+	if got.err != nil || got.person.ID != personA || len(got.person.Memberships) != 1 {
+		t.Fatalf("lookup after blocked update: %+v %v", got.person, got.err)
+	}
+}
 
 func TestDirectoryLookupReturnsOnlyVisibleMembershipsAndAudits(t *testing.T) {
 	conn := db(t)

@@ -55,7 +55,9 @@ func (s Service) FindVisiblePersonByEmployeeNo(ctx context.Context, id access.Tr
 	defer tx.Rollback(ctx)
 	at := s.now()
 	var targetUserID string
-	err = tx.QueryRow(ctx, `SELECT id FROM users WHERE tenant_id=$1 AND global_employee_no=$2`, id.TenantID, employeeNo).Scan(&targetUserID)
+	// Pin the employee number and its user before enumerating memberships. The
+	// row lock also blocks FK checks for assignments newly entering this user.
+	err = tx.QueryRow(ctx, `SELECT id FROM users WHERE tenant_id=$1 AND global_employee_no=$2 FOR UPDATE`, id.TenantID, employeeNo).Scan(&targetUserID)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return DirectoryPerson{}, err
 	}
@@ -88,7 +90,9 @@ ORDER BY id`, id.TenantID, targetUserID, at)
 	lockIDs = slices.Compact(lockIDs)
 	for _, membershipID := range lockIDs {
 		var locked string
-		err := tx.QueryRow(ctx, `SELECT id FROM user_organizations WHERE tenant_id=$1 AND id=$2 FOR SHARE`, id.TenantID, membershipID).Scan(&locked)
+		// Another directory read may already hold the membership before it
+		// requests the user row. Fail closed instead of forming a lock cycle.
+		err := tx.QueryRow(ctx, `SELECT id FROM user_organizations WHERE tenant_id=$1 AND id=$2 FOR SHARE NOWAIT`, id.TenantID, membershipID).Scan(&locked)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return DirectoryPerson{}, err
 		}
@@ -153,7 +157,7 @@ ORDER BY id`, id.TenantID, targetUserID, at)
 		if err != nil {
 			return DirectoryPerson{}, err
 		}
-		if profile.EmployeeNo != employeeNo {
+		if profile.UserID != targetUserID || profile.EmployeeNo != employeeNo {
 			continue
 		}
 		person.DisplayName = profile.DisplayName
