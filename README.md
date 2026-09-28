@@ -17,6 +17,8 @@ docker run --rm -d --name enterprise-im-dev-db -e POSTGRES_PASSWORD=local_only_p
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000001_group_foundation.up.sql
 ```
 
+迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
+
 然后启动服务：
 
 ```sh

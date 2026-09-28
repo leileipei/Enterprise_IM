@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
 
 CREATE TABLE tenants (
@@ -125,6 +127,68 @@ CREATE TABLE user_departments (
     ) WHERE (is_primary)
 );
 
+CREATE FUNCTION reject_organization_cycle() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+    has_cycle boolean;
+BEGIN
+    IF NEW.parent_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+    -- Serialize tree edits within a tenant, including concurrent edits of different nodes.
+    PERFORM 1 FROM tenants WHERE id = NEW.tenant_id FOR UPDATE;
+    WITH RECURSIVE ancestors(id, parent_id, path) AS (
+        SELECT id, parent_id, ARRAY[id] FROM organizations
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.parent_id
+        UNION ALL
+        SELECT o.id, o.parent_id, a.path || o.id
+        FROM organizations o JOIN ancestors a ON o.id = a.parent_id
+        WHERE o.tenant_id = NEW.tenant_id AND NOT o.id = ANY(a.path)
+    )
+    SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = NEW.id) INTO has_cycle;
+    IF has_cycle THEN
+        RAISE EXCEPTION 'organization parent cycle is not allowed' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER organizations_no_parent_cycle
+BEFORE INSERT OR UPDATE OF tenant_id, parent_id ON organizations
+FOR EACH ROW EXECUTE FUNCTION reject_organization_cycle();
+
+CREATE FUNCTION reject_department_cycle() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+    has_cycle boolean;
+BEGIN
+    IF NEW.parent_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+    -- Serialize edits within an organization so two writers cannot create a cycle together.
+    PERFORM 1 FROM organizations
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.organization_id FOR UPDATE;
+    WITH RECURSIVE ancestors(id, parent_id, path) AS (
+        SELECT id, parent_id, ARRAY[id] FROM departments
+        WHERE tenant_id = NEW.tenant_id AND organization_id = NEW.organization_id AND id = NEW.parent_id
+        UNION ALL
+        SELECT d.id, d.parent_id, a.path || d.id
+        FROM departments d JOIN ancestors a ON d.id = a.parent_id
+        WHERE d.tenant_id = NEW.tenant_id AND d.organization_id = NEW.organization_id
+          AND NOT d.id = ANY(a.path)
+    )
+    SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = NEW.id) INTO has_cycle;
+    IF has_cycle THEN
+        RAISE EXCEPTION 'department parent cycle is not allowed' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER departments_no_parent_cycle
+BEFORE INSERT OR UPDATE OF tenant_id, organization_id, parent_id ON departments
+FOR EACH ROW EXECUTE FUNCTION reject_department_cycle();
+
 CREATE FUNCTION reject_virtual_organization_membership() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -209,3 +273,5 @@ ON user_organizations (tenant_id, user_id, organization_id, effective_from);
 
 CREATE INDEX user_departments_membership_lookup
 ON user_departments (tenant_id, user_organization_id, department_id);
+
+COMMIT;

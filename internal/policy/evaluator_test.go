@@ -34,7 +34,7 @@ func exception() Rule {
 		ID: "project-exception", TenantID: "tenant-a", Effect: EffectExceptionAllow, Action: ActionStartChat,
 		SourceMembershipID: "member-a", TargetMembershipID: "member-b",
 		SourceOrganizationID: "org-a", TargetOrganizationID: "org-b",
-		OverrideRuleID: "isolation-12", EffectiveFrom: at.Add(-time.Hour), EffectiveTo: at.Add(time.Hour),
+		OverrideRuleID: "isolation-12", ApprovedBy: "admin-1", EffectiveFrom: at.Add(-time.Hour), EffectiveTo: at.Add(time.Hour),
 	}
 }
 
@@ -129,7 +129,7 @@ func TestCrossLegalGroupRequiresExplicitApproval(t *testing.T) {
 	req.Action = ActionInviteGroup
 	allow := Rule{
 		ID: "cross-org", TenantID: "tenant-a", Effect: EffectAllow, Action: ActionInviteGroup,
-		SourceOrganizationID: "org-a", TargetOrganizationID: "org-b", EffectiveFrom: at.Add(-time.Hour),
+		SourceOrganizationID: "org-a", TargetOrganizationID: "org-b", ApprovedBy: "admin-1", EffectiveFrom: at.Add(-time.Hour),
 	}
 	req.Rules = []Rule{allow}
 	if got := Evaluate(req); got.Allowed || got.Reason != ReasonCrossLegalApprovalRequired {
@@ -146,7 +146,7 @@ func TestRuleFromOtherTenantCannotAuthorize(t *testing.T) {
 	req := input(member("member-a", "org-a", "legal-a"), member("member-b", "org-b", "legal-b"))
 	allow := Rule{
 		ID: "other-tenant-allow", TenantID: "tenant-b", Effect: EffectAllow, Action: ActionStartChat,
-		SourceOrganizationID: "org-a", TargetOrganizationID: "org-b", EffectiveFrom: at.Add(-time.Hour),
+		SourceOrganizationID: "org-a", TargetOrganizationID: "org-b", ApprovedBy: "admin-1", EffectiveFrom: at.Add(-time.Hour),
 	}
 	req.Rules = []Rule{allow}
 	if got := Evaluate(req); got.Allowed || got.Reason != ReasonCrossOrganizationDenied {
@@ -168,6 +168,39 @@ func TestUnrelatedExceptionCannotApproveCrossLegalGroup(t *testing.T) {
 	req.Rules = []Rule{isolate, cover, unrelated}
 	if got := Evaluate(req); got.Allowed || got.Reason != ReasonCrossLegalApprovalRequired {
 		t.Fatalf("unrelated exception approved group: %+v", got)
+	}
+}
+
+func TestUnknownActionFailsClosedWithinSameOrganization(t *testing.T) {
+	req := input(member("member-a", "org-a", "legal-a"), member("member-b", "org-a", "legal-a"))
+	req.Action = Action("delete_all_messages")
+	if got := Evaluate(req); got.Allowed || got.Reason != ReasonInvalidContext {
+		t.Fatalf("unknown action allowed: %+v", got)
+	}
+}
+
+func TestPendingExceptionCannotBypassIsolation(t *testing.T) {
+	req := input(member("member-a", "org-a", "legal-a"), member("member-b", "org-b", "legal-b"))
+	ex := exception()
+	ex.ApprovedBy = ""
+	req.Rules = []Rule{isolation(), ex}
+	if got := Evaluate(req); got.Allowed || got.Reason != ReasonIsolated {
+		t.Fatalf("pending exception allowed: %+v", got)
+	}
+}
+
+func TestHardDenyAuditsAllMatchingRulesInStableOrder(t *testing.T) {
+	req := input(member("member-a", "org-a", "legal-a"), member("member-b", "org-a", "legal-a"))
+	first := isolation()
+	first.ID = "hard-z"
+	first.Effect = EffectHardDeny
+	first.TargetOrganizationID = "org-a"
+	second := first
+	second.ID = "hard-a"
+	req.Rules = []Rule{first, second}
+	got := Evaluate(req)
+	if got.Allowed || got.Reason != ReasonHardDeny || len(got.MatchedRuleIDs) != 2 || got.MatchedRuleIDs[0] != "hard-a" || got.MatchedRuleIDs[1] != "hard-z" {
+		t.Fatalf("hard denies not stable: %+v", got)
 	}
 }
 

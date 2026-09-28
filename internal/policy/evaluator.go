@@ -71,6 +71,7 @@ type Rule struct {
 	TargetMembershipID   string
 	Bidirectional        bool
 	OverrideRuleID       string
+	ApprovedBy           string
 	CrossLegalApproved   bool
 	EffectiveFrom        time.Time
 	EffectiveTo          time.Time
@@ -101,7 +102,17 @@ func (r Rule) directedMatch(source, target Membership) bool {
 func (r Rule) validException() bool {
 	return r.Effect == EffectExceptionAllow && r.OverrideRuleID != "" &&
 		r.SourceMembershipID != "" && r.TargetMembershipID != "" &&
+		r.ApprovedBy != "" &&
 		!r.EffectiveTo.IsZero() && r.EffectiveTo.After(r.EffectiveFrom)
+}
+
+func supportedAction(action Action) bool {
+	switch action {
+	case ActionDirectoryView, ActionStartChat, ActionSendMessage, ActionCreateGroup, ActionInviteGroup:
+		return true
+	default:
+		return false
+	}
 }
 
 type Input struct {
@@ -128,7 +139,7 @@ func Evaluate(in Input) Decision {
 	denied := func(reason Reason, ids ...string) Decision {
 		return Decision{Reason: reason, PolicyVersion: in.PolicyVersion, MatchedRuleIDs: ids}
 	}
-	if in.At.IsZero() || in.Action == "" || in.Actor.ID == "" || in.Target.ID == "" ||
+	if in.At.IsZero() || !supportedAction(in.Action) || in.Actor.ID == "" || in.Target.ID == "" ||
 		in.Actor.TenantID == "" || in.Target.TenantID == "" ||
 		in.Actor.OrganizationID == "" || in.Target.OrganizationID == "" ||
 		in.Actor.LegalEntityID == "" || in.Target.LegalEntityID == "" {
@@ -148,22 +159,29 @@ func Evaluate(in Input) Decision {
 	}
 
 	var isolates, allows, exceptions []Rule
+	var hardDenies []string
 	for _, rule := range in.Rules {
 		if !rule.matches(in) {
 			continue
 		}
 		switch rule.Effect {
 		case EffectHardDeny:
-			return denied(ReasonHardDeny, rule.ID)
+			hardDenies = append(hardDenies, rule.ID)
 		case EffectIsolate:
 			isolates = append(isolates, rule)
 		case EffectAllow:
-			allows = append(allows, rule)
+			if rule.ApprovedBy != "" {
+				allows = append(allows, rule)
+			}
 		case EffectExceptionAllow:
 			if rule.validException() {
 				exceptions = append(exceptions, rule)
 			}
 		}
+	}
+	if len(hardDenies) > 0 {
+		slices.Sort(hardDenies)
+		return denied(ReasonHardDeny, hardDenies...)
 	}
 
 	var covered, usedExceptions []string

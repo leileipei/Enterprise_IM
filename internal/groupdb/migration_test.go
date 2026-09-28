@@ -159,3 +159,19 @@ func TestMigrationCanRollBackAndReapply(t *testing.T) {
 	}
 	seed(t, conn)
 }
+
+func TestRejectsOrganizationParentCycle(t *testing.T) {
+	conn := migratedDB(t)
+	seed(t, conn)
+	exec(t, conn, "UPDATE organizations SET parent_id=$1 WHERE id=$2", orgA2, orgA)
+	mustReject(t, conn, "UPDATE organizations SET parent_id=$1 WHERE id=$2", orgA, orgA2)
+}
+
+func TestRejectsDepartmentParentCycle(t *testing.T) {
+	conn := migratedDB(t)
+	seed(t, conn)
+	other := "00000000-0000-4000-8000-000000000043"
+	exec(t, conn, "INSERT INTO departments (id,tenant_id,organization_id,code,name) VALUES ($1,$2,$3,'d3','部门三')", other, tenantA, orgA)
+	exec(t, conn, "UPDATE departments SET parent_id=$1 WHERE id=$2", other, depA)
+	mustReject(t, conn, "UPDATE departments SET parent_id=$1 WHERE id=$2", depA, other)
+}
