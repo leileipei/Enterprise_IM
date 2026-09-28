@@ -1,6 +1,7 @@
 package policystore
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"slices"
@@ -141,12 +142,19 @@ FROM users WHERE tenant_id=$1 AND id=$2 FOR UPDATE NOWAIT`, id.TenantID, userID,
 		}
 		return DirectorySearchPage{}, ErrForbidden
 	}
-	page := DirectorySearchPage{People: make([]DirectoryPerson, 0, limit)}
-	for _, userID := range ids {
-		candidate, ok := candidates[userID]
-		if !ok {
-			continue
+	visibleIDs := make([]string, 0, len(candidates))
+	for userID := range candidates {
+		visibleIDs = append(visibleIDs, userID)
+	}
+	slices.SortFunc(visibleIDs, func(a, b string) int {
+		if byNumber := cmp.Compare(candidates[a].employeeNo, candidates[b].employeeNo); byNumber != 0 {
+			return byNumber
 		}
+		return cmp.Compare(a, b)
+	})
+	page := DirectorySearchPage{People: make([]DirectoryPerson, 0, limit)}
+	for _, userID := range visibleIDs {
+		candidate := candidates[userID]
 		membershipIDs, err := activeNameMembershipIDs(ctx, tx, id.TenantID, userID, at)
 		if err != nil {
 			return DirectorySearchPage{}, err

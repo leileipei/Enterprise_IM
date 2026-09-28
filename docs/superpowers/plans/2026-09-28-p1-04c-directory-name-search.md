@@ -8,19 +8,19 @@
 
 **文件：**新增 `internal/policystore/search.go`、`search_test.go`；必要时仅提取 P1-04b 中的共用校验或审计函数。
 
-- [ ] 先写 PostgreSQL 失败测试：可见过滤、同名去重、隐藏候选对 `has_more` 无影响、策略放行/强制拒绝、通配符字面匹配、500 候选边界和审计故障。
-- [ ] 运行定向测试，确认因新服务方法缺失而失败。
-- [ ] 实现 `SearchVisiblePeople(ctx,id,q,limit) (DirectorySearchPage,error)`；同事务验证身份、读当前策略、稳定排序、锁定候选并逐任职判定与审计。
-- [ ] 运行定向测试，提交领域层增量。
+- [x] 先写 PostgreSQL 失败测试：可见过滤、同名去重、隐藏候选对 `has_more` 无影响、策略放行/强制拒绝、通配符字面匹配、500 候选边界和审计故障。
+- [x] 运行定向测试，确认因新服务方法缺失而失败。
+- [x] 实现 `SearchVisiblePeople(ctx,id,q,limit) (DirectorySearchPage,error)`；同事务验证身份、读当前策略、稳定排序、锁定候选并逐任职判定与审计。
+- [x] 运行定向测试，提交领域层增量。
 
 ## Task 2：受保护的 HTTP 路由
 
 **文件：**修改 `internal/httpserver/directory.go`、`directory_test.go`、`internal/oidcauth/store_test.go`、`README.md`。
 
-- [ ] 先写 HTTP 失败测试：签名身份、参数互斥与重复、边界值、响应结构和错误映射。
-- [ ] 运行定向测试，确认因路由缺失而失败。
-- [ ] 在 `/api/v1/directory/users` 按 `employee_no` 或 `q` 分流；新增姓名搜索响应，更新文档与令牌到数据库链路测试。
-- [ ] 运行 PostgreSQL 完整测试、`go vet ./...`、构建与差异检查；独立审阅后提交并建立草稿 PR。
+- [x] 先写 HTTP 失败测试：签名身份、参数互斥与重复、边界值、响应结构和错误映射。
+- [x] 运行定向测试，确认因路由缺失而失败。
+- [x] 在 `/api/v1/directory/users` 按 `employee_no` 或 `q` 分流；新增姓名搜索响应，更新文档与令牌到数据库链路测试。
+- [x] 运行 PostgreSQL 完整测试、`go vet ./...`、构建与差异检查；独立审阅后提交并建立草稿 PR。
 
 ## Review Focus
 
