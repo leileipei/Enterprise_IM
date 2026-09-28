@@ -2,7 +2,13 @@ module github.com/leileipei/Enterprise_IM
 
 go 1.27.1
 
-require github.com/jackc/pgx/v5 v5.11.0
+require (
+	github.com/MicahParks/jwkset v0.11.3
+	github.com/MicahParks/keyfunc/v3 v3.8.2
+	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/jackc/pgx/v5 v5.11.0
+	golang.org/x/time v0.15.0
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
