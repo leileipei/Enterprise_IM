@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1-01 集团模型与通信策略核心、P1-02a 管理授权与单组织离职、P1-02b 策略快照及决策审计、P1-03a 受保护管理 API、P1-03b OIDC JWT 访问令牌验证与本地身份映射、P1-03c 管理端人员检索、P1-04a 普通员工通讯录任职详情、P1-04b 按集团工号精确查找可见同事、P1-04c 按姓名片段搜索可见同事、P1-04d 可见组织索引，以及 P1-04e 按组织浏览可见成员。配置有效的身份提供方后，可显式启用这些受保护接口。**尚无浏览器登录流程、聊天界面或消息收发功能；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话发起。配置有效的身份提供方后，可显式启用这些受保护接口。**尚无浏览器登录流程、聊天界面或消息收发功能；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -28,6 +28,8 @@
 
 普通员工可用 `GET /api/v1/directory/organizations/{organization_id}/members?limit={1..20}&after={membership_id}` 分页查看某组织的可见成员。`limit` 默认 20；`after` 省略时从第一页开始，后续传入上一页的 `next_after`。响应包含 `people`、`has_more` 和 `next_after`；末页的 `next_after` 为 `null`。人员只带该组织下可见的当前任职与部门；分页锚点每次都会重新校验。组织、锚点不存在或不可见统一返回 404；无效 UUID 或分页参数返回 400。策略决策与请求审计在同一事务内完成。大组织且大量成员不可见时，接口可能扫描较多候选；上线前需按目标规模验证查询耗时及容量。
 
+普通员工可用 `POST /api/v1/conversations` 发起或复用单聊。请求须有相同的 Bearer 令牌和 `X-Acting-Membership-ID`，`Content-Type: application/json`，请求体为 `{ "target_membership_id": "<uuid>" }`。服务端只按当前 `start_chat` 策略授权，集团内同一对用户只保留一个单聊会话；换组织任职后经授权仍复用原会话。成功返回 200，包含 `id`、`type`、`last_seq`、`policy_version`、`cross_legal` 和 `decision_reason`。目标任职不存在、跨租户、自聊或当前不允许通信都返回 404；本人任职失效返回 403。已有会话不会绕过新发布的拒绝规则。会话创建、策略决策和请求审计同事务提交；本阶段不能发送消息。
+
 ## 本地运行
 
 需要 Go 1.27 和 PostgreSQL 16。数据库应启用 `btree_gist` 扩展；首次迁移需要具备创建扩展和表的权限。可用现有 PostgreSQL 实例，也可使用隔离的本地测试容器。
@@ -40,6 +42,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000002_admin_access.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000003_policy_store.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000004_external_identities.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000005_direct_conversations.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -73,4 +76,4 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000004`、`000003`、`000002`、`000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000005`、`000004`、`000003`、`000002`、`000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。

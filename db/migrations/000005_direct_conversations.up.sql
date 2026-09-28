@@ -6,7 +6,7 @@ ALTER TABLE user_organizations
 CREATE TABLE conversations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
-    kind text NOT NULL DEFAULT 'direct' CHECK (kind IN ('direct', 'group')),
+    kind text NOT NULL DEFAULT 'direct' CHECK (kind = 'direct'),
     status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'policy_blocked', 'ended')),
     direct_user_low_id uuid,
     direct_user_high_id uuid,
@@ -18,12 +18,10 @@ CREATE TABLE conversations (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE (tenant_id, id),
-    CHECK ((kind = 'direct' AND direct_user_low_id IS NOT NULL AND direct_user_high_id IS NOT NULL
+    CHECK (direct_user_low_id IS NOT NULL AND direct_user_high_id IS NOT NULL
         AND direct_low_membership_id IS NOT NULL AND direct_high_membership_id IS NOT NULL
         AND direct_user_low_id < direct_user_high_id
-        AND created_by_user_id IN (direct_user_low_id, direct_user_high_id))
-        OR (kind = 'group' AND direct_user_low_id IS NULL AND direct_user_high_id IS NULL
-        AND direct_low_membership_id IS NULL AND direct_high_membership_id IS NULL)),
+        AND created_by_user_id IN (direct_user_low_id, direct_user_high_id)),
     FOREIGN KEY (tenant_id, created_by_user_id) REFERENCES users(tenant_id, id),
     FOREIGN KEY (tenant_id, direct_user_low_id) REFERENCES users(tenant_id, id),
     FOREIGN KEY (tenant_id, direct_user_high_id) REFERENCES users(tenant_id, id),
