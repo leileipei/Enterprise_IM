@@ -59,4 +59,4 @@
 - [x] 运行定向测试确认配置解析缺失。
 - [x] 实现启动检查、轮询循环、结构化日志、信号退出；更新运行说明与边界。
 - [x] 全量 PostgreSQL/Redis 测试、`go vet ./...`、`go build ./...`、差异检查。
-- [ ] 独立审阅并修正；提交、推送，基于 `dev/p2-02-message-transaction` 创建草稿 PR。
+- [x] 独立审阅并修正；提交、推送，基于 `dev/p2-02-message-transaction` 创建草稿 PR。
