@@ -71,7 +71,9 @@ type Rule struct {
 	TargetMembershipID   string
 	Bidirectional        bool
 	OverrideRuleID       string
+	RequestedBy          string
 	ApprovedBy           string
+	Reason               string
 	CrossLegalApproved   bool
 	EffectiveFrom        time.Time
 	EffectiveTo          time.Time
