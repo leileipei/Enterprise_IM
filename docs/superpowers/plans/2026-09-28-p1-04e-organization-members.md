@@ -8,19 +8,19 @@
 
 **文件：**新增 `internal/policystore/organization_members.go`、`organization_members_test.go`。
 
-- [ ] 先写 PostgreSQL 失败测试：同组织、跨组织策略、隐藏候选分页、兼岗字段隔离、可见与隐藏锚点、跨租户、身份失效和审计失败。
-- [ ] 运行定向测试，确认服务方法缺失导致失败。
-- [ ] 实现 `ListVisibleOrganizationMembers(ctx,id,orgID,afterMembershipID,limit) (DirectoryMemberPage,error)`；按键集批量扫描、逐任职锁定与判定，在一个事务中写全部审计。
-- [ ] 运行定向测试并提交领域层增量。
+- [x] 先写 PostgreSQL 失败测试：同组织、跨组织策略、隐藏候选分页、兼岗字段隔离、可见与隐藏锚点、跨租户、身份失效和审计失败。
+- [x] 运行定向测试，确认服务方法缺失导致失败。
+- [x] 实现 `ListVisibleOrganizationMembers(ctx,id,orgID,afterMembershipID,limit) (DirectoryMemberPage,error)`；按键集批量扫描、逐任职锁定与判定，在一个事务中写全部审计。
+- [x] 运行定向测试，确认领域层增量通过。
 
 ## Task 2：受保护 HTTP 接口
 
 **文件：**修改 `internal/httpserver/directory.go`、`directory_test.go`、`internal/oidcauth/store_test.go`、`README.md`。
 
-- [ ] 先写 HTTP 失败测试：身份、路径 UUID、方法、`limit` 和 `after` 校验、响应与错误映射。
-- [ ] 运行定向测试，确认路由缺失导致失败。
-- [ ] 接入 `GET /api/v1/directory/organizations/{id}/members`，补签名令牌到数据库的完整链路。
-- [ ] 运行 PostgreSQL 完整测试、静态检查、构建及差异检查；独立审阅后提交并建立草稿 PR。
+- [x] 先写 HTTP 失败测试：身份、路径 UUID、方法、`limit` 和 `after` 校验、响应与错误映射。
+- [x] 运行定向测试，确认路由缺失导致失败。
+- [x] 接入 `GET /api/v1/directory/organizations/{id}/members`，补签名令牌到数据库的完整链路。
+- [x] 运行 PostgreSQL 完整测试、静态检查、构建及差异检查；独立审阅后提交并建立草稿 PR。
 
 ## Review Focus
 

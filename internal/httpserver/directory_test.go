@@ -30,6 +30,10 @@ func (f directoryFunc) ListVisibleOrganizations(context.Context, access.TrustedI
 	return nil, policystore.ErrDirectoryNotVisible
 }
 
+func (f directoryFunc) ListVisibleOrganizationMembers(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error) {
+	return policystore.DirectoryMemberPage{}, policystore.ErrDirectoryNotVisible
+}
+
 type directoryLookupStub struct {
 	lookup func(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error)
 }
@@ -48,6 +52,10 @@ func (s directoryLookupStub) SearchVisiblePeople(context.Context, access.Trusted
 
 func (s directoryLookupStub) ListVisibleOrganizations(context.Context, access.TrustedIdentity) ([]policystore.DirectoryOrganization, error) {
 	return nil, policystore.ErrDirectoryNotVisible
+}
+
+func (s directoryLookupStub) ListVisibleOrganizationMembers(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error) {
+	return policystore.DirectoryMemberPage{}, policystore.ErrDirectoryNotVisible
 }
 
 type directorySearchStub struct {
@@ -70,6 +78,10 @@ func (s directorySearchStub) ListVisibleOrganizations(context.Context, access.Tr
 	return nil, policystore.ErrDirectoryNotVisible
 }
 
+func (s directorySearchStub) ListVisibleOrganizationMembers(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error) {
+	return policystore.DirectoryMemberPage{}, policystore.ErrDirectoryNotVisible
+}
+
 type directoryOrganizationsStub struct {
 	list func(context.Context, access.TrustedIdentity) ([]policystore.DirectoryOrganization, error)
 }
@@ -88,6 +100,107 @@ func (s directoryOrganizationsStub) SearchVisiblePeople(context.Context, access.
 
 func (s directoryOrganizationsStub) ListVisibleOrganizations(ctx context.Context, id access.TrustedIdentity) ([]policystore.DirectoryOrganization, error) {
 	return s.list(ctx, id)
+}
+
+func (s directoryOrganizationsStub) ListVisibleOrganizationMembers(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error) {
+	return policystore.DirectoryMemberPage{}, policystore.ErrDirectoryNotVisible
+}
+
+type directoryOrganizationMembersStub struct {
+	directoryFunc
+	list func(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error)
+}
+
+func (s directoryOrganizationMembersStub) ListVisibleOrganizationMembers(ctx context.Context, id access.TrustedIdentity, orgID, after string, limit int) (policystore.DirectoryMemberPage, error) {
+	return s.list(ctx, id, orgID, after, limit)
+}
+
+func TestDirectoryOrganizationMembersRouteUsesVerifiedActorAndVisiblePage(t *testing.T) {
+	service := directoryOrganizationMembersStub{list: func(_ context.Context, id access.TrustedIdentity, orgID, after string, limit int) (policystore.DirectoryMemberPage, error) {
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) ||
+			orgID != tenantID || after != targetMemID || limit != 1 {
+			t.Fatalf("untrusted organization member input: %+v %q %q %d", id, orgID, after, limit)
+		}
+		return policystore.DirectoryMemberPage{People: []policystore.DirectoryPerson{{ID: targetUserID,
+			DisplayName: "同事", EmployeeNo: "A002", Memberships: []policystore.DirectoryMembership{{MembershipID: targetMemID,
+				OrganizationID: tenantID, OrganizationName: "总部", Departments: []access.Department{}}}}},
+			HasMore: true, NextAfter: targetMemID}, nil
+	}}
+	handler, err := HandlerWithDirectory(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := adminRequest(http.MethodGet, "/api/v1/directory/organizations/"+tenantID+"/members?limit=1&after="+targetMemID)
+	req.Header.Set("X-Tenant-ID", "99999999-9999-4999-8999-999999999999")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"people":[`) ||
+		!strings.Contains(res.Body.String(), `"membership_id":"`+targetMemID+`"`) ||
+		!strings.Contains(res.Body.String(), `"has_more":true`) ||
+		!strings.Contains(res.Body.String(), `"next_after":"`+targetMemID+`"`) {
+		t.Fatalf("organization member response: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestDirectoryOrganizationMembersRejectsMalformedRequestsAndMapsErrors(t *testing.T) {
+	service := directoryOrganizationMembersStub{list: func(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error) {
+		return policystore.DirectoryMemberPage{People: []policystore.DirectoryPerson{}}, nil
+	}}
+	handler, err := HandlerWithDirectory(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		"/api/v1/directory/organizations/bad/members",
+		"/api/v1/directory/organizations/" + tenantID + "/members?limit=0",
+		"/api/v1/directory/organizations/" + tenantID + "/members?limit=21",
+		"/api/v1/directory/organizations/" + tenantID + "/members?limit=x",
+		"/api/v1/directory/organizations/" + tenantID + "/members?after=bad",
+		"/api/v1/directory/organizations/" + tenantID + "/members?after=",
+		"/api/v1/directory/organizations/" + tenantID + "/members?limit=1&limit=2",
+		"/api/v1/directory/organizations/" + tenantID + "/members?include_hidden=true",
+		"/api/v1/directory/organizations/" + tenantID + "/members?limit=%ZZ",
+	} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(http.MethodGet, path))
+		if res.Code != http.StatusBadRequest {
+			t.Fatalf("invalid organization member request %q: %d %s", path, res.Code, res.Body.String())
+		}
+	}
+	for _, tc := range []struct {
+		method, path string
+		status       int
+	}{
+		{http.MethodPost, "/api/v1/directory/organizations/" + tenantID + "/members", http.StatusMethodNotAllowed},
+		{http.MethodGet, "/api/v1/directory/organizations/" + tenantID + "/members/extra", http.StatusNotFound},
+	} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(tc.method, tc.path))
+		if res.Code != tc.status {
+			t.Fatalf("organization member path %q: %d %s", tc.path, res.Code, res.Body.String())
+		}
+	}
+	for _, failure := range []struct {
+		err    error
+		status int
+		code   string
+	}{
+		{policystore.ErrDirectoryNotVisible, http.StatusNotFound, "not_found"},
+		{policystore.ErrForbidden, http.StatusForbidden, "invalid_identity"},
+		{errors.Join(policystore.ErrAuditUnavailable, errors.New("private detail")), http.StatusServiceUnavailable, "unavailable"},
+	} {
+		failed, err := HandlerWithDirectory(Handler(nil), authFunc(verified), directoryOrganizationMembersStub{list: func(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error) {
+			return policystore.DirectoryMemberPage{}, failure.err
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		res := httptest.NewRecorder()
+		failed.ServeHTTP(res, adminRequest(http.MethodGet, "/api/v1/directory/organizations/"+tenantID+"/members"))
+		if res.Code != failure.status || !strings.Contains(res.Body.String(), failure.code) || strings.Contains(res.Body.String(), "private detail") {
+			t.Fatalf("organization member service error: %d %s", res.Code, res.Body.String())
+		}
+	}
 }
 
 func TestDirectoryOrganizationsRouteUsesVerifiedActorAndReturnsTree(t *testing.T) {

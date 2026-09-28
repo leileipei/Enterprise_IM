@@ -269,6 +269,19 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if err := conn.QueryRow(ctx, "SELECT count(*) FROM audit_events WHERE action='directory_organization_list' AND outcome='allow' AND actor_user_id=$1", storeUserA).Scan(&auditCount); err != nil || auditCount != 1 {
 		t.Fatalf("ordinary organization audit: %d %v", auditCount, err)
 	}
+	memberReq := httptest.NewRequest(http.MethodGet, "/api/v1/directory/organizations/"+orgID+"/members?limit=2", nil)
+	memberReq.Header.Set("Authorization", "Bearer "+accessToken)
+	memberReq.Header.Set("X-Acting-Membership-ID", actorMembership)
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, memberReq)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"people":[`) ||
+		!strings.Contains(res.Body.String(), `"membership_id":"`+targetMembership+`"`) ||
+		!strings.Contains(res.Body.String(), `"next_after":null`) {
+		t.Fatalf("ordinary organization members response: %d %s", res.Code, res.Body.String())
+	}
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM audit_events WHERE action='directory_organization_members' AND outcome='allow' AND actor_user_id=$1", storeUserA).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("ordinary organization members audit: %d %v", auditCount, err)
+	}
 	if _, err := conn.Exec(ctx, "UPDATE user_organizations SET status='ended' WHERE id=$1", actorMembership); err != nil {
 		t.Fatal(err)
 	}
@@ -293,6 +306,11 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if res.Code != http.StatusForbidden {
 		t.Fatalf("ended acting membership organization list: %d %s", res.Code, res.Body.String())
 	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, memberReq)
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("ended acting membership organization members: %d %s", res.Code, res.Body.String())
+	}
 	if _, err := conn.Exec(ctx, "UPDATE users SET status='frozen' WHERE id=$1", storeUserA); err != nil {
 		t.Fatal(err)
 	}
@@ -310,5 +328,10 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	handler.ServeHTTP(res, orgReq)
 	if res.Code != http.StatusUnauthorized {
 		t.Fatalf("frozen account organization authentication: %d %s", res.Code, res.Body.String())
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, memberReq)
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("frozen account organization members authentication: %d %s", res.Code, res.Body.String())
 	}
 }
