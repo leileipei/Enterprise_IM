@@ -142,6 +142,20 @@ func TestCrossLegalGroupRequiresExplicitApproval(t *testing.T) {
 	}
 }
 
+func TestCrossLegalGroupDenialRetainsMatchedRuleForAudit(t *testing.T) {
+	req := input(member("member-a", "org-a", "legal-a"), member("member-b", "org-b", "legal-b"))
+	req.Action = ActionInviteGroup
+	allow := Rule{ID: "cross-org", TenantID: "tenant-a", Effect: EffectAllow, Action: ActionInviteGroup,
+		SourceOrganizationID: "org-a", TargetOrganizationID: "org-b", ApprovedBy: "admin-1",
+		EffectiveFrom: at.Add(-time.Hour)}
+	req.Rules = []Rule{allow}
+	got := Evaluate(req)
+	if got.Allowed || got.Reason != ReasonCrossLegalApprovalRequired ||
+		len(got.MatchedRuleIDs) != 1 || got.MatchedRuleIDs[0] != "cross-org" {
+		t.Fatalf("cross-legal denial lost matched rule: %+v", got)
+	}
+}
+
 func TestRuleFromOtherTenantCannotAuthorize(t *testing.T) {
 	req := input(member("member-a", "org-a", "legal-a"), member("member-b", "org-b", "legal-b"))
 	allow := Rule{

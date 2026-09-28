@@ -71,7 +71,9 @@ type Rule struct {
 	TargetMembershipID   string
 	Bidirectional        bool
 	OverrideRuleID       string
+	RequestedBy          string
 	ApprovedBy           string
+	Reason               string
 	CrossLegalApproved   bool
 	EffectiveFrom        time.Time
 	EffectiveTo          time.Time
@@ -214,7 +216,14 @@ func Evaluate(in Input) Decision {
 			}
 		}
 		if !approved {
-			return denied(ReasonCrossLegalApprovalRequired)
+			ids := slices.Clone(usedExceptions)
+			for _, rule := range allows {
+				ids = append(ids, rule.ID)
+			}
+			slices.Sort(ids)
+			slices.Sort(covered)
+			return Decision{Reason: ReasonCrossLegalApprovalRequired, PolicyVersion: in.PolicyVersion,
+				MatchedRuleIDs: ids, OverriddenRuleIDs: covered}
 		}
 	}
 	if len(usedExceptions) > 0 {
