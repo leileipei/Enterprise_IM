@@ -30,6 +30,21 @@ BEGIN
           (NEW.tenant_id, NEW.version, NEW.published_by_user_id, NEW.reason, NEW.created_at) THEN
         RAISE EXCEPTION 'published policy versions are immutable' USING ERRCODE = '23514';
     END IF;
+    IF TG_OP = 'UPDATE' AND EXISTS (
+        SELECT 1 FROM policy_rules exception_rule
+        LEFT JOIN policy_rules covered_rule
+          ON covered_rule.tenant_id=exception_rule.tenant_id
+         AND covered_rule.version=exception_rule.version
+         AND covered_rule.rule_id=exception_rule.override_rule_id
+        WHERE exception_rule.tenant_id=NEW.tenant_id
+          AND exception_rule.version=NEW.version
+          AND exception_rule.effect='exception_allow'
+          AND (covered_rule.effect IS DISTINCT FROM 'isolate'
+               OR covered_rule.action IS DISTINCT FROM exception_rule.action)
+    ) THEN
+        RAISE EXCEPTION 'exception must cover an isolation rule for the same action'
+            USING ERRCODE = '23514';
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -118,8 +133,14 @@ BEGIN
     IF TG_OP = 'DELETE' THEN
         RAISE EXCEPTION 'current policy pointer cannot be deleted' USING ERRCODE = '23514';
     END IF;
-    IF TG_OP = 'UPDATE' AND NEW.current_version <> OLD.current_version + 1 THEN
-        RAISE EXCEPTION 'policy version must advance by one' USING ERRCODE = '23514';
+    IF TG_OP = 'INSERT' AND NEW.current_version <> 1 THEN
+        RAISE EXCEPTION 'initial policy version must be one' USING ERRCODE = '23514';
+    END IF;
+    IF TG_OP = 'UPDATE' AND
+       (NEW.tenant_id IS DISTINCT FROM OLD.tenant_id OR
+        NEW.current_version <> OLD.current_version + 1) THEN
+        RAISE EXCEPTION 'policy pointer tenant is fixed and version must advance by one'
+            USING ERRCODE = '23514';
     END IF;
     SELECT status INTO version_status FROM policy_versions
     WHERE tenant_id=NEW.tenant_id AND version=NEW.current_version FOR SHARE;

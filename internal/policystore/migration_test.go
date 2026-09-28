@@ -128,3 +128,32 @@ func TestPolicyMigrationRollsBackAndReapplies(t *testing.T) {
 	}
 	seed(t, conn)
 }
+
+func TestPolicyCurrentTenantCannotChange(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	run(t, conn, "INSERT INTO policy_versions (tenant_id,version,status,published_by_user_id,reason) VALUES ($1,1,'draft',$2,'A 首版'),($3,2,'draft',$4,'B 二版')", tenantA, adminA, tenantB, personB)
+	run(t, conn, "UPDATE policy_versions SET status='published',published_at=$3 WHERE tenant_id=$1 AND version=$2", tenantA, int64(1), at)
+	run(t, conn, "UPDATE policy_versions SET status='published',published_at=$3 WHERE tenant_id=$1 AND version=$2", tenantB, int64(2), at)
+	reject(t, conn, "INSERT INTO policy_current (tenant_id,current_version) VALUES ($1,2)", tenantB)
+	run(t, conn, "INSERT INTO policy_current (tenant_id,current_version) VALUES ($1,1)", tenantA)
+	reject(t, conn, "UPDATE policy_current SET tenant_id=$2,current_version=2 WHERE tenant_id=$1", tenantA, tenantB)
+}
+
+func TestPolicyExceptionRequiresMatchingIsolationAtPublication(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	run(t, conn, "INSERT INTO policy_versions (tenant_id,version,status,published_by_user_id,reason) VALUES ($1,1,'draft',$2,'错误例外')", tenantA, adminA)
+	run(t, conn, "INSERT INTO policy_rules (tenant_id,version,rule_id,effect,action,source_organization_id,target_organization_id,reason,effective_from) VALUES ($1,1,'isolate-1','isolate','send_message',$2,$3,'消息隔离','2020-01-01')", tenantA, orgA, orgA2)
+	run(t, conn, "INSERT INTO policy_rules (tenant_id,version,rule_id,effect,action,source_organization_id,target_organization_id,source_membership_id,target_membership_id,override_rule_id,requested_by_user_id,approved_by_user_id,reason,effective_from,effective_to) VALUES ($1,1,'exception-1','exception_allow','start_chat',$2,$3,$4,$5,'isolate-1',$6,$6,'错误覆盖','2020-01-01','2027-01-01')", tenantA, orgA, orgA2, adminM, targetM, adminA)
+	reject(t, conn, "UPDATE policy_versions SET status='published',published_at=$2 WHERE tenant_id=$1 AND version=1", tenantA, at)
+}
+
+func TestPolicyExceptionCannotCoverAllowRule(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	run(t, conn, "INSERT INTO policy_versions (tenant_id,version,status,published_by_user_id,reason) VALUES ($1,1,'draft',$2,'错误覆盖')", tenantA, adminA)
+	run(t, conn, "INSERT INTO policy_rules (tenant_id,version,rule_id,effect,action,source_organization_id,target_organization_id,requested_by_user_id,approved_by_user_id,reason,effective_from,effective_to) VALUES ($1,1,'allow-1','allow','start_chat',$2,$3,$4,$4,'白名单','2020-01-01','2027-01-01')", tenantA, orgA, orgA2, adminA)
+	run(t, conn, "INSERT INTO policy_rules (tenant_id,version,rule_id,effect,action,source_organization_id,target_organization_id,source_membership_id,target_membership_id,override_rule_id,requested_by_user_id,approved_by_user_id,reason,effective_from,effective_to) VALUES ($1,1,'exception-1','exception_allow','start_chat',$2,$3,$4,$5,'allow-1',$6,$6,'错误覆盖','2020-01-01','2027-01-01')", tenantA, orgA, orgA2, adminM, targetM, adminA)
+	reject(t, conn, "UPDATE policy_versions SET status='published',published_at=$2 WHERE tenant_id=$1 AND version=1", tenantA, at)
+}
