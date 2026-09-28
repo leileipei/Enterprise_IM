@@ -34,10 +34,10 @@
 
 **Interfaces:** `Event` 包含 `ID/TenantID/ConversationID/MessageID/EventType/Seq`；`Publisher.Publish(context.Context, Event) error`；`Worker.ProcessOne(context.Context) (bool, error)`。
 
-- [ ] 写失败测试：无到期事件、成功发布标记、失败退避、多连接 `SKIP LOCKED`、状态更新故障回滚。
-- [ ] 运行定向测试确认缺少 Worker。
-- [ ] 实现单条事务领取、5 秒发布超时、原子状态更新和指数退避。
-- [ ] 运行 PostgreSQL 定向测试并提交。
+- [x] 写失败测试：无到期事件、成功发布标记、失败退避、多连接 `SKIP LOCKED`、状态更新故障回滚。
+- [x] 运行定向测试确认缺少 Worker。
+- [x] 实现单条事务领取、5 秒发布超时、原子状态更新和指数退避。
+- [x] 运行 PostgreSQL 定向测试并提交。
 
 ### Task 2: Redis Stream 适配器
 
