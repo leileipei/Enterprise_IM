@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1-01 集团模型与通信策略核心、P1-02a 管理授权与单组织离职、P1-02b 策略快照及决策审计，并新增 P1-03a 受保护管理 API 合约。`internal/httpserver.HandlerWithAdmin` 必须接入真实令牌验证与用户映射后才能挂载管理路由；当前可运行服务仍只暴露健康探针。**尚无真实登录、已启用的业务管理接口、聊天界面或消息收发功能。**
+本分支实现 P1-01 集团模型与通信策略核心、P1-02a 管理授权与单组织离职、P1-02b 策略快照及决策审计、P1-03a 受保护管理 API，以及 P1-03b OIDC JWT 访问令牌验证与本地身份映射。配置有效的身份提供方后，可显式启用人员查询和单组织离职接口。**尚无浏览器登录流程、聊天界面或消息收发功能；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -13,7 +13,7 @@
 | `GET /api/v1/admin/users/{id}` | 查询授权范围内的人员任职 | 200，snake_case JSON |
 | `POST /api/v1/admin/memberships/{id}:end` | 结束一个组织任职 | 204，无响应体 |
 
-两者要求 `Authorization: Bearer <token>` 和 `X-Acting-Membership-ID: <uuid>`。认证适配器必须验证令牌并映射本地租户与用户；选定任职由数据库二次校验。401 表示未认证，400 表示 ID 或请求格式错误，403 表示身份失效，404 隐藏无权限资源，409 表示状态冲突，503 表示认证、审计或数据库不可用。不能把测试用认证桩接入生产服务。
+两者要求 `Authorization: Bearer <access-token>` 和 `X-Acting-Membership-ID: <uuid>`。访问令牌须为签给本 API 的 RFC 9068 JWT，具有 RS256 签名、`at+jwt` 类型、正确发行方及受众，并包含允许的 `client_id`。仅通过 `(issuer, sub)` 查找受控导入的本地身份绑定；选定任职由数据库二次校验。ID Token、邮件地址和请求中的租户 ID 不用于映射。401 表示未认证，400 表示 ID 或请求格式错误，403 表示身份失效，404 隐藏无权限资源，409 表示状态冲突，503 表示认证、审计或数据库不可用。
 
 ## 本地运行
 
@@ -26,6 +26,7 @@ docker run --rm -d --name enterprise-im-dev-db -e POSTGRES_PASSWORD=local_only_p
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000001_group_foundation.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000002_admin_access.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000003_policy_store.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000004_external_identities.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -39,6 +40,18 @@ go run ./cmd/im-api
 
 服务默认监听 `:8080`，可用 `IM_HTTP_ADDR` 修改。探针为 `GET /health/live` 与 `GET /health/ready`；数据库不可用时 ready 返回 503。不要在共享环境使用示例密码，服务不会在日志中打印 DSN。
 
+默认 `IM_OIDC_ENABLED` 为空，服务只暴露健康检查。启用受保护管理 API 前，先核对 IdP 能签发上述 JWT 访问令牌，迁移数据库，并导入与本地用户一一核对的 `external_identities` 绑定及管理员授权。然后配置：
+
+```sh
+export IM_OIDC_ENABLED=true
+export IM_OIDC_ISSUER='https://sso.example.com/group'
+export IM_OIDC_AUDIENCE='enterprise-im-api'
+export IM_OIDC_JWKS_URL='https://sso.example.com/group/keys'
+export IM_OIDC_ALLOWED_CLIENT_IDS='enterprise-im-web,enterprise-im-desktop'
+```
+
+这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。当前仅验证外部签发的访问令牌，不提供授权码回调或客户端登录页面；非标准或不透明令牌需另建适配器。
+
 ## 测试
 
 ```sh
@@ -47,4 +60,4 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。回滚时按 `000003`、`000002`、`000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000004`、`000003`、`000002`、`000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。
