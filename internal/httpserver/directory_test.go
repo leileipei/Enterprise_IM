@@ -18,6 +18,93 @@ func (f directoryFunc) GetVisibleMembership(ctx context.Context, id access.Trust
 	return f(ctx, id, target)
 }
 
+func (f directoryFunc) FindVisiblePersonByEmployeeNo(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error) {
+	return policystore.DirectoryPerson{}, policystore.ErrDirectoryNotVisible
+}
+
+type directoryLookupStub struct {
+	lookup func(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error)
+}
+
+func (s directoryLookupStub) GetVisibleMembership(context.Context, access.TrustedIdentity, string) (policystore.DirectoryMembership, error) {
+	return policystore.DirectoryMembership{}, policystore.ErrDirectoryNotVisible
+}
+
+func (s directoryLookupStub) FindVisiblePersonByEmployeeNo(ctx context.Context, id access.TrustedIdentity, number string) (policystore.DirectoryPerson, error) {
+	return s.lookup(ctx, id, number)
+}
+
+func TestDirectoryLookupRouteUsesVerifiedActorAndReturnsVisibleAssignments(t *testing.T) {
+	service := directoryLookupStub{lookup: func(_ context.Context, id access.TrustedIdentity, number string) (policystore.DirectoryPerson, error) {
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) || number != "A002" {
+			t.Fatalf("untrusted lookup input: %+v %q", id, number)
+		}
+		return policystore.DirectoryPerson{ID: targetUserID, DisplayName: "同事", EmployeeNo: "A002",
+			Memberships: []policystore.DirectoryMembership{{MembershipID: targetMemID, OrganizationID: tenantID,
+				OrganizationName: "总部", Title: "工程师", Departments: []access.Department{{ID: actingID, Name: "技术部"}}}}}, nil
+	}}
+	handler, err := HandlerWithDirectory(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := adminRequest(http.MethodGet, "/api/v1/directory/users?employee_no=%20A002%20")
+	req.Header.Set("X-Tenant-ID", "99999999-9999-4999-8999-999999999999")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"employee_no":"A002"`) ||
+		!strings.Contains(res.Body.String(), `"membership_id":"`+targetMemID+`"`) ||
+		!strings.Contains(res.Body.String(), `"departments":[`) || strings.Contains(res.Body.String(), "TenantID") {
+		t.Fatalf("lookup response: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestDirectoryLookupRouteRejectsMalformedQueriesAndMapsErrors(t *testing.T) {
+	handler, err := HandlerWithDirectory(Handler(nil), authFunc(verified), directoryLookupStub{lookup: func(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error) {
+		return policystore.DirectoryPerson{}, policystore.ErrDirectoryNotVisible
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		"/api/v1/directory/users", "/api/v1/directory/users?employee_no=%20",
+		"/api/v1/directory/users?employee_no=A002&employee_no=A003",
+		"/api/v1/directory/users?employee_no=A002&scope_allowed=true",
+		"/api/v1/directory/users?employee_no=A%00", "/api/v1/directory/users?employee_no=%FF",
+		"/api/v1/directory/users?employee_no=" + strings.Repeat("A", 129),
+	} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(http.MethodGet, path))
+		if res.Code != http.StatusBadRequest {
+			t.Fatalf("invalid lookup %q: %d %s", path, res.Code, res.Body.String())
+		}
+	}
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, adminRequest(http.MethodPost, "/api/v1/directory/users?employee_no=A002"))
+	if res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "GET" {
+		t.Fatalf("wrong method: %d %s", res.Code, res.Body.String())
+	}
+	for _, failure := range []struct {
+		err    error
+		status int
+	}{
+		{policystore.ErrDirectoryNotVisible, http.StatusNotFound},
+		{policystore.ErrForbidden, http.StatusForbidden},
+		{errors.Join(policystore.ErrAuditUnavailable, errors.New("private detail")), http.StatusServiceUnavailable},
+	} {
+		failed, err := HandlerWithDirectory(Handler(nil), authFunc(verified), directoryLookupStub{lookup: func(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error) {
+			return policystore.DirectoryPerson{}, failure.err
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		res := httptest.NewRecorder()
+		failed.ServeHTTP(res, adminRequest(http.MethodGet, "/api/v1/directory/users?employee_no=A002"))
+		if res.Code != failure.status || strings.Contains(res.Body.String(), "private detail") {
+			t.Fatalf("lookup error: %d %s", res.Code, res.Body.String())
+		}
+	}
+}
+
 func TestDirectoryRouteRequiresDependenciesAndToken(t *testing.T) {
 	service := directoryFunc(func(context.Context, access.TrustedIdentity, string) (policystore.DirectoryMembership, error) {
 		return policystore.DirectoryMembership{}, nil
