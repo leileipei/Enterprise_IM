@@ -18,6 +18,7 @@ type DirectoryService interface {
 	GetVisibleMembership(context.Context, access.TrustedIdentity, string) (policystore.DirectoryMembership, error)
 	FindVisiblePersonByEmployeeNo(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error)
 	SearchVisiblePeople(context.Context, access.TrustedIdentity, string, int) (policystore.DirectorySearchPage, error)
+	ListVisibleOrganizations(context.Context, access.TrustedIdentity) ([]policystore.DirectoryOrganization, error)
 }
 
 // HandlerWithDirectory adds ordinary directory lookup and detail routes.
@@ -32,6 +33,15 @@ func HandlerWithDirectory(base http.Handler, authenticator Authenticator, direct
 		}
 		identity, ok := authenticateAdmin(w, r, authenticator)
 		if !ok {
+			return
+		}
+		if r.URL.Path == "/api/v1/directory/organizations" {
+			if r.Method != http.MethodGet {
+				w.Header().Set("Allow", http.MethodGet)
+				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+				return
+			}
+			listDirectoryOrganizations(w, r, identity, directory)
 			return
 		}
 		if r.URL.Path == "/api/v1/directory/users" {
@@ -86,6 +96,29 @@ func HandlerWithDirectory(base http.Handler, authenticator Authenticator, direct
 			IsPrimary: profile.IsPrimary, Departments: departments,
 		})
 	}), nil
+}
+
+func listDirectoryOrganizations(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, directory DirectoryService) {
+	if r.URL.RawQuery != "" {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	nodes, err := directory.ListVisibleOrganizations(r.Context(), identity)
+	if err != nil {
+		writeDirectoryError(w, err)
+		return
+	}
+	result := directoryOrganizationsDTO{Organizations: make([]directoryOrganizationDTO, 0, len(nodes))}
+	for _, node := range nodes {
+		item := directoryOrganizationDTO{ID: node.ID, Name: node.Name,
+			OrgType: node.OrgType, HasVisibleMembers: node.HasVisibleMembers}
+		if node.ParentID != "" {
+			parentID := node.ParentID
+			item.ParentID = &parentID
+		}
+		result.Organizations = append(result.Organizations, item)
+	}
+	writeAdminJSON(w, http.StatusOK, result)
 }
 
 func lookupDirectoryPerson(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, directory DirectoryService) {
@@ -202,6 +235,18 @@ type directoryPersonDTO struct {
 type directorySearchPageDTO struct {
 	People  []directoryPersonDTO `json:"people"`
 	HasMore bool                 `json:"has_more"`
+}
+
+type directoryOrganizationDTO struct {
+	ID                string  `json:"id"`
+	ParentID          *string `json:"parent_id"`
+	Name              string  `json:"name"`
+	OrgType           string  `json:"org_type"`
+	HasVisibleMembers bool    `json:"has_visible_members"`
+}
+
+type directoryOrganizationsDTO struct {
+	Organizations []directoryOrganizationDTO `json:"organizations"`
 }
 
 type directoryMembershipDTO struct {

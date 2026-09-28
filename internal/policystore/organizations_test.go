@@ -3,14 +3,111 @@ package policystore_test
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leileipei/Enterprise_IM/internal/policy"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
 
 const visibleRoot = "00000000-0000-4000-8000-000000000291"
+
+type organizationSnapshotGateDB struct {
+	conn    *pgx.Conn
+	reached chan struct{}
+	resume  chan struct{}
+}
+
+func (db organizationSnapshotGateDB) Begin(ctx context.Context) (pgx.Tx, error) {
+	tx, err := db.conn.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return organizationSnapshotGateTx{Tx: tx, reached: db.reached, resume: db.resume}, nil
+}
+
+type organizationSnapshotGateTx struct {
+	pgx.Tx
+	reached chan struct{}
+	resume  chan struct{}
+}
+
+func (tx organizationSnapshotGateTx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	rows, err := tx.Tx.Query(ctx, sql, args...)
+	if err != nil || !strings.Contains(sql, "FROM organizations WHERE tenant_id=$1") {
+		return rows, err
+	}
+	return organizationSnapshotGateRows{Rows: rows, reached: tx.reached, resume: tx.resume}, nil
+}
+
+type organizationSnapshotGateRows struct {
+	pgx.Rows
+	reached chan struct{}
+	resume  chan struct{}
+}
+
+func (rows organizationSnapshotGateRows) Close() {
+	rows.Rows.Close()
+	close(rows.reached)
+	<-rows.resume
+}
+
+func TestVisibleOrganizationsPinsAncestorStatusDuringProjection(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	run(t, conn, "INSERT INTO organizations (id,tenant_id,org_type,code,name) VALUES ($1,$2,'virtual_group','root','集团根')", visibleRoot, tenantA)
+	run(t, conn, "UPDATE organizations SET parent_id=$1 WHERE id=$2", visibleRoot, orgA)
+	ctx := context.Background()
+	var searchPath string
+	if err := conn.QueryRow(ctx, "SHOW search_path").Scan(&searchPath); err != nil {
+		t.Fatal(err)
+	}
+	updater, err := pgx.Connect(ctx, os.Getenv("IM_TEST_DATABASE_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { updater.Close(ctx) })
+	if _, err := updater.Exec(ctx, "SET search_path TO "+searchPath); err != nil {
+		t.Fatal(err)
+	}
+	reached, resume := make(chan struct{}), make(chan struct{})
+	svc := policystore.Service{DB: organizationSnapshotGateDB{conn: conn, reached: reached, resume: resume}, Now: func() time.Time { return at }}
+	type result struct {
+		nodes []policystore.DirectoryOrganization
+		err   error
+	}
+	finished := make(chan result, 1)
+	go func() {
+		nodes, err := svc.ListVisibleOrganizations(ctx, publisher())
+		finished <- result{nodes: nodes, err: err}
+	}()
+	select {
+	case <-reached:
+	case <-time.After(5 * time.Second):
+		close(resume)
+		t.Fatal("organization snapshot was not read")
+	}
+	_, updateErr := updater.Exec(ctx, "SET statement_timeout='150ms'")
+	if updateErr == nil {
+		_, updateErr = updater.Exec(ctx, "UPDATE organizations SET status='disabled' WHERE id=$1", visibleRoot)
+	}
+	close(resume)
+	got := <-finished
+	if updateErr == nil {
+		t.Fatal("ancestor was disabled while directory projection used its old status")
+	}
+	var pgErr *pgconn.PgError
+	if !errors.As(updateErr, &pgErr) || pgErr.Code != "57014" {
+		t.Fatalf("expected blocked ancestor update, got %v", updateErr)
+	}
+	if got.err != nil || len(got.nodes) != 2 || got.nodes[0].ID != visibleRoot || got.nodes[1].ID != orgA {
+		t.Fatalf("organization projection changed after locked snapshot: %+v %v", got.nodes, got.err)
+	}
+}
 
 func TestVisibleOrganizationsIncludeOnlyVisibleBranchAndActiveAncestors(t *testing.T) {
 	conn := db(t)

@@ -8,19 +8,19 @@
 
 **文件：**新增 `internal/policystore/organizations.go`、`organizations_test.go`。
 
-- [ ] 先写 PostgreSQL 失败测试：同组织与隐藏分支、虚拟祖先、发布放行/强制拒绝、停用祖先、跨租户、身份失效与审计失败。
-- [ ] 运行定向测试，确认新服务方法缺失导致失败。
-- [ ] 实现 `ListVisibleOrganizations(ctx,id) ([]DirectoryOrganization,error)`；同事务锁定身份，按当前策略逐任职判断，审计并投影有效祖先。
-- [ ] 运行定向测试并提交领域层增量。
+- [x] 先写 PostgreSQL 失败测试：同组织与隐藏分支、虚拟祖先、发布放行/强制拒绝、停用祖先、跨租户、身份失效与审计失败。
+- [x] 运行定向测试，确认新服务方法缺失导致失败。
+- [x] 实现 `ListVisibleOrganizations(ctx,id) ([]DirectoryOrganization,error)`；同事务锁定身份，按当前策略逐任职判断，审计并投影有效祖先。
+- [x] 运行定向测试并提交领域层增量。
 
 ## Task 2：受保护接口与完整链路
 
 **文件：**修改 `internal/httpserver/directory.go`、`directory_test.go`、`internal/oidcauth/store_test.go`、`README.md`。
 
-- [ ] 先写 HTTP 失败测试：验证身份、无查询参数、GET 限制、响应顺序与错误映射。
-- [ ] 运行定向测试，确认新路由缺失导致失败。
-- [ ] 接入 `GET /api/v1/directory/organizations`，更新用户文档与签名令牌集成测试。
-- [ ] 运行完整 PostgreSQL 测试、静态检查、构建及差异检查；独立审阅后提交并建立草稿 PR。
+- [x] 先写 HTTP 失败测试：验证身份、无查询参数、GET 限制、响应顺序与错误映射。
+- [x] 运行定向测试，确认新路由缺失导致失败。
+- [x] 接入 `GET /api/v1/directory/organizations`，更新用户文档与签名令牌集成测试。
+- [x] 运行完整 PostgreSQL 测试、静态检查、构建及差异检查；独立审阅后提交并建立草稿 PR。
 
 ## Review Focus
 

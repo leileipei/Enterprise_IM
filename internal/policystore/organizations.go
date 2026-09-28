@@ -169,9 +169,11 @@ func possibleDirectoryOrganizations(actorOrgID string, rules []policy.Rule) (map
 }
 
 func loadDirectoryOrganizations(ctx context.Context, tx pgx.Tx, tenantID string) (map[string]directoryOrgRow, error) {
+	// Pin ancestor status and parent links until the tree response commits.
 	rows, err := tx.Query(ctx, `
 SELECT id::text,COALESCE(parent_id::text,''),name,org_type,status
-FROM organizations WHERE tenant_id=$1`, tenantID)
+FROM organizations WHERE tenant_id=$1
+ORDER BY id FOR SHARE NOWAIT`, tenantID)
 	if err != nil {
 		return nil, err
 	}
