@@ -207,3 +207,23 @@ func TestProcessOneStatusUpdateFailureKeepsEventPending(t *testing.T) {
 		t.Fatalf("status failure changed row: %q %d %v", status, attempts, err)
 	}
 }
+
+func TestProcessOneRejectsSuppressedStatusUpdate(t *testing.T) {
+	db := database(t)
+	seedEvent(t, db)
+	if _, err := db.Exec(context.Background(), `CREATE FUNCTION skip_publish_status() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(context.Background(), "CREATE TRIGGER skip_publish_status BEFORE UPDATE ON outbox_events FOR EACH ROW WHEN (NEW.status = 'published') EXECUTE FUNCTION skip_publish_status()"); err != nil {
+		t.Fatal(err)
+	}
+	worker := outbox.Worker{DB: db, Now: func() time.Time { return fixedNow }, Publisher: publisherFunc(func(context.Context, outbox.Event) error { return nil })}
+	processed, err := worker.ProcessOne(context.Background())
+	if !processed || err == nil {
+		t.Fatalf("suppressed update reported success: %t %v", processed, err)
+	}
+	var status string
+	if err := db.QueryRow(context.Background(), "SELECT status FROM outbox_events WHERE tenant_id=$1 AND id=$2", tenantID, eventID).Scan(&status); err != nil || status != "pending" {
+		t.Fatalf("suppressed update changed row: %s %v", status, err)
+	}
+}

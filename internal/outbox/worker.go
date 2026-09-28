@@ -10,6 +10,7 @@ import (
 )
 
 var ErrWorkerUnconfigured = errors.New("outbox worker requires database and publisher")
+var ErrOutboxUpdateMissing = errors.New("claimed outbox event was not updated")
 
 // Event contains identifiers only. Consumers fetch message content from the
 // PostgreSQL source of truth and deduplicate by ID.
@@ -78,23 +79,29 @@ LIMIT 1 FOR UPDATE SKIP LOCKED`, w.now()).
 	cancel()
 	at := w.now()
 	if publishErr != nil {
-		_, err = tx.Exec(ctx, `
+		tag, updateErr := tx.Exec(ctx, `
 UPDATE outbox_events SET attempt_count=attempt_count+1,next_retry_at=$3
 WHERE tenant_id=$1 AND id=$2 AND status='pending'`,
 			event.TenantID, event.ID, at.Add(retryDelay(failedAttempts)))
-		if err != nil {
-			return true, errors.Join(publishErr, err)
+		if updateErr != nil {
+			return true, errors.Join(publishErr, updateErr)
+		}
+		if tag.RowsAffected() != 1 {
+			return true, errors.Join(publishErr, ErrOutboxUpdateMissing)
 		}
 		if err := tx.Commit(ctx); err != nil {
 			return true, errors.Join(publishErr, err)
 		}
 		return true, publishErr
 	}
-	_, err = tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 UPDATE outbox_events SET status='published',attempt_count=attempt_count+1,published_at=$3
 WHERE tenant_id=$1 AND id=$2 AND status='pending'`, event.TenantID, event.ID, at)
 	if err != nil {
 		return true, err
+	}
+	if tag.RowsAffected() != 1 {
+		return true, ErrOutboxUpdateMissing
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return true, err
