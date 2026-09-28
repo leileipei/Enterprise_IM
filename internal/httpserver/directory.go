@@ -19,6 +19,7 @@ type DirectoryService interface {
 	FindVisiblePersonByEmployeeNo(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error)
 	SearchVisiblePeople(context.Context, access.TrustedIdentity, string, int) (policystore.DirectorySearchPage, error)
 	ListVisibleOrganizations(context.Context, access.TrustedIdentity) ([]policystore.DirectoryOrganization, error)
+	ListVisibleOrganizationMembers(context.Context, access.TrustedIdentity, string, string, int) (policystore.DirectoryMemberPage, error)
 }
 
 // HandlerWithDirectory adds ordinary directory lookup and detail routes.
@@ -42,6 +43,20 @@ func HandlerWithDirectory(base http.Handler, authenticator Authenticator, direct
 				return
 			}
 			listDirectoryOrganizations(w, r, identity, directory)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/v1/directory/organizations/") {
+			parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/directory/organizations/"), "/")
+			if len(parts) != 2 || parts[1] != "members" {
+				rejectAdmin(w, r, http.StatusNotFound, "not_found")
+				return
+			}
+			if r.Method != http.MethodGet {
+				w.Header().Set("Allow", http.MethodGet)
+				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+				return
+			}
+			listDirectoryOrganizationMembers(w, r, identity, directory, parts[0])
 			return
 		}
 		if r.URL.Path == "/api/v1/directory/users" {
@@ -96,6 +111,50 @@ func HandlerWithDirectory(base http.Handler, authenticator Authenticator, direct
 			IsPrimary: profile.IsPrimary, Departments: departments,
 		})
 	}), nil
+}
+
+func listDirectoryOrganizationMembers(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, directory DirectoryService, orgID string) {
+	if !validUUID(orgID) {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	params, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil || len(params) > 2 {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	for key, values := range params {
+		if (key != "limit" && key != "after") || len(values) != 1 || values[0] == "" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	limit := 20
+	if values, present := params["limit"]; present {
+		limit, err = strconv.Atoi(values[0])
+		if err != nil || limit < 1 || limit > 20 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	after := params.Get("after")
+	if after != "" && !validUUID(after) {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	page, err := directory.ListVisibleOrganizationMembers(r.Context(), identity, orgID, after, limit)
+	if err != nil {
+		writeDirectoryError(w, err)
+		return
+	}
+	result := directoryMemberPageDTO{People: make([]directoryPersonDTO, 0, len(page.People)), HasMore: page.HasMore}
+	for _, person := range page.People {
+		result.People = append(result.People, directoryPersonResponse(person))
+	}
+	if page.NextAfter != "" {
+		result.NextAfter = &page.NextAfter
+	}
+	writeAdminJSON(w, http.StatusOK, result)
 }
 
 func listDirectoryOrganizations(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, directory DirectoryService) {
@@ -206,6 +265,8 @@ func writeDirectoryError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, policystore.ErrInvalidEmployeeNo):
 		writeAdminError(w, http.StatusBadRequest, "invalid_employee_no")
+	case errors.Is(err, policystore.ErrInvalidDirectoryPage):
+		writeAdminError(w, http.StatusBadRequest, "invalid_request")
 	case errors.Is(err, policystore.ErrForbidden):
 		writeAdminError(w, http.StatusForbidden, "invalid_identity")
 	case errors.Is(err, policystore.ErrDirectoryNotVisible):
@@ -235,6 +296,12 @@ type directoryPersonDTO struct {
 type directorySearchPageDTO struct {
 	People  []directoryPersonDTO `json:"people"`
 	HasMore bool                 `json:"has_more"`
+}
+
+type directoryMemberPageDTO struct {
+	People    []directoryPersonDTO `json:"people"`
+	HasMore   bool                 `json:"has_more"`
+	NextAfter *string              `json:"next_after"`
 }
 
 type directoryOrganizationDTO struct {
