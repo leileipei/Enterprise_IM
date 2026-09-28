@@ -42,6 +42,7 @@ func TestPullTextMessagesPagesForBothParticipantsAndPreservesReselectedHistory(t
 	}
 	other.UserID = strings.ToUpper(other.UserID)
 	other.ActingMembershipID = strings.ToUpper(other.ActingMembershipID)
+	other.TenantID = strings.ToUpper(other.TenantID)
 	page, err = svc.PullTextMessages(context.Background(), other, directA, 0, 10)
 	if err != nil || len(page.Messages) != 3 || page.Messages[0].Redacted {
 		t.Fatalf("uppercase UUID recipient lost history: %+v %v", page, err)

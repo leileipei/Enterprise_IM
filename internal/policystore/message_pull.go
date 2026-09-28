@@ -56,6 +56,9 @@ func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity
 	if s.DB == nil || id.TenantID == "" || id.UserID == "" || id.ActingMembershipID == "" {
 		return MessagePage{}, ErrForbidden
 	}
+	id.TenantID = strings.ToLower(id.TenantID)
+	id.UserID = strings.ToLower(id.UserID)
+	id.ActingMembershipID = strings.ToLower(id.ActingMembershipID)
 	tx, err := s.DB.Begin(ctx)
 	if err != nil {
 		return MessagePage{}, err
