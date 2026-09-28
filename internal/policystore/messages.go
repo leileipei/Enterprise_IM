@@ -282,10 +282,11 @@ WHERE tenant_id=$1 AND id=$2 RETURNING last_seq`, id.TenantID, conversationID, a
 	}
 	err = tx.QueryRow(ctx, `INSERT INTO messages
  (tenant_id,conversation_id,seq,sender_user_id,sender_membership_id,
-  recipient_user_id,recipient_membership_id,client_msg_id,text_body,content_digest,accepted_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id::text`, id.TenantID, conversationID,
+  recipient_user_id,recipient_membership_id,sender_organization_id,recipient_organization_id,
+  client_msg_id,text_body,content_digest,accepted_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id::text`, id.TenantID, conversationID,
 		ack.Seq, id.UserID, id.ActingMembershipID, targetUserID, targetMembershipID,
-		clientMessageID, body, digest[:], at).Scan(&ack.MessageID)
+		actor.OrganizationID, target.OrganizationID, clientMessageID, body, digest[:], at).Scan(&ack.MessageID)
 	if err != nil {
 		return MessageACK{}, err
 	}

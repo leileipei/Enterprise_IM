@@ -45,9 +45,9 @@ func TestSendTextMessageCommitsACKAndOutboxOnce(t *testing.T) {
 	if err := conn.QueryRow(context.Background(), "SELECT last_seq FROM conversations WHERE id=$1", directA).Scan(&seq); err != nil || seq != 1 {
 		t.Fatalf("last_seq: %d %v", seq, err)
 	}
-	var recipientUser, recipientMember string
-	if err := conn.QueryRow(context.Background(), "SELECT recipient_user_id::text,recipient_membership_id::text FROM messages WHERE id=$1", first.MessageID).Scan(&recipientUser, &recipientMember); err != nil || recipientUser != personA || recipientMember != targetM2 {
-		t.Fatalf("recipient at send: %s %s %v", recipientUser, recipientMember, err)
+	var recipientUser, recipientMember, senderOrg, recipientOrg string
+	if err := conn.QueryRow(context.Background(), "SELECT recipient_user_id::text,recipient_membership_id::text,sender_organization_id::text,recipient_organization_id::text FROM messages WHERE id=$1", first.MessageID).Scan(&recipientUser, &recipientMember, &senderOrg, &recipientOrg); err != nil || recipientUser != personA || recipientMember != targetM2 || senderOrg != orgA || recipientOrg != orgA {
+		t.Fatalf("recipient and organizations at send: %s %s %s %s %v", recipientUser, recipientMember, senderOrg, recipientOrg, err)
 	}
 	var decisions, audits, sentCount int
 	if err := conn.QueryRow(context.Background(), "SELECT count(*) FROM policy_decision_events WHERE action='send_message'").Scan(&decisions); err != nil || decisions != 1 {

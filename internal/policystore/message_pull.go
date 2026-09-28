@@ -66,6 +66,9 @@ func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity
 	if err != nil {
 		return MessagePage{}, err
 	}
+	if fresh := s.now(); fresh.After(at) {
+		at = fresh
+	}
 	if !found || !memberActiveAt(actor, at) {
 		if err := finishMessagePull(ctx, tx, id, "", "deny", "invalid_identity", at); err != nil {
 			return MessagePage{}, err
@@ -76,7 +79,7 @@ func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity
 	err = tx.QueryRow(ctx, `SELECT direct_user_low_id::text,direct_user_high_id::text
 FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
 		id.TenantID, conversationID).Scan(&lowUser, &highUser)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && id.UserID != lowUser && id.UserID != highUser) {
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !strings.EqualFold(id.UserID, lowUser) && !strings.EqualFold(id.UserID, highUser)) {
 		if err := finishMessagePull(ctx, tx, id, "", "deny", "conversation_unavailable", at); err != nil {
 			return MessagePage{}, err
 		}
@@ -103,16 +106,14 @@ FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
 	}
 	page := MessagePage{ConversationID: conversationID,
 		Messages: make([]PulledMessage, 0, min(limit, 100)), NextAfterSeq: afterSeq}
+	type historicalPair struct{ reader, peer policy.Membership }
+	histories := make([]historicalPair, 0, min(limit, 100))
 	rows, err := tx.Query(ctx, `
 SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,
  COALESCE(m.recipient_user_id::text,''),COALESCE(m.recipient_membership_id::text,''),
  m.text_body,m.accepted_at,
- COALESCE(sm.organization_id::text,''),COALESCE(rm.organization_id::text,'')
+ COALESCE(m.sender_organization_id::text,''),COALESCE(m.recipient_organization_id::text,'')
 FROM messages m
-LEFT JOIN user_organizations sm ON sm.tenant_id=m.tenant_id
- AND sm.user_id=m.sender_user_id AND sm.id=m.sender_membership_id
-LEFT JOIN user_organizations rm ON rm.tenant_id=m.tenant_id
- AND rm.user_id=m.recipient_user_id AND rm.id=m.recipient_membership_id
 WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3
 ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 	if err != nil {
@@ -133,27 +134,42 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 			break
 		}
 		item := PulledMessage{Seq: seq, Redacted: true}
+		history := historicalPair{}
 		validPair := (senderUser == lowUser && recipientUser == highUser) ||
 			(senderUser == highUser && recipientUser == lowUser)
 		if validPair && senderMember != "" && recipientMember != "" && senderOrg != "" && recipientOrg != "" {
 			sender := policy.Membership{ID: senderMember, TenantID: id.TenantID, OrganizationID: senderOrg}
 			recipient := policy.Membership{ID: recipientMember, TenantID: id.TenantID, OrganizationID: recipientOrg}
 			historicalReader, peer := sender, recipient
-			if id.UserID == recipientUser {
+			if strings.EqualFold(id.UserID, recipientUser) {
 				historicalReader, peer = recipient, sender
 			}
-			if !policy.HistoryHardDeny(actor, historicalReader, peer, at, rules) {
-				item = PulledMessage{MessageID: messageID, Seq: seq, SenderUserID: senderUser,
-					Text: body, ServerTime: acceptedAt, Redacted: false}
-			}
+			item = PulledMessage{MessageID: messageID, Seq: seq, SenderUserID: senderUser,
+				Text: body, ServerTime: acceptedAt, Redacted: false}
+			history = historicalPair{reader: historicalReader, peer: peer}
 		}
 		page.Messages = append(page.Messages, item)
+		histories = append(histories, history)
 		page.NextAfterSeq = seq
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
 		return MessagePage{}, err
+	}
+	if fresh := s.now(); fresh.After(at) {
+		at = fresh
+	}
+	if !memberActiveAt(actor, at) {
+		if err := finishMessagePull(ctx, tx, id, "", "deny", "invalid_identity", at); err != nil {
+			return MessagePage{}, err
+		}
+		return MessagePage{}, ErrForbidden
+	}
+	for i := range page.Messages {
+		if !page.Messages[i].Redacted && policy.HistoryHardDeny(actor, histories[i].reader, histories[i].peer, at, rules) {
+			page.Messages[i] = PulledMessage{Seq: page.Messages[i].Seq, Redacted: true}
+		}
 	}
 	if err := finishMessagePull(ctx, tx, id, conversationID, "allow", "history_page", at); err != nil {
 		return MessagePage{}, err

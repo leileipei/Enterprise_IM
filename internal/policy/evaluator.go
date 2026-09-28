@@ -109,7 +109,7 @@ func (r Rule) validException() bool {
 }
 
 // HistoryHardDeny revokes a previously authorized direct message when an
-// active hard-deny rule covers the historical pair or the reader's current
+// active send_message hard-deny rule covers the historical pair or the reader's current
 // membership and the historical peer. Both directions revoke the shared
 // message, even when the rule originally blocked only new sends one way.
 func HistoryHardDeny(currentReader, historicalReader, historicalPeer Membership, at time.Time, rules []Rule) bool {
@@ -119,7 +119,8 @@ func HistoryHardDeny(currentReader, historicalReader, historicalPeer Membership,
 		return true
 	}
 	for _, rule := range rules {
-		if rule.Effect != EffectHardDeny || rule.ID == "" || rule.TenantID != currentReader.TenantID || !rule.activeAt(at) {
+		if rule.Effect != EffectHardDeny || rule.Action != ActionSendMessage || rule.ID == "" ||
+			rule.TenantID != currentReader.TenantID || !rule.activeAt(at) {
 			continue
 		}
 		if rule.directedMatch(historicalReader, historicalPeer) ||

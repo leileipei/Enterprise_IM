@@ -99,11 +99,11 @@ func TestRecipientMigrationPreservesLegacyAndRejectsWrongMembership(t *testing.T
  (id,tenant_id,conversation_id,seq,sender_user_id,sender_membership_id,client_msg_id,text_body,content_digest)
  VALUES ($1,$2,$3,1,$4,$5,$6,'old',decode(repeat('ab',32),'hex'))`,
 		messageA, tenantA, directA, adminA, adminM, clientA)
-	var oldUser, oldMember *string
-	if err := conn.QueryRow(context.Background(), "SELECT recipient_user_id::text,recipient_membership_id::text FROM messages WHERE id=$1", messageA).Scan(&oldUser, &oldMember); err != nil || oldUser != nil || oldMember != nil {
-		t.Fatalf("legacy recipient should be unknown: %v %v %v", oldUser, oldMember, err)
+	var oldUser, oldMember, oldSenderOrg, oldRecipientOrg *string
+	if err := conn.QueryRow(context.Background(), "SELECT recipient_user_id::text,recipient_membership_id::text,sender_organization_id::text,recipient_organization_id::text FROM messages WHERE id=$1", messageA).Scan(&oldUser, &oldMember, &oldSenderOrg, &oldRecipientOrg); err != nil || oldUser != nil || oldMember != nil || oldSenderOrg != nil || oldRecipientOrg != nil {
+		t.Fatalf("legacy context should be unknown: %v %v %v %v %v", oldUser, oldMember, oldSenderOrg, oldRecipientOrg, err)
 	}
-	if _, err := conn.Exec(context.Background(), "UPDATE messages SET recipient_user_id=$1,recipient_membership_id=$2 WHERE id=$3", personA, adminM, messageA); err == nil {
+	if _, err := conn.Exec(context.Background(), "UPDATE messages SET recipient_user_id=$1,recipient_membership_id=$2,sender_organization_id=$3,recipient_organization_id=$3 WHERE id=$4", personA, adminM, orgA, messageA); err == nil {
 		t.Fatal("wrong user's recipient membership accepted")
 	}
 	if _, err := conn.Exec(context.Background(), "UPDATE messages SET recipient_user_id=$1 WHERE id=$2", personA, messageA); err == nil {

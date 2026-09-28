@@ -4,7 +4,7 @@
 
 **Goal:** 增加单聊文本消息按序号补拉，依据发送时双方任职和当前强制拒绝过滤正文。
 
-**Architecture:** 发送事务保存接收任职，读取服务按 tenant/conversation/seq 分页；HTTP 只解析身份和游标。旧消息无可靠接收任职时占位。
+**Architecture:** 发送事务保存接收任职和双方组织快照，读取服务按 tenant/conversation/seq 分页；HTTP 只解析身份和游标。旧消息无可靠接收任职时占位。
 
 **Tech Stack:** Go、pgx、PostgreSQL、现有 OIDC HTTP 认证。
 
@@ -30,7 +30,7 @@
 
 **Files:** `db/migrations/000007_message_recipient.up.sql`、`.down.sql`、`internal/policystore/messages.go`、`internal/policystore/messages_test.go`、`internal/policystore/message_send_test.go`、`internal/policystore/migration_test.go`
 
-- [ ] 写迁移和发送测试，确认新消息的接收用户/任职与会话选择一致，旧消息新列为空且数据库拒绝跨用户任职。
+- [ ] 写迁移和发送测试，确认新消息的接收用户/任职及双方组织快照与会话选择一致，旧消息新列为空且数据库拒绝跨用户任职。
 - [ ] 运行对应测试确认先失败。
 - [ ] 新增迁移、在发送事务写入接收用户及任职；更新测试迁移装载。
 - [ ] 运行对应测试并提交。

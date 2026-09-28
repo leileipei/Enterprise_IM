@@ -55,6 +55,12 @@ func TestHistoryHardDenyIgnoresOrdinaryRulesAndRevokesEitherDirection(t *testing
 	if HistoryHardDeny(currentActor, oldActor, peer, at, []Rule{ordinary}) {
 		t.Fatal("ordinary isolation revoked history")
 	}
+	directoryHard := ordinary
+	directoryHard.Effect = EffectHardDeny
+	directoryHard.Action = ActionDirectoryView
+	if HistoryHardDeny(currentActor, oldActor, peer, at, []Rule{directoryHard}) {
+		t.Fatal("directory-only hard deny revoked message history")
+	}
 	hard := ordinary
 	hard.Effect = EffectHardDeny
 	hard.Bidirectional = false

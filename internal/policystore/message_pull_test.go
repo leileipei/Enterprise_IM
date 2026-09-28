@@ -3,6 +3,7 @@ package policystore_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,6 +40,12 @@ func TestPullTextMessagesPagesForBothParticipantsAndPreservesReselectedHistory(t
 	if err != nil || len(page.Messages) != 0 || page.NextAfterSeq != 999 || page.HasMore {
 		t.Fatalf("empty page: %+v %v", page, err)
 	}
+	other.UserID = strings.ToUpper(other.UserID)
+	other.ActingMembershipID = strings.ToUpper(other.ActingMembershipID)
+	page, err = svc.PullTextMessages(context.Background(), other, directA, 0, 10)
+	if err != nil || len(page.Messages) != 3 || page.Messages[0].Redacted {
+		t.Fatalf("uppercase UUID recipient lost history: %+v %v", page, err)
+	}
 }
 
 func TestPullTextMessagesRedactsLegacyAndHardDeniedButNotOrdinaryIsolation(t *testing.T) {
@@ -65,6 +72,8 @@ func TestPullTextMessagesRedactsLegacyAndHardDeniedButNotOrdinaryIsolation(t *te
 		!page.Messages[1].Redacted || page.Messages[1].Text != "" || page.Messages[1].MessageID != "" {
 		t.Fatalf("ordinary/legacy filtering: %+v %v", page, err)
 	}
+	run(t, conn, "INSERT INTO organizations (id,tenant_id,legal_entity_id,org_type,code,name) VALUES ($1,$2,$3,'company','historical-new','新组织')", directOrgC, tenantA, legalA)
+	run(t, conn, "UPDATE user_organizations SET organization_id=$1 WHERE id=$2", directOrgC, targetM2)
 	hard := isolate
 	hard.ID = "hard"
 	hard.Effect = policy.EffectHardDeny
@@ -73,7 +82,40 @@ func TestPullTextMessagesRedactsLegacyAndHardDeniedButNotOrdinaryIsolation(t *te
 	}
 	page, err = svc.PullTextMessages(context.Background(), publisher(), directA, 0, 10)
 	if err != nil || len(page.Messages) != 2 || !page.Messages[0].Redacted || page.Messages[0].Text != "" {
-		t.Fatalf("hard deny leaked body: %+v %v", page, err)
+		t.Fatalf("hard deny leaked body after historical organization changed: %+v %v", page, err)
+	}
+}
+
+func TestPullTextMessagesRechecksTimeAfterLocksAndBeforeReturningBody(t *testing.T) {
+	conn := db(t)
+	seedDirectConversation(t, conn)
+	grantPublisher(t, conn)
+	writer := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	if _, err := writer.SendTextMessage(context.Background(), publisher(), directA, clientUUIDv7(at, 121), "secret"); err != nil {
+		t.Fatal(err)
+	}
+	hard := policy.Rule{ID: "future-hard", TenantID: tenantA, Effect: policy.EffectHardDeny,
+		Action: policy.ActionSendMessage, SourceOrganizationID: orgA, TargetOrganizationID: orgA,
+		EffectiveFrom: at.Add(time.Second), Reason: "future"}
+	if _, err := writer.Publish(context.Background(), publisher(), 0, []policy.Rule{hard}, "future"); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	puller := policystore.Service{DB: conn, Now: func() time.Time {
+		calls++
+		if calls >= 3 {
+			return at.Add(2 * time.Second)
+		}
+		return at
+	}}
+	page, err := puller.PullTextMessages(context.Background(), publisher(), directA, 0, 10)
+	if err != nil || len(page.Messages) != 1 || !page.Messages[0].Redacted || page.Messages[0].Text != "" || calls < 3 {
+		t.Fatalf("effective hard deny missed after wait: %+v %v calls=%d", page, err, calls)
+	}
+	run(t, conn, "UPDATE user_organizations SET effective_to=$1 WHERE id=$2", at.Add(time.Second), adminM)
+	calls = 0
+	if _, err := puller.PullTextMessages(context.Background(), publisher(), directA, 0, 10); !errors.Is(err, policystore.ErrForbidden) {
+		t.Fatalf("membership expired during read: %v", err)
 	}
 }
 
