@@ -45,9 +45,9 @@
 
 **Interfaces:** `RedisPublisher` 实现 `Publisher`，将稳定事件字段写入配置的 Stream。
 
-- [ ] 写失败测试：真实 Redis Stream 收到完整标识字段且没有正文；Redis 不可用返回错误。
-- [ ] 运行定向测试确认适配器缺失。
-- [ ] 引入 go-redis/v9 并实现 `XADD`；运行 Redis 与 PostgreSQL 集成测试并提交。
+- [x] 写失败测试：真实 Redis Stream 收到完整标识字段且没有正文；Redis 不可用返回错误。
+- [x] 运行定向测试确认适配器缺失。
+- [x] 引入 go-redis/v9 并实现 `XADD`；运行 Redis 与 PostgreSQL 集成测试并提交。
 
 ### Task 3: 独立进程与交付文档
 
