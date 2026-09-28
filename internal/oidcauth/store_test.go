@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
+	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
 
 const (
@@ -161,7 +162,7 @@ func TestExternalIdentityMigrationRollsBackAndReapplies(t *testing.T) {
 	seedIdentities(t, conn)
 }
 
-func TestSignedTokenThroughHTTPToAuditedAdminDirectory(t *testing.T) {
+func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) {
 	conn := identityDB(t)
 	seedIdentities(t, conn)
 	ctx := context.Background()
@@ -199,8 +200,13 @@ func TestSignedTokenThroughHTTPToAuditedAdminDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	handler, err = httpserver.HandlerWithDirectory(handler, auth, policystore.Service{DB: conn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	accessToken := signToken(t, key, testClaims(), "at+jwt", jwt.SigningMethodRS256)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users/"+targetID, nil)
-	req.Header.Set("Authorization", "Bearer "+signToken(t, key, testClaims(), "at+jwt", jwt.SigningMethodRS256))
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("X-Acting-Membership-ID", actorMembership)
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -213,5 +219,16 @@ func TestSignedTokenThroughHTTPToAuditedAdminDirectory(t *testing.T) {
 	}
 	if auditCount != 1 {
 		t.Fatalf("expected one allowed audit event, got %d", auditCount)
+	}
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/directory/memberships/"+targetMembership, nil)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("X-Acting-Membership-ID", actorMembership)
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"display_name":"Target User"`) {
+		t.Fatalf("ordinary directory response: %d %s", res.Code, res.Body.String())
+	}
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM policy_decision_events WHERE action='directory_view' AND allowed AND target_membership_id=$1", targetMembership).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("ordinary directory audit: %d %v", auditCount, err)
 	}
 }

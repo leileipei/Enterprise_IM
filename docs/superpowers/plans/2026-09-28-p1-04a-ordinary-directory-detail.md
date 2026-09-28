@@ -32,10 +32,10 @@
 
 **Interfaces:** `GetVisibleMembership(ctx context.Context, id access.TrustedIdentity, targetMembershipID string) (DirectoryMembership, error)`; `ErrDirectoryNotVisible` for hidden targets; reuse `ErrForbidden` and `ErrAuditUnavailable`.
 
-- [ ] Write failing PostgreSQL tests for same-org profile, cross-org denial/allow/hard deny, inactive identity/department, and audit failure.
-- [ ] Run `go test ./internal/policystore -run TestDirectory -count=1` with `IM_TEST_DATABASE_URL`; confirm missing interface failure.
-- [ ] Implement the transaction using existing membership, version, rule and decision audit helpers.
-- [ ] Rerun the targeted tests until they pass; commit the service increment.
+- [x] Write failing PostgreSQL tests for same-org profile, cross-org denial/allow/hard deny, inactive identity/department, and audit failure.
+- [x] Run `go test ./internal/policystore -run TestDirectory -count=1` with `IM_TEST_DATABASE_URL`; confirm missing interface failure.
+- [x] Implement the transaction using existing membership, version, rule and decision audit helpers.
+- [x] Rerun the targeted tests until they pass; commit the service increment.
 
 ### Task 2: Protected HTTP route and wiring
 
@@ -43,7 +43,11 @@
 
 **Interfaces:** `HandlerWithDirectory(base http.Handler, authenticator Authenticator, directory DirectoryService) (http.Handler, error)`; GET path `/api/v1/directory/memberships/{id}`.
 
-- [ ] Write failing HTTP tests for validated identity, response, malformed paths, wrong method, authentication first, and service errors.
-- [ ] Run `go test ./internal/httpserver -run TestDirectory -count=1`; confirm route construction is missing.
-- [ ] Implement route, integrate with OIDC-enabled main handler, and document request/response.
-- [ ] Run full PostgreSQL-backed `go test ./... -count=1`, `go vet ./...`, `go build ./cmd/im-api`, `git diff --check`; commit and request independent review.
+- [x] Write failing HTTP tests for validated identity, response, malformed paths, wrong method, authentication first, and service errors.
+- [x] Run `go test ./internal/httpserver -run TestDirectory -count=1`; confirm route construction is missing.
+- [x] Implement route, integrate with OIDC-enabled main handler, and document request/response.
+- [x] Run full PostgreSQL-backed `go test ./... -count=1`, `go vet ./...`, `go build ./cmd/im-api`, `git diff --check`; commit and request independent review.
+
+## Validation note
+
+本地 PostgreSQL 16 的完整测试、静态检查与构建已通过。独立审阅未发现明确的关键或重要问题。发布与详情读取的并发回归、以及临时规则在长时间请求中自然到期的等待场景，留作 P1 专项验收；当前判定按持有成员及租户锁后的服务端决策时刻执行。
