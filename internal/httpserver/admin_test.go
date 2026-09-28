@@ -29,8 +29,9 @@ func (f authFunc) Authenticate(ctx context.Context, token string) (VerifiedIdent
 }
 
 type adminStub struct {
-	get func(context.Context, access.TrustedIdentity, string) (access.Person, error)
-	end func(context.Context, access.TrustedIdentity, string) error
+	get    func(context.Context, access.TrustedIdentity, string) (access.Person, error)
+	end    func(context.Context, access.TrustedIdentity, string) error
+	search func(context.Context, access.TrustedIdentity, string, int) (access.SearchPage, error)
 }
 
 func (s adminStub) GetManagedPerson(ctx context.Context, id access.TrustedIdentity, target string) (access.Person, error) {
@@ -39,6 +40,10 @@ func (s adminStub) GetManagedPerson(ctx context.Context, id access.TrustedIdenti
 
 func (s adminStub) EndMembership(ctx context.Context, id access.TrustedIdentity, target string) error {
 	return s.end(ctx, id, target)
+}
+
+func (s adminStub) SearchManagedPeople(ctx context.Context, id access.TrustedIdentity, query string, limit int) (access.SearchPage, error) {
+	return s.search(ctx, id, query, limit)
 }
 
 func verified(_ context.Context, token string) (VerifiedIdentity, error) {
@@ -54,6 +59,59 @@ func testAdmin() adminStub {
 			return access.Person{ID: targetUserID, DisplayName: "目标用户", Memberships: []access.Membership{{ID: targetMemID, OrganizationID: tenantID, OrganizationName: "总部", Departments: []access.Department{{ID: actingID, Name: "信息中心"}}}}}, nil
 		},
 		end: func(context.Context, access.TrustedIdentity, string) error { return nil },
+		search: func(context.Context, access.TrustedIdentity, string, int) (access.SearchPage, error) {
+			return access.SearchPage{People: []access.SearchPerson{}}, nil
+		},
+	}
+}
+
+func TestAdminSearchUsesVerifiedIdentityAndBoundedQuery(t *testing.T) {
+	service := testAdmin()
+	service.search = func(_ context.Context, id access.TrustedIdentity, query string, limit int) (access.SearchPage, error) {
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) || query != "双任职" || limit != 1 {
+			t.Fatalf("unexpected search input: %+v %q %d", id, query, limit)
+		}
+		return access.SearchPage{People: []access.SearchPerson{{ID: targetUserID, EmployeeNo: "A002", DisplayName: "双任职人员"}}, HasMore: true}, nil
+	}
+	handler, err := HandlerWithAdmin(nil, authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, adminRequest(http.MethodGet, "/api/v1/admin/users?q=%E5%8F%8C%E4%BB%BB%E8%81%8C&limit=1"))
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"employee_no":"A002"`) || !strings.Contains(res.Body.String(), `"has_more":true`) || strings.Contains(res.Body.String(), "TenantID") {
+		t.Fatalf("search response: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestAdminSearchRejectsMalformedParameters(t *testing.T) {
+	handler, err := HandlerWithAdmin(nil, authFunc(verified), testAdmin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		"/api/v1/admin/users", "/api/v1/admin/users?q=%20", "/api/v1/admin/users?q=a&limit=0",
+		"/api/v1/admin/users?q=a&limit=51", "/api/v1/admin/users?q=a&limit=no",
+		"/api/v1/admin/users?q=a&q=b", "/api/v1/admin/users?q=a&tenant_id=" + tenantID,
+		"/api/v1/admin/users?q=" + strings.Repeat("a", 101), "/api/v1/admin/users?q=a%00",
+	} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(http.MethodGet, path))
+		if res.Code != http.StatusBadRequest || !strings.Contains(res.Body.String(), `"error_code":"invalid_search"`) {
+			t.Fatalf("invalid search %q: %d %s", path, res.Code, res.Body.String())
+		}
+	}
+	malformed := adminRequest(http.MethodGet, "/api/v1/admin/users?q=a")
+	malformed.URL.RawQuery = "q=a&limit=%ZZ"
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, malformed)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("malformed encoding accepted: %d %s", res.Code, res.Body.String())
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, adminRequest(http.MethodPost, "/api/v1/admin/users?q=a"))
+	if res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "GET" {
+		t.Fatalf("wrong search method: %d %s", res.Code, res.Body.String())
 	}
 }
 

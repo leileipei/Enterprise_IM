@@ -7,8 +7,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/leileipei/Enterprise_IM/internal/access"
 )
@@ -33,6 +36,7 @@ type Authenticator interface {
 
 type AdminService interface {
 	GetManagedPerson(context.Context, access.TrustedIdentity, string) (access.Person, error)
+	SearchManagedPeople(context.Context, access.TrustedIdentity, string, int) (access.SearchPage, error)
 	EndMembership(context.Context, access.TrustedIdentity, string) error
 }
 
@@ -53,6 +57,13 @@ func HandlerWithAdmin(database Pinger, authenticator Authenticator, admin AdminS
 			return
 		}
 		switch {
+		case r.URL.Path == "/api/v1/admin/users":
+			if r.Method != http.MethodGet {
+				w.Header().Set("Allow", http.MethodGet)
+				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+				return
+			}
+			searchAdminPeople(w, r, identity, admin)
 		case strings.HasPrefix(r.URL.Path, "/api/v1/admin/users/"):
 			if r.Method != http.MethodGet {
 				w.Header().Set("Allow", http.MethodGet)
@@ -71,6 +82,45 @@ func HandlerWithAdmin(database Pinger, authenticator Authenticator, admin AdminS
 			rejectAdmin(w, r, http.StatusNotFound, "not_found")
 		}
 	}), nil
+}
+
+func searchAdminPeople(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, admin AdminService) {
+	params, parseErr := url.ParseQuery(r.URL.RawQuery)
+	if parseErr != nil || len(params) < 1 || len(params) > 2 || len(params["q"]) != 1 ||
+		(len(params) == 2 && len(params["limit"]) != 1) {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_search")
+		return
+	}
+	for key := range params {
+		if key != "q" && key != "limit" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_search")
+			return
+		}
+	}
+	query := strings.TrimSpace(params.Get("q"))
+	if query == "" || !utf8.ValidString(query) || strings.ContainsRune(query, 0) || utf8.RuneCountInString(query) > 100 {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_search")
+		return
+	}
+	limit := 20
+	if values, present := params["limit"]; present {
+		parsed, err := strconv.Atoi(values[0])
+		if err != nil || parsed < 1 || parsed > 50 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_search")
+			return
+		}
+		limit = parsed
+	}
+	page, err := admin.SearchManagedPeople(r.Context(), identity, query, limit)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	result := searchPageDTO{People: make([]searchPersonDTO, 0, len(page.People)), HasMore: page.HasMore}
+	for _, person := range page.People {
+		result.People = append(result.People, searchPersonDTO{ID: person.ID, EmployeeNo: person.EmployeeNo, DisplayName: person.DisplayName})
+	}
+	writeAdminJSON(w, http.StatusOK, result)
 }
 
 func getAdminPerson(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, admin AdminService) {
@@ -167,6 +217,8 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeAdminError(w, http.StatusNotFound, "not_found")
 	case errors.Is(err, access.ErrConflict):
 		writeAdminError(w, http.StatusConflict, "conflict")
+	case errors.Is(err, access.ErrInvalidSearch):
+		writeAdminError(w, http.StatusBadRequest, "invalid_search")
 	default:
 		slog.Error("admin service unavailable", "error", err)
 		writeAdminError(w, http.StatusServiceUnavailable, "unavailable")
@@ -205,6 +257,17 @@ type personDTO struct {
 	ID          string          `json:"id"`
 	DisplayName string          `json:"display_name"`
 	Memberships []membershipDTO `json:"memberships"`
+}
+
+type searchPersonDTO struct {
+	ID          string `json:"id"`
+	EmployeeNo  string `json:"employee_no"`
+	DisplayName string `json:"display_name"`
+}
+
+type searchPageDTO struct {
+	People  []searchPersonDTO `json:"people"`
+	HasMore bool              `json:"has_more"`
 }
 
 func personResponse(person access.Person) personDTO {

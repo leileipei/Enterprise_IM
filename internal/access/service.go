@@ -117,7 +117,7 @@ FOR SHARE`, id.TenantID, id.ActingMembershipID, at)
 	return g, err
 }
 
-func audit(ctx context.Context, tx pgx.Tx, id TrustedIdentity, action, resourceType, resourceID, outcome, reason string, at time.Time) error {
+func audit(ctx context.Context, tx pgx.Tx, id TrustedIdentity, action, resourceType string, resourceID any, outcome, reason string, at time.Time) error {
 	_, err := tx.Exec(ctx, `
 INSERT INTO audit_events (tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, id.TenantID, id.UserID, id.ActingMembershipID,
@@ -125,7 +125,7 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, id.TenantID, id.UserID, id.ActingMembershi
 	return err
 }
 
-func deny(ctx context.Context, tx pgx.Tx, id TrustedIdentity, action, resourceType, resourceID, reason string, at time.Time, result error) error {
+func deny(ctx context.Context, tx pgx.Tx, id TrustedIdentity, action, resourceType string, resourceID any, reason string, at time.Time, result error) error {
 	if err := audit(ctx, tx, id, action, resourceType, resourceID, "deny", reason, at); err != nil {
 		return errors.Join(ErrAuditUnavailable, err)
 	}
