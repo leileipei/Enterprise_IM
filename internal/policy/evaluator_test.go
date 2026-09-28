@@ -45,6 +45,39 @@ func TestSameOrganizationAllowedByDefault(t *testing.T) {
 	}
 }
 
+func TestHistoryHardDenyIgnoresOrdinaryRulesAndRevokesEitherDirection(t *testing.T) {
+	oldActor := member("old-a", "org-a", "legal-a")
+	currentActor := member("new-a", "org-c", "legal-a")
+	peer := member("peer", "org-b", "legal-a")
+	oldActor.Status = "ended"
+	peer.Status = "ended"
+	ordinary := isolation()
+	if HistoryHardDeny(currentActor, oldActor, peer, at, []Rule{ordinary}) {
+		t.Fatal("ordinary isolation revoked history")
+	}
+	directoryHard := ordinary
+	directoryHard.Effect = EffectHardDeny
+	directoryHard.Action = ActionDirectoryView
+	if HistoryHardDeny(currentActor, oldActor, peer, at, []Rule{directoryHard}) {
+		t.Fatal("directory-only hard deny revoked message history")
+	}
+	hard := ordinary
+	hard.Effect = EffectHardDeny
+	hard.Bidirectional = false
+	hard.Action = ActionSendMessage
+	if !HistoryHardDeny(currentActor, peer, oldActor, at, []Rule{hard}) {
+		t.Fatal("historical directed hard deny missed on reverse read")
+	}
+	hard.SourceOrganizationID = "org-c"
+	if !HistoryHardDeny(currentActor, oldActor, peer, at, []Rule{hard}) {
+		t.Fatal("current actor hard deny missed after transfer")
+	}
+	hard.EffectiveTo = at
+	if HistoryHardDeny(currentActor, oldActor, peer, at, []Rule{hard}) {
+		t.Fatal("expired hard deny revoked history")
+	}
+}
+
 func TestCrossOrganizationDeniedWithoutExplicitRule(t *testing.T) {
 	got := Evaluate(input(member("member-a", "org-a", "legal-a"), member("member-b", "org-b", "legal-b")))
 	if got.Allowed || got.Reason != ReasonCrossOrganizationDenied {

@@ -55,6 +55,7 @@ func db(t *testing.T) *pgx.Conn {
 		"../../db/migrations/000003_policy_store.up.sql",
 		"../../db/migrations/000005_direct_conversations.up.sql",
 		"../../db/migrations/000006_message_write.up.sql",
+		"../../db/migrations/000007_message_recipient.up.sql",
 	} {
 		sql, err := os.ReadFile(path)
 		if err != nil {

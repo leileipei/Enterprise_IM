@@ -91,3 +91,46 @@ func TestMessageMigrationRollsBackAndReapplies(t *testing.T) {
 	}
 	seedDirectConversation(t, conn)
 }
+
+func TestRecipientMigrationPreservesLegacyAndRejectsWrongMembership(t *testing.T) {
+	conn := db(t)
+	seedDirectConversation(t, conn)
+	run(t, conn, `INSERT INTO messages
+ (id,tenant_id,conversation_id,seq,sender_user_id,sender_membership_id,client_msg_id,text_body,content_digest)
+ VALUES ($1,$2,$3,1,$4,$5,$6,'old',decode(repeat('ab',32),'hex'))`,
+		messageA, tenantA, directA, adminA, adminM, clientA)
+	var oldUser, oldMember, oldSenderOrg, oldRecipientOrg *string
+	if err := conn.QueryRow(context.Background(), "SELECT recipient_user_id::text,recipient_membership_id::text,sender_organization_id::text,recipient_organization_id::text FROM messages WHERE id=$1", messageA).Scan(&oldUser, &oldMember, &oldSenderOrg, &oldRecipientOrg); err != nil || oldUser != nil || oldMember != nil || oldSenderOrg != nil || oldRecipientOrg != nil {
+		t.Fatalf("legacy context should be unknown: %v %v %v %v %v", oldUser, oldMember, oldSenderOrg, oldRecipientOrg, err)
+	}
+	if _, err := conn.Exec(context.Background(), "UPDATE messages SET recipient_user_id=$1,recipient_membership_id=$2,sender_organization_id=$3,recipient_organization_id=$3 WHERE id=$4", personA, adminM, orgA, messageA); err == nil {
+		t.Fatal("wrong user's recipient membership accepted")
+	}
+	if _, err := conn.Exec(context.Background(), "UPDATE messages SET recipient_user_id=$1 WHERE id=$2", personA, messageA); err == nil {
+		t.Fatal("partial recipient identity accepted")
+	}
+}
+
+func TestRecipientMigrationRollsBackAndReapplies(t *testing.T) {
+	conn := db(t)
+	ctx := context.Background()
+	down, err := os.ReadFile("../../db/migrations/000007_message_recipient.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(ctx, string(down)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
+	var column *string
+	if err := conn.QueryRow(ctx, "SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='messages' AND column_name='recipient_membership_id'").Scan(&column); err != pgx.ErrNoRows {
+		t.Fatalf("recipient after down: %v %v", column, err)
+	}
+	up, err := os.ReadFile("../../db/migrations/000007_message_recipient.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(ctx, string(up)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
+	seedDirectConversation(t, conn)
+}
