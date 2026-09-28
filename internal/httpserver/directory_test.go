@@ -22,6 +22,10 @@ func (f directoryFunc) FindVisiblePersonByEmployeeNo(context.Context, access.Tru
 	return policystore.DirectoryPerson{}, policystore.ErrDirectoryNotVisible
 }
 
+func (f directoryFunc) SearchVisiblePeople(context.Context, access.TrustedIdentity, string, int) (policystore.DirectorySearchPage, error) {
+	return policystore.DirectorySearchPage{}, policystore.ErrInvalidDirectorySearch
+}
+
 type directoryLookupStub struct {
 	lookup func(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error)
 }
@@ -32,6 +36,97 @@ func (s directoryLookupStub) GetVisibleMembership(context.Context, access.Truste
 
 func (s directoryLookupStub) FindVisiblePersonByEmployeeNo(ctx context.Context, id access.TrustedIdentity, number string) (policystore.DirectoryPerson, error) {
 	return s.lookup(ctx, id, number)
+}
+
+func (s directoryLookupStub) SearchVisiblePeople(context.Context, access.TrustedIdentity, string, int) (policystore.DirectorySearchPage, error) {
+	return policystore.DirectorySearchPage{}, policystore.ErrInvalidDirectorySearch
+}
+
+type directorySearchStub struct {
+	search func(context.Context, access.TrustedIdentity, string, int) (policystore.DirectorySearchPage, error)
+}
+
+func (s directorySearchStub) GetVisibleMembership(context.Context, access.TrustedIdentity, string) (policystore.DirectoryMembership, error) {
+	return policystore.DirectoryMembership{}, policystore.ErrDirectoryNotVisible
+}
+
+func (s directorySearchStub) FindVisiblePersonByEmployeeNo(context.Context, access.TrustedIdentity, string) (policystore.DirectoryPerson, error) {
+	return policystore.DirectoryPerson{}, policystore.ErrDirectoryNotVisible
+}
+
+func (s directorySearchStub) SearchVisiblePeople(ctx context.Context, id access.TrustedIdentity, q string, limit int) (policystore.DirectorySearchPage, error) {
+	return s.search(ctx, id, q, limit)
+}
+
+func TestDirectoryNameSearchRouteUsesVerifiedActorAndVisiblePage(t *testing.T) {
+	service := directorySearchStub{search: func(_ context.Context, id access.TrustedIdentity, q string, limit int) (policystore.DirectorySearchPage, error) {
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) || q != "同事" || limit != 1 {
+			t.Fatalf("untrusted name search input: %+v %q %d", id, q, limit)
+		}
+		return policystore.DirectorySearchPage{People: []policystore.DirectoryPerson{{ID: targetUserID,
+			DisplayName: "同事", EmployeeNo: "A002", Memberships: []policystore.DirectoryMembership{{MembershipID: targetMemID,
+				OrganizationID: tenantID, OrganizationName: "总部", Departments: []access.Department{}}}}}, HasMore: true}, nil
+	}}
+	handler, err := HandlerWithDirectory(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := adminRequest(http.MethodGet, "/api/v1/directory/users?q=%20%E5%90%8C%E4%BA%8B%20&limit=1")
+	req.Header.Set("X-Tenant-ID", "99999999-9999-4999-8999-999999999999")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"people":[`) ||
+		!strings.Contains(res.Body.String(), `"employee_no":"A002"`) ||
+		!strings.Contains(res.Body.String(), `"membership_id":"`+targetMemID+`"`) ||
+		!strings.Contains(res.Body.String(), `"has_more":true`) {
+		t.Fatalf("name search response: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestDirectoryNameSearchRouteRejectsInvalidParametersAndMapsErrors(t *testing.T) {
+	service := directorySearchStub{search: func(context.Context, access.TrustedIdentity, string, int) (policystore.DirectorySearchPage, error) {
+		return policystore.DirectorySearchPage{}, nil
+	}}
+	handler, err := HandlerWithDirectory(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		"/api/v1/directory/users?q=", "/api/v1/directory/users?q=A",
+		"/api/v1/directory/users?q=%20%20", "/api/v1/directory/users?q=%00A",
+		"/api/v1/directory/users?q=%FF", "/api/v1/directory/users?q=%ZZ",
+		"/api/v1/directory/users?q=" + strings.Repeat("A", 101),
+		"/api/v1/directory/users?q=AB&q=CD", "/api/v1/directory/users?q=AB&employee_no=A002",
+		"/api/v1/directory/users?q=AB&unknown=true", "/api/v1/directory/users?q=AB&limit=0",
+		"/api/v1/directory/users?q=AB&limit=21", "/api/v1/directory/users?q=AB&limit=1&limit=2",
+	} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(http.MethodGet, path))
+		if res.Code != http.StatusBadRequest {
+			t.Fatalf("invalid name search %q: %d %s", path, res.Code, res.Body.String())
+		}
+	}
+	for _, failure := range []struct {
+		err    error
+		status int
+		code   string
+	}{
+		{policystore.ErrDirectorySearchTooBroad, http.StatusBadRequest, "refine_search"},
+		{policystore.ErrForbidden, http.StatusForbidden, "invalid_identity"},
+		{errors.Join(policystore.ErrAuditUnavailable, errors.New("private detail")), http.StatusServiceUnavailable, "unavailable"},
+	} {
+		failed, err := HandlerWithDirectory(Handler(nil), authFunc(verified), directorySearchStub{search: func(context.Context, access.TrustedIdentity, string, int) (policystore.DirectorySearchPage, error) {
+			return policystore.DirectorySearchPage{}, failure.err
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		res := httptest.NewRecorder()
+		failed.ServeHTTP(res, adminRequest(http.MethodGet, "/api/v1/directory/users?q=AB"))
+		if res.Code != failure.status || !strings.Contains(res.Body.String(), failure.code) || strings.Contains(res.Body.String(), "private detail") {
+			t.Fatalf("name search error: %d %s", res.Code, res.Body.String())
+		}
+	}
 }
 
 func TestDirectoryLookupRouteUsesVerifiedActorAndReturnsVisibleAssignments(t *testing.T) {
