@@ -41,7 +41,7 @@ type AdminService interface {
 }
 
 // HandlerWithAdmin installs management routes only when both dependencies are
-// supplied. Production does not call it until a real identity source exists.
+// supplied. Production enables it after configuring a real identity source.
 func HandlerWithAdmin(database Pinger, authenticator Authenticator, admin AdminService) (http.Handler, error) {
 	if authenticator == nil || admin == nil {
 		return nil, errors.New("admin authentication and service are required")
@@ -205,7 +205,7 @@ func denyAuthentication(w http.ResponseWriter, r *http.Request, status int, code
 }
 
 func rejectAdmin(w http.ResponseWriter, r *http.Request, status int, code string) {
-	slog.WarnContext(r.Context(), "admin request rejected", "path", r.URL.Path, "error_code", code)
+	slog.WarnContext(r.Context(), "protected request rejected", "path", r.URL.Path, "error_code", code)
 	writeAdminError(w, status, code)
 }
 

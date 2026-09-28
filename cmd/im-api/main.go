@@ -15,6 +15,7 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
+	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
 
 func main() {
@@ -51,6 +52,11 @@ func main() {
 		handler, err = httpserver.HandlerWithAdmin(pool, authenticator, access.Service{DB: pool})
 		if err != nil {
 			logger.Error("admin API unavailable", "error", err)
+			os.Exit(1)
+		}
+		handler, err = httpserver.HandlerWithDirectory(handler, authenticator, policystore.Service{DB: pool})
+		if err != nil {
+			logger.Error("directory API unavailable", "error", err)
 			os.Exit(1)
 		}
 	}

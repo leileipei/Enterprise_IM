@@ -1,0 +1,90 @@
+package httpserver
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"strings"
+
+	"github.com/leileipei/Enterprise_IM/internal/access"
+	"github.com/leileipei/Enterprise_IM/internal/policystore"
+)
+
+type DirectoryService interface {
+	GetVisibleMembership(context.Context, access.TrustedIdentity, string) (policystore.DirectoryMembership, error)
+}
+
+// HandlerWithDirectory adds ordinary directory detail to an authenticated API.
+func HandlerWithDirectory(base http.Handler, authenticator Authenticator, directory DirectoryService) (http.Handler, error) {
+	if base == nil || authenticator == nil || directory == nil {
+		return nil, errors.New("base handler, authentication and directory service are required")
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/directory" && !strings.HasPrefix(r.URL.Path, "/api/v1/directory/") {
+			base.ServeHTTP(w, r)
+			return
+		}
+		identity, ok := authenticateAdmin(w, r, authenticator)
+		if !ok {
+			return
+		}
+		if !strings.HasPrefix(r.URL.Path, "/api/v1/directory/memberships/") {
+			rejectAdmin(w, r, http.StatusNotFound, "not_found")
+			return
+		}
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+		target := strings.TrimPrefix(r.URL.Path, "/api/v1/directory/memberships/")
+		if strings.Contains(target, "/") {
+			rejectAdmin(w, r, http.StatusNotFound, "not_found")
+			return
+		}
+		if !validUUID(target) || r.URL.RawQuery != "" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		profile, err := directory.GetVisibleMembership(r.Context(), identity, target)
+		if err != nil {
+			writeDirectoryError(w, err)
+			return
+		}
+		departments := make([]departmentDTO, 0, len(profile.Departments))
+		for _, department := range profile.Departments {
+			departments = append(departments, departmentDTO{ID: department.ID, Name: department.Name})
+		}
+		writeAdminJSON(w, http.StatusOK, directoryMembershipDTO{
+			UserID: profile.UserID, DisplayName: profile.DisplayName, EmployeeNo: profile.EmployeeNo,
+			MembershipID: profile.MembershipID, OrganizationID: profile.OrganizationID,
+			OrganizationName: profile.OrganizationName, Title: profile.Title,
+			IsPrimary: profile.IsPrimary, Departments: departments,
+		})
+	}), nil
+}
+
+func writeDirectoryError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, policystore.ErrForbidden):
+		writeAdminError(w, http.StatusForbidden, "invalid_identity")
+	case errors.Is(err, policystore.ErrDirectoryNotVisible):
+		writeAdminError(w, http.StatusNotFound, "not_found")
+	default:
+		slog.Error("directory service unavailable", "error", err)
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable")
+	}
+}
+
+type directoryMembershipDTO struct {
+	UserID           string          `json:"user_id"`
+	DisplayName      string          `json:"display_name"`
+	EmployeeNo       string          `json:"employee_no"`
+	MembershipID     string          `json:"membership_id"`
+	OrganizationID   string          `json:"organization_id"`
+	OrganizationName string          `json:"organization_name"`
+	Title            string          `json:"title"`
+	IsPrimary        bool            `json:"is_primary"`
+	Departments      []departmentDTO `json:"departments"`
+}
