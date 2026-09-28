@@ -25,6 +25,17 @@ type workerConfig struct {
 	Stream      string
 }
 
+func redisOptionsFromURL(raw string) (*redis.Options, error) {
+	options, err := redis.ParseURL(raw)
+	if err != nil {
+		return nil, errors.New("invalid Redis URL")
+	}
+	// The Worker holds a PostgreSQL row lock while XADD runs. Socket reads
+	// must respect its publish context, including during Redis outages.
+	options.ContextTimeoutEnabled = true
+	return options, nil
+}
+
 func configFromEnv(getenv func(string) string) (workerConfig, error) {
 	config := workerConfig{DatabaseURL: getenv("IM_DATABASE_URL"),
 		RedisURL: getenv("IM_OUTBOX_REDIS_URL"), Stream: getenv("IM_OUTBOX_STREAM")}
@@ -35,7 +46,7 @@ func configFromEnv(getenv func(string) string) (workerConfig, error) {
 	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "redis" && parsed.Scheme != "rediss") {
 		return workerConfig{}, errors.New("IM_OUTBOX_REDIS_URL must be redis:// or rediss:// with a host")
 	}
-	if _, err := redis.ParseURL(config.RedisURL); err != nil {
+	if _, err := redisOptionsFromURL(config.RedisURL); err != nil {
 		return workerConfig{}, errors.New("IM_OUTBOX_REDIS_URL is invalid")
 	}
 	if config.Stream == "" {
@@ -55,7 +66,7 @@ func run(ctx context.Context, config workerConfig, logger *slog.Logger) error {
 		return errors.New("invalid database configuration")
 	}
 	defer pool.Close()
-	redisOptions, err := redis.ParseURL(config.RedisURL)
+	redisOptions, err := redisOptionsFromURL(config.RedisURL)
 	if err != nil {
 		return errors.New("invalid Redis configuration")
 	}
