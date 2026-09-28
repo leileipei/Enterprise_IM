@@ -14,18 +14,62 @@ func (s Service) EndMembership(ctx context.Context, id TrustedIdentity, membersh
 	if s.DB == nil || id.TenantID == "" || id.UserID == "" || id.ActingMembershipID == "" || membershipID == "" {
 		return ErrInvalidIdentity
 	}
-	at := s.currentTime()
 	tx, err := s.DB.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
+	// Lock both memberships in ID order before authorization. This also avoids
+	// upgrading a shared actor lock when an administrator ends their own role.
+	locked, err := tx.Query(ctx, `
+SELECT id FROM user_organizations
+WHERE tenant_id=$1 AND id IN ($2,$3)
+ORDER BY id FOR UPDATE`, id.TenantID, id.ActingMembershipID, membershipID)
+	if err != nil {
+		return err
+	}
+	for locked.Next() {
+	}
+	err = locked.Err()
+	locked.Close()
+	if err != nil {
+		return err
+	}
+	// Department edits are locked before taking the operation time. A new
+	// department assignment will wait on the parent membership lock above.
+	departments, err := tx.Query(ctx, `
+SELECT id FROM user_departments
+WHERE tenant_id=$1 AND user_organization_id=$2
+ORDER BY id FOR UPDATE`, id.TenantID, membershipID)
+	if err != nil {
+		return err
+	}
+	for departments.Next() {
+	}
+	err = departments.Err()
+	departments.Close()
+	if err != nil {
+		return err
+	}
+	at := s.currentTime()
 	g, err := s.resolve(ctx, tx, id, at)
 	if errors.Is(err, ErrInvalidIdentity) {
 		return deny(ctx, tx, id, "membership_end", "membership", membershipID, "invalid_identity", at, ErrInvalidIdentity)
 	}
 	if err != nil {
 		return err
+	}
+	// resolve can wait for a concurrent grant update. Recheck validity using
+	// the time after its locks have been acquired.
+	if fresh := s.currentTime(); fresh.After(at) {
+		at = fresh
+		g, err = s.resolve(ctx, tx, id, at)
+		if errors.Is(err, ErrInvalidIdentity) {
+			return deny(ctx, tx, id, "membership_end", "membership", membershipID, "invalid_identity", at, ErrInvalidIdentity)
+		}
+		if err != nil {
+			return err
+		}
 	}
 	var organizationID, status string
 	var from time.Time

@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支正在实现 P1 集团基础能力。已有 PostgreSQL 基础表与任职约束、通信策略判定核心，以及只暴露健康探针的 Go 服务入口。**尚无登录、业务管理接口、聊天界面或消息收发功能。**
+本分支实现 P1-01 集团模型与通信策略核心，并增加 P1-02a 管理授权、受限人员查询和单组织离职服务。公共 HTTP 入口仍只暴露健康探针。**尚无登录、业务管理接口、聊天界面或消息收发功能。**
 
 ## 本地运行
 
@@ -15,6 +15,7 @@
 ```sh
 docker run --rm -d --name enterprise-im-dev-db -e POSTGRES_PASSWORD=local_only_password -e POSTGRES_DB=enterprise_im -p 127.0.0.1:55432:5432 postgres:16-alpine
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000001_group_foundation.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000002_admin_access.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -36,4 +37,4 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。迁移回滚脚本位于 `db/migrations/000001_group_foundation.down.sql`，只对可丢弃的开发或测试数据库执行回滚。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 时跳过 PostgreSQL 集成测试。回滚时按 `000002`、`000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。

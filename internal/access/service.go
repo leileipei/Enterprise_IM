@@ -61,6 +61,10 @@ func (g grants) allows(organizationID string) bool {
 	return g.all || g.organizations[organizationID]
 }
 
+func (g grants) empty() bool {
+	return !g.all && len(g.organizations) == 0
+}
+
 func (s Service) currentTime() time.Time {
 	if s.Now != nil {
 		return s.Now().UTC()
@@ -137,18 +141,31 @@ func (s Service) GetManagedPerson(ctx context.Context, id TrustedIdentity, targe
 	if s.DB == nil || id.TenantID == "" || id.UserID == "" || id.ActingMembershipID == "" || targetUserID == "" {
 		return Person{}, ErrInvalidIdentity
 	}
-	at := s.currentTime()
 	tx, err := s.DB.Begin(ctx)
 	if err != nil {
 		return Person{}, err
 	}
 	defer tx.Rollback(ctx)
+	at := s.currentTime()
 	g, err := s.resolve(ctx, tx, id, at)
 	if errors.Is(err, ErrInvalidIdentity) {
 		return Person{}, deny(ctx, tx, id, "directory_view", "user", targetUserID, "invalid_identity", at, ErrInvalidIdentity)
 	}
 	if err != nil {
 		return Person{}, err
+	}
+	if fresh := s.currentTime(); fresh.After(at) {
+		at = fresh
+		g, err = s.resolve(ctx, tx, id, at)
+		if errors.Is(err, ErrInvalidIdentity) {
+			return Person{}, deny(ctx, tx, id, "directory_view", "user", targetUserID, "invalid_identity", at, ErrInvalidIdentity)
+		}
+		if err != nil {
+			return Person{}, err
+		}
+	}
+	if g.empty() {
+		return Person{}, deny(ctx, tx, id, "directory_view", "user", targetUserID, "not_visible", at, ErrNotFound)
 	}
 	rows, err := tx.Query(ctx, `
 SELECT u.display_name, m.id, m.organization_id, o.name, COALESCE(m.title,''), m.is_primary
