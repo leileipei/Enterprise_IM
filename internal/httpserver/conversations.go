@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -19,6 +21,7 @@ import (
 type ConversationService interface {
 	StartDirectConversation(context.Context, access.TrustedIdentity, string) (policystore.DirectConversation, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
+	PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
 }
 
 // HandlerWithConversations exposes direct conversation and message routes after
@@ -42,12 +45,15 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 				rejectAdmin(w, r, http.StatusNotFound, "not_found")
 				return
 			}
-			if r.Method != http.MethodPost {
-				w.Header().Set("Allow", http.MethodPost)
+			switch r.Method {
+			case http.MethodGet:
+				pullTextMessages(w, r, identity, conversationID, conversations)
+			case http.MethodPost:
+				sendTextMessage(w, r, identity, conversationID, conversations)
+			default:
+				w.Header().Set("Allow", "GET, POST")
 				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
-				return
 			}
-			sendTextMessage(w, r, identity, conversationID, conversations)
 			return
 		}
 		if r.Method != http.MethodPost {
@@ -65,6 +71,88 @@ func messageConversationID(path string) (string, bool) {
 		return "", false
 	}
 	return parts[0], true
+}
+
+func decimalDigits(value string) bool {
+	if value == "" {
+		return false
+	}
+	for i := 0; i < len(value); i++ {
+		if value[i] < '0' || value[i] > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func pullTextMessages(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
+	conversationID string, conversations ConversationService) {
+	query, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil || len(query) < 1 || len(query) > 2 || len(query["after_seq"]) != 1 ||
+		!decimalDigits(query.Get("after_seq")) || len(query["limit"]) > 1 {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	for key := range query {
+		if key != "after_seq" && key != "limit" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	afterSeq, err := strconv.ParseInt(query.Get("after_seq"), 10, 64)
+	if err != nil {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	limit := 100
+	if value, ok := query["limit"]; ok {
+		if !decimalDigits(value[0]) {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		limit, err = strconv.Atoi(value[0])
+		if err != nil || limit < 1 || limit > 500 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	if r.Body != nil {
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
+		if err != nil || len(body) != 0 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	page, err := conversations.PullTextMessages(r.Context(), identity, conversationID, afterSeq, limit)
+	if err != nil {
+		writeMessageError(w, err)
+		return
+	}
+	type itemDTO struct {
+		MessageID    string `json:"message_id,omitempty"`
+		Seq          int64  `json:"seq"`
+		SenderUserID string `json:"sender_user_id,omitempty"`
+		Text         string `json:"text,omitempty"`
+		ServerTime   string `json:"server_time,omitempty"`
+		Redacted     bool   `json:"redacted,omitempty"`
+	}
+	items := make([]itemDTO, 0, len(page.Messages))
+	for _, message := range page.Messages {
+		item := itemDTO{Seq: message.Seq, Redacted: message.Redacted}
+		if !message.Redacted {
+			item.MessageID = message.MessageID
+			item.SenderUserID = message.SenderUserID
+			item.Text = message.Text
+			item.ServerTime = message.ServerTime.UTC().Format("2006-01-02T15:04:05.999999999Z07:00")
+		}
+		items = append(items, item)
+	}
+	writeAdminJSON(w, http.StatusOK, struct {
+		ConversationID string    `json:"conversation_id"`
+		Messages       []itemDTO `json:"messages"`
+		NextAfterSeq   int64     `json:"next_after_seq"`
+		HasMore        bool      `json:"has_more"`
+	}{page.ConversationID, items, page.NextAfterSeq, page.HasMore})
 }
 
 func sendTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,

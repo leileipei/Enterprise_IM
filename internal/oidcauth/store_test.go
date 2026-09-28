@@ -47,7 +47,7 @@ func identityDB(t *testing.T) *pgx.Conn {
 	if _, err := conn.Exec(ctx, "SET search_path TO "+schema+", public"); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql", "../../db/migrations/000003_policy_store.up.sql", "../../db/migrations/000004_external_identities.up.sql", "../../db/migrations/000005_direct_conversations.up.sql", "../../db/migrations/000006_message_write.up.sql"} {
+	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql", "../../db/migrations/000003_policy_store.up.sql", "../../db/migrations/000004_external_identities.up.sql", "../../db/migrations/000005_direct_conversations.up.sql", "../../db/migrations/000006_message_write.up.sql", "../../db/migrations/000007_message_recipient.up.sql"} {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
@@ -326,6 +326,15 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	handler.ServeHTTP(res, messageRequest())
 	if res.Code != http.StatusOK || res.Body.String() != firstACK {
 		t.Fatalf("signed-token idempotent ACK: %d %s vs %s", res.Code, res.Body.String(), firstACK)
+	}
+	pullReq := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/"+chat.ID+"/messages?after_seq=0&limit=1", nil)
+	pullReq.Header.Set("Authorization", "Bearer "+accessToken)
+	pullReq.Header.Set("X-Acting-Membership-ID", actorMembership)
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, pullReq)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"text":"你好"`) ||
+		!strings.Contains(res.Body.String(), `"next_after_seq":1`) || res.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("signed-token message pull: %d %s", res.Code, res.Body.String())
 	}
 	for _, table := range []string{"messages", "outbox_events", "message_idempotency"} {
 		if err := conn.QueryRow(ctx, "SELECT count(*) FROM "+table+" WHERE tenant_id=$1", storeTenantA).Scan(&auditCount); err != nil || auditCount != 1 {

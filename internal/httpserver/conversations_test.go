@@ -25,6 +25,10 @@ func (conversationStub) SendTextMessage(context.Context, access.TrustedIdentity,
 	panic("unexpected message send")
 }
 
+func (conversationStub) PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error) {
+	panic("unexpected message pull")
+}
+
 type messageStub struct {
 	conversationStub
 	send func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
@@ -245,10 +249,10 @@ func TestMessageRouteRejectsInvalidRequestAndMapsErrors(t *testing.T) {
 		}
 	}
 	req := messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`)
-	req.Method = http.MethodGet
+	req.Method = http.MethodPut
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
-	if res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != http.MethodPost {
+	if res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "GET, POST" {
 		t.Fatalf("method: %d %s", res.Code, res.Body.String())
 	}
 	req = messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`)
@@ -288,6 +292,84 @@ func TestMessageRouteRejectsInvalidRequestAndMapsErrors(t *testing.T) {
 		failed.ServeHTTP(res, messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`))
 		if res.Code != tc.status || !strings.Contains(res.Body.String(), tc.code) || strings.Contains(res.Body.String(), "private SQL error") {
 			t.Fatalf("error mapping %v: %d %s", tc.err, res.Code, res.Body.String())
+		}
+	}
+}
+
+type pullStub struct {
+	conversationStub
+	pull func(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
+}
+
+func (p pullStub) PullTextMessages(ctx context.Context, id access.TrustedIdentity, conversationID string, afterSeq int64, limit int) (policystore.MessagePage, error) {
+	return p.pull(ctx, id, conversationID, afterSeq, limit)
+}
+
+func TestMessagePullRouteStrictCursorIdentityAndRedaction(t *testing.T) {
+	conversationID := "00000000-0000-4000-8000-000000000471"
+	path := "/api/v1/conversations/" + conversationID + "/messages"
+	called := 0
+	service := pullStub{pull: func(_ context.Context, id access.TrustedIdentity, chat string, afterSeq int64, limit int) (policystore.MessagePage, error) {
+		called++
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) || chat != conversationID || afterSeq != 8 || limit != 2 {
+			t.Fatalf("untrusted pull arguments: %+v %s %d %d", id, chat, afterSeq, limit)
+		}
+		return policystore.MessagePage{ConversationID: chat, NextAfterSeq: 10, HasMore: true,
+			Messages: []policystore.PulledMessage{
+				{MessageID: targetUserID, Seq: 9, SenderUserID: actorID, Text: "你好", ServerTime: time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC)},
+				{Seq: 10, Redacted: true},
+			}}, nil
+	}}
+	handler, err := HandlerWithConversations(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, adminRequest(http.MethodGet, path+"?after_seq=8&limit=2"))
+	if res.Code != 200 || res.Header().Get("Cache-Control") != "no-store" ||
+		!strings.Contains(res.Body.String(), `"next_after_seq":10`) ||
+		!strings.Contains(res.Body.String(), `"has_more":true`) ||
+		!strings.Contains(res.Body.String(), `"text":"你好"`) ||
+		!strings.Contains(res.Body.String(), `{"seq":10,"redacted":true}`) || called != 1 {
+		t.Fatalf("pull response: %d %s called=%d", res.Code, res.Body.String(), called)
+	}
+	for _, query := range []string{"", "?after_seq=-1", "?after_seq=1&limit=0", "?after_seq=1&limit=501",
+		"?after_seq=1&limit=1&limit=2", "?after_seq=1&tenant_id=" + tenantID,
+		"?after_seq=9223372036854775808", "?after_seq=1%3Blimit%3D2"} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(http.MethodGet, path+query))
+		if res.Code != 400 || called != 1 {
+			t.Fatalf("invalid query %q: %d %s", query, res.Code, res.Body.String())
+		}
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path+"?after_seq=8", nil))
+	if res.Code != 401 || called != 1 {
+		t.Fatalf("anonymous pull: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestMessagePullRouteDoesNotExposeStoreErrors(t *testing.T) {
+	path := "/api/v1/conversations/00000000-0000-4000-8000-000000000471/messages?after_seq=0"
+	for _, tc := range []struct {
+		err  error
+		code int
+	}{
+		{policystore.ErrForbidden, 403},
+		{policystore.ErrMessageNotAvailable, 404},
+		{errors.Join(policystore.ErrAuditUnavailable, errors.New("private SQL detail")), 503},
+	} {
+		service := pullStub{pull: func(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error) {
+			return policystore.MessagePage{}, tc.err
+		}}
+		handler, err := HandlerWithConversations(Handler(nil), authFunc(verified), service)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(http.MethodGet, path))
+		if res.Code != tc.code || strings.Contains(res.Body.String(), "private SQL detail") || strings.Contains(res.Body.String(), "text") {
+			t.Fatalf("pull error: %d %s", res.Code, res.Body.String())
 		}
 	}
 }

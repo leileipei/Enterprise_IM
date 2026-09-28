@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入和 P2-03 Outbox 发布 Worker。配置有效的身份提供方后，可显式启用受保护 API。**尚无浏览器登录流程、聊天界面、WebSocket Gateway 或离线补拉；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入、P2-03 Outbox 发布 Worker 和 P2-04 单聊文本补拉。配置有效的身份提供方后，可显式启用受保护 API。**尚无浏览器登录流程、聊天界面、WebSocket Gateway、群聊补拉或完整断线恢复；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -34,6 +34,8 @@
 
 Outbox Worker 从 PostgreSQL 领取到期事件并写入 Redis Stream，成功后标记 `published`；失败会按最长 5 分钟的指数退避重试。Redis 事件只含 `event_id`、`tenant_id`、`conversation_id`、`message_id`、`seq` 和 `event_type`，不含正文。Redis 发布与数据库标记之间可能发生重复，后续 Gateway 必须按稳定的 `event_id` 去重，并按 `seq` 处理乱序与缺口。`published` 只表示 Redis 接受了事件，**不表示消息已送达设备**。生产者暂不裁剪 Stream；部署 Gateway 前需确定消费组、积压容量和清理策略。PostgreSQL 仍为消息事实来源。
 
+单聊文本可通过 `GET /api/v1/conversations/{id}/messages?after_seq=0&limit=100` 按会话序号升序补拉。`after_seq` 必填，`limit` 可选（默认 100，最大 500）。响应中的 `next_after_seq` 用于下一页；`has_more` 表示是否还有后续序号。不可见消息只返回 `seq` 和 `redacted:true`，客户端仍须推进游标。补拉依据消息发送时保存的双方任职；迁移前无法证明接收任职的旧消息只能返回不可见占位，不能用当前会话任职自动回填。冻结账户或失效任职不能补拉，现行 `hard_deny` 会撤销匹配内容的读取，普通通信隔离不追溯删除已授权历史。该接口不提供实时推送或设备送达确认。
+
 ## 本地运行
 
 需要 Go 1.27 和 PostgreSQL 16。数据库应启用 `btree_gist` 扩展；首次迁移需要具备创建扩展和表的权限。可用现有 PostgreSQL 实例，也可使用隔离的本地测试容器。
@@ -48,6 +50,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000004_external_identities.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000005_direct_conversations.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000006_message_write.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000007_message_recipient.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
