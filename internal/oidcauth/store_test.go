@@ -46,7 +46,7 @@ func identityDB(t *testing.T) *pgx.Conn {
 	if _, err := conn.Exec(ctx, "SET search_path TO "+schema+", public"); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql", "../../db/migrations/000003_policy_store.up.sql", "../../db/migrations/000004_external_identities.up.sql"} {
+	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql", "../../db/migrations/000003_policy_store.up.sql", "../../db/migrations/000004_external_identities.up.sql", "../../db/migrations/000005_direct_conversations.up.sql"} {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
@@ -204,6 +204,10 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	handler, err = httpserver.HandlerWithConversations(handler, auth, policystore.Service{DB: conn})
+	if err != nil {
+		t.Fatal(err)
+	}
 	accessToken := signToken(t, key, testClaims(), "at+jwt", jwt.SigningMethodRS256)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users/"+targetID, nil)
 	req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -282,6 +286,25 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if err := conn.QueryRow(ctx, "SELECT count(*) FROM audit_events WHERE action='directory_organization_members' AND outcome='allow' AND actor_user_id=$1", storeUserA).Scan(&auditCount); err != nil || auditCount != 1 {
 		t.Fatalf("ordinary organization members audit: %d %v", auditCount, err)
 	}
+	chatRequest := func() *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations", strings.NewReader(`{"target_membership_id":"`+targetMembership+`"}`))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("X-Acting-Membership-ID", actorMembership)
+		req.Header.Set("Content-Type", "application/json")
+		return req
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, chatRequest())
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"type":"direct"`) ||
+		!strings.Contains(res.Body.String(), `"decision_reason":"allowed_same_organization"`) {
+		t.Fatalf("signed-token direct conversation response: %d %s", res.Code, res.Body.String())
+	}
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM conversations WHERE tenant_id=$1 AND kind='direct'", storeTenantA).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("signed-token direct conversation row: %d %v", auditCount, err)
+	}
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM audit_events WHERE action='conversation_start' AND outcome='allow' AND actor_user_id=$1", storeUserA).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("signed-token direct conversation audit: %d %v", auditCount, err)
+	}
 	if _, err := conn.Exec(ctx, "UPDATE user_organizations SET status='ended' WHERE id=$1", actorMembership); err != nil {
 		t.Fatal(err)
 	}
@@ -311,6 +334,11 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if res.Code != http.StatusForbidden {
 		t.Fatalf("ended acting membership organization members: %d %s", res.Code, res.Body.String())
 	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, chatRequest())
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("ended acting membership direct conversation: %d %s", res.Code, res.Body.String())
+	}
 	if _, err := conn.Exec(ctx, "UPDATE users SET status='frozen' WHERE id=$1", storeUserA); err != nil {
 		t.Fatal(err)
 	}
@@ -333,5 +361,10 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	handler.ServeHTTP(res, memberReq)
 	if res.Code != http.StatusUnauthorized {
 		t.Fatalf("frozen account organization members authentication: %d %s", res.Code, res.Body.String())
+	}
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, chatRequest())
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("frozen account direct conversation authentication: %d %s", res.Code, res.Body.String())
 	}
 }

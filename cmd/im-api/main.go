@@ -59,6 +59,11 @@ func main() {
 			logger.Error("directory API unavailable", "error", err)
 			os.Exit(1)
 		}
+		handler, err = httpserver.HandlerWithConversations(handler, authenticator, policystore.Service{DB: pool})
+		if err != nil {
+			logger.Error("conversation API unavailable", "error", err)
+			os.Exit(1)
+		}
 	}
 
 	server := &http.Server{
