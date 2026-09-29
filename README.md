@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入、P2-03 Outbox 发布 Worker 和 P2-04 单聊文本补拉。配置有效的身份提供方后，可显式启用受保护 API。**尚无浏览器登录流程、聊天界面、WebSocket Gateway、群聊补拉或完整断线恢复；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入、P2-03 Outbox 发布 Worker、P2-04 单聊文本补拉和 P2-05 WebSocket 身份握手。配置有效的身份提供方后，可显式启用受保护 API。**尚无浏览器登录流程、聊天界面、Redis Stream 在线推送、群聊补拉或完整断线恢复；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -35,6 +35,8 @@
 Outbox Worker 从 PostgreSQL 领取到期事件并写入 Redis Stream，成功后标记 `published`；失败会按最长 5 分钟的指数退避重试。Redis 事件只含 `event_id`、`tenant_id`、`conversation_id`、`message_id`、`seq` 和 `event_type`，不含正文。Redis 发布与数据库标记之间可能发生重复，后续 Gateway 必须按稳定的 `event_id` 去重，并按 `seq` 处理乱序与缺口。`published` 只表示 Redis 接受了事件，**不表示消息已送达设备**。生产者暂不裁剪 Stream；部署 Gateway 前需确定消费组、积压容量和清理策略。PostgreSQL 仍为消息事实来源。
 
 单聊文本可通过 `GET /api/v1/conversations/{id}/messages?after_seq=0&limit=100` 按会话序号升序补拉。`after_seq` 必填，`limit` 可选（默认 100，最大 500）。响应中的 `next_after_seq` 用于下一页；`has_more` 表示是否还有后续序号。不可见消息只返回 `seq` 和 `redacted:true`，客户端仍须推进游标。补拉依据消息发送时保存的双方任职及组织快照；迁移前无法证明接收任职的旧消息只能返回不可见占位，不能用当前会话任职自动回填。冻结账户或失效任职不能补拉，现行 `send_message` 强制拒绝会撤销匹配内容的读取，普通通信隔离不追溯删除已授权历史。该接口不提供实时推送或设备送达确认。
+
+显式配置 `IM_REALTIME_REDIS_URL` 后，浏览器可用相同身份头向 `POST /api/v1/realtime/tickets` 申请 30 秒一次性票据，再以子协议 `enterprise-im.v1`、`ticket.<票据>` 连接同源 `GET /api/v1/realtime` WebSocket。票据不放在 URL；服务器只回显 `enterprise-im.v1`。连接成功首先收到 `{"type":"ready","resync_required":true}`，客户端应立即用上次连续确认的 `seq` 调用上述 HTTP 补拉。当前连接尚不推送 Redis Stream 消息；票据不可重复使用，任职或账号失效时连接会关闭。Redis 不可用时票据入口返回 503，服务不会改用本机内存票据。
 
 ## 本地运行
 
@@ -84,7 +86,10 @@ export IM_OIDC_AUDIENCE='enterprise-im-api'
 export IM_OIDC_JWKS_URL='https://sso.example.com/group/keys'
 export IM_OIDC_ALLOWED_CLIENT_IDS='enterprise-im-web,enterprise-im-desktop'
 export IM_MESSAGE_RATE_PER_SECOND=10
+export IM_REALTIME_REDIS_URL='redis://127.0.0.1:16379/0'
 ```
+
+`IM_REALTIME_REDIS_URL` 可省略；省略时不启用实时握手路由。启用时必须同时启用 OIDC，且启动时 Redis 必须可连接。浏览器 WebSocket 默认只允许同源；生产环境应通过 HTTPS/WSS 提供入口。单进程最多保持 5000 条连接、同一用户最多 5 条，连接每 5 秒复核任职并每 30 秒发送 Ping。Redis Stream 的消费、积压清理和在线消息推送仍属于下一增量。
 
 这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。当前仅验证外部签发的访问令牌，不提供授权码回调或客户端登录页面；非标准或不透明令牌需另建适配器。
 
