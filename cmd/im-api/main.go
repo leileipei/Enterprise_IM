@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -44,6 +45,11 @@ func main() {
 		os.Exit(1)
 	}
 	if enabled {
+		messageRate, err := messageRateFromEnv(os.Getenv)
+		if err != nil {
+			logger.Error("invalid message rate configuration", "error", err)
+			os.Exit(1)
+		}
 		authenticator, err := oidcauth.New(ctx, authConfig, oidcauth.Store{DB: pool})
 		if err != nil {
 			logger.Error("OIDC authentication unavailable", "error", err)
@@ -59,7 +65,7 @@ func main() {
 			logger.Error("directory API unavailable", "error", err)
 			os.Exit(1)
 		}
-		handler, err = httpserver.HandlerWithConversations(handler, authenticator, policystore.Service{DB: pool})
+		handler, err = httpserver.HandlerWithConversations(handler, authenticator, policystore.Service{DB: pool, MessageRatePerSecond: messageRate})
 		if err != nil {
 			logger.Error("conversation API unavailable", "error", err)
 			os.Exit(1)
@@ -90,6 +96,18 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func messageRateFromEnv(getenv func(string) string) (int, error) {
+	raw := getenv("IM_MESSAGE_RATE_PER_SECOND")
+	if raw == "" {
+		return 10, nil
+	}
+	rate, err := strconv.Atoi(raw)
+	if err != nil || rate <= 0 || rate > 10000 {
+		return 0, errors.New("IM_MESSAGE_RATE_PER_SECOND must be an integer from 1 to 10000")
+	}
+	return rate, nil
 }
 
 func adminConfigFromEnv(getenv func(string) string) (bool, oidcauth.Config, error) {

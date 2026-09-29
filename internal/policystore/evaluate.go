@@ -21,6 +21,14 @@ type Request struct {
 }
 
 func loadMembership(ctx context.Context, tx pgx.Tx, tenantID, membershipID, actorUserID string) (policy.Membership, bool, error) {
+	return loadMembershipWithLock(ctx, tx, tenantID, membershipID, actorUserID, true)
+}
+
+func loadMembershipSnapshot(ctx context.Context, tx pgx.Tx, tenantID, membershipID, actorUserID string) (policy.Membership, bool, error) {
+	return loadMembershipWithLock(ctx, tx, tenantID, membershipID, actorUserID, false)
+}
+
+func loadMembershipWithLock(ctx context.Context, tx pgx.Tx, tenantID, membershipID, actorUserID string, lock bool) (policy.Membership, bool, error) {
 	query := `
 SELECT m.id,m.tenant_id,m.organization_id,o.legal_entity_id,u.status,
  CASE WHEN t.status='active' AND o.status='active' AND l.status='active' THEN m.status ELSE 'suspended' END,
@@ -36,7 +44,9 @@ WHERE m.tenant_id=$1 AND m.id=$2`
 		query += " AND u.id=$3"
 		args = append(args, actorUserID)
 	}
-	query += " FOR SHARE OF t,u,m,o,l"
+	if lock {
+		query += " FOR SHARE OF t,u,m,o,l"
+	}
 	var member policy.Membership
 	var end *time.Time
 	err := tx.QueryRow(ctx, query, args...).Scan(&member.ID, &member.TenantID, &member.OrganizationID,
