@@ -29,6 +29,89 @@ func (conversationStub) PullTextMessages(context.Context, access.TrustedIdentity
 	panic("unexpected message pull")
 }
 
+func (conversationStub) ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error) {
+	panic("unexpected conversation list")
+}
+
+type conversationListStub struct {
+	conversationStub
+	list func(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
+}
+
+func (s conversationListStub) ListDirectConversations(ctx context.Context, id access.TrustedIdentity, cursor string, limit int) (policystore.ConversationListPage, error) {
+	return s.list(ctx, id, cursor, limit)
+}
+
+func TestConversationListRouteUsesVerifiedIdentityAndHidesPeerProfile(t *testing.T) {
+	service := conversationListStub{list: func(_ context.Context, id access.TrustedIdentity, cursor string, limit int) (policystore.ConversationListPage, error) {
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) ||
+			cursor != "opaque-cursor" || limit != 2 {
+			t.Fatalf("list arguments: %+v %q %d", id, cursor, limit)
+		}
+		return policystore.ConversationListPage{Conversations: []policystore.ListedConversation{
+			{ID: targetUserID, LastSeq: 3, UpdatedAt: time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC),
+				PeerVisible: true, PeerDisplayName: "同事", PeerOrganizationName: "总部"},
+			{ID: targetMemID, LastSeq: 5, UpdatedAt: time.Date(2026, 9, 29, 9, 0, 0, 0, time.UTC),
+				PeerVisible: false, PeerDisplayName: "不得出现", PeerOrganizationName: "隐藏组织"},
+		}, HasMore: true, NextCursor: "next-page"}, nil
+	}}
+	handler, err := HandlerWithConversations(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := adminRequest(http.MethodGet, "/api/v1/conversations?cursor=opaque-cursor&limit=2")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"next_cursor":"next-page"`) ||
+		!strings.Contains(res.Body.String(), `"display_name":"同事"`) ||
+		strings.Contains(res.Body.String(), "不得出现") || strings.Contains(res.Body.String(), "隐藏组织") ||
+		!strings.Contains(res.Body.String(), `"peer_visible":false`) {
+		t.Fatalf("list response: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestConversationListRouteRejectsInvalidQueryAndMapsFailures(t *testing.T) {
+	service := conversationListStub{list: func(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error) {
+		t.Fatal("list called for invalid query")
+		return policystore.ConversationListPage{}, nil
+	}}
+	handler, err := HandlerWithConversations(Handler(nil), authFunc(verified), service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{
+		"/api/v1/conversations?", "/api/v1/conversations?limit=0", "/api/v1/conversations?limit=51",
+		"/api/v1/conversations?limit=2&limit=3", "/api/v1/conversations?cursor=",
+		"/api/v1/conversations?cursor=x&cursor=y", "/api/v1/conversations?tenant_id=x",
+	} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, adminRequest(http.MethodGet, path))
+		if res.Code != http.StatusBadRequest {
+			t.Fatalf("query accepted %s: %d %s", path, res.Code, res.Body.String())
+		}
+	}
+	for _, failure := range []struct {
+		serviceError error
+		status       int
+	}{
+		{policystore.ErrInvalidConversationListRequest, http.StatusBadRequest},
+		{policystore.ErrForbidden, http.StatusForbidden},
+		{errors.Join(policystore.ErrAuditUnavailable, errors.New("private detail")), http.StatusServiceUnavailable},
+	} {
+		failed, err := HandlerWithConversations(Handler(nil), authFunc(verified), conversationListStub{list: func(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error) {
+			return policystore.ConversationListPage{}, failure.serviceError
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		res := httptest.NewRecorder()
+		failed.ServeHTTP(res, adminRequest(http.MethodGet, "/api/v1/conversations"))
+		if res.Code != failure.status || strings.Contains(res.Body.String(), "private detail") {
+			t.Fatalf("list failure: %d %s", res.Code, res.Body.String())
+		}
+	}
+}
+
 type messageStub struct {
 	conversationStub
 	send func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
@@ -93,12 +176,12 @@ func TestConversationRouteRejectsMalformedAndPrivilegeFields(t *testing.T) {
 		}
 	}
 	for _, request := range []*http.Request{
-		adminRequest(http.MethodGet, "/api/v1/conversations"),
+		adminRequest(http.MethodPut, "/api/v1/conversations"),
 		adminRequest(http.MethodPost, "/api/v1/conversations?scope_allowed=true"),
 	} {
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, request)
-		if request.Method == http.MethodGet && (res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != http.MethodPost) {
+		if request.Method == http.MethodPut && (res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "GET, POST") {
 			t.Fatalf("wrong conversation method: %d %s", res.Code, res.Body.String())
 		}
 		if request.URL.RawQuery != "" && res.Code != http.StatusBadRequest {
