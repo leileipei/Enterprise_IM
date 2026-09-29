@@ -172,21 +172,9 @@ func endAdminMembership(w http.ResponseWriter, r *http.Request, identity access.
 func validUUID(value string) bool { return uuidPattern.MatchString(value) }
 
 func authenticateAdmin(w http.ResponseWriter, r *http.Request, authenticator Authenticator) (access.TrustedIdentity, bool) {
-	w.Header().Set("Cache-Control", "no-store")
-	values := r.Header.Values("Authorization")
-	if len(values) != 1 {
-		return denyAuthentication(w, r, http.StatusUnauthorized, "unauthorized")
-	}
-	scheme, token, found := strings.Cut(values[0], " ")
-	if !found || !strings.EqualFold(scheme, "Bearer") || token == "" || strings.ContainsAny(token, " \t\r\n") || len(token) > 8192 {
-		return denyAuthentication(w, r, http.StatusUnauthorized, "unauthorized")
-	}
-	verified, err := authenticator.Authenticate(r.Context(), token)
-	if errors.Is(err, ErrAuthUnavailable) {
-		return denyAuthentication(w, r, http.StatusServiceUnavailable, "unavailable")
-	}
-	if err != nil || !validUUID(verified.TenantID) || !validUUID(verified.UserID) {
-		return denyAuthentication(w, r, http.StatusUnauthorized, "unauthorized")
+	verified, ok := authenticateBearer(w, r, authenticator)
+	if !ok {
+		return access.TrustedIdentity{}, false
 	}
 	memberships := r.Header.Values("X-Acting-Membership-ID")
 	if len(memberships) != 1 || !validUUID(memberships[0]) {
@@ -196,12 +184,32 @@ func authenticateAdmin(w http.ResponseWriter, r *http.Request, authenticator Aut
 	return access.TrustedIdentity{TenantID: verified.TenantID, UserID: verified.UserID, ActingMembershipID: memberships[0]}, true
 }
 
-func denyAuthentication(w http.ResponseWriter, r *http.Request, status int, code string) (access.TrustedIdentity, bool) {
+func authenticateBearer(w http.ResponseWriter, r *http.Request, authenticator Authenticator) (VerifiedIdentity, bool) {
+	w.Header().Set("Cache-Control", "no-store")
+	values := r.Header.Values("Authorization")
+	if len(values) != 1 {
+		return denyBearer(w, r, http.StatusUnauthorized, "unauthorized")
+	}
+	scheme, token, found := strings.Cut(values[0], " ")
+	if !found || !strings.EqualFold(scheme, "Bearer") || token == "" || strings.ContainsAny(token, " \t\r\n") || len(token) > 8192 {
+		return denyBearer(w, r, http.StatusUnauthorized, "unauthorized")
+	}
+	verified, err := authenticator.Authenticate(r.Context(), token)
+	if errors.Is(err, ErrAuthUnavailable) {
+		return denyBearer(w, r, http.StatusServiceUnavailable, "unavailable")
+	}
+	if err != nil || !validUUID(verified.TenantID) || !validUUID(verified.UserID) {
+		return denyBearer(w, r, http.StatusUnauthorized, "unauthorized")
+	}
+	return verified, true
+}
+
+func denyBearer(w http.ResponseWriter, r *http.Request, status int, code string) (VerifiedIdentity, bool) {
 	if status == http.StatusUnauthorized {
 		w.Header().Set("WWW-Authenticate", "Bearer")
 	}
 	rejectAdmin(w, r, status, code)
-	return access.TrustedIdentity{}, false
+	return VerifiedIdentity{}, false
 }
 
 func rejectAdmin(w http.ResponseWriter, r *http.Request, status int, code string) {
