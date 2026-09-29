@@ -4,11 +4,39 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
 )
 
 func env(values map[string]string) func(string) string {
 	return func(key string) string { return values[key] }
+}
+
+func TestWebConfigRequiresOIDCAndAllowedPublicClient(t *testing.T) {
+	base := oidcauth.Config{Issuer: "https://sso.example.test/group", Audience: "enterprise-im-api",
+		JWKSURL: "https://sso.example.test/keys", AllowedClientIDs: []string{"enterprise-im-web"}}
+	if enabled, _, err := webConfigFromEnv(env(nil), true, base); err != nil || enabled {
+		t.Fatalf("web should default off: %v %v", enabled, err)
+	}
+	settings := map[string]string{"IM_WEB_ENABLED": "true", "IM_WEB_AUTHORIZATION_URL": "https://sso.example.test/authorize",
+		"IM_WEB_TOKEN_URL": "https://sso.example.test/token", "IM_WEB_CLIENT_ID": "enterprise-im-web",
+		"IM_WEB_REDIRECT_URL": "https://im.example.test/web/"}
+	if _, _, err := webConfigFromEnv(env(settings), false, base); err == nil {
+		t.Fatal("web without OIDC accepted")
+	}
+	enabled, cfg, err := webConfigFromEnv(env(settings), true, base)
+	if err != nil || !enabled || cfg.ClientID != "enterprise-im-web" || cfg.Scope != "openid profile" || cfg.Issuer != base.Issuer {
+		t.Fatalf("valid web config rejected: %v %+v %v", enabled, cfg, err)
+	}
+	settings["IM_WEB_CLIENT_ID"] = "unknown-client"
+	if _, _, err := webConfigFromEnv(env(settings), true, base); err == nil {
+		t.Fatal("client outside access-token allowlist accepted")
+	}
+	settings["IM_WEB_CLIENT_ID"] = "enterprise-im-web"
+	settings["IM_WEB_REDIRECT_URL"] = "http://im.example.test/web/"
+	if _, _, err := webConfigFromEnv(env(settings), true, base); err == nil {
+		t.Fatal("insecure web callback accepted")
+	}
 }
 
 func TestOIDCAdminConfigRequiresExplicitEnableAndCompleteSettings(t *testing.T) {

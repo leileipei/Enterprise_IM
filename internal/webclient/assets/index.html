@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102638">
+  <title>企业 IM · 集团协作</title>
+  <link rel="stylesheet" href="/web/style.css">
+  <script src="/web/app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <main>
+    <section id="login-view" class="login-view">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p class="eyebrow">ENTERPRISE IM · GROUP EDITION</p>
+      <h1>让集团沟通<br><em>回到同一个地方。</em></h1>
+      <p class="login-copy">以集团身份进入，在自己的组织任职下，与被授权的同事安全交流。</p>
+      <button id="login-button" class="primary-button" type="button">使用企业账号登录 <span aria-hidden="true">↗</span></button>
+      <p id="login-hint" class="hint" role="status">正在准备登录…</p>
+      <div class="login-foot"><span>集团统一身份</span><span>组织边界可控</span><span>消息可靠保存</span></div>
+    </section>
+
+    <section id="workspace" class="workspace hidden" aria-label="企业 IM 工作台">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <div class="small-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div><strong>企业 IM</strong><small>集团协作空间</small></div>
+        </div>
+        <div class="account-card">
+          <div id="avatar" class="avatar">IM</div>
+          <div class="account-text"><strong id="account-name">—</strong><small id="account-number">—</small></div>
+          <button id="logout-button" class="text-button" type="button" title="退出当前页面">退出</button>
+        </div>
+        <div class="identity-panel">
+          <div class="section-heading"><span>当前任职</span><span class="tag">身份</span></div>
+          <div id="identity-options" class="identity-options"></div>
+        </div>
+        <div class="search-panel">
+          <label for="person-query" class="section-heading">查找同事</label>
+          <div class="search-row"><input id="person-query" type="search" placeholder="输入姓名，至少 2 个字" autocomplete="off"><button id="search-button" type="button" aria-label="搜索">⌕</button></div>
+          <p id="search-hint" class="microcopy">选择任职后，可查找通讯录内可见的同事。</p>
+          <div id="people-results" class="people-results"></div>
+        </div>
+        <div class="recent-panel"><div class="section-heading"><span>本次会话</span><span class="tag">仅当前页面</span></div><div id="conversation-list" class="conversation-list"></div></div>
+        <div class="sidebar-foot">本地页面不会保存你的访问令牌。刷新后需重新登录。</div>
+      </aside>
+      <div class="chat-column">
+        <header class="chat-header"><div><p class="eyebrow">DIRECT MESSAGE</p><h2 id="chat-title">选择一位同事，开始沟通</h2><p id="chat-subtitle">选择任职后搜索可见人员</p></div><span id="connection-state" class="connection-state">未连接</span></header>
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text"><div class="empty-state"><div class="empty-glyph">✦</div><strong>沟通从这里开始</strong><span>选择任职，查找同事，再发起单聊。</span></div></div>
+        <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
+      </div>
+    </section>
+  </main>
+  <div id="notice" class="notice hidden" role="status"></div>
+</body>
+</html>

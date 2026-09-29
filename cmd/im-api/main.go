@@ -21,6 +21,7 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 	"github.com/leileipei/Enterprise_IM/internal/realtime"
+	"github.com/leileipei/Enterprise_IM/internal/webclient"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -47,6 +48,11 @@ func main() {
 	enabled, authConfig, err := adminConfigFromEnv(os.Getenv)
 	if err != nil {
 		logger.Error("invalid OIDC configuration", "error", err)
+		os.Exit(1)
+	}
+	webEnabled, webConfig, err := webConfigFromEnv(os.Getenv, enabled, authConfig)
+	if err != nil {
+		logger.Error("invalid Web login configuration", "error", err)
 		os.Exit(1)
 	}
 	realtimeOptions, err := realtimeRedisOptionsFromEnv(os.Getenv, enabled)
@@ -113,6 +119,14 @@ func main() {
 				os.Exit(1)
 			}
 			logger.Info("realtime notifications enabled", "stream", realtimeStream)
+		}
+		if webEnabled {
+			handler, err = webclient.NewHandler(handler, authenticator, webConfig, nil)
+			if err != nil {
+				logger.Error("Web client unavailable", "error", err)
+				os.Exit(1)
+			}
+			logger.Info("Web client enabled", "path", "/web/")
 		}
 	}
 
@@ -210,5 +224,34 @@ func adminConfigFromEnv(getenv func(string) string) (bool, oidcauth.Config, erro
 		return true, config, nil
 	default:
 		return false, oidcauth.Config{}, errors.New("IM_OIDC_ENABLED must be true or false")
+	}
+}
+
+func webConfigFromEnv(getenv func(string) string, oidcEnabled bool, auth oidcauth.Config) (bool, webclient.Config, error) {
+	switch getenv("IM_WEB_ENABLED") {
+	case "", "false":
+		return false, webclient.Config{}, nil
+	case "true":
+		if !oidcEnabled {
+			return false, webclient.Config{}, errors.New("IM_WEB_ENABLED requires IM_OIDC_ENABLED=true")
+		}
+		scope := getenv("IM_WEB_SCOPE")
+		if scope == "" {
+			scope = "openid profile"
+		}
+		config := webclient.Config{Issuer: auth.Issuer, AuthorizationURL: getenv("IM_WEB_AUTHORIZATION_URL"),
+			TokenURL: getenv("IM_WEB_TOKEN_URL"), ClientID: getenv("IM_WEB_CLIENT_ID"),
+			RedirectURL: getenv("IM_WEB_REDIRECT_URL"), Scope: scope}
+		if err := config.Validate(); err != nil {
+			return false, webclient.Config{}, err
+		}
+		for _, allowed := range auth.AllowedClientIDs {
+			if allowed == config.ClientID {
+				return true, config, nil
+			}
+		}
+		return false, webclient.Config{}, errors.New("web client ID is not in OIDC allowed clients")
+	default:
+		return false, webclient.Config{}, errors.New("IM_WEB_ENABLED must be true or false")
 	}
 }

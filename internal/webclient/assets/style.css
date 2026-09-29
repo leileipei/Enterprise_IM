@@ -1,0 +1,106 @@
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#193044;background:#edf2f2;font-synthesis:none}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;overflow-x:hidden}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.52}
+.hidden{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.ambient{position:fixed;pointer-events:none;border-radius:50%;filter:blur(3px)}
+.ambient-one{width:650px;height:650px;top:-330px;right:-180px;background:radial-gradient(circle,#c4e4dc 0%,transparent 68%)}
+.ambient-two{width:480px;height:480px;bottom:-260px;left:-180px;background:radial-gradient(circle,#c9dedc 0%,transparent 70%)}
+main{position:relative;z-index:1;min-height:100vh}
+.login-view{max-width:620px;padding:12vh 36px 60px;margin:auto}
+.brand-mark,.small-mark{display:flex;gap:5px;align-items:end;height:34px}
+.brand-mark span,.small-mark span{width:9px;border-radius:6px;background:#2c9e89;transform:skewX(-12deg)}
+.brand-mark span:nth-child(1){height:18px}
+.brand-mark span:nth-child(2){height:32px}
+.brand-mark span:nth-child(3){height:25px}
+.eyebrow{font-size:11px;letter-spacing:.23em;font-weight:800;color:#3b9e8d}
+.login-view .eyebrow{margin-top:42px}
+.login-view h1{font-size:clamp(43px,7vw,72px);line-height:1.18;letter-spacing:-.065em;margin:18px 0 25px;color:#142d40}
+.login-view h1 em{font-style:normal;color:#248d7e}
+.login-copy{max-width:390px;color:#617783;line-height:1.9;font-size:16px;margin-bottom:42px}
+.primary-button{border:0;border-radius:12px;background:#176c66;color:white;padding:14px 21px;font-weight:700;box-shadow:0 12px 25px rgba(23,108,102,.18);display:inline-flex;gap:28px;align-items:center;justify-content:space-between}
+.primary-button:hover:not(:disabled){background:#105d58}
+.hint{min-height:22px;color:#647b84;font-size:13px;margin-top:15px}
+.login-foot{display:flex;gap:28px;margin-top:85px;color:#779099;font-size:12px}
+.login-foot span:before{content:"●";color:#41a895;margin-right:8px;font-size:8px}
+.workspace{height:100vh;min-height:660px;max-width:1800px;margin:auto;display:flex;background:#f9fbfa;box-shadow:0 0 60px rgba(32,71,69,.11)}
+.sidebar{width:365px;flex:none;display:flex;flex-direction:column;background:#f0f6f4;border-right:1px solid #dce8e5;padding:26px 20px 17px;overflow-y:auto}
+.sidebar-head{display:flex;gap:12px;align-items:center;padding:0 8px 24px}
+.small-mark{height:27px}
+.small-mark span{width:6px}
+.small-mark span:nth-child(1){height:14px}
+.small-mark span:nth-child(2){height:25px}
+.small-mark span:nth-child(3){height:19px}
+.sidebar-head strong,.sidebar-head small,.account-text strong,.account-text small{display:block}
+.sidebar-head strong{font-size:19px;letter-spacing:.02em}
+.sidebar-head small{font-size:10px;letter-spacing:.14em;color:#81959a;margin-top:2px}
+.account-card{display:flex;align-items:center;gap:11px;background:white;border:1px solid #e3ece9;border-radius:14px;padding:12px;box-shadow:0 6px 14px rgba(33,78,67,.035)}
+.avatar{height:38px;width:38px;border-radius:12px;background:#dbf2e8;color:#148574;display:grid;place-items:center;font-weight:800;font-size:12px;flex:none}
+.account-text{min-width:0;flex:1}
+.account-text strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-text small{font-size:11px;color:#7b8f95;margin-top:3px}
+.text-button{border:0;background:transparent;color:#659087;font-size:12px;padding:5px}
+.text-button:hover{color:#145f58}
+.identity-panel,.search-panel,.recent-panel{padding:23px 5px 0}
+.section-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;font-size:12px;font-weight:800;letter-spacing:.04em;color:#526c72}
+.tag{font-weight:600;color:#6f9990;font-size:10px;letter-spacing:0}
+.identity-options{display:grid;gap:7px}
+.identity-button,.person-button,.conversation-button{width:100%;text-align:left;border:1px solid #deebe7;background:rgba(255,255,255,.65);border-radius:10px;padding:10px 12px;color:#2e4850}
+.identity-button:hover,.person-button:hover,.conversation-button:hover{border-color:#8fcbb9;background:white}
+.identity-button.active,.conversation-button.active{border-color:#55b39e;background:#e1f5ed}
+.identity-button strong,.person-button strong,.conversation-button strong{display:block;font-size:13px}
+.identity-button small,.person-button small,.conversation-button small{display:block;color:#7c9293;font-size:11px;margin-top:3px;line-height:1.5}
+.search-row{display:flex;border:1px solid #dbe8e3;background:white;border-radius:11px;overflow:hidden}
+.search-row:focus-within{border-color:#59ae9c}
+.search-row input{width:100%;min-width:0;border:0;outline:0;padding:11px 12px;background:transparent;font-size:12px;color:#23434c}
+.search-row button{border:0;background:transparent;color:#26917f;font-size:24px;width:38px;line-height:1}
+.microcopy{color:#8da1a2;font-size:11px;line-height:1.6;margin:11px 4px}
+.people-results,.conversation-list{display:grid;gap:7px}
+.person-card{background:rgba(255,255,255,.65);border:1px solid #e0ebe7;border-radius:11px;padding:10px}
+.person-card>strong{font-size:13px}
+.person-card>small{font-size:11px;color:#809396;margin-left:7px}
+.person-button{margin-top:7px;padding:7px 9px;background:white}
+.recent-panel{margin-bottom:30px}
+.sidebar-foot{margin-top:auto;border-top:1px solid #dce8e5;padding:15px 6px 0;color:#90a2a5;font-size:11px;line-height:1.55}
+.chat-column{flex:1;min-width:0;display:flex;flex-direction:column}
+.chat-header{min-height:105px;padding:25px 34px 20px;border-bottom:1px solid #e7eeeb;display:flex;justify-content:space-between;align-items:center;gap:12px;background:white}
+.chat-header .eyebrow{margin:0 0 6px;font-size:9px}
+.chat-header h2{font-size:20px;line-height:1.35;margin:0;font-weight:760}
+.chat-header p:last-child{margin:5px 0 0;color:#8ba0a1;font-size:12px}
+.connection-state{white-space:nowrap;font-size:11px;color:#8a9b9c;background:#edf2f0;border-radius:30px;padding:7px 11px}
+.connection-state.online{color:#177566;background:#e0f4ea}
+.messages{flex:1;overflow-y:auto;padding:28px 34px;background:linear-gradient(#fbfdfb,#f5f9f7);display:flex;flex-direction:column;gap:14px}
+.empty-state{margin:auto;display:flex;align-items:center;flex-direction:column;text-align:center;color:#98a9a9;gap:8px;font-size:13px}
+.empty-state strong{font-size:19px;color:#406066}
+.empty-glyph{font-size:39px;color:#5eb79f;margin-bottom:7px}
+.message{max-width:min(72%,550px);display:flex;flex-direction:column;gap:5px;align-self:flex-start}
+.message.mine{align-self:flex-end;align-items:flex-end}
+.message-meta{font-size:10px;color:#9aacad}
+.message-bubble{background:white;border:1px solid #e4ece8;border-radius:15px 15px 15px 5px;padding:11px 14px;line-height:1.6;font-size:13px;white-space:pre-wrap;word-break:break-word;box-shadow:0 5px 15px rgba(29,66,56,.035)}
+.message.mine .message-bubble{background:#d9f2e8;border-color:#c7e9dc;border-radius:15px 15px 5px 15px}
+.message.redacted .message-bubble{color:#8a9fa0;font-style:italic;background:#f1f5f3}
+.composer{border-top:1px solid #e3ebe7;background:white;padding:16px 25px 20px}
+.composer textarea{display:block;width:100%;border:0;resize:none;outline:0;background:transparent;color:#203b45;font-size:13px;line-height:1.6;min-height:52px;max-height:145px}
+.composer-bottom{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.composer-bottom span{font-size:11px;color:#94a5a7}
+.composer .primary-button{padding:10px 17px;border-radius:9px;box-shadow:none;gap:16px;font-size:12px}
+.notice{position:fixed;right:22px;bottom:22px;background:#173b43;color:white;border-radius:11px;padding:12px 17px;font-size:12px;box-shadow:0 14px 32px rgba(26,61,65,.22);z-index:10;max-width:360px}
+@media(max-width:780px){.workspace{height:auto;min-height:100vh;flex-direction:column}
+.sidebar{width:100%;max-height:48vh;border-right:0;border-bottom:1px solid #dce8e5;padding:15px}
+.sidebar-head{padding-bottom:12px}
+.identity-panel,.search-panel,.recent-panel{padding-top:15px}
+.sidebar-foot{display:none}
+.chat-column{min-height:52vh}
+.chat-header{padding:16px;min-height:78px}
+.chat-header h2{font-size:16px}
+.messages{padding:18px;min-height:250px}
+.composer{padding:12px 15px}
+.login-view{padding-top:9vh}
+.login-foot{flex-wrap:wrap;gap:14px}
+}
+.composer-actions{display:flex;align-items:center;gap:9px}
+.secondary-button{border:1px solid #bed8d0;border-radius:9px;background:#f4faf7;color:#2f7569;padding:9px 12px;font-size:12px;font-weight:700}
+.secondary-button:hover{background:#e5f3eb}

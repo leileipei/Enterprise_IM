@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入、P2-03 Outbox 发布 Worker、P2-04 单聊文本补拉、P2-05 WebSocket 身份握手、P2-06 在线补拉通知和 P2-07 本人身份上下文。配置有效的身份提供方后，可显式启用受保护 API。**尚无浏览器登录流程、聊天界面、消息正文直推、设备送达确认、群聊补拉或完整断线恢复验收；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入、P2-03 Outbox 发布 Worker、P2-04 单聊文本补拉、P2-05 WebSocket 身份握手、P2-06 在线补拉通知、P2-07 本人身份上下文和 P2-08 基础 Web 单聊。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无跨刷新会话列表、消息正文直推、设备送达确认、群聊补拉或完整断线恢复验收；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -94,7 +94,20 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 `IM_REALTIME_REDIS_URL` 可省略；省略时不启用实时握手与通知路由。启用时必须同时启用 OIDC，且启动时 Redis 必须可连接。`IM_REALTIME_STREAM` 默认与 Worker 的 `IM_OUTBOX_STREAM` 相同；自定义时两者必须设为同一名称，并先启动 Worker。Worker 在健康处理循环刷新 10 秒存活标记；API 要求同一 Redis 和 Stream 上有该标记。Worker 停止、配置错配、读流或数据库核验故障会让通知入口失效，就绪探针返回 503，现有连接关闭。每个 API 实例独立从 Stream 尾部读取新事件并只通知本机连接，客户端重连收到 `ready` 后从 PostgreSQL 补拉。浏览器 WebSocket 默认只允许同源；生产环境应通过 HTTPS/WSS 提供入口。单进程最多保持 5000 条连接、同一用户最多 5 条，连接每 5 秒复核任职并每 30 秒发送 Ping。Stream 目前不自动裁剪，投入生产前仍需容量与保留策略验证。
 
-这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。当前仅验证外部签发的访问令牌，不提供授权码回调或客户端登录页面；非标准或不透明令牌需另建适配器。
+基础 Web 页面默认关闭。先在身份源注册支持授权码和 PKCE S256 的**公共客户端**，将其客户端 ID 同时加入 `IM_OIDC_ALLOWED_CLIENT_IDS`，并把精确回调 URL 注册为公开 HTTPS 地址，例如 `https://im.example.com/web/`。身份源须为此客户端签发满足上文约束的 API 访问令牌。经 HTTPS 反向代理提供同源页面和 API 后，额外配置：
+
+```sh
+export IM_WEB_ENABLED=true
+export IM_WEB_AUTHORIZATION_URL='https://sso.example.com/group/authorize'
+export IM_WEB_TOKEN_URL='https://sso.example.com/group/token'
+export IM_WEB_CLIENT_ID='enterprise-im-web'
+export IM_WEB_REDIRECT_URL='https://im.example.com/web/'
+export IM_WEB_SCOPE='openid profile'
+```
+
+然后访问 `https://im.example.com/web/`。页面完成授权码登录和当前有效任职选择，可按姓名查找可见同事、发起单聊、发送文本并补拉消息。令牌只保存在页面内存，刷新或退出后需重新登录；当前页面的会话列表也不跨刷新保存。可配置 Redis 实时通知，未配置或暂不可用时页面以定时补拉继续工作。当前 ACK 文案仅表示服务器持久化接收。`IM_WEB_SCOPE` 默认 `openid profile`；令牌兑换只访问服务器配置的 HTTPS 地址，不使用浏览器请求中的目标地址。部署前仍需用客户 IdP、HTTPS 入口和真实组织数据做联调；本地模拟测试不等于已完成联调。
+
+这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。非标准或不透明令牌需另建适配器。
 
 ## 测试
 
