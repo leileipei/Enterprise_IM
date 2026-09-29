@@ -48,3 +48,26 @@ func TestMessageRateConfigRequiresPositiveInteger(t *testing.T) {
 		}
 	}
 }
+
+func TestRealtimeRedisRequiresOIDCAndValidURL(t *testing.T) {
+	if options, err := realtimeRedisOptionsFromEnv(env(nil), false); err != nil || options != nil {
+		t.Fatalf("realtime default should be off: %v %v", options, err)
+	}
+	for _, tc := range []struct {
+		url     string
+		enabled bool
+	}{
+		{"redis://127.0.0.1:16379/0", false},
+		{"not-a-url", true},
+		{"http://127.0.0.1:16379", true},
+		{"redis://", true},
+	} {
+		if _, err := realtimeRedisOptionsFromEnv(env(map[string]string{"IM_REALTIME_REDIS_URL": tc.url}), tc.enabled); err == nil {
+			t.Fatalf("invalid realtime config accepted: %+v", tc)
+		}
+	}
+	options, err := realtimeRedisOptionsFromEnv(env(map[string]string{"IM_REALTIME_REDIS_URL": "redis://127.0.0.1:16379/0"}), true)
+	if err != nil || options == nil || options.Addr != "127.0.0.1:16379" || !options.ContextTimeoutEnabled {
+		t.Fatalf("valid realtime Redis config: %+v %v", options, err)
+	}
+}

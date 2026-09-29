@@ -14,11 +14,14 @@ import (
 
 	"crypto/rand"
 	"crypto/rsa"
+	"github.com/coder/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
+	"github.com/leileipei/Enterprise_IM/internal/realtime"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -335,6 +338,49 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"text":"你好"`) ||
 		!strings.Contains(res.Body.String(), `"next_after_seq":1`) || res.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("signed-token message pull: %d %s", res.Code, res.Body.String())
+	}
+	if rawRedis := os.Getenv("IM_TEST_REDIS_URL"); rawRedis != "" {
+		options, err := redis.ParseURL(rawRedis)
+		if err != nil {
+			t.Fatal(err)
+		}
+		redisClient := redis.NewClient(options)
+		defer redisClient.Close()
+		realtimeHandler, err := httpserver.HandlerWithRealtime(handler, auth, policystore.Service{DB: conn},
+			realtime.RedisTickets{Client: redisClient}, context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		ticketReq := httptest.NewRequest(http.MethodPost, "/api/v1/realtime/tickets", nil)
+		ticketReq.Header.Set("Authorization", "Bearer "+accessToken)
+		ticketReq.Header.Set("X-Acting-Membership-ID", actorMembership)
+		res = httptest.NewRecorder()
+		realtimeHandler.ServeHTTP(res, ticketReq)
+		var issued struct {
+			Ticket string `json:"ticket"`
+		}
+		if res.Code != http.StatusOK || json.Unmarshal(res.Body.Bytes(), &issued) != nil || issued.Ticket == "" {
+			t.Fatalf("signed-token realtime ticket: %d %s", res.Code, res.Body.String())
+		}
+		server := httptest.NewServer(realtimeHandler)
+		wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/v1/realtime"
+		wsCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		connWS, _, err := websocket.Dial(wsCtx, wsURL, &websocket.DialOptions{
+			Subprotocols: []string{"enterprise-im.v1", "ticket." + issued.Ticket},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, frame, err := connWS.Read(wsCtx)
+		if err != nil || string(frame) != `{"type":"ready","resync_required":true}` {
+			t.Fatalf("signed-token realtime ready: %s %v", frame, err)
+		}
+		connWS.CloseNow()
+		cancel()
+		server.Close()
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM audit_events WHERE tenant_id=$1 AND action IN ('realtime_ticket','realtime_connect') AND outcome='allow'", storeTenantA).Scan(&auditCount); err != nil || auditCount != 2 {
+			t.Fatalf("signed-token realtime audits: %d %v", auditCount, err)
+		}
 	}
 	for _, table := range []string{"messages", "outbox_events", "message_idempotency"} {
 		if err := conn.QueryRow(ctx, "SELECT count(*) FROM "+table+" WHERE tenant_id=$1", storeTenantA).Scan(&auditCount); err != nil || auditCount != 1 {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -17,6 +18,8 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
+	"github.com/leileipei/Enterprise_IM/internal/realtime"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -42,6 +45,11 @@ func main() {
 	enabled, authConfig, err := adminConfigFromEnv(os.Getenv)
 	if err != nil {
 		logger.Error("invalid OIDC configuration", "error", err)
+		os.Exit(1)
+	}
+	realtimeOptions, err := realtimeRedisOptionsFromEnv(os.Getenv, enabled)
+	if err != nil {
+		logger.Error("invalid realtime configuration", "error", err)
 		os.Exit(1)
 	}
 	if enabled {
@@ -70,6 +78,24 @@ func main() {
 			logger.Error("conversation API unavailable", "error", err)
 			os.Exit(1)
 		}
+		if realtimeOptions != nil {
+			redisClient := redis.NewClient(realtimeOptions)
+			defer redisClient.Close()
+			checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			pingErr := redisClient.Ping(checkCtx).Err()
+			cancel()
+			if pingErr != nil {
+				logger.Error("realtime Redis unavailable at startup")
+				os.Exit(1)
+			}
+			handler, err = httpserver.HandlerWithRealtime(handler, authenticator,
+				policystore.Service{DB: pool}, realtime.RedisTickets{Client: redisClient}, ctx)
+			if err != nil {
+				logger.Error("realtime API unavailable", "error", err)
+				os.Exit(1)
+			}
+			logger.Info("realtime handshake enabled")
+		}
 	}
 
 	server := &http.Server{
@@ -96,6 +122,26 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func realtimeRedisOptionsFromEnv(getenv func(string) string, oidcEnabled bool) (*redis.Options, error) {
+	raw := getenv("IM_REALTIME_REDIS_URL")
+	if raw == "" {
+		return nil, nil
+	}
+	if !oidcEnabled {
+		return nil, errors.New("IM_REALTIME_REDIS_URL requires IM_OIDC_ENABLED=true")
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "redis" && parsed.Scheme != "rediss") {
+		return nil, errors.New("IM_REALTIME_REDIS_URL must be redis:// or rediss:// with a host")
+	}
+	options, err := redis.ParseURL(raw)
+	if err != nil {
+		return nil, errors.New("IM_REALTIME_REDIS_URL is invalid")
+	}
+	options.ContextTimeoutEnabled = true
+	return options, nil
 }
 
 func messageRateFromEnv(getenv func(string) string) (int, error) {
