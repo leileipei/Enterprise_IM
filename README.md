@@ -59,6 +59,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000007_message_recipient.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000008_conversation_inbox.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000009_group_membership.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000010_group_create_request.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -98,6 +99,8 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 `IM_REALTIME_REDIS_URL` 可省略；省略时不启用实时握手与通知路由。启用时必须同时启用 OIDC，且启动时 Redis 必须可连接。`IM_REALTIME_STREAM` 默认与 Worker 的 `IM_OUTBOX_STREAM` 相同；自定义时两者必须设为同一名称，并先启动 Worker。Worker 在健康处理循环刷新 10 秒存活标记；API 要求同一 Redis 和 Stream 上有该标记。Worker 停止、配置错配、读流或数据库核验故障会让通知入口失效，就绪探针返回 503，现有连接关闭。每个 API 实例独立从 Stream 尾部读取新事件并只通知本机连接，客户端重连收到 `ready` 后从 PostgreSQL 补拉。浏览器 WebSocket 默认只允许同源；生产环境应通过 HTTPS/WSS 提供入口。单进程最多保持 5000 条连接、同一用户最多 5 条，连接每 5 秒复核任职并每 30 秒发送 Ping。Stream 目前不自动裁剪，投入生产前仍需容量与保留策略验证。
 
+启用 OIDC 后，`POST /api/v1/groups` 可由当前有效任职创建群，JSON 请求示例：`{"client_request_id":"00000000-0000-4000-8000-000000000851","name":"项目群","member_membership_ids":["00000000-0000-4000-8000-000000000852"]}`。`client_request_id` 由客户端生成；同一创建人用相同 ID 和相同内容重试会返回原群，改动内容则返回 409。一次可指定 1 至 20 位初始成员，服务会逐对检查建群策略；所有检查通过后才写入群及成员。当前仅提供建群 API，尚未开放群聊消息、邀请、退群或群列表。
+
 基础 Web 页面默认关闭。先在身份源注册支持授权码和 PKCE S256 的**公共客户端**，将其客户端 ID 同时加入 `IM_OIDC_ALLOWED_CLIENT_IDS`，并把精确回调 URL 注册为公开 HTTPS 地址，例如 `https://im.example.com/web/`。身份源须为此客户端签发满足上文约束的 API 访问令牌。经 HTTPS 反向代理提供同源页面和 API 后，额外配置：
 
 ```sh
@@ -124,4 +127,4 @@ go vet ./...
 
 浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`。
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000009` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理群数据。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000010` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
