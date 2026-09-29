@@ -58,6 +58,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000006_message_write.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000007_message_recipient.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000008_conversation_inbox.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000009_group_membership.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -123,4 +124,4 @@ go vet ./...
 
 浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`。
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000008` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000009` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理群数据。
