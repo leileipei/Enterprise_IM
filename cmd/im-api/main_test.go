@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/leileipei/Enterprise_IM/internal/outbox"
+)
 
 func env(values map[string]string) func(string) string {
 	return func(key string) string { return values[key] }
@@ -69,5 +74,27 @@ func TestRealtimeRedisRequiresOIDCAndValidURL(t *testing.T) {
 	options, err := realtimeRedisOptionsFromEnv(env(map[string]string{"IM_REALTIME_REDIS_URL": "redis://127.0.0.1:16379/0"}), true)
 	if err != nil || options == nil || options.Addr != "127.0.0.1:16379" || !options.ContextTimeoutEnabled {
 		t.Fatalf("valid realtime Redis config: %+v %v", options, err)
+	}
+}
+
+func TestRealtimeStreamConfiguration(t *testing.T) {
+	stream, err := realtimeStreamFromEnv(env(nil), true)
+	if err != nil || stream != outbox.DefaultStream {
+		t.Fatalf("default stream: %q %v", stream, err)
+	}
+	stream, err = realtimeStreamFromEnv(env(map[string]string{"IM_REALTIME_STREAM": "enterprise-im:staging:message-created:v1"}), true)
+	if err != nil || stream != "enterprise-im:staging:message-created:v1" {
+		t.Fatalf("custom stream: %q %v", stream, err)
+	}
+	for _, tc := range []struct {
+		stream  string
+		enabled bool
+	}{
+		{" bad ", true}, {"bad\nname", true}, {strings.Repeat("x", 129), true},
+		{"enterprise-im:staging:message-created:v1", false},
+	} {
+		if _, err := realtimeStreamFromEnv(env(map[string]string{"IM_REALTIME_STREAM": tc.stream}), tc.enabled); err == nil {
+			t.Fatalf("invalid stream accepted: %+v", tc)
+		}
 	}
 }

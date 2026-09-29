@@ -17,8 +17,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const defaultStream = "enterprise-im:message-created:v1"
-
 type workerConfig struct {
 	DatabaseURL string
 	RedisURL    string
@@ -50,7 +48,7 @@ func configFromEnv(getenv func(string) string) (workerConfig, error) {
 		return workerConfig{}, errors.New("IM_OUTBOX_REDIS_URL is invalid")
 	}
 	if config.Stream == "" {
-		config.Stream = defaultStream
+		config.Stream = outbox.DefaultStream
 	}
 	if len(config.Stream) > 128 || strings.IndexFunc(config.Stream, func(r rune) bool {
 		return unicode.IsSpace(r) || unicode.IsControl(r)
@@ -80,10 +78,23 @@ func run(ctx context.Context, config workerConfig, logger *slog.Logger) error {
 	if err := redisClient.Ping(checkCtx).Err(); err != nil {
 		return errors.New("Redis unavailable at startup")
 	}
+	if err := outbox.RefreshPublisherPresence(checkCtx, redisClient, config.Stream); err != nil {
+		return errors.New("publisher presence unavailable at startup")
+	}
 	worker := outbox.Worker{DB: pool, Publisher: outbox.RedisPublisher{Client: redisClient, Stream: config.Stream}}
 	logger.Info("outbox worker started", "stream", config.Stream)
+	lastPresenceRefresh := time.Now()
 	for ctx.Err() == nil {
 		processed, err := worker.ProcessOne(ctx)
+		if err == nil && time.Since(lastPresenceRefresh) >= 3*time.Second {
+			presenceCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			presenceErr := outbox.RefreshPublisherPresence(presenceCtx, redisClient, config.Stream)
+			cancel()
+			lastPresenceRefresh = time.Now()
+			if presenceErr != nil && ctx.Err() == nil {
+				logger.Warn("publisher presence refresh failed", "error", presenceErr)
+			}
+		}
 		if err != nil && ctx.Err() == nil {
 			logger.Warn("outbox event processing failed; event remains retryable", "error", err)
 		}
