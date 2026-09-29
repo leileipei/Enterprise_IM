@@ -21,6 +21,10 @@ func (f conversationStub) StartDirectConversation(ctx context.Context, id access
 	return f(ctx, id, target)
 }
 
+func (conversationStub) CreateGroup(context.Context, access.TrustedIdentity, policystore.CreateGroupRequest) (policystore.GroupConversation, error) {
+	panic("unexpected group create")
+}
+
 func (conversationStub) SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
 	panic("unexpected message send")
 }

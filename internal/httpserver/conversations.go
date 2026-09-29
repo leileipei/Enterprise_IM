@@ -20,6 +20,7 @@ import (
 
 type ConversationService interface {
 	StartDirectConversation(context.Context, access.TrustedIdentity, string) (policystore.DirectConversation, error)
+	CreateGroup(context.Context, access.TrustedIdentity, policystore.CreateGroupRequest) (policystore.GroupConversation, error)
 	ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
 	PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
@@ -32,12 +33,22 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 		return nil, errors.New("base handler, authentication and conversation service are required")
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/conversations" && !strings.HasPrefix(r.URL.Path, "/api/v1/conversations/") {
+		if r.URL.Path != "/api/v1/groups" && r.URL.Path != "/api/v1/conversations" &&
+			!strings.HasPrefix(r.URL.Path, "/api/v1/conversations/") {
 			base.ServeHTTP(w, r)
 			return
 		}
 		identity, ok := authenticateAdmin(w, r, authenticator)
 		if !ok {
+			return
+		}
+		if r.URL.Path == "/api/v1/groups" {
+			if r.Method != http.MethodPost {
+				w.Header().Set("Allow", "POST")
+				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+				return
+			}
+			createGroup(w, r, identity, conversations)
 			return
 		}
 		if r.URL.Path != "/api/v1/conversations" {
