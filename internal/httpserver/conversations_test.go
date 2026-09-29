@@ -25,6 +25,14 @@ func (conversationStub) CreateGroup(context.Context, access.TrustedIdentity, pol
 	panic("unexpected group create")
 }
 
+func (conversationStub) GetOwnGroupMembership(context.Context, access.TrustedIdentity, string) (policystore.GroupMembership, error) {
+	panic("unexpected group membership read")
+}
+
+func (conversationStub) LeaveGroup(context.Context, access.TrustedIdentity, string, string) (policystore.GroupLeaveResult, error) {
+	panic("unexpected group leave")
+}
+
 func (conversationStub) SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
 	panic("unexpected message send")
 }

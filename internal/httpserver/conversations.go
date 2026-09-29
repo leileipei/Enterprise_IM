@@ -21,6 +21,8 @@ import (
 type ConversationService interface {
 	StartDirectConversation(context.Context, access.TrustedIdentity, string) (policystore.DirectConversation, error)
 	CreateGroup(context.Context, access.TrustedIdentity, policystore.CreateGroupRequest) (policystore.GroupConversation, error)
+	GetOwnGroupMembership(context.Context, access.TrustedIdentity, string) (policystore.GroupMembership, error)
+	LeaveGroup(context.Context, access.TrustedIdentity, string, string) (policystore.GroupLeaveResult, error)
 	ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
 	PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
@@ -33,7 +35,7 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 		return nil, errors.New("base handler, authentication and conversation service are required")
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/groups" && r.URL.Path != "/api/v1/conversations" &&
+		if r.URL.Path != "/api/v1/groups" && !strings.HasPrefix(r.URL.Path, "/api/v1/groups/") && r.URL.Path != "/api/v1/conversations" &&
 			!strings.HasPrefix(r.URL.Path, "/api/v1/conversations/") {
 			base.ServeHTTP(w, r)
 			return
@@ -49,6 +51,10 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 				return
 			}
 			createGroup(w, r, identity, conversations)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/v1/groups/") {
+			groupMembershipRoute(w, r, identity, conversations)
 			return
 		}
 		if r.URL.Path != "/api/v1/conversations" {
