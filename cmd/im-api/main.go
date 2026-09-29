@@ -75,6 +75,11 @@ func main() {
 			logger.Error("admin API unavailable", "error", err)
 			os.Exit(1)
 		}
+		handler, err = httpserver.HandlerWithSelfContext(handler, authenticator, policystore.Service{DB: pool})
+		if err != nil {
+			logger.Error("self context API unavailable", "error", err)
+			os.Exit(1)
+		}
 		handler, err = httpserver.HandlerWithDirectory(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
 			logger.Error("directory API unavailable", "error", err)

@@ -205,6 +205,10 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	handler, err = httpserver.HandlerWithSelfContext(handler, auth, policystore.Service{DB: conn})
+	if err != nil {
+		t.Fatal(err)
+	}
 	handler, err = httpserver.HandlerWithDirectory(handler, auth, policystore.Service{DB: conn})
 	if err != nil {
 		t.Fatal(err)
@@ -214,6 +218,16 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 		t.Fatal(err)
 	}
 	accessToken := signToken(t, key, testClaims(), "at+jwt", jwt.SigningMethodRS256)
+	selfRequest := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	selfRequest.Header.Set("Authorization", "Bearer "+accessToken)
+	selfResponse := httptest.NewRecorder()
+	handler.ServeHTTP(selfResponse, selfRequest)
+	if selfResponse.Code != http.StatusOK || selfResponse.Header().Get("Cache-Control") != "no-store" ||
+		!strings.Contains(selfResponse.Body.String(), `"user_id":"`+storeUserA+`"`) ||
+		!strings.Contains(selfResponse.Body.String(), `"id":"`+actorMembership+`"`) ||
+		strings.Contains(selfResponse.Body.String(), `"id":"`+targetMembership+`"`) {
+		t.Fatalf("signed-token self context: %d %s", selfResponse.Code, selfResponse.Body.String())
+	}
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users/"+targetID, nil)
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("X-Acting-Membership-ID", actorMembership)
