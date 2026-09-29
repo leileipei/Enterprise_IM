@@ -20,6 +20,7 @@ import (
 
 type ConversationService interface {
 	StartDirectConversation(context.Context, access.TrustedIdentity, string) (policystore.DirectConversation, error)
+	ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
 	PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
 }
@@ -56,13 +57,99 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 			}
 			return
 		}
-		if r.Method != http.MethodPost {
-			w.Header().Set("Allow", http.MethodPost)
+		switch r.Method {
+		case http.MethodGet:
+			listDirectConversations(w, r, identity, conversations)
+		case http.MethodPost:
+			startDirectConversation(w, r, identity, conversations)
+		default:
+			w.Header().Set("Allow", "GET, POST")
 			rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+		}
+	}), nil
+}
+
+func listDirectConversations(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, service ConversationService) {
+	if r.URL.ForceQuery {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	query, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil || len(query) > 2 || len(query["limit"]) > 1 || len(query["cursor"]) > 1 {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	for key := range query {
+		if key != "limit" && key != "cursor" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 			return
 		}
-		startDirectConversation(w, r, identity, conversations)
-	}), nil
+	}
+	limit := 20
+	if value, ok := query["limit"]; ok {
+		if !decimalDigits(value[0]) {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		limit, err = strconv.Atoi(value[0])
+		if err != nil || limit < 1 || limit > 50 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	cursor := ""
+	if value, ok := query["cursor"]; ok {
+		cursor = value[0]
+		if cursor == "" || len(cursor) > 256 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	if r.Body != nil {
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
+		if err != nil || len(body) != 0 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+	}
+	page, err := service.ListDirectConversations(r.Context(), identity, cursor, limit)
+	if err != nil {
+		switch {
+		case errors.Is(err, policystore.ErrInvalidConversationListRequest):
+			writeAdminError(w, http.StatusBadRequest, "invalid_request")
+		case errors.Is(err, policystore.ErrForbidden):
+			writeAdminError(w, http.StatusForbidden, "invalid_identity")
+		default:
+			slog.ErrorContext(r.Context(), "conversation list unavailable", "error", err)
+			writeAdminError(w, http.StatusServiceUnavailable, "unavailable")
+		}
+		return
+	}
+	type itemDTO struct {
+		ID               string `json:"id"`
+		Type             string `json:"type"`
+		LastSeq          int64  `json:"last_seq"`
+		UpdatedAt        string `json:"updated_at"`
+		PeerVisible      bool   `json:"peer_visible"`
+		DisplayName      string `json:"display_name,omitempty"`
+		OrganizationName string `json:"organization_name,omitempty"`
+	}
+	items := make([]itemDTO, 0, len(page.Conversations))
+	for _, conversation := range page.Conversations {
+		item := itemDTO{ID: conversation.ID, Type: "direct", LastSeq: conversation.LastSeq,
+			UpdatedAt:   conversation.UpdatedAt.UTC().Format("2006-01-02T15:04:05.999999999Z07:00"),
+			PeerVisible: conversation.PeerVisible}
+		if conversation.PeerVisible {
+			item.DisplayName = conversation.PeerDisplayName
+			item.OrganizationName = conversation.PeerOrganizationName
+		}
+		items = append(items, item)
+	}
+	writeAdminJSON(w, http.StatusOK, struct {
+		Conversations []itemDTO `json:"conversations"`
+		HasMore       bool      `json:"has_more"`
+		NextCursor    string    `json:"next_cursor,omitempty"`
+	}{items, page.HasMore, page.NextCursor})
 }
 
 func messageConversationID(path string) (string, bool) {

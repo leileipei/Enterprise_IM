@@ -9,6 +9,7 @@ const noticeBox = element("notice");
 const identityOptions = element("identity-options");
 const results = element("people-results");
 const conversationList = element("conversation-list");
+const loadMoreConversationsButton = element("load-more-conversations");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -37,6 +38,14 @@ let pollingTimer = null;
 let realtimeUnsupported = false;
 let noticeTimer = null;
 const conversations = new Map();
+let inboxCursor = "";
+let inboxHasMore = false;
+let inboxGeneration = 0;
+let inboxRefreshPromise = null;
+let inboxRefreshAgain = false;
+let inboxPagePromise = null;
+let openChatSerial = 0;
+let openingChatSerial = 0;
 
 function notify(message) {
   noticeBox.textContent = message;
@@ -168,8 +177,9 @@ function showWorkspace() {
   renderMemberships();
   if (!self.memberships.length) notify("账号当前没有有效任职，请联系管理员。");
   if (!pollingTimer) pollingTimer = setInterval(() => {
-    if (activeConversation && (!realtimeSocket || realtimeSocket.readyState !== WebSocket.OPEN)) {
-      syncMessages().catch(report);
+    if (actingMembership && (!realtimeSocket || realtimeSocket.readyState !== WebSocket.OPEN)) {
+      refreshInbox().catch(report);
+      if (activeConversation) syncMessages().catch(report);
     }
   }, 5000);
 }
@@ -191,10 +201,19 @@ function logout(message = "已退出当前页面。") {
   syncPromise = null;
   syncAgain = false;
   pendingMessage = null;
+  inboxGeneration++;
+  inboxRefreshPromise = null;
+  inboxRefreshAgain = false;
+  inboxPagePromise = null;
+  inboxCursor = "";
+  inboxHasMore = false;
+  openChatSerial++;
+  openingChatSerial = 0;
   conversations.clear();
   identityOptions.replaceChildren();
   results.replaceChildren();
   conversationList.replaceChildren();
+  loadMoreConversationsButton.classList.add("hidden");
   resetChat();
   workspace.classList.add("hidden");
   loginView.classList.remove("hidden");
@@ -230,14 +249,26 @@ function selectMembership(id) {
   syncPromise = null;
   syncAgain = false;
   pendingMessage = null;
+  inboxGeneration++;
+  inboxRefreshPromise = null;
+  inboxRefreshAgain = false;
+  inboxPagePromise = null;
+  inboxCursor = "";
+  inboxHasMore = false;
+  openChatSerial++;
+  openingChatSerial = 0;
   conversations.clear();
   conversationList.replaceChildren();
+  loadMoreConversationsButton.classList.add("hidden");
   results.replaceChildren();
   element("person-query").value = "";
   element("search-hint").textContent = id ? "输入姓名，查找当前任职下可见的同事。" : "请选择一个有效任职。";
   resetChat();
   renderMemberships();
-  if (id) connectRealtime();
+  if (id) {
+    refreshInbox().catch(report);
+    connectRealtime();
+  }
 }
 
 function resetChat() {
@@ -300,15 +331,106 @@ async function searchPeople() {
 
 async function openChat(person, member) {
   if (!actingMembership) return notify("请先选择任职。");
+  if (openingChatSerial) return;
+  const serial = ++openChatSerial;
+  openingChatSerial = serial;
+  const selectedEpoch = identityEpoch;
+  const selectedConversationEpoch = conversationEpoch;
+  const priorTextDisabled = messageText.disabled;
+  const priorSendDisabled = sendButton.disabled;
+  messageText.disabled = true;
+  sendButton.disabled = true;
   try {
     const chat = await request("/api/v1/conversations", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target_membership_id: member.membership_id }),
     });
+    if (serial !== openChatSerial || selectedEpoch !== identityEpoch ||
+        selectedConversationEpoch !== conversationEpoch) return;
     conversations.set(chat.id, { id: chat.id, name: person.display_name, organization: member.organization_name });
     renderConversations();
     activateConversation(chat.id);
+    refreshInbox().catch(report);
   } catch (error) { report(error); }
+  finally {
+    if (openingChatSerial === serial) openingChatSerial = 0;
+    if (serial === openChatSerial && selectedEpoch === identityEpoch &&
+        selectedConversationEpoch === conversationEpoch) {
+      messageText.disabled = priorTextDisabled;
+      sendButton.disabled = priorSendDisabled;
+    }
+  }
+}
+
+function inboxConversation(item) {
+  return { id: item.id, name: item.peer_visible ? item.display_name : "联系人不可见",
+    organization: item.peer_visible ? item.organization_name : "资料当前不可见",
+    peerVisible: item.peer_visible, updatedAt: item.updated_at };
+}
+
+async function refreshInbox() {
+  if (!actingMembership) return;
+  if (inboxPagePromise) {
+    inboxRefreshAgain = true;
+    return inboxPagePromise;
+  }
+  if (inboxRefreshPromise) {
+    inboxRefreshAgain = true;
+    return inboxRefreshPromise;
+  }
+  const generation = inboxGeneration;
+  const work = (async () => {
+    do {
+      inboxRefreshAgain = false;
+      const page = await request("/api/v1/conversations?limit=20");
+      if (generation !== inboxGeneration) return;
+      const activeID = activeConversation;
+      conversations.clear();
+      for (const item of page.conversations) conversations.set(item.id, inboxConversation(item));
+      if (activeID && !conversations.has(activeID)) {
+        conversations.set(activeID, { id: activeID, name: "当前会话", organization: "历史会话", peerVisible: false });
+      }
+      inboxCursor = page.next_cursor || "";
+      inboxHasMore = page.has_more;
+      renderConversations();
+    } while (inboxRefreshAgain && generation === inboxGeneration);
+  })();
+  inboxRefreshPromise = work;
+  try { await work; }
+  finally {
+    if (inboxRefreshPromise === work) {
+      inboxRefreshPromise = null;
+      if (inboxRefreshAgain && generation === inboxGeneration) refreshInbox().catch(report);
+    }
+  }
+}
+
+async function loadMoreInbox() {
+  if (inboxRefreshPromise) {
+    try { await inboxRefreshPromise; } catch (error) { report(error); return; }
+  }
+  if (!actingMembership || !inboxHasMore || !inboxCursor) return;
+  if (inboxPagePromise) return inboxPagePromise;
+  const generation = inboxGeneration;
+  const cursor = inboxCursor;
+  loadMoreConversationsButton.disabled = true;
+  const work = (async () => {
+    const page = await request(`/api/v1/conversations?limit=20&cursor=${encodeURIComponent(cursor)}`);
+    if (generation !== inboxGeneration) return;
+    for (const item of page.conversations) conversations.set(item.id, inboxConversation(item));
+    inboxCursor = page.next_cursor || "";
+    inboxHasMore = page.has_more;
+    renderConversations();
+  })();
+  inboxPagePromise = work;
+  try { await work; } catch (error) { report(error); }
+  finally {
+    if (inboxPagePromise === work) {
+      inboxPagePromise = null;
+      loadMoreConversationsButton.disabled = false;
+      if (inboxRefreshAgain && generation === inboxGeneration) refreshInbox().catch(report);
+    }
+  }
 }
 
 function renderConversations() {
@@ -324,6 +446,12 @@ function renderConversations() {
     button.append(name, org);
     button.addEventListener("click", () => activateConversation(chat.id));
     conversationList.append(button);
+  }
+  loadMoreConversationsButton.classList.toggle("hidden", !inboxHasMore);
+  if (activeConversation && conversations.has(activeConversation)) {
+    const active = conversations.get(activeConversation);
+    element("chat-title").textContent = active.name;
+    element("chat-subtitle").textContent = active.organization + " · 单聊";
   }
 }
 
@@ -455,6 +583,7 @@ async function sendMessage(event) {
     discardPendingButton.classList.add("hidden");
     pendingMessage = null;
     element("send-hint").textContent = "已保存到服务器；对方送达和已读状态尚不可用。";
+    refreshInbox().catch(report);
     try { await syncMessages(); } catch (error) { report(error); }
   } catch (error) {
     if (error.stale || actingMembership !== selectedMembership || activeConversation !== submitted.chatID) return;
@@ -511,6 +640,7 @@ async function connectRealtime() {
       let frame;
       try { frame = JSON.parse(event.data); } catch (_) { return; }
       if (frame.type === "ready" || frame.type === "sync_required") {
+        refreshInbox().catch(report);
         syncMessages().catch(report);
       }
     };
@@ -536,6 +666,7 @@ loginButton.disabled = true;
 loginButton.addEventListener("click", startLogin);
 element("logout-button").addEventListener("click", () => logout());
 element("search-button").addEventListener("click", searchPeople);
+loadMoreConversationsButton.addEventListener("click", loadMoreInbox);
 element("person-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); searchPeople(); }
 });

@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入、P2-03 Outbox 发布 Worker、P2-04 单聊文本补拉、P2-05 WebSocket 身份握手、P2-06 在线补拉通知、P2-07 本人身份上下文和 P2-08 基础 Web 单聊。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无跨刷新会话列表、消息正文直推、设备送达确认、群聊补拉或完整断线恢复验收；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，以及 P2-01 单聊会话、P2-02 文本消息可靠写入、P2-03 Outbox 发布 Worker、P2-04 单聊文本补拉、P2-05 WebSocket 身份握手、P2-06 在线补拉通知、P2-07 本人身份上下文、P2-08 基础 Web 单聊和 P2-09 当前任职会话列表。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认、群聊补拉或完整断线恢复验收；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -32,6 +32,8 @@
 
 普通员工可用 `POST /api/v1/conversations` 发起或复用单聊。请求须有相同的 Bearer 令牌和 `X-Acting-Membership-ID`，`Content-Type: application/json`，请求体为 `{ "target_membership_id": "<uuid>" }`。服务端只按当前 `start_chat` 策略授权，集团内同一对用户只保留一个单聊会话；换组织任职后经授权仍复用原会话。成功返回 200，包含 `id`、`type`、`last_seq`、`policy_version`、`cross_legal` 和 `decision_reason`。目标任职不存在、跨租户、自聊或当前不允许通信都返回 404；本人任职失效返回 403。已有会话不会绕过新发布的拒绝规则。会话创建、策略决策和请求审计同事务提交。
 
+普通员工可用 `GET /api/v1/conversations?limit=20&cursor=<opaque>` 浏览当前任职对应的已有单聊。`limit` 默认 20、最大 50，`cursor` 由上一页的 `next_cursor` 原样传回；响应包含 `conversations` 和 `has_more`。列表按更新时间倒序，跨租户、非参与者或其他任职的会话不返回。对方个人资料受当前 `directory_view` 策略控制：不可见时仍可显示通用会话项，但不会返回对方姓名或组织。列表不含消息正文、未读数和发送授权；打开会话后仍由补拉接口逐条复核正文，发送仍由原接口重新判定。
+
 普通员工可用 `POST /api/v1/conversations/{id}/messages` 写入单聊文本消息。沿用上述身份头，请求体仅含 `{ "client_msg_id": "<uuidv7>", "text": "消息正文" }`。UUIDv7 的时间须在服务端当前时间之前 7 天至之后 5 分钟内；正文须为有效 UTF-8、非空白，最多 16 KiB。成功返回 200，包含 `message_id`、`conversation_id`、`seq` 与 `server_time`。同一租户、会话、发送用户和客户端消息 ID 重试，若正文相同则返回原 ACK，不重复占用序号、限流额度或 Outbox；正文不同返回 409。服务端在一个事务中复核双方任职和当前 `send_message` 策略，分配连续序号，保存消息、幂等记录、待发布 Outbox 和审计，提交后才返回 ACK。本人身份失效返回 403；会话、目标或通信边界不可用返回 404；会话任职上下文变化返回 409；客户端消息 ID 过期返回 410；超出每秒发送上限返回 429；数据库或审计故障返回 503。默认每用户每秒 10 条，可用 `IM_MESSAGE_RATE_PER_SECOND` 配置 1～10000 的正整数。当前 ACK 只表示服务端持久化接收，不表示收件人已送达或已读；Outbox 由独立 Worker 异步发布。
 
 Outbox Worker 从 PostgreSQL 领取到期事件并写入 Redis Stream，成功后标记 `published`；失败会按最长 5 分钟的指数退避重试。Redis 事件只含 `event_id`、`tenant_id`、`conversation_id`、`message_id`、`seq` 和 `event_type`，不含正文。Redis 发布与数据库标记之间可能发生重复；每个 API 实例独立读取新事件，按稳定的 `event_id` 在本机有界窗口内去重，并让客户端按 PostgreSQL `seq` 补拉、处理乱序与缺口。`published` 只表示 Redis 接受了事件，**不表示消息已送达设备**。生产者暂不裁剪 Stream；上线前必须监控积压容量并制定可检测缺口的保留策略。PostgreSQL 仍为消息事实来源。
@@ -55,6 +57,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000005_direct_conversations.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000006_message_write.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000007_message_recipient.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000008_conversation_inbox.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -105,7 +108,7 @@ export IM_WEB_REDIRECT_URL='https://im.example.com/web/'
 export IM_WEB_SCOPE='openid profile'
 ```
 
-然后访问 `https://im.example.com/web/`。页面完成授权码登录和当前有效任职选择，可按姓名查找可见同事、发起单聊、发送文本并补拉消息。令牌只保存在页面内存，刷新或退出后需重新登录；当前页面的会话列表也不跨刷新保存。可配置 Redis 实时通知，未配置或暂不可用时页面以定时补拉继续工作。当前 ACK 文案仅表示服务器持久化接收。`IM_WEB_SCOPE` 默认 `openid profile`；令牌兑换只访问服务器配置的 HTTPS 地址，不使用浏览器请求中的目标地址。部署前仍需用客户 IdP、HTTPS 入口和真实组织数据做联调；本地模拟测试不等于已完成联调。
+然后访问 `https://im.example.com/web/`。页面完成授权码登录和当前有效任职选择，可浏览当前任职下的已有单聊、按姓名查找可见同事、发起单聊、发送文本并补拉消息。令牌只保存在页面内存，刷新或退出后需重新登录；重新登录并选择任职后，会话列表会从服务端重新加载。可配置 Redis 实时通知，未配置或暂不可用时页面以定时补拉继续工作。当前 ACK 文案仅表示服务器持久化接收。`IM_WEB_SCOPE` 默认 `openid profile`；令牌兑换只访问服务器配置的 HTTPS 地址，不使用浏览器请求中的目标地址。部署前仍需用客户 IdP、HTTPS 入口和真实组织数据做联调；本地模拟测试不等于已完成联调。
 
 这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。非标准或不透明令牌需另建适配器。
 

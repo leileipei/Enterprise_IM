@@ -56,6 +56,7 @@ func db(t *testing.T) *pgx.Conn {
 		"../../db/migrations/000005_direct_conversations.up.sql",
 		"../../db/migrations/000006_message_write.up.sql",
 		"../../db/migrations/000007_message_recipient.up.sql",
+		"../../db/migrations/000008_conversation_inbox.up.sql",
 	} {
 		sql, err := os.ReadFile(path)
 		if err != nil {
@@ -66,6 +67,17 @@ func db(t *testing.T) *pgx.Conn {
 		}
 	}
 	return conn
+}
+
+func TestConversationInboxMigrationAddsParticipantIndexes(t *testing.T) {
+	conn := db(t)
+	for _, index := range []string{"conversations_direct_low_inbox", "conversations_direct_high_inbox"} {
+		var exists bool
+		if err := conn.QueryRow(context.Background(), `SELECT EXISTS (
+SELECT 1 FROM pg_indexes WHERE schemaname=current_schema() AND indexname=$1)`, index).Scan(&exists); err != nil || !exists {
+			t.Fatalf("missing inbox index %s: %v", index, err)
+		}
+	}
 }
 
 func run(t *testing.T, conn *pgx.Conn, sql string, args ...any) {
