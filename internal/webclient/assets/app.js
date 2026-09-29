@@ -35,6 +35,7 @@ let realtimeEpoch = 0;
 let ticketInFlight = false;
 let reconnectTimer = null;
 let pollingTimer = null;
+let nextSafetySyncAt = 0;
 let realtimeUnsupported = false;
 let noticeTimer = null;
 const conversations = new Map();
@@ -56,6 +57,10 @@ function notify(message) {
 
 function report(error) {
   if (!error.stale) notify(error.message);
+}
+
+function scheduleSafetySync() {
+  nextSafetySyncAt = Date.now() + 30000 + Math.floor(Math.random() * 10000);
 }
 
 function randomURLSafe(bytes = 32) {
@@ -177,7 +182,9 @@ function showWorkspace() {
   renderMemberships();
   if (!self.memberships.length) notify("账号当前没有有效任职，请联系管理员。");
   if (!pollingTimer) pollingTimer = setInterval(() => {
-    if (actingMembership && (!realtimeSocket || realtimeSocket.readyState !== WebSocket.OPEN)) {
+    const connected = realtimeSocket && realtimeSocket.readyState === WebSocket.OPEN;
+    if (actingMembership && (!connected || Date.now() >= nextSafetySyncAt)) {
+      if (connected) scheduleSafetySync();
       refreshInbox().catch(report);
       if (activeConversation) syncMessages().catch(report);
     }
@@ -190,6 +197,7 @@ function logout(message = "已退出当前页面。") {
   identityEpoch++;
   if (pollingTimer) clearInterval(pollingTimer);
   pollingTimer = null;
+  nextSafetySyncAt = 0;
   sessionStorage.removeItem("enterprise-im-login");
   accessToken = "";
   tokenExpiresAt = 0;
@@ -242,6 +250,7 @@ function selectMembership(id) {
   clearSyncRetry();
   identityEpoch++;
   actingMembership = id;
+  nextSafetySyncAt = 0;
   realtimeUnsupported = false;
   activeConversation = null;
   conversationEpoch++;
@@ -266,6 +275,7 @@ function selectMembership(id) {
   resetChat();
   renderMemberships();
   if (id) {
+    scheduleSafetySync();
     refreshInbox().catch(report);
     connectRealtime();
   }
@@ -397,6 +407,10 @@ async function refreshInbox() {
   })();
   inboxRefreshPromise = work;
   try { await work; }
+  catch (error) {
+    if (generation === inboxGeneration && !error.stale) nextSafetySyncAt = 0;
+    throw error;
+  }
   finally {
     if (inboxRefreshPromise === work) {
       inboxRefreshPromise = null;
@@ -637,9 +651,12 @@ async function connectRealtime() {
       connectionState.classList.add("online");
     };
     socket.onmessage = (event) => {
+      if (realtimeSocket !== socket || selectedEpoch !== realtimeEpoch ||
+          selectedMembership !== actingMembership) return;
       let frame;
       try { frame = JSON.parse(event.data); } catch (_) { return; }
       if (frame.type === "ready" || frame.type === "sync_required") {
+        scheduleSafetySync();
         refreshInbox().catch(report);
         syncMessages().catch(report);
       }
@@ -647,6 +664,7 @@ async function connectRealtime() {
     socket.onclose = () => {
       if (realtimeSocket !== socket) return;
       realtimeSocket = null;
+      nextSafetySyncAt = 0;
       connectionState.textContent = "定时同步中";
       connectionState.classList.remove("online");
       if (actingMembership && accessToken) reconnectTimer = setTimeout(connectRealtime, 3000);
