@@ -56,18 +56,31 @@ func TestDirectConversationSchemaEnforcesPairAndTenant(t *testing.T) {
 	}
 }
 
-func TestDirectConversationSchemaRejectsUnsupportedGroupRow(t *testing.T) {
+func TestConversationSchemaRejectsIncompleteGroupRow(t *testing.T) {
 	conn := db(t)
 	seed(t, conn)
 	if _, err := conn.Exec(context.Background(), `INSERT INTO conversations
  (tenant_id,kind,created_by_user_id) VALUES ($1,'group',$2)`, tenantA, adminA); err == nil {
-		t.Fatal("group conversation accepted before group membership model exists")
+		t.Fatal("group conversation accepted without required metadata")
 	}
 }
 
 func TestDirectConversationMigrationRollsBackAndReapplies(t *testing.T) {
 	conn := db(t)
 	ctx := context.Background()
+	for _, path := range []string{
+		"../../db/migrations/000009_group_membership.down.sql",
+		"../../db/migrations/000008_conversation_inbox.down.sql",
+		"../../db/migrations/000007_message_recipient.down.sql",
+	} {
+		sql, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conn.PgConn().Exec(ctx, string(sql)).ReadAll(); err != nil {
+			t.Fatal(err)
+		}
+	}
 	messageDown, err := os.ReadFile("../../db/migrations/000006_message_write.down.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -99,6 +112,19 @@ func TestDirectConversationMigrationRollsBackAndReapplies(t *testing.T) {
 	}
 	if _, err := conn.PgConn().Exec(ctx, string(messageUp)).ReadAll(); err != nil {
 		t.Fatal(err)
+	}
+	for _, path := range []string{
+		"../../db/migrations/000007_message_recipient.up.sql",
+		"../../db/migrations/000008_conversation_inbox.up.sql",
+		"../../db/migrations/000009_group_membership.up.sql",
+	} {
+		sql, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conn.PgConn().Exec(ctx, string(sql)).ReadAll(); err != nil {
+			t.Fatal(err)
+		}
 	}
 	seed(t, conn)
 }
