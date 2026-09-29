@@ -99,7 +99,9 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 `IM_REALTIME_REDIS_URL` 可省略；省略时不启用实时握手与通知路由。启用时必须同时启用 OIDC，且启动时 Redis 必须可连接。`IM_REALTIME_STREAM` 默认与 Worker 的 `IM_OUTBOX_STREAM` 相同；自定义时两者必须设为同一名称，并先启动 Worker。Worker 在健康处理循环刷新 10 秒存活标记；API 要求同一 Redis 和 Stream 上有该标记。Worker 停止、配置错配、读流或数据库核验故障会让通知入口失效，就绪探针返回 503，现有连接关闭。每个 API 实例独立从 Stream 尾部读取新事件并只通知本机连接，客户端重连收到 `ready` 后从 PostgreSQL 补拉。浏览器 WebSocket 默认只允许同源；生产环境应通过 HTTPS/WSS 提供入口。单进程最多保持 5000 条连接、同一用户最多 5 条，连接每 5 秒复核任职并每 30 秒发送 Ping。Stream 目前不自动裁剪，投入生产前仍需容量与保留策略验证。
 
-启用 OIDC 后，`POST /api/v1/groups` 可由当前有效任职创建群，JSON 请求示例：`{"client_request_id":"00000000-0000-4000-8000-000000000851","name":"项目群","member_membership_ids":["00000000-0000-4000-8000-000000000852"]}`。`client_request_id` 由客户端生成；同一创建人用相同 ID 和相同内容重试会返回原群，改动内容则返回 409。一次可指定 1 至 20 位初始成员，服务会逐对检查建群策略；所有检查通过后才写入群及成员。当前仅提供建群 API，尚未开放群聊消息、邀请、退群或群列表。
+启用 OIDC 后，`POST /api/v1/groups` 可由当前有效任职创建群，JSON 请求示例：`{"client_request_id":"00000000-0000-4000-8000-000000000851","name":"项目群","member_membership_ids":["00000000-0000-4000-8000-000000000852"]}`。`client_request_id` 由客户端生成；同一创建人用相同 ID 和相同内容重试会返回原群，改动内容则返回 409。一次可指定 1 至 20 位初始成员，服务会逐对检查建群策略；所有检查通过后才写入群及成员。
+
+群成员可用 `GET /api/v1/groups/{group_id}/membership` 查询本人的当前成员区间，取得 `interval_id`、`role`、`join_seq` 和 `group_status`；用 `POST /api/v1/groups/{group_id}/leave` 提交 `{"interval_id":"<当前区间 ID>"}` 主动退群。退群返回 `status=left` 与 `leave_seq`；相同区间的请求可以安全重试，即使本人之后重新入群，也不会退出新区间。群主需先转让群主身份，当前版本尚无转让接口，因此群主暂不能主动退群（409 `owner_transfer_required`）。群聊消息、邀请、群列表尚未开放。
 
 基础 Web 页面默认关闭。先在身份源注册支持授权码和 PKCE S256 的**公共客户端**，将其客户端 ID 同时加入 `IM_OIDC_ALLOWED_CLIENT_IDS`，并把精确回调 URL 注册为公开 HTTPS 地址，例如 `https://im.example.com/web/`。身份源须为此客户端签发满足上文约束的 API 访问令牌。经 HTTPS 反向代理提供同源页面和 API 后，额外配置：
 
