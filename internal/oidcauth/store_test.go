@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
+	"github.com/leileipei/Enterprise_IM/internal/outbox"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 	"github.com/leileipei/Enterprise_IM/internal/realtime"
 	"github.com/redis/go-redis/v9"
@@ -346,8 +347,20 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 		}
 		redisClient := redis.NewClient(options)
 		defer redisClient.Close()
-		realtimeHandler, err := httpserver.HandlerWithRealtime(handler, auth, policystore.Service{DB: conn},
-			realtime.RedisTickets{Client: redisClient}, context.Background())
+		stream := fmt.Sprintf("enterprise-im:test:signed-notification:%d", time.Now().UnixNano())
+		defer redisClient.Del(context.Background(), stream)
+		if err := outbox.RefreshPublisherPresence(context.Background(), redisClient, stream); err != nil {
+			t.Fatal(err)
+		}
+		defer redisClient.Del(context.Background(), outbox.PublisherPresenceKey(stream))
+		fanoutCtx, stopFanout := context.WithCancel(context.Background())
+		defer stopFanout()
+		fanout, err := realtime.StartStreamFanout(fanoutCtx, redisClient, stream, policystore.Service{DB: conn})
+		if err != nil {
+			t.Fatal(err)
+		}
+		realtimeHandler, err := httpserver.HandlerWithRealtimeNotifications(handler, auth, policystore.Service{DB: conn},
+			realtime.RedisTickets{Client: redisClient}, fanoutCtx, fanout)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -364,7 +377,7 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 		}
 		server := httptest.NewServer(realtimeHandler)
 		wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/v1/realtime"
-		wsCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		wsCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		connWS, _, err := websocket.Dial(wsCtx, wsURL, &websocket.DialOptions{
 			Subprotocols: []string{"enterprise-im.v1", "ticket." + issued.Ticket},
 		})
@@ -374,6 +387,20 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 		_, frame, err := connWS.Read(wsCtx)
 		if err != nil || string(frame) != `{"type":"ready","resync_required":true}` {
 			t.Fatalf("signed-token realtime ready: %s %v", frame, err)
+		}
+		var event outbox.Event
+		if err := conn.QueryRow(ctx, `SELECT id::text,tenant_id::text,conversation_id::text,
+ message_id::text,event_type,seq FROM outbox_events WHERE tenant_id=$1`, storeTenantA).
+			Scan(&event.ID, &event.TenantID, &event.ConversationID, &event.MessageID,
+				&event.EventType, &event.Seq); err != nil {
+			t.Fatal(err)
+		}
+		if err := (outbox.RedisPublisher{Client: redisClient, Stream: stream}).Publish(wsCtx, event); err != nil {
+			t.Fatal(err)
+		}
+		_, frame, err = connWS.Read(wsCtx)
+		if err != nil || string(frame) != `{"type":"sync_required"}` {
+			t.Fatalf("signed-token stream notification: %s %v", frame, err)
 		}
 		connWS.CloseNow()
 		cancel()

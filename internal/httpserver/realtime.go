@@ -30,11 +30,17 @@ type RealtimeTicketStore interface {
 	Consume(context.Context, string) (access.TrustedIdentity, error)
 }
 
+type RealtimeNotificationSource interface {
+	Subscribe(access.TrustedIdentity) (<-chan struct{}, func())
+	Done() <-chan struct{}
+}
+
 type realtimeHandler struct {
 	base          http.Handler
 	authenticator Authenticator
 	authorizer    RealtimeAuthorizer
 	tickets       RealtimeTicketStore
+	notifications RealtimeNotificationSource
 	shutdown      context.Context
 	checkInterval time.Duration
 	mu            sync.Mutex
@@ -46,16 +52,45 @@ type realtimeHandler struct {
 // WebSocket connection. Message delivery will be attached in a later slice.
 func HandlerWithRealtime(base http.Handler, authenticator Authenticator, authorizer RealtimeAuthorizer,
 	tickets RealtimeTicketStore, shutdown context.Context) (http.Handler, error) {
+	return newRealtimeHandler(base, authenticator, authorizer, tickets, shutdown, nil)
+}
+
+func HandlerWithRealtimeNotifications(base http.Handler, authenticator Authenticator, authorizer RealtimeAuthorizer,
+	tickets RealtimeTicketStore, shutdown context.Context, source RealtimeNotificationSource) (http.Handler, error) {
+	if source == nil || source.Done() == nil {
+		return nil, errors.New("realtime notifications require a live source")
+	}
+	return newRealtimeHandler(base, authenticator, authorizer, tickets, shutdown, source)
+}
+
+func newRealtimeHandler(base http.Handler, authenticator Authenticator, authorizer RealtimeAuthorizer,
+	tickets RealtimeTicketStore, shutdown context.Context, source RealtimeNotificationSource) (http.Handler, error) {
 	if base == nil || authenticator == nil || authorizer == nil || tickets == nil || shutdown == nil {
 		return nil, errors.New("realtime handler requires base, authentication, authorization, tickets and shutdown context")
 	}
 	h := &realtimeHandler{base: base, authenticator: authenticator, authorizer: authorizer,
-		tickets: tickets, shutdown: shutdown, checkInterval: 5 * time.Second,
+		tickets: tickets, notifications: source, shutdown: shutdown, checkInterval: 5 * time.Second,
 		connections: make(map[string]int)}
 	return h, nil
 }
 
+func (h *realtimeHandler) sourceAvailable() bool {
+	if h.notifications == nil {
+		return true
+	}
+	select {
+	case <-h.notifications.Done():
+		return false
+	default:
+		return true
+	}
+}
+
 func (h *realtimeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet && r.URL.Path == "/health/ready" && !h.sourceAvailable() {
+		respond(w, http.StatusServiceUnavailable, "unavailable")
+		return
+	}
 	switch r.URL.Path {
 	case "/api/v1/realtime/tickets":
 		h.serveTicket(w, r)
@@ -78,6 +113,10 @@ func (h *realtimeHandler) serveTicket(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.RawQuery != "" || requestHasBody(w, r) {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	if !h.sourceAvailable() {
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable")
 		return
 	}
 	if err := h.authorizer.AuthorizeRealtime(r.Context(), id, policystore.RealtimeTicket); err != nil {
@@ -135,6 +174,10 @@ func (h *realtimeHandler) serveSocket(w http.ResponseWriter, r *http.Request) {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
+	if !h.sourceAvailable() {
+		writeAdminError(w, http.StatusServiceUnavailable, "unavailable")
+		return
+	}
 	ticket, ok := ticketFromProtocols(r)
 	if !ok {
 		rejectAdmin(w, r, http.StatusUnauthorized, "invalid_ticket")
@@ -167,6 +210,14 @@ func (h *realtimeHandler) serveSocket(w http.ResponseWriter, r *http.Request) {
 	defer conn.CloseNow()
 	conn.SetReadLimit(1024)
 	ctx := conn.CloseRead(h.shutdown)
+	var notifications <-chan struct{}
+	var sourceDone <-chan struct{}
+	if h.notifications != nil {
+		var unsubscribe func()
+		notifications, unsubscribe = h.notifications.Subscribe(id)
+		defer unsubscribe()
+		sourceDone = h.notifications.Done()
+	}
 	writeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	err = conn.Write(writeCtx, websocket.MessageText, []byte(`{"type":"ready","resync_required":true}`))
 	cancel()
@@ -185,16 +236,25 @@ func (h *realtimeHandler) serveSocket(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-checkTicker.C:
-			checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-			active, err := h.authorizer.RealtimeIdentityActive(checkCtx, id)
-			cancel()
-			if err != nil {
-				conn.Close(websocket.StatusInternalError, "identity check unavailable")
+		case <-sourceDone:
+			conn.Close(websocket.StatusTryAgainLater, "reconnect and resync")
+			return
+		case <-notifications:
+			if !h.sourceAvailable() {
+				conn.Close(websocket.StatusTryAgainLater, "reconnect and resync")
 				return
 			}
-			if !active {
-				conn.Close(websocket.StatusPolicyViolation, "identity expired")
+			if !h.checkConnectionIdentity(ctx, conn, id) {
+				return
+			}
+			writeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			err := conn.Write(writeCtx, websocket.MessageText, []byte(`{"type":"sync_required"}`))
+			cancel()
+			if err != nil {
+				return
+			}
+		case <-checkTicker.C:
+			if !h.checkConnectionIdentity(ctx, conn, id) {
 				return
 			}
 		case <-pingTicker.C:
@@ -206,6 +266,22 @@ func (h *realtimeHandler) serveSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+func (h *realtimeHandler) checkConnectionIdentity(ctx context.Context, conn *websocket.Conn,
+	id access.TrustedIdentity) bool {
+	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	active, err := h.authorizer.RealtimeIdentityActive(checkCtx, id)
+	cancel()
+	if err != nil {
+		conn.Close(websocket.StatusInternalError, "identity check unavailable")
+		return false
+	}
+	if !active {
+		conn.Close(websocket.StatusPolicyViolation, "identity expired")
+		return false
+	}
+	return true
 }
 
 func (h *realtimeHandler) claim(id access.TrustedIdentity) bool {

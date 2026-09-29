@@ -12,11 +12,13 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
+	"github.com/leileipei/Enterprise_IM/internal/outbox"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 	"github.com/leileipei/Enterprise_IM/internal/realtime"
 	"github.com/redis/go-redis/v9"
@@ -50,6 +52,11 @@ func main() {
 	realtimeOptions, err := realtimeRedisOptionsFromEnv(os.Getenv, enabled)
 	if err != nil {
 		logger.Error("invalid realtime configuration", "error", err)
+		os.Exit(1)
+	}
+	realtimeStream, err := realtimeStreamFromEnv(os.Getenv, realtimeOptions != nil)
+	if err != nil {
+		logger.Error("invalid realtime Stream configuration", "error", err)
 		os.Exit(1)
 	}
 	if enabled {
@@ -88,13 +95,19 @@ func main() {
 				logger.Error("realtime Redis unavailable at startup")
 				os.Exit(1)
 			}
-			handler, err = httpserver.HandlerWithRealtime(handler, authenticator,
-				policystore.Service{DB: pool}, realtime.RedisTickets{Client: redisClient}, ctx)
+			fanout, startErr := realtime.StartStreamFanout(ctx, redisClient, realtimeStream,
+				policystore.Service{DB: pool})
+			if startErr != nil {
+				logger.Error("realtime Stream unavailable at startup", "error", startErr)
+				os.Exit(1)
+			}
+			handler, err = httpserver.HandlerWithRealtimeNotifications(handler, authenticator,
+				policystore.Service{DB: pool}, realtime.RedisTickets{Client: redisClient}, ctx, fanout)
 			if err != nil {
 				logger.Error("realtime API unavailable", "error", err)
 				os.Exit(1)
 			}
-			logger.Info("realtime handshake enabled")
+			logger.Info("realtime notifications enabled", "stream", realtimeStream)
 		}
 	}
 
@@ -122,6 +135,25 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func realtimeStreamFromEnv(getenv func(string) string, enabled bool) (string, error) {
+	stream := getenv("IM_REALTIME_STREAM")
+	if !enabled {
+		if stream != "" {
+			return "", errors.New("IM_REALTIME_STREAM requires IM_REALTIME_REDIS_URL")
+		}
+		return "", nil
+	}
+	if stream == "" {
+		stream = outbox.DefaultStream
+	}
+	if len(stream) > 128 || strings.IndexFunc(stream, func(r rune) bool {
+		return unicode.IsSpace(r) || unicode.IsControl(r)
+	}) >= 0 {
+		return "", errors.New("IM_REALTIME_STREAM must be a nonblank key of at most 128 bytes")
+	}
+	return stream, nil
 }
 
 func realtimeRedisOptionsFromEnv(getenv func(string) string, oidcEnabled bool) (*redis.Options, error) {

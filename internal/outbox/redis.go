@@ -10,6 +10,8 @@ import (
 
 var ErrRedisPublisherUnconfigured = errors.New("Redis publisher requires client and stream")
 
+const DefaultStream = "enterprise-im:message-created:v1"
+
 // RedisPublisher publishes identifier-only notifications. Redis is not the
 // source of truth for message content or delivery status.
 type RedisPublisher struct {

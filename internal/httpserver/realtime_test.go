@@ -50,6 +50,17 @@ type ticketStub struct {
 	used     bool
 }
 
+type notificationStub struct {
+	signals chan struct{}
+	done    chan struct{}
+}
+
+func (s *notificationStub) Subscribe(access.TrustedIdentity) (<-chan struct{}, func()) {
+	return s.signals, func() {}
+}
+
+func (s *notificationStub) Done() <-chan struct{} { return s.done }
+
 func (s *ticketStub) Issue(_ context.Context, id access.TrustedIdentity) (string, error) {
 	if id.TenantID != tenantID || id.UserID != actorID || id.ActingMembershipID != actingID {
 		return "", realtime.ErrInvalidTicket
@@ -336,4 +347,83 @@ func TestRealtimeShutdownClosesConnectionAndReleasesSlot(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal("connection slot leaked after shutdown")
+}
+
+func TestRealtimeNotificationAndRevocationBeforeWrite(t *testing.T) {
+	auth := &realtimeAuthStub{active: true}
+	source := &notificationStub{signals: make(chan struct{}, 1), done: make(chan struct{})}
+	handler, err := HandlerWithRealtimeNotifications(Handler(nil), authFunc(verified), auth,
+		&ticketStub{issued: true}, context.Background(), source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(server.URL, "http")+"/api/v1/realtime",
+		&websocket.DialOptions{Subprotocols: []string{"enterprise-im.v1", "ticket." + testTicket}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.CloseNow()
+	if _, _, err := conn.Read(ctx); err != nil {
+		t.Fatalf("ready: %v", err)
+	}
+	source.signals <- struct{}{}
+	_, frame, err := conn.Read(ctx)
+	if err != nil || string(frame) != `{"type":"sync_required"}` {
+		t.Fatalf("notification: %s %v", frame, err)
+	}
+	auth.mu.Lock()
+	auth.active = false
+	auth.mu.Unlock()
+	source.signals <- struct{}{}
+	if _, _, err := conn.Read(ctx); websocket.CloseStatus(err) != websocket.StatusPolicyViolation {
+		t.Fatalf("revoked notification was written: %v", err)
+	}
+}
+
+func TestRealtimeStreamFailureClosesSocketsAndReadiness(t *testing.T) {
+	auth := &realtimeAuthStub{active: true}
+	source := &notificationStub{signals: make(chan struct{}, 1), done: make(chan struct{})}
+	handler, err := HandlerWithRealtimeNotifications(
+		Handler(pingFunc(func(context.Context) error { return nil })), authFunc(verified), auth,
+		&ticketStub{issued: true}, context.Background(), source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(server.URL, "http")+"/api/v1/realtime",
+		&websocket.DialOptions{Subprotocols: []string{"enterprise-im.v1", "ticket." + testTicket}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.CloseNow()
+	if _, _, err := conn.Read(ctx); err != nil {
+		t.Fatalf("ready: %v", err)
+	}
+	close(source.done)
+	if _, _, err := conn.Read(ctx); websocket.CloseStatus(err) != websocket.StatusTryAgainLater {
+		t.Fatalf("stream failure did not close socket: %v", err)
+	}
+	for _, tc := range []struct {
+		method, path string
+	}{
+		{http.MethodGet, "/health/ready"},
+		{http.MethodPost, "/api/v1/realtime/tickets"},
+	} {
+		res := httptest.NewRecorder()
+		req := httptest.NewRequest(tc.method, tc.path, nil)
+		if tc.method == http.MethodPost {
+			req = adminRequest(tc.method, tc.path)
+		}
+		handler.ServeHTTP(res, req)
+		if res.Code != 503 {
+			t.Fatalf("stream unavailable %s: %d %s", tc.path, res.Code, res.Body.String())
+		}
+	}
 }
