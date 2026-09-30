@@ -61,6 +61,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000009_group_membership.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000010_group_create_request.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000011_group_invitation.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000012_group_owner_transfer.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -102,11 +103,13 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 启用 OIDC 后，`POST /api/v1/groups` 可由当前有效任职创建群，JSON 请求示例：`{"client_request_id":"00000000-0000-4000-8000-000000000851","name":"项目群","member_membership_ids":["00000000-0000-4000-8000-000000000852"]}`。`client_request_id` 由客户端生成；同一创建人用相同 ID 和相同内容重试会返回原群，改动内容则返回 409。一次可指定 1 至 20 位初始成员，服务会逐对检查建群策略；所有检查通过后才写入群及成员。
 
-群成员可用 `GET /api/v1/groups/{group_id}/membership` 查询本人的当前成员区间，取得 `interval_id`、`role`、`join_seq` 和 `group_status`；用 `POST /api/v1/groups/{group_id}/leave` 提交 `{"interval_id":"<当前区间 ID>"}` 主动退群。退群返回 `status=left` 与 `leave_seq`；相同区间的请求可以安全重试，即使本人之后重新入群，也不会退出新区间。群主需先转让群主身份，当前版本尚无转让接口，因此群主暂不能主动退群（409 `owner_transfer_required`）。
+群成员可用 `GET /api/v1/groups/{group_id}/membership` 查询本人的当前成员区间，取得 `interval_id`、`role`、`join_seq` 和 `group_status`；用 `POST /api/v1/groups/{group_id}/leave` 提交 `{"interval_id":"<当前区间 ID>"}` 主动退群。退群返回 `status=left` 与 `leave_seq`；相同区间的请求可以安全重试，即使本人之后重新入群，也不会退出新区间。群主须先转让群主身份，然后才能主动退群；直接退群返回 409 `owner_transfer_required`。
 
 群主或群管理员可用 `POST /api/v1/groups/{group_id}/invitations` 提交 `{"client_request_id":"<请求 UUID>","target_membership_id":"<目标任职 UUID>"}` 邀请一人。服务对目标与每位现有成员双向检查 `invite_group` 策略，成功返回新区间 `interval_id`、`join_seq` 和 `policy_version`。同一请求重试返回原区间，即使目标已退群或重新入群；更改请求内容返回 409。`policy_blocked` 群暂停新邀请。
 
-群主或群管理员可用 `POST /api/v1/groups/{group_id}/removals` 提交 `{"interval_id":"<目标当前区间 UUID>"}` 移除成员。群主可移除管理员或普通成员；管理员只能移除普通成员，不能移除自己或群主。返回 `status=removed` 与 `leave_seq`，同一区间重试安全，目标重新入群后的新区间不受旧请求影响。`policy_blocked` 群允许移除冲突成员，但本接口不会自动恢复群状态；恢复须由后续策略复核能力判定。批量邀请、群主转让、群聊消息和群列表尚未开放。
+群主或群管理员可用 `POST /api/v1/groups/{group_id}/removals` 提交 `{"interval_id":"<目标当前区间 UUID>"}` 移除成员。群主可移除管理员或普通成员；管理员只能移除普通成员，不能移除自己或群主。返回 `status=removed` 与 `leave_seq`，同一区间重试安全，目标重新入群后的新区间不受旧请求影响。`policy_blocked` 群允许移除冲突成员，但本接口不会自动恢复群状态；恢复须由后续策略复核能力判定。
+
+当前群主可用 `POST /api/v1/groups/{group_id}/owner-transfers` 提交 `{"client_request_id":"<请求 UUID>","source_interval_id":"<本人当前区间 UUID>","target_interval_id":"<接任成员当前区间 UUID>"}` 转让所有权。接任者须为群内活跃成员，且其来源任职仍有效；原群主降为普通成员，之后可主动退群。首次成功返回 201，同一请求重试返回 200；即使群主后来再次变更，旧请求也不会重新执行。更改同一请求 ID 的内容返回 409。`policy_blocked` 群允许转让，但不会自动解除封锁。批量邀请、群聊消息和群列表尚未开放。
 
 基础 Web 页面默认关闭。先在身份源注册支持授权码和 PKCE S256 的**公共客户端**，将其客户端 ID 同时加入 `IM_OIDC_ALLOWED_CLIENT_IDS`，并把精确回调 URL 注册为公开 HTTPS 地址，例如 `https://im.example.com/web/`。身份源须为此客户端签发满足上文约束的 API 访问令牌。经 HTTPS 反向代理提供同源页面和 API 后，额外配置：
 
