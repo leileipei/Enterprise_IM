@@ -29,6 +29,7 @@ type ConversationService interface {
 	ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
 	PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
+	PullGroupTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
 }
 
 // HandlerWithConversations exposes direct conversation and message routes after
@@ -194,6 +195,16 @@ func decimalDigits(value string) bool {
 
 func pullTextMessages(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
 	conversationID string, conversations ConversationService) {
+	serveMessagePage(w, r, identity, conversationID, conversations.PullTextMessages)
+}
+
+func pullGroupTextMessages(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
+	groupID string, conversations ConversationService) {
+	serveMessagePage(w, r, identity, groupID, conversations.PullGroupTextMessages)
+}
+
+func serveMessagePage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
+	conversationID string, pull func(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)) {
 	query, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil || len(query) < 1 || len(query) > 2 || len(query["after_seq"]) != 1 ||
 		!decimalDigits(query.Get("after_seq")) || len(query["limit"]) > 1 {
@@ -230,7 +241,7 @@ func pullTextMessages(w http.ResponseWriter, r *http.Request, identity access.Tr
 			return
 		}
 	}
-	page, err := conversations.PullTextMessages(r.Context(), identity, conversationID, afterSeq, limit)
+	page, err := pull(r.Context(), identity, conversationID, afterSeq, limit)
 	if err != nil {
 		writeMessageError(w, err)
 		return

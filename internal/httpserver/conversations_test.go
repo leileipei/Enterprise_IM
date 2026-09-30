@@ -53,6 +53,10 @@ func (conversationStub) PullTextMessages(context.Context, access.TrustedIdentity
 	panic("unexpected message pull")
 }
 
+func (conversationStub) PullGroupTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error) {
+	panic("unexpected group message pull")
+}
+
 func (conversationStub) ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error) {
 	panic("unexpected conversation list")
 }

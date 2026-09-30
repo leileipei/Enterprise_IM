@@ -109,7 +109,9 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 群主或群管理员可用 `POST /api/v1/groups/{group_id}/removals` 提交 `{"interval_id":"<目标当前区间 UUID>"}` 移除成员。群主可移除管理员或普通成员；管理员只能移除普通成员，不能移除自己或群主。返回 `status=removed` 与 `leave_seq`，同一区间重试安全，目标重新入群后的新区间不受旧请求影响。`policy_blocked` 群允许移除冲突成员，但本接口不会自动恢复群状态；恢复须由后续策略复核能力判定。
 
-当前群主可用 `POST /api/v1/groups/{group_id}/owner-transfers` 提交 `{"client_request_id":"<请求 UUID>","source_interval_id":"<本人当前区间 UUID>","target_interval_id":"<接任成员当前区间 UUID>"}` 转让所有权。接任者须为群内活跃成员，且其来源任职仍有效；原群主降为普通成员，之后可主动退群。首次成功返回 201，同一请求重试返回 200；即使群主后来再次变更，旧请求也不会重新执行。更改同一请求 ID 的内容返回 409。`policy_blocked` 群允许转让，但不会自动解除封锁。批量邀请、群聊消息和群列表尚未开放。
+当前群主可用 `POST /api/v1/groups/{group_id}/owner-transfers` 提交 `{"client_request_id":"<请求 UUID>","source_interval_id":"<本人当前区间 UUID>","target_interval_id":"<接任成员当前区间 UUID>"}` 转让所有权。接任者须为群内活跃成员，且其来源任职仍有效；原群主降为普通成员，之后可主动退群。首次成功返回 201，同一请求重试返回 200；即使群主后来再次变更，旧请求也不会重新执行。更改同一请求 ID 的内容返回 409。`policy_blocked` 群允许转让，但不会自动解除封锁。批量邀请、群消息写入和群列表尚未开放。
+
+群历史补拉使用 `GET /api/v1/groups/{group_id}/messages?after_seq=0&limit=100`。当前或历史成员可在账号和选定任职有效时，读取本人曾参与区间内且未满默认 365 天保留期的消息；退出、移除与重新入群之间的序号缺口、错误发送任职及过期正文只返回 `redacted=true` 占位，不包含正文和发送人。普通策略变化不追改保留期内的旧正文；当前 `hard_deny` 命中读者与群内任一成员时会遮蔽整页历史正文，账号冻结也会阻断读取。`policy_blocked` 群仍可按历史授权补拉。保留期配置和物理清理由 P4 实现；群消息写入尚未开放，下一增量接入。
 
 基础 Web 页面默认关闭。先在身份源注册支持授权码和 PKCE S256 的**公共客户端**，将其客户端 ID 同时加入 `IM_OIDC_ALLOWED_CLIENT_IDS`，并把精确回调 URL 注册为公开 HTTPS 地址，例如 `https://im.example.com/web/`。身份源须为此客户端签发满足上文约束的 API 访问令牌。经 HTTPS 反向代理提供同源页面和 API 后，额外配置：
 
