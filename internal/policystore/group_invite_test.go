@@ -36,6 +36,13 @@ func TestGroupInvitationMigrationPreservesRecordedRequests(t *testing.T) {
  (tenant_id,group_id,inviter_user_id,request_id,acting_membership_id,target_membership_id,interval_id,request_digest)
  VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, tenantA, groupA, adminA,
 		"00000000-0000-4000-8000-000000000875", adminM, adminM, groupInviteIntervalID, make([]byte, 32))
+	transferDown, err := os.ReadFile("../../db/migrations/000012_group_owner_transfer.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(context.Background(), string(transferDown)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
 	down, err := os.ReadFile("../../db/migrations/000011_group_invitation.down.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -59,6 +66,13 @@ func TestGroupInvitationMigrationPreservesRecordedRequests(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := conn.PgConn().Exec(context.Background(), string(up)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
+	transferUp, err := os.ReadFile("../../db/migrations/000012_group_owner_transfer.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(context.Background(), string(transferUp)).ReadAll(); err != nil {
 		t.Fatal(err)
 	}
 }
