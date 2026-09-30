@@ -147,6 +147,13 @@ func groupMembershipRoute(w http.ResponseWriter, r *http.Request, identity acces
 			return
 		}
 		transferGroupOwner(w, r, identity, parts[0], service)
+	case "messages":
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", "GET")
+			rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+		pullGroupTextMessages(w, r, identity, parts[0], service)
 	default:
 		rejectAdmin(w, r, http.StatusNotFound, "not_found")
 	}
