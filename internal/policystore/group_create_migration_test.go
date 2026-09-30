@@ -41,6 +41,13 @@ func TestGroupCreateRequestMigrationDownProtectsData(t *testing.T) {
   group_creator_legal_entity_id,created_by_user_id,group_create_request_id,group_create_request_digest)
  VALUES ($1,$2,'group','项目群',$3,$4,$5,$6,$7,decode(repeat('ab',32),'hex'))`,
 		groupA, tenantA, adminM, orgA, legalA, adminA, groupRequestID)
+	invitationDown, err := os.ReadFile("../../db/migrations/000011_group_invitation.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(context.Background(), string(invitationDown)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
 	down, err := os.ReadFile("../../db/migrations/000010_group_create_request.down.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -65,6 +72,13 @@ func TestGroupCreateRequestMigrationDownProtectsData(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := conn.PgConn().Exec(context.Background(), string(up)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
+	invitationUp, err := os.ReadFile("../../db/migrations/000011_group_invitation.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(context.Background(), string(invitationUp)).ReadAll(); err != nil {
 		t.Fatal(err)
 	}
 }
