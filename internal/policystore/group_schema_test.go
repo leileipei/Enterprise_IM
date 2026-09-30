@@ -124,6 +124,13 @@ func TestGroupSchemaDownRefusesDataAndReapplies(t *testing.T) {
 	conn := db(t)
 	seed(t, conn)
 	insertGroup(t, conn)
+	invitationDown, err := os.ReadFile("../../db/migrations/000011_group_invitation.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(context.Background(), string(invitationDown)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
 	requestDown, err := os.ReadFile("../../db/migrations/000010_group_create_request.down.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -165,6 +172,13 @@ func TestGroupSchemaDownRefusesDataAndReapplies(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := conn.PgConn().Exec(context.Background(), string(requestUp)).ReadAll(); err != nil {
+		t.Fatal(err)
+	}
+	invitationUp, err := os.ReadFile("../../db/migrations/000011_group_invitation.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.PgConn().Exec(context.Background(), string(invitationUp)).ReadAll(); err != nil {
 		t.Fatal(err)
 	}
 	insertGroup(t, conn)

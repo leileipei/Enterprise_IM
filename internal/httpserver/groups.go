@@ -126,6 +126,13 @@ func groupMembershipRoute(w http.ResponseWriter, r *http.Request, identity acces
 			return
 		}
 		leaveGroup(w, r, identity, parts[0], service)
+	case "invitations":
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", "POST")
+			rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+		inviteGroupMember(w, r, identity, parts[0], service)
 	default:
 		rejectAdmin(w, r, http.StatusNotFound, "not_found")
 	}
