@@ -37,6 +37,10 @@ func (conversationStub) InviteGroupMember(context.Context, access.TrustedIdentit
 	panic("unexpected group invitation")
 }
 
+func (conversationStub) RemoveGroupMember(context.Context, access.TrustedIdentity, string, string) (policystore.GroupRemoveResult, error) {
+	panic("unexpected group member removal")
+}
+
 func (conversationStub) SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
 	panic("unexpected message send")
 }
