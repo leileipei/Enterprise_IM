@@ -339,11 +339,30 @@ func TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory(t *testing.T) 
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"seq":1`) || !strings.Contains(res.Body.String(), `"conversation_id":"`+chat.ID+`"`) {
 		t.Fatalf("signed-token message ACK: %d %s", res.Code, res.Body.String())
 	}
-	firstACK := res.Body.String()
+	var firstACK struct {
+		MessageID      string `json:"message_id"`
+		ConversationID string `json:"conversation_id"`
+		Seq            int64  `json:"seq"`
+		ServerTime     string `json:"server_time"`
+		Duplicate      bool   `json:"duplicate"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &firstACK); err != nil || firstACK.MessageID == "" || firstACK.Duplicate {
+		t.Fatalf("first ACK duplicate flag: %+v %v", firstACK, err)
+	}
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, messageRequest())
-	if res.Code != http.StatusOK || res.Body.String() != firstACK {
-		t.Fatalf("signed-token idempotent ACK: %d %s vs %s", res.Code, res.Body.String(), firstACK)
+	var replayACK struct {
+		MessageID      string `json:"message_id"`
+		ConversationID string `json:"conversation_id"`
+		Seq            int64  `json:"seq"`
+		ServerTime     string `json:"server_time"`
+		Duplicate      bool   `json:"duplicate"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &replayACK); res.Code != http.StatusOK || err != nil ||
+		!replayACK.Duplicate || replayACK.MessageID != firstACK.MessageID ||
+		replayACK.ConversationID != firstACK.ConversationID || replayACK.Seq != firstACK.Seq ||
+		replayACK.ServerTime != firstACK.ServerTime {
+		t.Fatalf("signed-token idempotent ACK: %d %+v vs %+v, decode: %v", res.Code, replayACK, firstACK, err)
 	}
 	pullReq := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/"+chat.ID+"/messages?after_seq=0&limit=1", nil)
 	pullReq.Header.Set("Authorization", "Bearer "+accessToken)

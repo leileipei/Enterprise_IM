@@ -28,6 +28,7 @@ type ConversationService interface {
 	TransferGroupOwner(context.Context, access.TrustedIdentity, string, policystore.GroupOwnerTransferRequest) (policystore.GroupOwnerTransfer, error)
 	ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
+	SendGroupTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
 	PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
 	PullGroupTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
 }
@@ -275,7 +276,17 @@ func serveMessagePage(w http.ResponseWriter, r *http.Request, identity access.Tr
 
 func sendTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
 	conversationID string, conversations ConversationService) {
-	if r.URL.RawQuery != "" || r.Body == nil {
+	serveTextMessage(w, r, identity, conversationID, conversations.SendTextMessage)
+}
+
+func sendGroupTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
+	groupID string, conversations ConversationService) {
+	serveTextMessage(w, r, identity, groupID, conversations.SendGroupTextMessage)
+}
+
+func serveTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
+	conversationID string, send func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)) {
+	if r.URL.RawQuery != "" || r.URL.ForceQuery || r.Body == nil {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
@@ -307,7 +318,7 @@ func sendTextMessage(w http.ResponseWriter, r *http.Request, identity access.Tru
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	ack, err := conversations.SendTextMessage(r.Context(), identity, conversationID, body.ClientMessageID, body.Text)
+	ack, err := send(r.Context(), identity, conversationID, body.ClientMessageID, body.Text)
 	if err != nil {
 		writeMessageError(w, err)
 		return
@@ -317,7 +328,8 @@ func sendTextMessage(w http.ResponseWriter, r *http.Request, identity access.Tru
 		ConversationID string `json:"conversation_id"`
 		Seq            int64  `json:"seq"`
 		ServerTime     string `json:"server_time"`
-	}{ack.MessageID, ack.ConversationID, ack.Seq, ack.ServerTime.UTC().Format("2006-01-02T15:04:05.999999999Z07:00")})
+		Duplicate      bool   `json:"duplicate"`
+	}{ack.MessageID, ack.ConversationID, ack.Seq, ack.ServerTime.UTC().Format("2006-01-02T15:04:05.999999999Z07:00"), ack.Duplicate})
 }
 
 func writeMessageError(w http.ResponseWriter, err error) {
@@ -336,6 +348,8 @@ func writeMessageError(w http.ResponseWriter, err error) {
 		writeAdminError(w, http.StatusConflict, "idempotency_conflict")
 	case errors.Is(err, policystore.ErrConversationContextChanged):
 		writeAdminError(w, http.StatusConflict, "conversation_context_changed")
+	case errors.Is(err, policystore.ErrGroupPolicyBlocked):
+		writeAdminError(w, http.StatusConflict, "group_policy_blocked")
 	case errors.Is(err, policystore.ErrMessageRateLimited):
 		writeAdminError(w, http.StatusTooManyRequests, "rate_limited")
 	default:

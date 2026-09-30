@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，P2 单聊与浏览器基础能力，以及 P3 群成员区间、建群、本人退群、单人邀请和成员移除。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认、群聊补拉或完整断线恢复验收；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，P2 单聊与浏览器基础能力，以及 P3 群成员管理、群文本消息写入与区间补拉。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认、群列表及完整断线恢复验收；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -34,7 +34,7 @@
 
 普通员工可用 `GET /api/v1/conversations?limit=20&cursor=<opaque>` 浏览当前任职对应的已有单聊。`limit` 默认 20、最大 50，`cursor` 由上一页的 `next_cursor` 原样传回；响应包含 `conversations` 和 `has_more`。列表按更新时间倒序，跨租户、非参与者或其他任职的会话不返回。对方个人资料受当前 `directory_view` 策略控制：不可见时仍可显示通用会话项，但不会返回对方姓名或组织。列表不含消息正文、未读数和发送授权；打开会话后仍由补拉接口逐条复核正文，发送仍由原接口重新判定。
 
-普通员工可用 `POST /api/v1/conversations/{id}/messages` 写入单聊文本消息。沿用上述身份头，请求体仅含 `{ "client_msg_id": "<uuidv7>", "text": "消息正文" }`。UUIDv7 的时间须在服务端当前时间之前 7 天至之后 5 分钟内；正文须为有效 UTF-8、非空白，最多 16 KiB。成功返回 200，包含 `message_id`、`conversation_id`、`seq` 与 `server_time`。同一租户、会话、发送用户和客户端消息 ID 重试，若正文相同则返回原 ACK，不重复占用序号、限流额度或 Outbox；正文不同返回 409。服务端在一个事务中复核双方任职和当前 `send_message` 策略，分配连续序号，保存消息、幂等记录、待发布 Outbox 和审计，提交后才返回 ACK。本人身份失效返回 403；会话、目标或通信边界不可用返回 404；会话任职上下文变化返回 409；客户端消息 ID 过期返回 410；超出每秒发送上限返回 429；数据库或审计故障返回 503。默认每用户每秒 10 条，可用 `IM_MESSAGE_RATE_PER_SECOND` 配置 1～10000 的正整数。当前 ACK 只表示服务端持久化接收，不表示收件人已送达或已读；Outbox 由独立 Worker 异步发布。
+普通员工可用 `POST /api/v1/conversations/{id}/messages` 写入单聊文本消息。沿用上述身份头，请求体仅含 `{ "client_msg_id": "<uuidv7>", "text": "消息正文" }`。UUIDv7 的时间须在服务端当前时间之前 7 天至之后 5 分钟内；正文须为有效 UTF-8、非空白，最多 16 KiB。成功返回 200，包含 `message_id`、`conversation_id`、`seq`、`server_time` 与 `duplicate`；首次写入为 `false`，相同内容重试为 `true`。同一租户、会话、发送用户和客户端消息 ID 重试，若正文相同则返回原 ACK，不重复占用序号、限流额度或 Outbox；正文不同返回 409。服务端在一个事务中复核双方任职和当前 `send_message` 策略，分配连续序号，保存消息、幂等记录、待发布 Outbox 和审计，提交后才返回 ACK。本人身份失效返回 403；会话、目标或通信边界不可用返回 404；会话任职上下文变化返回 409；客户端消息 ID 过期返回 410；超出每秒发送上限返回 429；数据库或审计故障返回 503。默认每用户每秒 10 条，可用 `IM_MESSAGE_RATE_PER_SECOND` 配置 1～10000 的正整数。当前 ACK 只表示服务端持久化接收，不表示收件人已送达或已读；Outbox 由独立 Worker 异步发布。
 
 Outbox Worker 从 PostgreSQL 领取到期事件并写入 Redis Stream，成功后标记 `published`；失败会按最长 5 分钟的指数退避重试。Redis 事件只含 `event_id`、`tenant_id`、`conversation_id`、`message_id`、`seq` 和 `event_type`，不含正文。Redis 发布与数据库标记之间可能发生重复；每个 API 实例独立读取新事件，按稳定的 `event_id` 在本机有界窗口内去重，并让客户端按 PostgreSQL `seq` 补拉、处理乱序与缺口。`published` 只表示 Redis 接受了事件，**不表示消息已送达设备**。生产者暂不裁剪 Stream；上线前必须监控积压容量并制定可检测缺口的保留策略。PostgreSQL 仍为消息事实来源。
 
@@ -109,9 +109,11 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 群主或群管理员可用 `POST /api/v1/groups/{group_id}/removals` 提交 `{"interval_id":"<目标当前区间 UUID>"}` 移除成员。群主可移除管理员或普通成员；管理员只能移除普通成员，不能移除自己或群主。返回 `status=removed` 与 `leave_seq`，同一区间重试安全，目标重新入群后的新区间不受旧请求影响。`policy_blocked` 群允许移除冲突成员，但本接口不会自动恢复群状态；恢复须由后续策略复核能力判定。
 
-当前群主可用 `POST /api/v1/groups/{group_id}/owner-transfers` 提交 `{"client_request_id":"<请求 UUID>","source_interval_id":"<本人当前区间 UUID>","target_interval_id":"<接任成员当前区间 UUID>"}` 转让所有权。接任者须为群内活跃成员，且其来源任职仍有效；原群主降为普通成员，之后可主动退群。首次成功返回 201，同一请求重试返回 200；即使群主后来再次变更，旧请求也不会重新执行。更改同一请求 ID 的内容返回 409。`policy_blocked` 群允许转让，但不会自动解除封锁。批量邀请、群消息写入和群列表尚未开放。
+当前群主可用 `POST /api/v1/groups/{group_id}/owner-transfers` 提交 `{"client_request_id":"<请求 UUID>","source_interval_id":"<本人当前区间 UUID>","target_interval_id":"<接任成员当前区间 UUID>"}` 转让所有权。接任者须为群内活跃成员，且其来源任职仍有效；原群主降为普通成员，之后可主动退群。首次成功返回 201，同一请求重试返回 200；即使群主后来再次变更，旧请求也不会重新执行。更改同一请求 ID 的内容返回 409。`policy_blocked` 群允许转让，但不会自动解除封锁。批量邀请和群列表尚未开放。
 
-群历史补拉使用 `GET /api/v1/groups/{group_id}/messages?after_seq=0&limit=100`。当前或历史成员可在账号和选定任职有效时，读取本人曾参与区间内且未满默认 365 天保留期的消息；退出、移除与重新入群之间的序号缺口、错误发送任职及过期正文只返回 `redacted=true` 占位，不包含正文和发送人。普通策略变化不追改保留期内的旧正文；当前 `hard_deny` 命中读者与群内任一成员时会遮蔽整页历史正文，账号冻结也会阻断读取。`policy_blocked` 群仍可按历史授权补拉。保留期配置和物理清理由 P4 实现；群消息写入尚未开放，下一增量接入。
+群历史补拉使用 `GET /api/v1/groups/{group_id}/messages?after_seq=0&limit=100`。当前或历史成员可在账号和选定任职有效时，读取本人曾参与区间内且未满默认 365 天保留期的消息；退出、移除与重新入群之间的序号缺口、错误发送任职及过期正文只返回 `redacted=true` 占位，不包含正文和发送人。普通策略变化不追改保留期内的旧正文；当前 `hard_deny` 命中读者与群内任一成员时会遮蔽整页历史正文，账号冻结也会阻断读取。`policy_blocked` 群仍可按历史授权补拉。保留期配置和物理清理由 P4 实现。
+
+群成员可用 `POST /api/v1/groups/{group_id}/messages` 发送文本，请求体与单聊发送相同。新消息要求所选任职等于当前群成员区间的来源任职，且全部活跃成员的任职及双向 `send_message` 策略仍有效；发现不合规时群在同一事务中进入 `policy_blocked`，拒绝新消息且不消耗序号。`policy_blocked` 群和已退群成员不能发送新消息，但本人当前账号及所选任职仍有效时可用相同 `client_msg_id` 重放原 ACK。消息、幂等键、连续 `seq`、Outbox 与请求审计同事务提交。Outbox 通知按消息序号对应的群成员区间解析收件人；通知只提示客户端补拉，不包含正文。当前 Web 页面尚无群列表和群消息界面；策略阻断后的恢复须由后续复核能力处理。
 
 基础 Web 页面默认关闭。先在身份源注册支持授权码和 PKCE S256 的**公共客户端**，将其客户端 ID 同时加入 `IM_OIDC_ALLOWED_CLIENT_IDS`，并把精确回调 URL 注册为公开 HTTPS 地址，例如 `https://im.example.com/web/`。身份源须为此客户端签发满足上文约束的 API 访问令牌。经 HTTPS 反向代理提供同源页面和 API 后，额外配置：
 
