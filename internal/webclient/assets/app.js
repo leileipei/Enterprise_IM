@@ -12,6 +12,14 @@ const conversationList = element("conversation-list");
 const loadMoreConversationsButton = element("load-more-conversations");
 const groupList = element("group-list");
 const loadMoreGroupsButton = element("load-more-groups");
+const groupCreateOpenButton = element("group-create-open");
+const groupCreateDialog = element("group-create-dialog");
+const groupCreateName = element("group-create-name");
+const groupCreateQuery = element("group-create-query");
+const groupCreateResults = element("group-create-results");
+const groupCreateSelected = element("group-create-selected");
+const groupCreateSubmit = element("group-create-submit");
+const groupCreateDiscard = element("group-create-discard");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -60,6 +68,58 @@ let groupRefreshPromise = null;
 let groupRefreshAgain = false;
 let groupRefreshAfterPage = false;
 let groupPagePromise = null;
+const groupCreateMembers = new Map();
+let groupCreateSearchResults = [];
+let groupCreateSearchSerial = 0;
+let pendingGroupCreate = null;
+
+function groupCreateStoragePrefix(actor = actingMembership) {
+  return `enterprise-im-group-create:${self.tenant_id}:${self.user_id}:${actor}:`;
+}
+
+function groupCreateStorageKey(id, actor = actingMembership) {
+  return groupCreateStoragePrefix(actor) + id;
+}
+
+function forgetGroupCreate(id, actor = actingMembership) {
+  try { localStorage.removeItem(groupCreateStorageKey(id, actor)); } catch (_) { /* Storage may be unavailable. */ }
+}
+
+function restoreGroupCreate() {
+  let saved = null;
+  try {
+    const prefix = groupCreateStoragePrefix();
+    const keys = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(prefix)) keys.push(key);
+    }
+    keys.sort();
+    for (const key of keys) {
+      try {
+        const candidate = JSON.parse(localStorage.getItem(key) || "null");
+        if (candidate?.id === key.slice(prefix.length)) { saved = candidate; break; }
+      } catch (_) { /* Ignore an unreadable saved request. */ }
+    }
+  } catch (_) { /* Storage may be unavailable. */ }
+  if (!saved || saved.actor !== actingMembership ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved.id) ||
+      typeof saved.name !== "string" || !saved.name.trim() || [...saved.name].length > 120 ||
+      !Array.isArray(saved.memberIDs) || saved.memberIDs.length < 1 || saved.memberIDs.length > 20 ||
+      !saved.memberIDs.every((id) => typeof id === "string")) return;
+  pendingGroupCreate = { id: saved.id, name: saved.name, memberIDs: saved.memberIDs,
+    actor: saved.actor, sending: false };
+  groupCreateName.value = saved.name;
+  saved.memberIDs.forEach((membershipID, index) => {
+    const member = Array.isArray(saved.members) ? saved.members[index] : null;
+    groupCreateMembers.set(member?.userID || membershipID, {
+      userID: member?.userID || membershipID, membershipID,
+      name: typeof member?.name === "string" ? member.name : `成员 ${index + 1}`,
+      organization: typeof member?.organization === "string" ? member.organization : "已保存任职",
+    });
+  });
+  element("group-create-hint").textContent = "已恢复待确认建群请求；可用同一编号重试，或放弃后核对群列表。";
+}
 
 function notify(message) {
   noticeBox.textContent = message;
@@ -223,6 +283,7 @@ function showWorkspace() {
 }
 
 function logout(message = "已退出当前页面。") {
+  closeGroupCreate(true);
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -263,6 +324,7 @@ function logout(message = "已退出当前页面。") {
 }
 
 function renderMemberships() {
+  groupCreateOpenButton.disabled = !actingMembership;
   identityOptions.replaceChildren();
   for (const membership of self.memberships) {
     const button = document.createElement("button");
@@ -282,6 +344,7 @@ function renderMemberships() {
 
 function selectMembership(id) {
   if (id === actingMembership) return;
+  closeGroupCreate(true);
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -378,6 +441,205 @@ async function searchPeople() {
     if (error.stale) return;
     element("search-hint").textContent = error.message;
   }
+}
+
+function renderGroupCreate() {
+  groupCreateSelected.replaceChildren();
+  for (const member of groupCreateMembers.values()) {
+    const card = document.createElement("div");
+    card.className = "person-card";
+    const name = document.createElement("strong");
+    name.textContent = member.name;
+    const organization = document.createElement("small");
+    organization.textContent = member.organization;
+    const remove = document.createElement("button");
+    remove.className = "text-button";
+    remove.type = "button";
+    remove.textContent = "移除";
+    remove.disabled = !!pendingGroupCreate;
+    remove.addEventListener("click", () => {
+      groupCreateMembers.delete(member.userID);
+      renderGroupCreate();
+    });
+    card.append(name, organization, remove);
+    groupCreateSelected.append(card);
+  }
+  element("group-create-count").textContent = String(groupCreateMembers.size);
+  groupCreateResults.replaceChildren();
+  for (const person of groupCreateSearchResults) {
+    const card = document.createElement("div");
+    card.className = "person-card";
+    const name = document.createElement("strong");
+    name.textContent = person.display_name;
+    card.append(name);
+    for (const membership of person.memberships) {
+      const button = document.createElement("button");
+      button.className = "person-button";
+      button.type = "button";
+      button.textContent = membership.organization_name +
+        (membership.title ? " · " + membership.title : "");
+      button.disabled = !!pendingGroupCreate || person.id === self.user_id ||
+        groupCreateMembers.has(person.id) || groupCreateMembers.size >= 20;
+      button.addEventListener("click", () => {
+        if (pendingGroupCreate || groupCreateMembers.has(person.id) ||
+            groupCreateMembers.size >= 20 || person.id === self.user_id) return;
+        groupCreateMembers.set(person.id, {
+          userID: person.id, membershipID: membership.membership_id,
+          name: person.display_name, organization: membership.organization_name,
+        });
+        renderGroupCreate();
+      });
+      card.append(button);
+    }
+    groupCreateResults.append(card);
+  }
+  const locked = !!pendingGroupCreate;
+  groupCreateName.disabled = locked;
+  groupCreateQuery.disabled = locked;
+  element("group-create-search").disabled = locked;
+  element("group-create-cancel").disabled = locked;
+  groupCreateDiscard.classList.toggle("hidden", !locked || !!pendingGroupCreate.sending);
+  groupCreateSubmit.disabled = locked ? pendingGroupCreate.sending :
+    !groupCreateName.value.trim() || groupCreateMembers.size < 1;
+}
+
+function closeGroupCreate(force = false) {
+  if (pendingGroupCreate && !force) {
+    notify("建群结果尚未确认，请先重试或放弃待确认请求。");
+    return;
+  }
+  if (groupCreateDialog.open) groupCreateDialog.close();
+  groupCreateSearchSerial++;
+  groupCreateSearchResults = [];
+  groupCreateMembers.clear();
+  pendingGroupCreate = null;
+  groupCreateName.value = "";
+  groupCreateQuery.value = "";
+  groupCreateResults.replaceChildren();
+  groupCreateSelected.replaceChildren();
+  element("group-create-hint").textContent = "";
+  element("group-create-search-hint").textContent = "搜索当前任职下可见的同事。";
+}
+
+function openGroupCreate() {
+  if (!actingMembership || !canSwitchChat()) return;
+  if (messageText.value.trim()) return notify("请先发送或清空当前消息草稿，再新建群聊。");
+  closeGroupCreate(true);
+  restoreGroupCreate();
+  groupCreateDialog.showModal();
+  renderGroupCreate();
+  if (pendingGroupCreate) groupCreateSubmit.focus();
+  else groupCreateName.focus();
+}
+
+async function searchGroupCreatePeople() {
+  if (!groupCreateDialog.open || pendingGroupCreate) return;
+  const query = groupCreateQuery.value.trim();
+  if ([...query].length < 2 || [...query].length > 100) {
+    return notify("请输入 2～100 个字符的姓名片段。");
+  }
+  const serial = ++groupCreateSearchSerial;
+  const selectedEpoch = identityEpoch;
+  element("group-create-search-hint").textContent = "正在查找…";
+  try {
+    const page = await request(`/api/v1/directory/users?q=${encodeURIComponent(query)}&limit=20`);
+    if (!groupCreateDialog.open || serial !== groupCreateSearchSerial ||
+        selectedEpoch !== identityEpoch) return;
+    groupCreateSearchResults = page.people;
+    element("group-create-search-hint").textContent = !page.people.length ?
+      "没有找到当前任职下可见的同事。" : page.has_more ?
+        "结果较多，请缩小姓名范围。" : `找到 ${page.people.length} 位同事`;
+    renderGroupCreate();
+  } catch (error) {
+    if (error.stale || serial !== groupCreateSearchSerial || !groupCreateDialog.open) return;
+    element("group-create-search-hint").textContent = error.message;
+  }
+}
+
+async function submitGroupCreate(event) {
+  event.preventDefault();
+  if (!groupCreateDialog.open || !actingMembership || pendingGroupCreate?.sending) return;
+  if (!pendingGroupCreate) {
+    const name = groupCreateName.value.trim();
+    if (!name || [...name].length > 120 || /[\u0000-\u001f\u007f-\u009f]/u.test(name)) {
+      return notify("请输入 1～120 个字符且不含控制字符的群名。");
+    }
+    if (groupCreateMembers.size < 1 || groupCreateMembers.size > 20) {
+      return notify("请选择 1～20 位初始成员。");
+    }
+    const created = { id: uuidV7(), name,
+      memberIDs: [...groupCreateMembers.values()].map((member) => member.membershipID),
+      actor: actingMembership, sending: false };
+    try {
+      localStorage.setItem(groupCreateStorageKey(created.id), JSON.stringify({ ...created,
+        members: [...groupCreateMembers.values()] }));
+    } catch (_) {
+      return notify("浏览器无法保存待确认建群请求，请检查浏览器存储设置后重试。");
+    }
+    pendingGroupCreate = created;
+  }
+  const submitted = pendingGroupCreate;
+  const selectedEpoch = identityEpoch;
+  const selectedConversationEpoch = conversationEpoch;
+  const selectedOpenChatSerial = openChatSerial;
+  submitted.sending = true;
+  element("group-create-hint").textContent = "正在创建群聊…";
+  renderGroupCreate();
+  try {
+    const group = await request("/api/v1/groups", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_request_id: submitted.id, name: submitted.name,
+        member_membership_ids: submitted.memberIDs }),
+    });
+    if (selectedEpoch !== identityEpoch || submitted !== pendingGroupCreate ||
+        submitted.actor !== actingMembership) return;
+    forgetGroupCreate(submitted.id, submitted.actor);
+    closeGroupCreate(true);
+    try {
+      await refreshGroups();
+      if (selectedEpoch !== identityEpoch || submitted.actor !== actingMembership) return;
+      if (!groups.has(group.id)) await refreshGroups();
+      if (selectedEpoch !== identityEpoch || submitted.actor !== actingMembership ||
+          selectedConversationEpoch !== conversationEpoch ||
+          selectedOpenChatSerial !== openChatSerial || messageText.value.trim() ||
+          groupCreateDialog.open) return;
+      if (groups.has(group.id)) activateGroupHistory(group.id);
+      else notify("群已创建，群列表正在同步，请稍后查看。");
+    } catch (error) {
+      if (error.stale || selectedEpoch !== identityEpoch ||
+          submitted.actor !== actingMembership ||
+          selectedConversationEpoch !== conversationEpoch ||
+          selectedOpenChatSerial !== openChatSerial || messageText.value.trim() ||
+          groupCreateDialog.open) return;
+      report(error);
+      notify("群已创建，群列表暂时无法同步，请稍后刷新。");
+    }
+  } catch (error) {
+    if (error.stale || selectedEpoch !== identityEpoch ||
+        submitted !== pendingGroupCreate || submitted.actor !== actingMembership) return;
+    if ([400, 404, 409].includes(error.status)) {
+      pendingGroupCreate = null;
+      forgetGroupCreate(submitted.id, submitted.actor);
+      element("group-create-hint").textContent = "建群请求未通过，请核对成员与群名。";
+      renderGroupCreate();
+    } else {
+      submitted.sending = false;
+      element("group-create-hint").textContent = "建群结果未确认；可用同一编号重试，或放弃后核对群列表。";
+      renderGroupCreate();
+    }
+    report(error);
+  } finally {
+    submitted.sending = false;
+    if (submitted === pendingGroupCreate) renderGroupCreate();
+  }
+}
+
+function discardGroupCreate() {
+  if (!pendingGroupCreate || pendingGroupCreate.sending) return;
+  forgetGroupCreate(pendingGroupCreate.id, pendingGroupCreate.actor);
+  closeGroupCreate(true);
+  refreshGroups().catch(report);
+  notify("已放弃待确认建群请求；群可能已创建，请先核对群列表。");
 }
 
 function canSwitchChat() {
@@ -966,6 +1228,24 @@ element("logout-button").addEventListener("click", () => logout());
 element("search-button").addEventListener("click", searchPeople);
 loadMoreConversationsButton.addEventListener("click", loadMoreInbox);
 loadMoreGroupsButton.addEventListener("click", loadMoreGroups);
+groupCreateOpenButton.addEventListener("click", openGroupCreate);
+element("group-create-cancel").addEventListener("click", () => closeGroupCreate());
+groupCreateDiscard.addEventListener("click", discardGroupCreate);
+element("group-create-search").addEventListener("click", searchGroupCreatePeople);
+groupCreateQuery.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); searchGroupCreatePeople(); }
+});
+groupCreateQuery.addEventListener("input", () => {
+  groupCreateSearchSerial++;
+  groupCreateSearchResults = [];
+  renderGroupCreate();
+});
+groupCreateName.addEventListener("input", renderGroupCreate);
+element("group-create-form").addEventListener("submit", submitGroupCreate);
+groupCreateDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeGroupCreate();
+});
 element("person-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); searchPeople(); }
 });

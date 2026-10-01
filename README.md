@@ -101,7 +101,9 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 `IM_REALTIME_REDIS_URL` 可省略；省略时不启用实时握手与通知路由。启用时必须同时启用 OIDC，且启动时 Redis 必须可连接。`IM_REALTIME_STREAM` 默认与 Worker 的 `IM_OUTBOX_STREAM` 相同；自定义时两者必须设为同一名称，并先启动 Worker。Worker 在健康处理循环刷新 10 秒存活标记；API 要求同一 Redis 和 Stream 上有该标记。Worker 停止、配置错配、读流或数据库核验故障会让通知入口失效，就绪探针返回 503，现有连接关闭。每个 API 实例独立从 Stream 尾部读取新事件并只通知本机连接，客户端重连收到 `ready` 后从 PostgreSQL 补拉。浏览器 WebSocket 默认只允许同源；生产环境应通过 HTTPS/WSS 提供入口。单进程最多保持 5000 条连接、同一用户最多 5 条，连接每 5 秒复核任职并每 30 秒发送 Ping。Stream 目前不自动裁剪，投入生产前仍需容量与保留策略验证。
 
-启用 OIDC 后，`POST /api/v1/groups` 可由当前有效任职创建群，JSON 请求示例：`{"client_request_id":"00000000-0000-4000-8000-000000000851","name":"项目群","member_membership_ids":["00000000-0000-4000-8000-000000000852"]}`。`client_request_id` 由客户端生成；同一创建人用相同 ID 和相同内容重试会返回原群，改动内容则返回 409。一次可指定 1 至 20 位初始成员，服务会逐对检查建群策略；所有检查通过后才写入群及成员。
+启用 OIDC 后，`POST /api/v1/groups` 可由当前有效任职创建群，JSON 请求示例：`{"client_request_id":"00000000-0000-4000-8000-000000000851","name":"项目群","member_membership_ids":["00000000-0000-4000-8000-000000000852"]}`。`client_request_id` 由客户端生成；同一创建人用相同 ID 和相同内容重试会返回原群，改动内容则返回 409。一次可指定 1 至 20 位初始成员，服务会逐对检查建群策略；所有检查通过后才写入群及成员。Web 页面“新建群聊”使用当前所选任职作为创建人，可跨多次目录搜索选择成员；同一人只能选择一个任职，跨组织成员仍由服务端策略判定。建群结果未确认时页面锁定群名和成员，并用相同请求编号及内容重试；放弃后应先核对群列表，避免重复建群。
+
+网页会把待确认建群请求的编号、群名、创建任职和成员快照保存在浏览器本地存储，不保存令牌。刷新后重新登录、选择原任职并打开“新建群聊”，即可恢复同编号重试或明确放弃。
 
 群成员可用 `GET /api/v1/groups/{group_id}/membership` 查询本人的当前成员区间，取得 `interval_id`、`role`、`join_seq` 和 `group_status`；用 `POST /api/v1/groups/{group_id}/leave` 提交 `{"interval_id":"<当前区间 ID>"}` 主动退群。退群返回 `status=left` 与 `leave_seq`；相同区间的请求可以安全重试，即使本人之后重新入群，也不会退出新区间。群主须先转让群主身份，然后才能主动退群；直接退群返回 409 `owner_transfer_required`。
 
@@ -128,7 +130,7 @@ export IM_WEB_REDIRECT_URL='https://im.example.com/web/'
 export IM_WEB_SCOPE='openid profile'
 ```
 
-然后访问 `https://im.example.com/web/`。页面完成授权码登录和当前有效任职选择，可浏览当前任职下的已有单聊、查看本人跨任职加入的群列表、按姓名查找可见同事、发起单聊、发送文本并补拉单聊消息。群列表展示群状态、角色及来源任职，支持分页和约 30～40 秒定时刷新；已展开的页会重新读取。点击群可按服务端区间授权规则补拉历史消息，不可见消息显示占位；选择群的来源任职且群状态正常时，可在网页发送群文本。跨任职查看和 `policy_blocked` 群禁用新消息输入，但结果未确认的旧消息仍可按原编号重试。网络或服务故障导致发送结果未确认时，需先重试或放弃该条消息，再切换会话或任职，以保留幂等重试编号；明确拒绝或重试过期会解除待确认状态。多页请求没有共享数据库快照，群在翻页期间因新消息改变排序时可能短暂缺漏，后续刷新会重新核对；实际访问权限始终由服务端检查。令牌只保存在页面内存，刷新或退出后需重新登录；重新登录并选择任职后，会话列表会从服务端重新加载。可配置 Redis 实时通知；即使 WebSocket 保持连接，页面也会在约 30～40 秒无通知后核对一次单聊会话、群列表和当前聊天，避免静默漏通知使页面长期停留在旧状态。连接断开或实时功能不可用时每 5 秒补拉一次当前聊天，群列表仍约 30～40 秒核对一次。核对间隔带随机错峰，页面处于后台时浏览器可能延后计时；这不是设备送达确认或生产故障恢复验收。当前 ACK 文案仅表示服务器持久化接收。`IM_WEB_SCOPE` 默认 `openid profile`；令牌兑换只访问服务器配置的 HTTPS 地址，不使用浏览器请求中的目标地址。部署前仍需用客户 IdP、HTTPS 入口和真实组织数据做联调；本地模拟测试不等于已完成联调。
+然后访问 `https://im.example.com/web/`。页面完成授权码登录和当前有效任职选择，可浏览当前任职下的已有单聊、查看本人跨任职加入的群列表、从可见目录选人新建群聊、按姓名查找可见同事、发起单聊、发送文本并补拉单聊消息。群列表展示群状态、角色及来源任职，支持分页和约 30～40 秒定时刷新；已展开的页会重新读取。点击群可按服务端区间授权规则补拉历史消息，不可见消息显示占位；选择群的来源任职且群状态正常时，可在网页发送群文本。跨任职查看和 `policy_blocked` 群禁用新消息输入，但结果未确认的旧消息仍可按原编号重试。网络或服务故障导致发送结果未确认时，需先重试或放弃该条消息，再切换会话或任职，以保留幂等重试编号；明确拒绝或重试过期会解除待确认状态。多页请求没有共享数据库快照，群在翻页期间因新消息改变排序时可能短暂缺漏，后续刷新会重新核对；实际访问权限始终由服务端检查。令牌只保存在页面内存，刷新或退出后需重新登录；重新登录并选择任职后，会话列表会从服务端重新加载。可配置 Redis 实时通知；即使 WebSocket 保持连接，页面也会在约 30～40 秒无通知后核对一次单聊会话、群列表和当前聊天，避免静默漏通知使页面长期停留在旧状态。连接断开或实时功能不可用时每 5 秒补拉一次当前聊天，群列表仍约 30～40 秒核对一次。核对间隔带随机错峰，页面处于后台时浏览器可能延后计时；这不是设备送达确认或生产故障恢复验收。当前 ACK 文案仅表示服务器持久化接收。`IM_WEB_SCOPE` 默认 `openid profile`；令牌兑换只访问服务器配置的 HTTPS 地址，不使用浏览器请求中的目标地址。部署前仍需用客户 IdP、HTTPS 入口和真实组织数据做联调；本地模拟测试不等于已完成联调。
 
 这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。非标准或不透明令牌需另建适配器。
 
@@ -141,6 +143,6 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs` 和 `node internal/webclient/e2e/group_send.cjs`。
+浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs` 和 `node internal/webclient/e2e/group_create.cjs`。
 
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000011` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。

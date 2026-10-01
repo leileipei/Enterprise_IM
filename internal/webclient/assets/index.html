@@ -43,7 +43,7 @@
           <div id="people-results" class="people-results"></div>
         </div>
         <div class="recent-panel"><div class="section-heading"><span>单聊会话</span><span class="tag">当前任职</span></div><div id="conversation-list" class="conversation-list"></div><button id="load-more-conversations" class="secondary-button hidden" type="button">加载更多会话</button></div>
-        <div class="recent-panel group-panel"><div class="section-heading"><span>我的群聊</span><span class="tag">全部任职</span></div><div id="group-list" class="group-list"></div><button id="load-more-groups" class="secondary-button hidden" type="button">加载更多群聊</button></div>
+        <div class="recent-panel group-panel"><div class="section-heading"><span>我的群聊</span><span class="tag">全部任职</span></div><button id="group-create-open" class="secondary-button" type="button">新建群聊</button><div id="group-list" class="group-list"></div><button id="load-more-groups" class="secondary-button hidden" type="button">加载更多群聊</button></div>
         <div class="sidebar-foot">本地页面不会保存你的访问令牌。刷新后需重新登录。</div>
       </aside>
       <div class="chat-column">
@@ -52,6 +52,22 @@
         <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
       </div>
     </section>
+    <dialog id="group-create-dialog" class="group-create-dialog" aria-labelledby="group-create-title">
+      <form id="group-create-form">
+        <h2 id="group-create-title">新建群聊</h2>
+        <p class="microcopy">以当前任职创建群聊；可从通讯录搜索结果选择 1～20 位初始成员。</p>
+        <label for="group-create-name">群名</label>
+        <input id="group-create-name" name="name" autocomplete="off" required>
+        <label for="group-create-query">查找初始成员</label>
+        <div class="group-create-search-row"><input id="group-create-query" type="search" autocomplete="off" placeholder="输入姓名，至少 2 个字"><button id="group-create-search" class="secondary-button" type="button">搜索成员</button></div>
+        <p id="group-create-search-hint" class="microcopy" role="status">搜索当前任职下可见的同事。</p>
+        <div id="group-create-results" class="group-create-results"></div>
+        <p class="group-create-count">已选 <span id="group-create-count">0</span> / 20 人</p>
+        <div id="group-create-selected" class="group-create-selected"></div>
+        <p id="group-create-hint" class="microcopy" role="status"></p>
+        <div class="group-create-actions"><button id="group-create-cancel" class="secondary-button" type="button">取消</button><button id="group-create-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-create-submit" class="primary-button" type="submit">创建群聊</button></div>
+      </form>
+    </dialog>
   </main>
   <div id="notice" class="notice hidden" role="status"></div>
 </body>
