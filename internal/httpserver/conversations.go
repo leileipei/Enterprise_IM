@@ -27,6 +27,7 @@ type ConversationService interface {
 	RemoveGroupMember(context.Context, access.TrustedIdentity, string, string) (policystore.GroupRemoveResult, error)
 	TransferGroupOwner(context.Context, access.TrustedIdentity, string, policystore.GroupOwnerTransferRequest) (policystore.GroupOwnerTransfer, error)
 	ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
+	ListGroups(context.Context, access.TrustedIdentity, string, int) (policystore.GroupListPage, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
 	SendGroupTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
 	PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)
@@ -50,12 +51,15 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 			return
 		}
 		if r.URL.Path == "/api/v1/groups" {
-			if r.Method != http.MethodPost {
-				w.Header().Set("Allow", "POST")
+			switch r.Method {
+			case http.MethodGet:
+				listGroups(w, r, identity, conversations)
+			case http.MethodPost:
+				createGroup(w, r, identity, conversations)
+			default:
+				w.Header().Set("Allow", "GET, POST")
 				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
-				return
 			}
-			createGroup(w, r, identity, conversations)
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/api/v1/groups/") {
@@ -92,47 +96,9 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 }
 
 func listDirectConversations(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, service ConversationService) {
-	if r.URL.ForceQuery {
-		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+	cursor, limit, ok := parseConversationListQuery(w, r)
+	if !ok {
 		return
-	}
-	query, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil || len(query) > 2 || len(query["limit"]) > 1 || len(query["cursor"]) > 1 {
-		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
-		return
-	}
-	for key := range query {
-		if key != "limit" && key != "cursor" {
-			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
-			return
-		}
-	}
-	limit := 20
-	if value, ok := query["limit"]; ok {
-		if !decimalDigits(value[0]) {
-			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
-			return
-		}
-		limit, err = strconv.Atoi(value[0])
-		if err != nil || limit < 1 || limit > 50 {
-			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
-			return
-		}
-	}
-	cursor := ""
-	if value, ok := query["cursor"]; ok {
-		cursor = value[0]
-		if cursor == "" || len(cursor) > 256 {
-			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
-			return
-		}
-	}
-	if r.Body != nil {
-		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
-		if err != nil || len(body) != 0 {
-			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
-			return
-		}
 	}
 	page, err := service.ListDirectConversations(r.Context(), identity, cursor, limit)
 	if err != nil {
@@ -171,6 +137,94 @@ func listDirectConversations(w http.ResponseWriter, r *http.Request, identity ac
 		Conversations []itemDTO `json:"conversations"`
 		HasMore       bool      `json:"has_more"`
 		NextCursor    string    `json:"next_cursor,omitempty"`
+	}{items, page.HasMore, page.NextCursor})
+}
+
+func parseConversationListQuery(w http.ResponseWriter, r *http.Request) (string, int, bool) {
+	if r.URL.ForceQuery {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return "", 0, false
+	}
+	query, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil || len(query) > 2 || len(query["limit"]) > 1 || len(query["cursor"]) > 1 {
+		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+		return "", 0, false
+	}
+	for key := range query {
+		if key != "limit" && key != "cursor" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return "", 0, false
+		}
+	}
+	limit := 20
+	if value, ok := query["limit"]; ok {
+		if !decimalDigits(value[0]) {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return "", 0, false
+		}
+		limit, err = strconv.Atoi(value[0])
+		if err != nil || limit < 1 || limit > 50 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return "", 0, false
+		}
+	}
+	cursor := ""
+	if value, ok := query["cursor"]; ok {
+		cursor = value[0]
+		if cursor == "" || len(cursor) > 256 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return "", 0, false
+		}
+	}
+	if r.Body != nil {
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
+		if err != nil || len(body) != 0 {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return "", 0, false
+		}
+	}
+	return cursor, limit, true
+}
+
+func listGroups(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, service ConversationService) {
+	cursor, limit, ok := parseConversationListQuery(w, r)
+	if !ok {
+		return
+	}
+	page, err := service.ListGroups(r.Context(), identity, cursor, limit)
+	if err != nil {
+		switch {
+		case errors.Is(err, policystore.ErrInvalidGroupListRequest):
+			writeAdminError(w, http.StatusBadRequest, "invalid_request")
+		case errors.Is(err, policystore.ErrForbidden):
+			writeAdminError(w, http.StatusForbidden, "invalid_identity")
+		default:
+			slog.ErrorContext(r.Context(), "group list unavailable", "error", err)
+			writeAdminError(w, http.StatusServiceUnavailable, "unavailable")
+		}
+		return
+	}
+	type itemDTO struct {
+		ID                 string `json:"id"`
+		Type               string `json:"type"`
+		Name               string `json:"name"`
+		Status             string `json:"status"`
+		Role               string `json:"role"`
+		SourceMembershipID string `json:"source_membership_id"`
+		LastSeq            int64  `json:"last_seq"`
+		UpdatedAt          string `json:"updated_at"`
+	}
+	items := make([]itemDTO, 0, len(page.Groups))
+	for _, group := range page.Groups {
+		items = append(items, itemDTO{ID: group.ID, Type: "group", Name: group.Name,
+			Status: group.Status, Role: group.Role,
+			SourceMembershipID: group.SourceMembershipID, LastSeq: group.LastSeq,
+			UpdatedAt: group.UpdatedAt.UTC().Format("2006-01-02T15:04:05.999999999Z07:00")})
+	}
+	writeAdminJSON(w, http.StatusOK, struct {
+		Groups     []itemDTO `json:"groups"`
+		HasMore    bool      `json:"has_more"`
+		NextCursor string    `json:"next_cursor,omitempty"`
 	}{items, page.HasMore, page.NextCursor})
 }
 
