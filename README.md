@@ -107,6 +107,8 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 群成员可用 `GET /api/v1/groups/{group_id}/membership` 查询本人的当前成员区间，取得 `interval_id`、`role`、`join_seq` 和 `group_status`；用 `POST /api/v1/groups/{group_id}/leave` 提交 `{"interval_id":"<当前区间 ID>"}` 主动退群。退群返回 `status=left` 与 `leave_seq`；相同区间的请求可以安全重试，即使本人之后重新入群，也不会退出新区间。群主须先转让群主身份，然后才能主动退群；直接退群返回 409 `owner_transfer_required`。
 
+网页中，普通成员或管理员可在群聊页确认退群，策略暂停的群也可退出；群主须先转让群主。网页先读取本人当前成员区间，提交前按账号、当前任职、群和区间 ID 保存待确认请求，不保存令牌。结果未确认时可在“我的群聊”区域恢复并以原区间 ID 重试，即使群已从列表消失；放弃后应核对成员状态。切换任职时只显示该任职发起的待确认退群。未确认的消息或同群邀请须先处理。服务端确认退出后，当前群聊关闭并刷新群列表；重新入群后的新区间不受旧请求重试影响。
+
 群主或群管理员可用 `POST /api/v1/groups/{group_id}/invitations` 提交 `{"client_request_id":"<请求 UUID>","target_membership_id":"<目标任职 UUID>"}` 邀请一人。服务对目标与每位现有成员双向检查 `invite_group` 策略，成功返回新区间 `interval_id`、`join_seq` 和 `policy_version`。同一请求重试返回原区间，即使目标已退群或重新入群；更改请求内容返回 409。`policy_blocked` 群暂停新邀请。
 
 网页中，当前活跃群的群主或管理员可点“邀请成员”，从当前任职可见的通讯录中选择一人及其任职。是否有权邀请、目标能否加入仍由服务端判定。结果未确认时，网页按账号、任职、群和请求编号保存待确认邀请，不保存令牌；刷新后重新登录并在“我的群聊”区域打开待确认邀请，可用相同编号和目标重试或放弃，即使原群已不在群列表中。放弃后应先核对成员状态，避免重复邀请。网页目前没有群成员名册或批量邀请。
@@ -145,6 +147,6 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs` 和 `node internal/webclient/e2e/group_invite.cjs`。
+浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs` 和 `node internal/webclient/e2e/group_leave.cjs`。
 
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000011` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
