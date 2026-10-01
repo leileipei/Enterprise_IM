@@ -22,6 +22,7 @@ type ConversationService interface {
 	StartDirectConversation(context.Context, access.TrustedIdentity, string) (policystore.DirectConversation, error)
 	CreateGroup(context.Context, access.TrustedIdentity, policystore.CreateGroupRequest) (policystore.GroupConversation, error)
 	GetOwnGroupMembership(context.Context, access.TrustedIdentity, string) (policystore.GroupMembership, error)
+	ListGroupMembers(context.Context, access.TrustedIdentity, string, string, int) (policystore.GroupRosterPage, error)
 	LeaveGroup(context.Context, access.TrustedIdentity, string, string) (policystore.GroupLeaveResult, error)
 	InviteGroupMember(context.Context, access.TrustedIdentity, string, policystore.InviteGroupRequest) (policystore.GroupInvitation, error)
 	RemoveGroupMember(context.Context, access.TrustedIdentity, string, string) (policystore.GroupRemoveResult, error)

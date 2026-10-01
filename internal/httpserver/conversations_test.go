@@ -29,6 +29,10 @@ func (conversationStub) GetOwnGroupMembership(context.Context, access.TrustedIde
 	panic("unexpected group membership read")
 }
 
+func (conversationStub) ListGroupMembers(context.Context, access.TrustedIdentity, string, string, int) (policystore.GroupRosterPage, error) {
+	panic("unexpected group roster read")
+}
+
 func (conversationStub) LeaveGroup(context.Context, access.TrustedIdentity, string, string) (policystore.GroupLeaveResult, error) {
 	panic("unexpected group leave")
 }
