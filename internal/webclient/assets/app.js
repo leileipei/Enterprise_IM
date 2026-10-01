@@ -20,6 +20,14 @@ const groupCreateResults = element("group-create-results");
 const groupCreateSelected = element("group-create-selected");
 const groupCreateSubmit = element("group-create-submit");
 const groupCreateDiscard = element("group-create-discard");
+const groupInviteOpenButton = element("group-invite-open");
+const groupInviteDialog = element("group-invite-dialog");
+const groupInviteQuery = element("group-invite-query");
+const groupInviteResults = element("group-invite-results");
+const groupInviteSelected = element("group-invite-selected");
+const groupInviteSubmit = element("group-invite-submit");
+const groupInviteDiscard = element("group-invite-discard");
+const pendingGroupInvites = element("pending-group-invites");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -72,6 +80,11 @@ const groupCreateMembers = new Map();
 let groupCreateSearchResults = [];
 let groupCreateSearchSerial = 0;
 let pendingGroupCreate = null;
+let groupInviteGroupID = "";
+let groupInviteTarget = null;
+let groupInviteSearchResults = [];
+let groupInviteSearchSerial = 0;
+let pendingGroupInvite = null;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
   return `enterprise-im-group-create:${self.tenant_id}:${self.user_id}:${actor}:`;
@@ -188,10 +201,6 @@ async function request(path, options = {}, needsMembership = true) {
     logout("登录已过期，请重新登录。");
     throw new Error("登录已过期");
   }
-  if (response.status === 403 && needsMembership) {
-    selectMembership("");
-    throw new Error("当前任职已失效，请重新选择");
-  }
   if (!response.ok) {
     let errorCode = "";
     try {
@@ -199,11 +208,18 @@ async function request(path, options = {}, needsMembership = true) {
       if (typeof body.error_code === "string") errorCode = body.error_code;
     } catch (_) { /* Error responses can be empty or non-JSON at the proxy. */ }
     checkIdentity();
-    const error = new Error(errorCode === "group_policy_blocked" ? "群通信已暂停，新消息未保存。" :
+    if (response.status === 403 && needsMembership && errorCode === "invalid_identity") {
+      selectMembership("");
+      throw new Error("当前任职已失效，请重新选择");
+    }
+    const error = new Error(errorCode === "group_policy_blocked" ?
+      (path.endsWith("/invitations") ? "群通信已暂停，无法邀请成员。" : "群通信已暂停，新消息未保存。") :
+      errorCode === "group_permission_denied" ? "当前账号无权邀请群成员。" :
       errorCode === "retry_window_expired" ? "重试期限已过，请核对历史消息后重新发送。" :
         response.status === 404 ? "目标不可用或无权限" :
         response.status === 409 ? "当前会话状态已变化，请核对后重试" :
-          response.status === 429 ? "操作太频繁，请稍后再试" : "服务暂时不可用，请稍后重试");
+          response.status === 403 ? "当前操作无权限" :
+            response.status === 429 ? "操作太频繁，请稍后再试" : "服务暂时不可用，请稍后重试");
     error.status = response.status;
     error.code = errorCode;
     throw error;
@@ -284,6 +300,7 @@ function showWorkspace() {
 
 function logout(message = "已退出当前页面。") {
   closeGroupCreate(true);
+  closeGroupInvite(true);
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -314,6 +331,8 @@ function logout(message = "已退出当前页面。") {
   conversations.clear();
   resetGroups();
   identityOptions.replaceChildren();
+  pendingGroupInvites.replaceChildren();
+  pendingGroupInvites.classList.add("hidden");
   results.replaceChildren();
   conversationList.replaceChildren();
   loadMoreConversationsButton.classList.add("hidden");
@@ -345,6 +364,7 @@ function renderMemberships() {
 function selectMembership(id) {
   if (id === actingMembership) return;
   closeGroupCreate(true);
+  closeGroupInvite(true);
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -376,6 +396,7 @@ function selectMembership(id) {
   element("search-hint").textContent = id ? "输入姓名，查找当前任职下可见的同事。" : "请选择一个有效任职。";
   resetChat();
   renderMemberships();
+  renderPendingGroupInvites();
   if (id) {
     scheduleSafetySync();
     refreshInbox().catch(report);
@@ -385,6 +406,7 @@ function selectMembership(id) {
 }
 
 function resetChat() {
+  groupInviteOpenButton.classList.add("hidden");
   messages.replaceChildren();
   const empty = document.createElement("div");
   empty.className = "empty-state";
@@ -602,7 +624,7 @@ async function submitGroupCreate(event) {
       if (selectedEpoch !== identityEpoch || submitted.actor !== actingMembership ||
           selectedConversationEpoch !== conversationEpoch ||
           selectedOpenChatSerial !== openChatSerial || messageText.value.trim() ||
-          groupCreateDialog.open) return;
+          groupCreateDialog.open || groupInviteDialog.open) return;
       if (groups.has(group.id)) activateGroupHistory(group.id);
       else notify("群已创建，群列表正在同步，请稍后查看。");
     } catch (error) {
@@ -610,7 +632,7 @@ async function submitGroupCreate(event) {
           submitted.actor !== actingMembership ||
           selectedConversationEpoch !== conversationEpoch ||
           selectedOpenChatSerial !== openChatSerial || messageText.value.trim() ||
-          groupCreateDialog.open) return;
+          groupCreateDialog.open || groupInviteDialog.open) return;
       report(error);
       notify("群已创建，群列表暂时无法同步，请稍后刷新。");
     }
@@ -640,6 +662,274 @@ function discardGroupCreate() {
   closeGroupCreate(true);
   refreshGroups().catch(report);
   notify("已放弃待确认建群请求；群可能已创建，请先核对群列表。");
+}
+
+function groupInviteAccountPrefix(actor = actingMembership) {
+  return `enterprise-im-group-invite:${self.tenant_id}:${self.user_id}:${actor}:`;
+}
+
+function groupInviteStoragePrefix(groupID, actor = actingMembership) {
+  return groupInviteAccountPrefix(actor) + groupID + ":";
+}
+
+function groupInviteStorageKey(requestID, groupID, actor = actingMembership) {
+  return groupInviteStoragePrefix(groupID, actor) + requestID;
+}
+
+function forgetGroupInvite(requestID, groupID, actor) {
+  try { localStorage.removeItem(groupInviteStorageKey(requestID, groupID, actor)); }
+  catch (_) { /* Storage may be unavailable. */ }
+}
+
+function savedGroupInvites() {
+  if (!self || !actingMembership) return [];
+  const found = [];
+  try {
+    const prefix = groupInviteAccountPrefix();
+    const keys = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(prefix)) keys.push(key);
+    }
+    keys.sort();
+    for (const key of keys) {
+      try {
+        const suffix = key.slice(prefix.length).split(":");
+        const saved = JSON.parse(localStorage.getItem(key) || "null");
+        if (suffix.length === 2 && saved?.id === suffix[1] && saved.groupID === suffix[0] &&
+            saved.actor === actingMembership &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved.groupID) &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved.id) &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved.targetID)) {
+          found.push(saved);
+        }
+      } catch (_) { /* Ignore an unreadable saved request. */ }
+    }
+  } catch (_) { /* Storage may be unavailable. */ }
+  return found;
+}
+
+function savedGroupInvite(groupID) {
+  return savedGroupInvites().find((saved) => saved.groupID === groupID) || null;
+}
+
+function renderPendingGroupInvites() {
+  pendingGroupInvites.replaceChildren();
+  for (const saved of savedGroupInvites()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.textContent = `待确认邀请 · ${saved.groupName || groups.get(saved.groupID)?.name || saved.groupID}`;
+    button.addEventListener("click", () => showGroupInvite(saved.groupID,
+      saved.groupName || groups.get(saved.groupID)?.name || saved.groupID, saved));
+    pendingGroupInvites.append(button);
+  }
+  pendingGroupInvites.classList.toggle("hidden", !pendingGroupInvites.childElementCount);
+}
+
+function renderGroupInviteAction() {
+  const group = activeConversationKind === "group" ? groups.get(activeConversation) : null;
+  const canInvite = group && group.status === "active" &&
+    ["owner", "admin"].includes(group.role);
+  groupInviteOpenButton.classList.toggle("hidden", !actingMembership ||
+    !(canInvite || (group && savedGroupInvite(group.id))));
+}
+
+function renderGroupInvite() {
+  groupInviteSelected.replaceChildren();
+  if (groupInviteTarget) {
+    const card = document.createElement("div");
+    card.className = "person-card";
+    const name = document.createElement("strong");
+    name.textContent = groupInviteTarget.name;
+    const organization = document.createElement("small");
+    organization.textContent = groupInviteTarget.organization;
+    const remove = document.createElement("button");
+    remove.className = "text-button";
+    remove.type = "button";
+    remove.textContent = "移除";
+    remove.disabled = !!pendingGroupInvite;
+    remove.addEventListener("click", () => {
+      groupInviteTarget = null;
+      renderGroupInvite();
+    });
+    card.append(name, organization, remove);
+    groupInviteSelected.append(card);
+  }
+  groupInviteResults.replaceChildren();
+  for (const person of groupInviteSearchResults) {
+    const card = document.createElement("div");
+    card.className = "person-card";
+    const name = document.createElement("strong");
+    name.textContent = person.display_name;
+    card.append(name);
+    for (const membership of person.memberships) {
+      const button = document.createElement("button");
+      button.className = "person-button";
+      button.type = "button";
+      button.textContent = membership.organization_name +
+        (membership.title ? " · " + membership.title : "");
+      button.disabled = !!pendingGroupInvite || person.id === self.user_id ||
+        groupInviteTarget?.membershipID === membership.membership_id;
+      button.addEventListener("click", () => {
+        if (pendingGroupInvite || person.id === self.user_id) return;
+        groupInviteTarget = { userID: person.id, membershipID: membership.membership_id,
+          name: person.display_name, organization: membership.organization_name };
+        renderGroupInvite();
+      });
+      card.append(button);
+    }
+    groupInviteResults.append(card);
+  }
+  const locked = !!pendingGroupInvite;
+  groupInviteQuery.disabled = locked;
+  element("group-invite-search").disabled = locked;
+  element("group-invite-cancel").disabled = locked;
+  groupInviteDiscard.classList.toggle("hidden", !locked || !!pendingGroupInvite.sending);
+  groupInviteSubmit.disabled = locked ? pendingGroupInvite.sending :
+    !groupInviteTarget || groups.get(groupInviteGroupID)?.status === "policy_blocked";
+  groupInviteSubmit.textContent = locked ? "重试邀请" : "发送邀请";
+}
+
+function closeGroupInvite(force = false) {
+  if (pendingGroupInvite && !force) {
+    notify("邀请结果尚未确认，请先重试或放弃待确认请求。");
+    return;
+  }
+  if (groupInviteDialog.open) groupInviteDialog.close();
+  groupInviteSearchSerial++;
+  groupInviteGroupID = "";
+  groupInviteTarget = null;
+  groupInviteSearchResults = [];
+  pendingGroupInvite = null;
+  groupInviteQuery.value = "";
+  groupInviteResults.replaceChildren();
+  groupInviteSelected.replaceChildren();
+  element("group-invite-hint").textContent = "";
+  element("group-invite-search-hint").textContent = "搜索当前任职下可见的同事。";
+}
+
+function openGroupInvite() {
+  const group = activeConversationKind === "group" ? groups.get(activeConversation) : null;
+  if (!group || !actingMembership) return;
+  const saved = savedGroupInvite(group.id);
+  if (!saved && (group.status !== "active" || !["owner", "admin"].includes(group.role))) return;
+  showGroupInvite(group.id, group.name, saved);
+}
+
+function showGroupInvite(groupID, groupName, saved) {
+  if (!self || !actingMembership) return;
+  closeGroupInvite(true);
+  groupInviteGroupID = groupID;
+  if (saved) {
+    pendingGroupInvite = { id: saved.id, groupID: saved.groupID, actor: saved.actor,
+      targetID: saved.targetID, sending: false };
+    groupInviteTarget = { membershipID: saved.targetID,
+      name: typeof saved.name === "string" ? saved.name : "已保存成员",
+      organization: typeof saved.organization === "string" ? saved.organization : "已保存任职" };
+    element("group-invite-hint").textContent = "已恢复待确认邀请；可用同一编号重试，或放弃后核对成员状态。";
+  }
+  element("group-invite-group").textContent = `群聊：${groupName} · 当前任职发起邀请`;
+  groupInviteDialog.showModal();
+  renderGroupInvite();
+  if (saved) groupInviteSubmit.focus();
+  else groupInviteQuery.focus();
+}
+
+async function searchGroupInvitePeople() {
+  if (!groupInviteDialog.open || pendingGroupInvite) return;
+  const query = groupInviteQuery.value.trim();
+  if ([...query].length < 2 || [...query].length > 100) {
+    return notify("请输入 2～100 个字符的姓名片段。");
+  }
+  const serial = ++groupInviteSearchSerial;
+  const selectedEpoch = identityEpoch;
+  element("group-invite-search-hint").textContent = "正在查找…";
+  try {
+    const page = await request(`/api/v1/directory/users?q=${encodeURIComponent(query)}&limit=20`);
+    if (!groupInviteDialog.open || serial !== groupInviteSearchSerial ||
+        selectedEpoch !== identityEpoch) return;
+    groupInviteSearchResults = page.people;
+    element("group-invite-search-hint").textContent = !page.people.length ?
+      "没有找到当前任职下可见的同事。" : page.has_more ?
+        "结果较多，请缩小姓名范围。" : `找到 ${page.people.length} 位同事`;
+    renderGroupInvite();
+  } catch (error) {
+    if (error.stale || serial !== groupInviteSearchSerial || !groupInviteDialog.open) return;
+    element("group-invite-search-hint").textContent = error.message;
+  }
+}
+
+async function submitGroupInvite(event) {
+  event.preventDefault();
+  if (!groupInviteDialog.open || !actingMembership || pendingGroupInvite?.sending) return;
+  if (!pendingGroupInvite) {
+    if (!groupInviteTarget || !groupInviteGroupID) return notify("请选择一位要邀请的成员任职。");
+    const created = { id: uuidV7(), groupID: groupInviteGroupID,
+      actor: actingMembership, targetID: groupInviteTarget.membershipID, sending: false };
+    try {
+      localStorage.setItem(groupInviteStorageKey(created.id, created.groupID),
+        JSON.stringify({ ...created, name: groupInviteTarget.name,
+          organization: groupInviteTarget.organization,
+          groupName: groups.get(created.groupID)?.name || created.groupID }));
+    } catch (_) {
+      return notify("浏览器无法保存待确认邀请，请检查浏览器存储设置后重试。");
+    }
+    pendingGroupInvite = created;
+    renderPendingGroupInvites();
+  }
+  const submitted = pendingGroupInvite;
+  const selectedEpoch = identityEpoch;
+  submitted.sending = true;
+  element("group-invite-hint").textContent = "正在邀请成员…";
+  renderGroupInvite();
+  try {
+    await request(`/api/v1/groups/${submitted.groupID}/invitations`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_request_id: submitted.id,
+        target_membership_id: submitted.targetID }),
+    });
+    if (selectedEpoch !== identityEpoch || submitted !== pendingGroupInvite ||
+        submitted.actor !== actingMembership) return;
+    forgetGroupInvite(submitted.id, submitted.groupID, submitted.actor);
+    closeGroupInvite(true);
+    renderPendingGroupInvites();
+    renderGroupInviteAction();
+    notify("已邀请成员加入群聊。");
+  } catch (error) {
+    if (error.stale || selectedEpoch !== identityEpoch ||
+        submitted !== pendingGroupInvite || submitted.actor !== actingMembership) return;
+    if ([400, 404, 409].includes(error.status) ||
+        (error.status === 403 && error.code === "group_permission_denied")) {
+      forgetGroupInvite(submitted.id, submitted.groupID, submitted.actor);
+      pendingGroupInvite = null;
+      renderPendingGroupInvites();
+      element("group-invite-hint").textContent = "邀请未通过，请核对群状态和目标任职。";
+      if (error.code === "group_policy_blocked" && groups.has(submitted.groupID)) {
+        groups.get(submitted.groupID).status = "policy_blocked";
+        renderGroups();
+        refreshGroups().catch(report);
+      }
+    } else {
+      element("group-invite-hint").textContent = "邀请结果未确认；可用同一编号重试，或放弃后核对成员状态。";
+    }
+    submitted.sending = false;
+    renderGroupInvite();
+    report(error);
+  } finally {
+    submitted.sending = false;
+    if (submitted === pendingGroupInvite) renderGroupInvite();
+  }
+}
+
+function discardGroupInvite() {
+  if (!pendingGroupInvite || pendingGroupInvite.sending) return;
+  forgetGroupInvite(pendingGroupInvite.id, pendingGroupInvite.groupID,
+    pendingGroupInvite.actor);
+  closeGroupInvite(true);
+  renderPendingGroupInvites();
+  renderGroupInviteAction();
+  notify("已放弃待确认邀请；成员可能已加入，请先核对后再邀请。");
 }
 
 function canSwitchChat() {
@@ -798,6 +1088,8 @@ function renderGroups() {
     groupList.append(card);
   }
   loadMoreGroupsButton.classList.toggle("hidden", !groupHasMore);
+  renderPendingGroupInvites();
+  renderGroupInviteAction();
   if (activeConversationKind === "group") {
     if (groups.has(activeConversation)) {
       const active = groups.get(activeConversation);
@@ -1245,6 +1537,27 @@ element("group-create-form").addEventListener("submit", submitGroupCreate);
 groupCreateDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeGroupCreate();
+});
+groupInviteOpenButton.addEventListener("click", openGroupInvite);
+element("group-invite-cancel").addEventListener("click", () => closeGroupInvite());
+groupInviteDiscard.addEventListener("click", discardGroupInvite);
+element("group-invite-search").addEventListener("click", searchGroupInvitePeople);
+groupInviteQuery.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); searchGroupInvitePeople(); }
+});
+groupInviteQuery.addEventListener("input", () => {
+  groupInviteSearchSerial++;
+  groupInviteSearchResults = [];
+  renderGroupInvite();
+});
+element("group-invite-form").addEventListener("submit", submitGroupInvite);
+groupInviteDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeGroupInvite();
+});
+window.addEventListener("storage", () => {
+  renderPendingGroupInvites();
+  renderGroupInviteAction();
 });
 element("person-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); searchPeople(); }
