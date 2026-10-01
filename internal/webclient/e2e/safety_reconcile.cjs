@@ -65,6 +65,9 @@ const server = http.createServer((req, res) => {
     return send(403, { error_code: "invalid_identity" });
   }
   if (url.pathname === "/api/v1/realtime/tickets") return send(200, { ticket: "test-ticket" });
+  if (url.pathname === "/api/v1/groups" && req.method === "GET") {
+    return send(200, { groups: [], has_more: false });
+  }
   if (url.pathname === "/api/v1/conversations" && req.method === "GET") {
     if (req.headers["x-acting-membership-id"] === otherMembership) {
       otherMembershipInboxCalls++;
