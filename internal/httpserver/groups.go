@@ -119,6 +119,13 @@ func groupMembershipRoute(w http.ResponseWriter, r *http.Request, identity acces
 			return
 		}
 		getOwnGroupMembership(w, r, identity, parts[0], service)
+	case "members":
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", "GET")
+			rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+		listGroupMembers(w, r, identity, parts[0], service)
 	case "leave":
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", "POST")
