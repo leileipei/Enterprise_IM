@@ -57,6 +57,7 @@ let groupHasMore = false;
 let groupVisiblePages = 1;
 let groupGeneration = 0;
 let groupRefreshPromise = null;
+let groupRefreshAgain = false;
 let groupRefreshAfterPage = false;
 let groupPagePromise = null;
 
@@ -132,9 +133,19 @@ async function request(path, options = {}, needsMembership = true) {
     throw new Error("当前任职已失效，请重新选择");
   }
   if (!response.ok) {
-    const error = new Error(response.status === 404 ? "目标不可用或无权限" :
-      response.status === 429 ? "操作太频繁，请稍后再试" : "服务暂时不可用，请稍后重试");
+    let errorCode = "";
+    try {
+      const body = await response.json();
+      if (typeof body.error_code === "string") errorCode = body.error_code;
+    } catch (_) { /* Error responses can be empty or non-JSON at the proxy. */ }
+    checkIdentity();
+    const error = new Error(errorCode === "group_policy_blocked" ? "群通信已暂停，新消息未保存。" :
+      errorCode === "retry_window_expired" ? "重试期限已过，请核对历史消息后重新发送。" :
+        response.status === 404 ? "目标不可用或无权限" :
+        response.status === 409 ? "当前会话状态已变化，请核对后重试" :
+          response.status === 429 ? "操作太频繁，请稍后再试" : "服务暂时不可用，请稍后重试");
     error.status = response.status;
+    error.code = errorCode;
     throw error;
   }
   const data = await response.json();
@@ -371,7 +382,7 @@ async function searchPeople() {
 
 function canSwitchChat() {
   if (!pendingMessage) return true;
-  notify("当前单聊消息结果尚未确认，请先重试或放弃待确认消息。");
+  notify("当前消息结果尚未确认，请先重试或放弃待确认消息。");
   return false;
 }
 
@@ -487,6 +498,7 @@ async function loadMoreInbox() {
 function resetGroups() {
   groupGeneration++;
   groupRefreshPromise = null;
+  groupRefreshAgain = false;
   groupRefreshAfterPage = false;
   groupPagePromise = null;
   groupCursor = "";
@@ -524,11 +536,16 @@ function renderGroups() {
     groupList.append(card);
   }
   loadMoreGroupsButton.classList.toggle("hidden", !groupHasMore);
-  if (activeConversationKind === "group" && groups.has(activeConversation)) {
-    const active = groups.get(activeConversation);
-    element("chat-title").textContent = active.name;
-    element("chat-subtitle").textContent = "群聊历史" +
-      (active.status === "policy_blocked" ? " · 策略暂停" : "");
+  if (activeConversationKind === "group") {
+    if (groups.has(activeConversation)) {
+      const active = groups.get(activeConversation);
+      element("chat-title").textContent = active.name;
+      element("chat-subtitle").textContent = "群聊历史" +
+        (active.status === "policy_blocked" ? " · 策略暂停" : "");
+    } else {
+      element("chat-subtitle").textContent = "群聊历史 · 群已不在当前列表";
+    }
+    updateGroupComposer();
   }
 }
 
@@ -538,31 +555,37 @@ async function refreshGroups() {
     groupRefreshAfterPage = true;
     return groupPagePromise;
   }
-  if (groupRefreshPromise) return groupRefreshPromise;
+  if (groupRefreshPromise) {
+    groupRefreshAgain = true;
+    return groupRefreshPromise;
+  }
   const generation = groupGeneration;
   const work = (async () => {
-    const refreshed = new Map();
-    const visiblePages = groupVisiblePages;
-    let cursor = "";
-    let hasMore = true;
-    let pagesRead = 0;
-    while (hasMore && pagesRead < visiblePages) {
-      const path = cursor ? `/api/v1/groups?limit=20&cursor=${encodeURIComponent(cursor)}` :
-        "/api/v1/groups?limit=20";
-      const page = await request(path);
-      if (generation !== groupGeneration) return;
-      for (const group of page.groups) refreshed.set(group.id, group);
-      cursor = page.next_cursor || "";
-      hasMore = page.has_more;
-      pagesRead++;
-      if (hasMore && !cursor) throw new Error("群列表同步中断，请稍后重试。");
-    }
-    groups.clear();
-    for (const group of refreshed.values()) groups.set(group.id, group);
-    groupCursor = cursor;
-    groupHasMore = hasMore;
-    groupVisiblePages = pagesRead;
-    renderGroups();
+    do {
+      groupRefreshAgain = false;
+      const refreshed = new Map();
+      const visiblePages = groupVisiblePages;
+      let cursor = "";
+      let hasMore = true;
+      let pagesRead = 0;
+      while (hasMore && pagesRead < visiblePages) {
+        const path = cursor ? `/api/v1/groups?limit=20&cursor=${encodeURIComponent(cursor)}` :
+          "/api/v1/groups?limit=20";
+        const page = await request(path);
+        if (generation !== groupGeneration) return;
+        for (const group of page.groups) refreshed.set(group.id, group);
+        cursor = page.next_cursor || "";
+        hasMore = page.has_more;
+        pagesRead++;
+        if (hasMore && !cursor) throw new Error("群列表同步中断，请稍后重试。");
+      }
+      groups.clear();
+      for (const group of refreshed.values()) groups.set(group.id, group);
+      groupCursor = cursor;
+      groupHasMore = hasMore;
+      groupVisiblePages = pagesRead;
+      renderGroups();
+    } while (groupRefreshAgain && generation === groupGeneration);
   })();
   groupRefreshPromise = work;
   try {
@@ -572,7 +595,10 @@ async function refreshGroups() {
     if (generation === groupGeneration && !error.stale) nextGroupSyncAt = 0;
     throw error;
   } finally {
-    if (groupRefreshPromise === work) groupRefreshPromise = null;
+    if (groupRefreshPromise === work) {
+      groupRefreshPromise = null;
+      if (groupRefreshAgain && generation === groupGeneration) refreshGroups().catch(report);
+    }
   }
 }
 
@@ -672,15 +698,34 @@ function activateGroupHistory(id) {
   element("chat-title").textContent = group.name;
   element("chat-subtitle").textContent = "群聊历史" +
     (group.status === "policy_blocked" ? " · 策略暂停" : "");
-  messageText.disabled = true;
-  messageText.readOnly = false;
-  sendButton.disabled = true;
-  discardPendingButton.classList.add("hidden");
   messageText.value = "";
-  element("send-hint").textContent = "当前仅可查看群历史，网页暂不支持群消息发送。";
+  discardPendingButton.classList.add("hidden");
   renderConversations();
   renderGroups();
   syncMessages().catch(report);
+}
+
+function updateGroupComposer() {
+  if (activeConversationKind !== "group") return;
+  const group = groups.get(activeConversation);
+  const canSendNew = !!group && group.status === "active" &&
+    group.source_membership_id === actingMembership;
+  element("chat-mode").textContent = canSendNew ? "GROUP CHAT" : "GROUP HISTORY";
+  if (pendingMessage && pendingMessage.chatKind === "group" &&
+      pendingMessage.chatID === activeConversation) {
+    messageText.disabled = !!pendingMessage.sending;
+    messageText.readOnly = true;
+    sendButton.disabled = !!pendingMessage.sending;
+    return;
+  }
+  messageText.disabled = !canSendNew;
+  messageText.readOnly = false;
+  sendButton.disabled = !canSendNew;
+  discardPendingButton.classList.add("hidden");
+  element("send-hint").textContent = !group ? "群已不在当前列表，无法发送新消息。" :
+    group.status !== "active" ? "群通信已暂停，仅可查看历史消息。" :
+      !canSendNew ? "请先切换到此群的来源任职，再发送群消息。" :
+        "服务端保存成功后显示“已保存”，不代表群成员已收到。";
 }
 
 function appendMessage(message) {
@@ -768,51 +813,91 @@ function scheduleSyncRetry(chatID, membershipID, selectedEpoch, selectedConversa
 
 async function sendMessage(event) {
   event.preventDefault();
-  if (!activeConversation || activeConversationKind !== "direct") return;
-  if (!pendingMessage || pendingMessage.chatID !== activeConversation) {
+  if (!activeConversation || !["direct", "group"].includes(activeConversationKind)) return;
+  const chatID = activeConversation;
+  const chatKind = activeConversationKind;
+  if (pendingMessage && pendingMessage.sending) return;
+  if (!pendingMessage || pendingMessage.chatID !== chatID || pendingMessage.chatKind !== chatKind) {
+    if (chatKind === "group") {
+      const group = groups.get(chatID);
+      if (!group || group.status !== "active" || group.source_membership_id !== actingMembership) return;
+    }
     const text = messageText.value.trim();
     if (!text) return notify("请输入消息内容。");
-    pendingMessage = { id: uuidV7(), text, chatID: activeConversation };
+    if (new TextEncoder().encode(text).length > 16384) return notify("消息正文最多 16384 字节。");
+    pendingMessage = { id: uuidV7(), text, chatID, chatKind, sending: false };
   }
   const submitted = pendingMessage;
   const selectedMembership = actingMembership;
+  submitted.sending = true;
   sendButton.disabled = true;
   messageText.disabled = true;
   element("send-hint").textContent = "正在保存…";
   try {
-    await request(`/api/v1/conversations/${encodeURIComponent(activeConversation)}/messages`, {
+    const resource = chatKind === "group" ? "groups" : "conversations";
+    await request(`/api/v1/${resource}/${encodeURIComponent(chatID)}/messages`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client_msg_id: submitted.id, text: submitted.text }),
     });
-    if (actingMembership !== selectedMembership || activeConversation !== submitted.chatID || pendingMessage !== submitted) return;
+    if (actingMembership !== selectedMembership || activeConversation !== chatID ||
+        activeConversationKind !== chatKind || pendingMessage !== submitted) return;
     messageText.value = "";
     messageText.readOnly = false;
-    messageText.disabled = false;
     discardPendingButton.classList.add("hidden");
     pendingMessage = null;
-    element("send-hint").textContent = "已保存到服务器；对方送达和已读状态尚不可用。";
-    refreshInbox().catch(report);
+    if (chatKind === "group") {
+      updateGroupComposer();
+      if (!messageText.disabled) element("send-hint").textContent = "已保存到服务器；群成员送达和已读状态尚不可用。";
+      refreshGroups().catch(report);
+    } else {
+      messageText.disabled = false;
+      element("send-hint").textContent = "已保存到服务器；对方送达和已读状态尚不可用。";
+      refreshInbox().catch(report);
+    }
     try { await syncMessages(); } catch (error) { report(error); }
   } catch (error) {
-    if (error.stale || actingMembership !== selectedMembership || activeConversation !== submitted.chatID) return;
+    if (error.stale || actingMembership !== selectedMembership || activeConversation !== chatID ||
+        activeConversationKind !== chatKind || pendingMessage !== submitted) return;
+    if (chatKind === "group" && [400, 404, 409, 410, 429].includes(error.status)) {
+      pendingMessage = null;
+      messageText.readOnly = false;
+      discardPendingButton.classList.add("hidden");
+      messageText.disabled = true;
+      sendButton.disabled = true;
+      if (error.code === "group_policy_blocked" && groups.has(chatID)) {
+        groups.get(chatID).status = "policy_blocked";
+        renderGroups();
+      }
+      try { await refreshGroups(); } catch (refreshError) { report(refreshError); }
+      if (error.status === 410) syncMessages().catch(report);
+      report(error);
+      return;
+    }
     messageText.disabled = false;
     messageText.readOnly = true;
     discardPendingButton.classList.remove("hidden");
     element("send-hint").textContent = "发送结果未确认；点击发送将用同一编号重试。";
+    if (chatKind === "group") refreshGroups().catch(report);
     report(error);
   } finally {
-    if (actingMembership === selectedMembership && activeConversation === submitted.chatID) {
-      messageText.disabled = false;
-      sendButton.disabled = false;
+    submitted.sending = false;
+    if (actingMembership === selectedMembership && activeConversation === chatID &&
+        activeConversationKind === chatKind) {
+      if (chatKind === "group") updateGroupComposer();
+      else {
+        messageText.disabled = false;
+        sendButton.disabled = false;
+      }
     }
   }
 }
 
 function discardPending() {
-  if (!pendingMessage) return;
+  if (!pendingMessage || pendingMessage.sending) return;
   pendingMessage = null;
   messageText.readOnly = false;
   discardPendingButton.classList.add("hidden");
+  if (activeConversationKind === "group") updateGroupComposer();
   element("send-hint").textContent = "已放弃待确认消息；此前请求可能已保存，可先补拉核对。";
   syncMessages().catch(report);
 }
