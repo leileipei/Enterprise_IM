@@ -58,13 +58,19 @@ main{position:relative;z-index:1;min-height:100vh}
 .search-row input{width:100%;min-width:0;border:0;outline:0;padding:11px 12px;background:transparent;font-size:12px;color:#23434c}
 .search-row button{border:0;background:transparent;color:#26917f;font-size:24px;width:38px;line-height:1}
 .microcopy{color:#8da1a2;font-size:11px;line-height:1.6;margin:11px 4px}
-.people-results,.conversation-list{display:grid;gap:7px}
+.people-results,.conversation-list,.group-list{display:grid;gap:7px}
 .person-card{background:rgba(255,255,255,.65);border:1px solid #e0ebe7;border-radius:11px;padding:10px}
 .person-card>strong{font-size:13px}
 .person-card>small{font-size:11px;color:#809396;margin-left:7px}
 .person-button{margin-top:7px;padding:7px 9px;background:white}
 .recent-panel{margin-bottom:30px}
 .recent-panel>.secondary-button{margin-top:10px;width:100%}
+.group-panel{padding-top:0}
+.group-card{border:1px solid #deebe7;background:rgba(255,255,255,.65);border-radius:10px;padding:10px 12px;color:#2e4850}
+.group-card strong{display:block;font-size:13px;overflow-wrap:anywhere}
+.group-card small{display:block;color:#7c9293;font-size:11px;margin-top:3px;line-height:1.5}
+.group-card.policy-blocked{border-color:#e7d7b5;background:#fffaf0}
+.group-empty{color:#8da1a2;font-size:11px;line-height:1.6;margin:4px}
 .sidebar-foot{margin-top:auto;border-top:1px solid #dce8e5;padding:15px 6px 0;color:#90a2a5;font-size:11px;line-height:1.55}
 .chat-column{flex:1;min-width:0;display:flex;flex-direction:column}
 .chat-header{min-height:105px;padding:25px 34px 20px;border-bottom:1px solid #e7eeeb;display:flex;justify-content:space-between;align-items:center;gap:12px;background:white}

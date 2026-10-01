@@ -10,6 +10,8 @@ const identityOptions = element("identity-options");
 const results = element("people-results");
 const conversationList = element("conversation-list");
 const loadMoreConversationsButton = element("load-more-conversations");
+const groupList = element("group-list");
+const loadMoreGroupsButton = element("load-more-groups");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -36,6 +38,7 @@ let ticketInFlight = false;
 let reconnectTimer = null;
 let pollingTimer = null;
 let nextSafetySyncAt = 0;
+let nextGroupSyncAt = 0;
 let realtimeUnsupported = false;
 let noticeTimer = null;
 const conversations = new Map();
@@ -47,6 +50,14 @@ let inboxRefreshAgain = false;
 let inboxPagePromise = null;
 let openChatSerial = 0;
 let openingChatSerial = 0;
+const groups = new Map();
+let groupCursor = "";
+let groupHasMore = false;
+let groupVisiblePages = 1;
+let groupGeneration = 0;
+let groupRefreshPromise = null;
+let groupRefreshAfterPage = false;
+let groupPagePromise = null;
 
 function notify(message) {
   noticeBox.textContent = message;
@@ -61,6 +72,10 @@ function report(error) {
 
 function scheduleSafetySync() {
   nextSafetySyncAt = Date.now() + 30000 + Math.floor(Math.random() * 10000);
+}
+
+function scheduleGroupSync() {
+  nextGroupSyncAt = Date.now() + 30000 + Math.floor(Math.random() * 10000);
 }
 
 function randomURLSafe(bytes = 32) {
@@ -188,6 +203,10 @@ function showWorkspace() {
       refreshInbox().catch(report);
       if (activeConversation) syncMessages().catch(report);
     }
+    if (actingMembership && Date.now() >= nextGroupSyncAt) {
+      nextGroupSyncAt = Number.MAX_SAFE_INTEGER;
+      refreshGroups().catch(report);
+    }
   }, 5000);
 }
 
@@ -198,6 +217,7 @@ function logout(message = "已退出当前页面。") {
   if (pollingTimer) clearInterval(pollingTimer);
   pollingTimer = null;
   nextSafetySyncAt = 0;
+  nextGroupSyncAt = 0;
   sessionStorage.removeItem("enterprise-im-login");
   accessToken = "";
   tokenExpiresAt = 0;
@@ -218,6 +238,7 @@ function logout(message = "已退出当前页面。") {
   openChatSerial++;
   openingChatSerial = 0;
   conversations.clear();
+  resetGroups();
   identityOptions.replaceChildren();
   results.replaceChildren();
   conversationList.replaceChildren();
@@ -251,6 +272,7 @@ function selectMembership(id) {
   identityEpoch++;
   actingMembership = id;
   nextSafetySyncAt = 0;
+  nextGroupSyncAt = 0;
   realtimeUnsupported = false;
   activeConversation = null;
   conversationEpoch++;
@@ -267,6 +289,7 @@ function selectMembership(id) {
   openChatSerial++;
   openingChatSerial = 0;
   conversations.clear();
+  resetGroups();
   conversationList.replaceChildren();
   loadMoreConversationsButton.classList.add("hidden");
   results.replaceChildren();
@@ -277,6 +300,7 @@ function selectMembership(id) {
   if (id) {
     scheduleSafetySync();
     refreshInbox().catch(report);
+    refreshGroups().catch(report);
     connectRealtime();
   }
 }
@@ -443,6 +467,120 @@ async function loadMoreInbox() {
       inboxPagePromise = null;
       loadMoreConversationsButton.disabled = false;
       if (inboxRefreshAgain && generation === inboxGeneration) refreshInbox().catch(report);
+    }
+  }
+}
+
+function resetGroups() {
+  groupGeneration++;
+  groupRefreshPromise = null;
+  groupRefreshAfterPage = false;
+  groupPagePromise = null;
+  groupCursor = "";
+  groupHasMore = false;
+  groupVisiblePages = 1;
+  groups.clear();
+  groupList.replaceChildren();
+  loadMoreGroupsButton.disabled = false;
+  loadMoreGroupsButton.classList.add("hidden");
+}
+
+function renderGroups() {
+  groupList.replaceChildren();
+  if (!groups.size) {
+    const empty = document.createElement("p");
+    empty.className = "group-empty";
+    empty.textContent = "暂无已加入的群聊。";
+    groupList.append(empty);
+  }
+  for (const group of groups.values()) {
+    const card = document.createElement("div");
+    card.className = "group-card" + (group.status === "policy_blocked" ? " policy-blocked" : "");
+    const name = document.createElement("strong");
+    name.textContent = group.name;
+    const detail = document.createElement("small");
+    const role = { owner: "群主", admin: "管理员", member: "成员" }[group.role] || "成员";
+    const source = self.memberships.find((membership) => membership.id === group.source_membership_id);
+    detail.textContent = [group.status === "policy_blocked" ? "策略暂停" : "正常",
+      role, source ? source.organization_name : "来源任职已失效"].join(" · ");
+    card.append(name, detail);
+    groupList.append(card);
+  }
+  loadMoreGroupsButton.classList.toggle("hidden", !groupHasMore);
+}
+
+async function refreshGroups() {
+  if (!actingMembership) return;
+  if (groupPagePromise) {
+    groupRefreshAfterPage = true;
+    return groupPagePromise;
+  }
+  if (groupRefreshPromise) return groupRefreshPromise;
+  const generation = groupGeneration;
+  const work = (async () => {
+    const refreshed = new Map();
+    const visiblePages = groupVisiblePages;
+    let cursor = "";
+    let hasMore = true;
+    let pagesRead = 0;
+    while (hasMore && pagesRead < visiblePages) {
+      const path = cursor ? `/api/v1/groups?limit=20&cursor=${encodeURIComponent(cursor)}` :
+        "/api/v1/groups?limit=20";
+      const page = await request(path);
+      if (generation !== groupGeneration) return;
+      for (const group of page.groups) refreshed.set(group.id, group);
+      cursor = page.next_cursor || "";
+      hasMore = page.has_more;
+      pagesRead++;
+      if (hasMore && !cursor) throw new Error("群列表同步中断，请稍后重试。");
+    }
+    groups.clear();
+    for (const group of refreshed.values()) groups.set(group.id, group);
+    groupCursor = cursor;
+    groupHasMore = hasMore;
+    groupVisiblePages = pagesRead;
+    renderGroups();
+  })();
+  groupRefreshPromise = work;
+  try {
+    await work;
+    if (generation === groupGeneration) scheduleGroupSync();
+  } catch (error) {
+    if (generation === groupGeneration && !error.stale) nextGroupSyncAt = 0;
+    throw error;
+  } finally {
+    if (groupRefreshPromise === work) groupRefreshPromise = null;
+  }
+}
+
+async function loadMoreGroups() {
+  if (groupRefreshPromise) {
+    try { await groupRefreshPromise; } catch (error) { report(error); return; }
+  }
+  if (!actingMembership || !groupHasMore || !groupCursor) return;
+  if (groupPagePromise) return groupPagePromise;
+  const generation = groupGeneration;
+  const cursor = groupCursor;
+  loadMoreGroupsButton.disabled = true;
+  const work = (async () => {
+    const page = await request(`/api/v1/groups?limit=20&cursor=${encodeURIComponent(cursor)}`);
+    if (generation !== groupGeneration) return;
+    for (const group of page.groups) groups.set(group.id, group);
+    groupCursor = page.next_cursor || "";
+    groupHasMore = page.has_more;
+    groupVisiblePages++;
+    renderGroups();
+  })();
+  groupPagePromise = work;
+  try { await work; } catch (error) { report(error); }
+  finally {
+    if (groupPagePromise === work) {
+      groupPagePromise = null;
+      loadMoreGroupsButton.disabled = false;
+      if (groupRefreshAfterPage && generation === groupGeneration) {
+        groupRefreshAfterPage = false;
+        refreshGroups().catch(report);
+      }
     }
   }
 }
@@ -658,6 +796,7 @@ async function connectRealtime() {
       if (frame.type === "ready" || frame.type === "sync_required") {
         scheduleSafetySync();
         refreshInbox().catch(report);
+        refreshGroups().catch(report);
         syncMessages().catch(report);
       }
     };
@@ -685,6 +824,7 @@ loginButton.addEventListener("click", startLogin);
 element("logout-button").addEventListener("click", () => logout());
 element("search-button").addEventListener("click", searchPeople);
 loadMoreConversationsButton.addEventListener("click", loadMoreInbox);
+loadMoreGroupsButton.addEventListener("click", loadMoreGroups);
 element("person-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); searchPeople(); }
 });
