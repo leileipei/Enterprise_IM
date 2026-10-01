@@ -28,6 +28,12 @@ const groupInviteSelected = element("group-invite-selected");
 const groupInviteSubmit = element("group-invite-submit");
 const groupInviteDiscard = element("group-invite-discard");
 const pendingGroupInvites = element("pending-group-invites");
+const pendingGroupLeaves = element("pending-group-leaves");
+const groupLeaveOpenButton = element("group-leave-open");
+const groupLeaveDialog = element("group-leave-dialog");
+const groupLeaveConfirm = element("group-leave-confirm");
+const groupLeaveRetry = element("group-leave-retry");
+const groupLeaveDiscard = element("group-leave-discard");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -85,6 +91,10 @@ let groupInviteTarget = null;
 let groupInviteSearchResults = [];
 let groupInviteSearchSerial = 0;
 let pendingGroupInvite = null;
+let pendingGroupLeave = null;
+let preparedGroupLeave = null;
+let groupLeaveLookupSerial = 0;
+let groupListNeedsRefreshID = "";
 
 function groupCreateStoragePrefix(actor = actingMembership) {
   return `enterprise-im-group-create:${self.tenant_id}:${self.user_id}:${actor}:`;
@@ -301,6 +311,8 @@ function showWorkspace() {
 function logout(message = "已退出当前页面。") {
   closeGroupCreate(true);
   closeGroupInvite(true);
+  closeGroupLeave(true);
+  groupListNeedsRefreshID = "";
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -333,6 +345,8 @@ function logout(message = "已退出当前页面。") {
   identityOptions.replaceChildren();
   pendingGroupInvites.replaceChildren();
   pendingGroupInvites.classList.add("hidden");
+  pendingGroupLeaves.replaceChildren();
+  pendingGroupLeaves.classList.add("hidden");
   results.replaceChildren();
   conversationList.replaceChildren();
   loadMoreConversationsButton.classList.add("hidden");
@@ -365,6 +379,8 @@ function selectMembership(id) {
   if (id === actingMembership) return;
   closeGroupCreate(true);
   closeGroupInvite(true);
+  closeGroupLeave(true);
+  groupListNeedsRefreshID = "";
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -397,6 +413,7 @@ function selectMembership(id) {
   resetChat();
   renderMemberships();
   renderPendingGroupInvites();
+  renderPendingGroupLeaves();
   if (id) {
     scheduleSafetySync();
     refreshInbox().catch(report);
@@ -407,6 +424,7 @@ function selectMembership(id) {
 
 function resetChat() {
   groupInviteOpenButton.classList.add("hidden");
+  groupLeaveOpenButton.classList.add("hidden");
   messages.replaceChildren();
   const empty = document.createElement("div");
   empty.className = "empty-state";
@@ -928,8 +946,228 @@ function discardGroupInvite() {
     pendingGroupInvite.actor);
   closeGroupInvite(true);
   renderPendingGroupInvites();
+  renderPendingGroupLeaves();
   renderGroupInviteAction();
+  renderGroupLeaveAction();
   notify("已放弃待确认邀请；成员可能已加入，请先核对后再邀请。");
+}
+
+function groupLeaveStoragePrefix(actor = actingMembership) {
+  return `enterprise-im-group-leave:${self.tenant_id}:${self.user_id}:${actor}:`;
+}
+
+function groupLeaveStorageKey(groupID, intervalID, actor = actingMembership) {
+  return groupLeaveStoragePrefix(actor) + groupID + ":" + intervalID;
+}
+
+function forgetGroupLeave(leave) {
+  try { localStorage.removeItem(groupLeaveStorageKey(leave.groupID, leave.intervalID, leave.actor)); }
+  catch (_) { /* Storage may be unavailable. */ }
+}
+
+function savedGroupLeaves() {
+  if (!self || !actingMembership) return [];
+  const found = [];
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  try {
+    const prefix = groupLeaveStoragePrefix();
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || "null");
+        if (saved?.actor === actingMembership && uuid.test(saved.groupID) &&
+            uuid.test(saved.intervalID) && typeof saved.groupName === "string" &&
+            key === groupLeaveStorageKey(saved.groupID, saved.intervalID)) found.push(saved);
+      } catch (_) { /* Ignore an unreadable saved request. */ }
+    }
+  } catch (_) { /* Storage may be unavailable. */ }
+  return found;
+}
+
+function renderPendingGroupLeaves() {
+  pendingGroupLeaves.replaceChildren();
+  for (const saved of savedGroupLeaves()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.textContent = `待确认退群 · ${saved.groupName || saved.groupID}`;
+    button.addEventListener("click", () => showGroupLeave(saved, true));
+    pendingGroupLeaves.append(button);
+  }
+  pendingGroupLeaves.classList.toggle("hidden", !pendingGroupLeaves.childElementCount);
+}
+
+function renderGroupLeaveAction() {
+  const group = activeConversationKind === "group" ? groups.get(activeConversation) : null;
+  groupLeaveOpenButton.classList.toggle("hidden", !actingMembership || !group);
+  groupLeaveOpenButton.disabled = !group || group.role === "owner";
+  groupLeaveOpenButton.textContent = group?.role === "owner" ? "请先转让群主" : "退出群聊";
+  groupLeaveOpenButton.title = group?.role === "owner" ? "请先转让群主，再退出群聊" : "";
+}
+
+function renderGroupLeaveDialog() {
+  const saved = !!pendingGroupLeave;
+  groupLeaveConfirm.classList.toggle("hidden", saved);
+  groupLeaveRetry.classList.toggle("hidden", !saved);
+  groupLeaveDiscard.classList.toggle("hidden", !saved || pendingGroupLeave.sending);
+  groupLeaveConfirm.disabled = !preparedGroupLeave;
+  groupLeaveRetry.disabled = !saved || pendingGroupLeave.sending;
+}
+
+function closeGroupLeave(force = false) {
+  if (pendingGroupLeave?.sending && !force) return;
+  groupLeaveLookupSerial++;
+  if (groupLeaveDialog.open) groupLeaveDialog.close();
+  pendingGroupLeave = null;
+  preparedGroupLeave = null;
+  element("group-leave-hint").textContent = "";
+  renderGroupLeaveAction();
+}
+
+function showGroupLeave(leave, saved = false) {
+  if (!actingMembership || !canSwitchChat() ||
+      savedGroupInvites().some((invite) => invite.groupID === leave.groupID)) {
+    if (actingMembership && savedGroupInvites().some((invite) => invite.groupID === leave.groupID))
+      notify("此群有待确认邀请，请先重试或放弃该邀请。");
+    return;
+  }
+  closeGroupLeave(true);
+  if (saved) pendingGroupLeave = { ...leave, sending: false };
+  else preparedGroupLeave = leave;
+  element("group-leave-group").textContent = leave.groupName;
+  element("group-leave-hint").textContent = saved ?
+    "退群结果未确认；可用原成员区间重试，或放弃后核对群成员状态。" :
+    "退出后群聊将从当前列表移除。请确认退群。";
+  renderGroupLeaveDialog();
+  groupLeaveDialog.showModal();
+  if (saved) groupLeaveRetry.focus();
+  else groupLeaveConfirm.focus();
+}
+
+async function openGroupLeave() {
+  const group = activeConversationKind === "group" ? groups.get(activeConversation) : null;
+  if (!group || !actingMembership || groupLeaveDialog.open) return;
+  if (group.role === "owner") return notify("请先转让群主，再退出群聊。");
+  const saved = savedGroupLeaves().find((leave) => leave.groupID === group.id);
+  if (saved) return showGroupLeave(saved, true);
+  if (!canSwitchChat() || savedGroupInvites().some((invite) => invite.groupID === group.id)) {
+    if (savedGroupInvites().some((invite) => invite.groupID === group.id))
+      notify("此群有待确认邀请，请先重试或放弃该邀请。");
+    return;
+  }
+  const serial = ++groupLeaveLookupSerial;
+  const selectedEpoch = identityEpoch;
+  groupLeaveOpenButton.disabled = true;
+  try {
+    const membership = await request(`/api/v1/groups/${encodeURIComponent(group.id)}/membership`);
+    if (serial !== groupLeaveLookupSerial || selectedEpoch !== identityEpoch ||
+        activeConversationKind !== "group" || activeConversation !== group.id) return;
+    if (membership.role === "owner") return notify("请先转让群主，再退出群聊。");
+    if (typeof membership.interval_id !== "string") throw new Error("群成员状态不可用，请稍后重试。");
+    showGroupLeave({ groupID: group.id, groupName: group.name,
+      intervalID: membership.interval_id, actor: actingMembership });
+  } catch (error) { report(error); }
+  finally { if (serial === groupLeaveLookupSerial) renderGroupLeaveAction(); }
+}
+
+async function submitGroupLeave() {
+  if (!actingMembership || pendingGroupLeave?.sending) return;
+  const fresh = !pendingGroupLeave;
+  if (fresh) {
+    if (!preparedGroupLeave) return;
+    try {
+      localStorage.setItem(groupLeaveStorageKey(preparedGroupLeave.groupID,
+        preparedGroupLeave.intervalID), JSON.stringify(preparedGroupLeave));
+    } catch (_) {
+      return notify("浏览器无法保存待确认退群请求，请启用本地存储后重试。");
+    }
+    pendingGroupLeave = { ...preparedGroupLeave, sending: false };
+    preparedGroupLeave = null;
+    renderPendingGroupLeaves();
+  }
+  const submitted = pendingGroupLeave;
+  const selectedEpoch = identityEpoch;
+  submitted.sending = true;
+  renderGroupLeaveDialog();
+  try {
+    const result = await request(`/api/v1/groups/${encodeURIComponent(submitted.groupID)}/leave`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interval_id: submitted.intervalID }),
+    });
+    if (selectedEpoch !== identityEpoch || submitted !== pendingGroupLeave ||
+        submitted.actor !== actingMembership) return;
+    if (result.status !== "left" || result.interval_id !== submitted.intervalID)
+      throw new Error("退群响应无法确认，请使用原成员区间重试。");
+    forgetGroupLeave(submitted);
+    const openGroup = activeConversationKind === "group" && activeConversation === submitted.groupID;
+    let membershipState = "unknown";
+    if (openGroup) {
+      messageText.disabled = true;
+      sendButton.disabled = true;
+      try {
+        const current = await request(`/api/v1/groups/${encodeURIComponent(submitted.groupID)}/membership`);
+        membershipState = typeof current.interval_id === "string" &&
+          current.interval_id !== submitted.intervalID ? "rejoined" : "old";
+      } catch (error) {
+        if (error.stale) return;
+        if (error.status === 404) membershipState = "absent";
+        else report(error);
+      }
+    }
+    if (selectedEpoch !== identityEpoch || submitted !== pendingGroupLeave) return;
+    let refreshed = false;
+    try { await refreshGroups(); refreshed = true; } catch (error) { report(error); }
+    if (selectedEpoch !== identityEpoch) return;
+    if (openGroup && activeConversationKind === "group" &&
+        activeConversation === submitted.groupID) {
+      if (membershipState === "rejoined" && (!refreshed || !groups.has(submitted.groupID)))
+        groupListNeedsRefreshID = submitted.groupID;
+      const left = membershipState === "absent" || membershipState === "old" ||
+        (membershipState !== "rejoined" && (!refreshed || !groups.has(submitted.groupID)));
+      if (left) {
+        clearSyncRetry();
+        activeConversation = null;
+        activeConversationKind = "";
+        conversationEpoch++;
+        resetChat();
+        renderGroups();
+      }
+    }
+    closeGroupLeave(true);
+    renderPendingGroupLeaves();
+    if (openGroup && activeConversationKind === "group" &&
+        activeConversation === submitted.groupID) updateGroupComposer();
+    notify("已退出群聊。");
+  } catch (error) {
+    if (error.stale || selectedEpoch !== identityEpoch || submitted !== pendingGroupLeave ||
+        submitted.actor !== actingMembership) return;
+    if ([400, 404, 409].includes(error.status)) {
+      forgetGroupLeave(submitted);
+      pendingGroupLeave = null;
+      renderPendingGroupLeaves();
+      preparedGroupLeave = null;
+      element("group-leave-hint").textContent = error.code === "owner_transfer_required" ?
+        "请先转让群主，再退出群聊。" : "当前成员区间不可用，请刷新群列表核对状态。";
+      refreshGroups().catch(report);
+    } else {
+      element("group-leave-hint").textContent =
+        "退群结果未确认；可用原成员区间重试，或放弃后核对群成员状态。";
+    }
+    report(error);
+  } finally {
+    submitted.sending = false;
+    if (submitted === pendingGroupLeave || groupLeaveDialog.open) renderGroupLeaveDialog();
+  }
+}
+
+function discardGroupLeave() {
+  if (!pendingGroupLeave || pendingGroupLeave.sending) return;
+  forgetGroupLeave(pendingGroupLeave);
+  closeGroupLeave(true);
+  renderPendingGroupLeaves();
+  refreshGroups().catch(report);
+  notify("已放弃待确认退群；此前请求可能已成功，请先核对群成员状态。");
 }
 
 function canSwitchChat() {
@@ -1089,7 +1327,9 @@ function renderGroups() {
   }
   loadMoreGroupsButton.classList.toggle("hidden", !groupHasMore);
   renderPendingGroupInvites();
+  renderPendingGroupLeaves();
   renderGroupInviteAction();
+  renderGroupLeaveAction();
   if (activeConversationKind === "group") {
     if (groups.has(activeConversation)) {
       const active = groups.get(activeConversation);
@@ -1107,7 +1347,8 @@ async function refreshGroups() {
   if (!actingMembership) return;
   if (groupPagePromise) {
     groupRefreshAfterPage = true;
-    return groupPagePromise;
+    await groupPagePromise;
+    return refreshGroups();
   }
   if (groupRefreshPromise) {
     groupRefreshAgain = true;
@@ -1144,7 +1385,13 @@ async function refreshGroups() {
   groupRefreshPromise = work;
   try {
     await work;
-    if (generation === groupGeneration) scheduleGroupSync();
+    if (generation === groupGeneration) {
+      scheduleGroupSync();
+      if (groupListNeedsRefreshID && groups.has(groupListNeedsRefreshID)) {
+        groupListNeedsRefreshID = "";
+        if (activeConversationKind === "group") updateGroupComposer();
+      }
+    }
   } catch (error) {
     if (generation === groupGeneration && !error.stale) nextGroupSyncAt = 0;
     throw error;
@@ -1263,7 +1510,8 @@ function updateGroupComposer() {
   if (activeConversationKind !== "group") return;
   const group = groups.get(activeConversation);
   const canSendNew = !!group && group.status === "active" &&
-    group.source_membership_id === actingMembership;
+    group.source_membership_id === actingMembership && !groupLeaveDialog.open &&
+    groupListNeedsRefreshID !== activeConversation;
   element("chat-mode").textContent = canSendNew ? "GROUP CHAT" : "GROUP HISTORY";
   if (pendingMessage && pendingMessage.chatKind === "group" &&
       pendingMessage.chatID === activeConversation) {
@@ -1555,9 +1803,19 @@ groupInviteDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeGroupInvite();
 });
+groupLeaveOpenButton.addEventListener("click", openGroupLeave);
+element("group-leave-cancel").addEventListener("click", () => closeGroupLeave());
+groupLeaveConfirm.addEventListener("click", submitGroupLeave);
+groupLeaveRetry.addEventListener("click", submitGroupLeave);
+groupLeaveDiscard.addEventListener("click", discardGroupLeave);
+groupLeaveDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeGroupLeave();
+});
 window.addEventListener("storage", () => {
   renderPendingGroupInvites();
   renderGroupInviteAction();
+  renderPendingGroupLeaves();
 });
 element("person-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); searchPeople(); }

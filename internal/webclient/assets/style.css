@@ -69,7 +69,9 @@ main{position:relative;z-index:1;min-height:100vh}
 .group-panel>#group-create-open{width:100%;margin-bottom:10px}
 .pending-group-invites{display:grid;gap:7px;margin-bottom:10px}
 .pending-group-invites button{width:100%;text-align:left;overflow-wrap:anywhere}
+.secondary-button:disabled{cursor:not-allowed;opacity:.55}
 .group-create-dialog{width:min(620px,calc(100vw - 28px));max-height:min(820px,calc(100vh - 28px));overflow-y:auto;border:1px solid #dce8e5;border-radius:16px;padding:25px;background:#fbfdfb;color:#193044;box-shadow:0 24px 70px rgba(20,45,64,.24)}
+.group-leave-dialog{width:min(440px,calc(100vw - 28px))}
 .group-create-dialog::backdrop{background:rgba(17,42,50,.52)}
 .group-create-dialog h2{font-size:20px;margin:0 0 8px}
 .group-create-dialog label{display:block;font-size:12px;font-weight:700;color:#526c72;margin:16px 0 7px}
