@@ -96,7 +96,7 @@ func TestGroupCreateRouteRejectsMalformedRequestsAndMapsErrors(t *testing.T) {
 		}
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, request)
-		if request.Method == http.MethodPut && (res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "POST") {
+		if request.Method == http.MethodPut && (res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "GET, POST") {
 			t.Fatalf("wrong method: %d %s", res.Code, res.Body.String())
 		}
 		if request.Method == http.MethodPost && res.Code != http.StatusBadRequest {

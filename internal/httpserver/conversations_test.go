@@ -65,6 +65,10 @@ func (conversationStub) ListDirectConversations(context.Context, access.TrustedI
 	panic("unexpected conversation list")
 }
 
+func (conversationStub) ListGroups(context.Context, access.TrustedIdentity, string, int) (policystore.GroupListPage, error) {
+	panic("unexpected group list")
+}
+
 type conversationListStub struct {
 	conversationStub
 	list func(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
