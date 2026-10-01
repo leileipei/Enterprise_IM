@@ -66,10 +66,12 @@ main{position:relative;z-index:1;min-height:100vh}
 .recent-panel{margin-bottom:30px}
 .recent-panel>.secondary-button{margin-top:10px;width:100%}
 .group-panel{padding-top:0}
-.group-card{border:1px solid #deebe7;background:rgba(255,255,255,.65);border-radius:10px;padding:10px 12px;color:#2e4850}
+.group-card{width:100%;text-align:left;border:1px solid #deebe7;background:rgba(255,255,255,.65);border-radius:10px;padding:10px 12px;color:#2e4850}
 .group-card strong{display:block;font-size:13px;overflow-wrap:anywhere}
 .group-card small{display:block;color:#7c9293;font-size:11px;margin-top:3px;line-height:1.5}
 .group-card.policy-blocked{border-color:#e7d7b5;background:#fffaf0}
+.group-card:hover{border-color:#8fcbb9;background:white}
+.group-card.active{border-color:#55b39e;background:#e1f5ed}
 .group-empty{color:#8da1a2;font-size:11px;line-height:1.6;margin:4px}
 .sidebar-foot{margin-top:auto;border-top:1px solid #dce8e5;padding:15px 6px 0;color:#90a2a5;font-size:11px;line-height:1.55}
 .chat-column{flex:1;min-width:0;display:flex;flex-direction:column}

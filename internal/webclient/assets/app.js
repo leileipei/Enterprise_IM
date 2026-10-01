@@ -25,6 +25,7 @@ let self = null;
 let actingMembership = "";
 let identityEpoch = 0;
 let activeConversation = null;
+let activeConversationKind = "";
 let conversationEpoch = 0;
 let afterSeq = 0;
 let syncPromise = null;
@@ -224,6 +225,7 @@ function logout(message = "已退出当前页面。") {
   self = null;
   actingMembership = "";
   activeConversation = null;
+  activeConversationKind = "";
   conversationEpoch++;
   afterSeq = 0;
   syncPromise = null;
@@ -260,7 +262,9 @@ function renderMemberships() {
     const detail = document.createElement("small");
     detail.textContent = [membership.legal_entity_name, membership.title].filter(Boolean).join(" / ");
     button.append(name, detail);
-    button.addEventListener("click", () => selectMembership(membership.id));
+    button.addEventListener("click", () => {
+      if (canSwitchChat()) selectMembership(membership.id);
+    });
     identityOptions.append(button);
   }
 }
@@ -275,6 +279,7 @@ function selectMembership(id) {
   nextGroupSyncAt = 0;
   realtimeUnsupported = false;
   activeConversation = null;
+  activeConversationKind = "";
   conversationEpoch++;
   afterSeq = 0;
   syncPromise = null;
@@ -315,6 +320,7 @@ function resetChat() {
   detail.textContent = "选择任职，查找同事，再发起单聊。";
   empty.append(title, detail);
   messages.append(empty);
+  element("chat-mode").textContent = "DIRECT MESSAGE";
   element("chat-title").textContent = "选择一位同事，开始沟通";
   element("chat-subtitle").textContent = actingMembership ? "搜索可见人员并选择任职" : "选择任职后搜索可见人员";
   messageText.disabled = true;
@@ -363,8 +369,15 @@ async function searchPeople() {
   }
 }
 
+function canSwitchChat() {
+  if (!pendingMessage) return true;
+  notify("当前单聊消息结果尚未确认，请先重试或放弃待确认消息。");
+  return false;
+}
+
 async function openChat(person, member) {
   if (!actingMembership) return notify("请先选择任职。");
+  if (!canSwitchChat()) return;
   if (openingChatSerial) return;
   const serial = ++openChatSerial;
   openingChatSerial = serial;
@@ -421,7 +434,7 @@ async function refreshInbox() {
       const activeID = activeConversation;
       conversations.clear();
       for (const item of page.conversations) conversations.set(item.id, inboxConversation(item));
-      if (activeID && !conversations.has(activeID)) {
+      if (activeConversationKind === "direct" && activeID && !conversations.has(activeID)) {
         conversations.set(activeID, { id: activeID, name: "当前会话", organization: "历史会话", peerVisible: false });
       }
       inboxCursor = page.next_cursor || "";
@@ -494,8 +507,11 @@ function renderGroups() {
     groupList.append(empty);
   }
   for (const group of groups.values()) {
-    const card = document.createElement("div");
-    card.className = "group-card" + (group.status === "policy_blocked" ? " policy-blocked" : "");
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "group-card" + (group.status === "policy_blocked" ? " policy-blocked" : "") +
+      (activeConversationKind === "group" && activeConversation === group.id ? " active" : "");
+    card.setAttribute("aria-pressed", activeConversationKind === "group" && activeConversation === group.id ? "true" : "false");
     const name = document.createElement("strong");
     name.textContent = group.name;
     const detail = document.createElement("small");
@@ -504,9 +520,16 @@ function renderGroups() {
     detail.textContent = [group.status === "policy_blocked" ? "策略暂停" : "正常",
       role, source ? source.organization_name : "来源任职已失效"].join(" · ");
     card.append(name, detail);
+    card.addEventListener("click", () => activateGroupHistory(group.id));
     groupList.append(card);
   }
   loadMoreGroupsButton.classList.toggle("hidden", !groupHasMore);
+  if (activeConversationKind === "group" && groups.has(activeConversation)) {
+    const active = groups.get(activeConversation);
+    element("chat-title").textContent = active.name;
+    element("chat-subtitle").textContent = "群聊历史" +
+      (active.status === "policy_blocked" ? " · 策略暂停" : "");
+  }
 }
 
 async function refreshGroups() {
@@ -590,7 +613,7 @@ function renderConversations() {
   for (const chat of conversations.values()) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "conversation-button" + (activeConversation === chat.id ? " active" : "");
+    button.className = "conversation-button" + (activeConversationKind === "direct" && activeConversation === chat.id ? " active" : "");
     const name = document.createElement("strong");
     name.textContent = chat.name;
     const org = document.createElement("small");
@@ -600,7 +623,7 @@ function renderConversations() {
     conversationList.append(button);
   }
   loadMoreConversationsButton.classList.toggle("hidden", !inboxHasMore);
-  if (activeConversation && conversations.has(activeConversation)) {
+  if (activeConversationKind === "direct" && activeConversation && conversations.has(activeConversation)) {
     const active = conversations.get(activeConversation);
     element("chat-title").textContent = active.name;
     element("chat-subtitle").textContent = active.organization + " · 单聊";
@@ -608,9 +631,10 @@ function renderConversations() {
 }
 
 function activateConversation(id) {
-  if (!conversations.has(id)) return;
+  if (!conversations.has(id) || !canSwitchChat()) return;
   clearSyncRetry();
   activeConversation = id;
+  activeConversationKind = "direct";
   conversationEpoch++;
   afterSeq = 0;
   syncPromise = null;
@@ -618,6 +642,7 @@ function activateConversation(id) {
   pendingMessage = null;
   messages.replaceChildren();
   const chat = conversations.get(id);
+  element("chat-mode").textContent = "DIRECT MESSAGE";
   element("chat-title").textContent = chat.name;
   element("chat-subtitle").textContent = chat.organization + " · 单聊";
   messageText.disabled = false;
@@ -625,7 +650,36 @@ function activateConversation(id) {
   sendButton.disabled = false;
   discardPendingButton.classList.add("hidden");
   messageText.value = "";
+  element("send-hint").textContent = "服务端保存成功后显示“已保存”，不代表对方已收到。";
   renderConversations();
+  renderGroups();
+  syncMessages().catch(report);
+}
+
+function activateGroupHistory(id) {
+  if (!groups.has(id) || !actingMembership || !canSwitchChat()) return;
+  clearSyncRetry();
+  activeConversation = id;
+  activeConversationKind = "group";
+  conversationEpoch++;
+  afterSeq = 0;
+  syncPromise = null;
+  syncAgain = false;
+  pendingMessage = null;
+  messages.replaceChildren();
+  const group = groups.get(id);
+  element("chat-mode").textContent = "GROUP HISTORY";
+  element("chat-title").textContent = group.name;
+  element("chat-subtitle").textContent = "群聊历史" +
+    (group.status === "policy_blocked" ? " · 策略暂停" : "");
+  messageText.disabled = true;
+  messageText.readOnly = false;
+  sendButton.disabled = true;
+  discardPendingButton.classList.add("hidden");
+  messageText.value = "";
+  element("send-hint").textContent = "当前仅可查看群历史，网页暂不支持群消息发送。";
+  renderConversations();
+  renderGroups();
   syncMessages().catch(report);
 }
 
@@ -653,6 +707,7 @@ async function syncMessages() {
     return syncPromise;
   }
   const chatID = activeConversation;
+  const chatKind = activeConversationKind;
   const selectedMembership = actingMembership;
   const selectedEpoch = identityEpoch;
   const selectedConversationEpoch = conversationEpoch;
@@ -662,7 +717,8 @@ async function syncMessages() {
       let more = true;
       while (more && activeConversation === chatID && actingMembership === selectedMembership &&
           identityEpoch === selectedEpoch && conversationEpoch === selectedConversationEpoch) {
-        const page = await request(`/api/v1/conversations/${encodeURIComponent(chatID)}/messages?after_seq=${afterSeq}&limit=100`);
+        const resource = chatKind === "group" ? "groups" : "conversations";
+        const page = await request(`/api/v1/${resource}/${encodeURIComponent(chatID)}/messages?after_seq=${afterSeq}&limit=100`);
         if (activeConversation !== chatID || actingMembership !== selectedMembership ||
             identityEpoch !== selectedEpoch || conversationEpoch !== selectedConversationEpoch) break;
         for (const message of page.messages) {
@@ -712,7 +768,7 @@ function scheduleSyncRetry(chatID, membershipID, selectedEpoch, selectedConversa
 
 async function sendMessage(event) {
   event.preventDefault();
-  if (!activeConversation) return;
+  if (!activeConversation || activeConversationKind !== "direct") return;
   if (!pendingMessage || pendingMessage.chatID !== activeConversation) {
     const text = messageText.value.trim();
     if (!text) return notify("请输入消息内容。");
