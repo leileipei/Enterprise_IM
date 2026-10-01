@@ -28,6 +28,7 @@ type MessageACK struct {
 	ConversationID string
 	Seq            int64
 	ServerTime     time.Time
+	Duplicate      bool
 }
 
 type directMessageContext struct {
@@ -321,5 +322,6 @@ func finishExistingMessage(ctx context.Context, tx pgx.Tx, id access.TrustedIden
 	if err := finishMessageSend(ctx, tx, id, ack.ConversationID, "allow", "idempotent_replay", at); err != nil {
 		return MessageACK{}, err
 	}
+	ack.Duplicate = true
 	return ack, nil
 }

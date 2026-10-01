@@ -70,10 +70,10 @@ func TestGroupHistoryRouteRejectsInvalidQueryAndMapsFailures(t *testing.T) {
 			t.Fatalf("bad group history query %q: %d %s", path, res.Code, res.Body.String())
 		}
 	}
-	wrongMethod := adminRequest(http.MethodPost, "/api/v1/groups/"+targetUserID+"/messages")
+	wrongMethod := adminRequest(http.MethodDelete, "/api/v1/groups/"+targetUserID+"/messages")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, wrongMethod)
-	if res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "GET" {
+	if res.Code != http.StatusMethodNotAllowed || res.Header().Get("Allow") != "GET, POST" {
 		t.Fatalf("wrong method: %d %s", res.Code, res.Body.String())
 	}
 	for _, failure := range []struct {

@@ -49,6 +49,10 @@ func (conversationStub) SendTextMessage(context.Context, access.TrustedIdentity,
 	panic("unexpected message send")
 }
 
+func (conversationStub) SendGroupTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
+	panic("unexpected group message send")
+}
+
 func (conversationStub) PullTextMessages(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error) {
 	panic("unexpected message pull")
 }
