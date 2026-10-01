@@ -43,11 +43,11 @@
           <div id="people-results" class="people-results"></div>
         </div>
         <div class="recent-panel"><div class="section-heading"><span>单聊会话</span><span class="tag">当前任职</span></div><div id="conversation-list" class="conversation-list"></div><button id="load-more-conversations" class="secondary-button hidden" type="button">加载更多会话</button></div>
-        <div class="recent-panel group-panel"><div class="section-heading"><span>我的群聊</span><span class="tag">全部任职</span></div><button id="group-create-open" class="secondary-button" type="button">新建群聊</button><div id="group-list" class="group-list"></div><button id="load-more-groups" class="secondary-button hidden" type="button">加载更多群聊</button></div>
+        <div class="recent-panel group-panel"><div class="section-heading"><span>我的群聊</span><span class="tag">全部任职</span></div><button id="group-create-open" class="secondary-button" type="button">新建群聊</button><div id="pending-group-invites" class="pending-group-invites hidden" aria-label="待确认邀请"></div><div id="group-list" class="group-list"></div><button id="load-more-groups" class="secondary-button hidden" type="button">加载更多群聊</button></div>
         <div class="sidebar-foot">本地页面不会保存你的访问令牌。刷新后需重新登录。</div>
       </aside>
       <div class="chat-column">
-        <header class="chat-header"><div><p class="eyebrow" id="chat-mode">DIRECT MESSAGE</p><h2 id="chat-title">选择一位同事，开始沟通</h2><p id="chat-subtitle">选择任职后搜索可见人员</p></div><span id="connection-state" class="connection-state">未连接</span></header>
+        <header class="chat-header"><div><p class="eyebrow" id="chat-mode">DIRECT MESSAGE</p><h2 id="chat-title">选择一位同事，开始沟通</h2><p id="chat-subtitle">选择任职后搜索可见人员</p></div><div class="chat-header-actions"><button id="group-invite-open" class="secondary-button hidden" type="button">邀请成员</button><span id="connection-state" class="connection-state">未连接</span></div></header>
         <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text"><div class="empty-state"><div class="empty-glyph">✦</div><strong>沟通从这里开始</strong><span>选择任职，查找同事，再发起单聊。</span></div></div>
         <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
       </div>
@@ -66,6 +66,20 @@
         <div id="group-create-selected" class="group-create-selected"></div>
         <p id="group-create-hint" class="microcopy" role="status"></p>
         <div class="group-create-actions"><button id="group-create-cancel" class="secondary-button" type="button">取消</button><button id="group-create-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-create-submit" class="primary-button" type="submit">创建群聊</button></div>
+      </form>
+    </dialog>
+    <dialog id="group-invite-dialog" class="group-create-dialog" aria-labelledby="group-invite-title">
+      <form id="group-invite-form">
+        <h2 id="group-invite-title">邀请成员</h2>
+        <p id="group-invite-group" class="microcopy"></p>
+        <label for="group-invite-query">查找要邀请的同事</label>
+        <div class="group-create-search-row"><input id="group-invite-query" type="search" autocomplete="off" placeholder="输入姓名，至少 2 个字"><button id="group-invite-search" class="secondary-button" type="button">搜索成员</button></div>
+        <p id="group-invite-search-hint" class="microcopy" role="status">搜索当前任职下可见的同事。</p>
+        <div id="group-invite-results" class="group-create-results"></div>
+        <p class="group-create-count">已选成员</p>
+        <div id="group-invite-selected" class="group-create-selected"></div>
+        <p id="group-invite-hint" class="microcopy" role="status"></p>
+        <div class="group-create-actions"><button id="group-invite-cancel" class="secondary-button" type="button">取消</button><button id="group-invite-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-invite-submit" class="primary-button" type="submit">发送邀请</button></div>
       </form>
     </dialog>
   </main>

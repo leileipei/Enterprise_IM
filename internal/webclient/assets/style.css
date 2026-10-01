@@ -67,6 +67,8 @@ main{position:relative;z-index:1;min-height:100vh}
 .recent-panel>.secondary-button{margin-top:10px;width:100%}
 .group-panel{padding-top:0}
 .group-panel>#group-create-open{width:100%;margin-bottom:10px}
+.pending-group-invites{display:grid;gap:7px;margin-bottom:10px}
+.pending-group-invites button{width:100%;text-align:left;overflow-wrap:anywhere}
 .group-create-dialog{width:min(620px,calc(100vw - 28px));max-height:min(820px,calc(100vh - 28px));overflow-y:auto;border:1px solid #dce8e5;border-radius:16px;padding:25px;background:#fbfdfb;color:#193044;box-shadow:0 24px 70px rgba(20,45,64,.24)}
 .group-create-dialog::backdrop{background:rgba(17,42,50,.52)}
 .group-create-dialog h2{font-size:20px;margin:0 0 8px}
@@ -92,6 +94,7 @@ main{position:relative;z-index:1;min-height:100vh}
 .sidebar-foot{margin-top:auto;border-top:1px solid #dce8e5;padding:15px 6px 0;color:#90a2a5;font-size:11px;line-height:1.55}
 .chat-column{flex:1;min-width:0;display:flex;flex-direction:column}
 .chat-header{min-height:105px;padding:25px 34px 20px;border-bottom:1px solid #e7eeeb;display:flex;justify-content:space-between;align-items:center;gap:12px;background:white}
+.chat-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
 .chat-header .eyebrow{margin:0 0 6px;font-size:9px}
 .chat-header h2{font-size:20px;line-height:1.35;margin:0;font-weight:760}
 .chat-header p:last-child{margin:5px 0 0;color:#8ba0a1;font-size:12px}

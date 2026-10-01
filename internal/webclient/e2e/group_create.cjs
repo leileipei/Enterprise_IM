@@ -248,6 +248,30 @@ server.listen(0, "127.0.0.1", async () => {
     await page.locator("#message-text").fill("");
 
     await page.locator("#group-create-open").click();
+    await page.locator("#group-create-name").fill("邀请弹窗竞态群");
+    await page.locator("#group-create-query").fill("张三");
+    await page.locator("#group-create-search").click();
+    await page.locator("#group-create-results .person-button").first().waitFor({ timeout: 1500 });
+    await page.locator("#group-create-results .person-button").first().click();
+    const inviteRaceListHeld = new Promise((resolve) => { resolveHeldGroupList = resolve; });
+    holdNextGroupList = true;
+    await page.locator("#group-create-submit").click();
+    await Promise.race([inviteRaceListHeld, new Promise((_, reject) => setTimeout(() =>
+      reject(new Error("invite race group list was not held")), 1500))]);
+    await page.locator("#group-invite-open").click();
+    heldGroupListResponse.writeHead(200, { "Content-Type": "application/json" });
+    heldGroupListResponse.end(JSON.stringify({ groups: [...created.values()].map((group) => ({
+      id: group.id, type: "group", name: group.name, status: "active", role: "owner",
+      source_membership_id: primary, last_seq: 0, updated_at: "2026-10-01T10:00:00Z",
+    })), has_more: false }));
+    await page.locator("#group-list .group-card").getByText("邀请弹窗竞态群").waitFor({ timeout: 1500 });
+    await page.waitForTimeout(50);
+    assert(await page.locator("#group-invite-dialog").isVisible() &&
+      await page.locator("#chat-title").textContent() === "跨组织项目群",
+      "late group create replaced the chat behind an invitation dialog");
+    await page.locator("#group-invite-cancel").click();
+
+    await page.locator("#group-create-open").click();
     await page.locator("#group-create-name").fill("单聊竞态群");
     await page.locator("#group-create-query").fill("张三");
     await page.locator("#group-create-search").click();
@@ -311,7 +335,7 @@ server.listen(0, "127.0.0.1", async () => {
     await page.waitForFunction(() => !document.getElementById("group-create-name").disabled);
     assert(await page.locator("#group-create-dialog").isVisible() &&
       await page.locator("#group-create-name").isEnabled() &&
-      !await page.locator("#group-create-discard").isVisible() && created.size === 4,
+      !await page.locator("#group-create-discard").isVisible() && created.size === 5,
       "definite policy denial retained pending state or created a partial group");
     const allowedName = "😀".repeat(120);
     await page.locator("#group-create-name").fill(allowedName);
