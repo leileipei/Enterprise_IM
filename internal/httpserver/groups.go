@@ -154,6 +154,13 @@ func groupMembershipRoute(w http.ResponseWriter, r *http.Request, identity acces
 			return
 		}
 		transferGroupOwner(w, r, identity, parts[0], service)
+	case "policy-rechecks":
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", "POST")
+			rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+		recheckGroupPolicy(w, r, identity, parts[0], service)
 	case "messages":
 		switch r.Method {
 		case http.MethodGet:
