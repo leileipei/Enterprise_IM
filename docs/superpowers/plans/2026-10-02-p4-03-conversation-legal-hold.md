@@ -34,10 +34,10 @@
 
 **Interfaces:** Produces `conversation_legal_holds` with `id`, `tenant_id`, `conversation_id`, `case_reference`, `create_request_id`, `placed_by_user_id`, `placed_by_membership_id`, `placed_at`, nullable release fields; `conversation_legal_hold_events` with `hold_id`, `tenant_id`, `conversation_id`, `event_type`, `request_id`, `reference`, actor IDs and `occurred_at`. Active predicate is `released_at IS NULL`; partial unique index covers `(tenant_id, conversation_id, case_reference)` for active rows.
 
-- [ ] Write `TestLegalHoldMigrationConstraintsAndRollback`: seed two tenants/conversations; assert cross-tenant conversation and actor references fail, partial release fields fail, duplicate active case fails, second case succeeds, event UPDATE/DELETE fails, second release rewrite fails, Down with any history fails; empty Down/Up succeeds.
-- [ ] Run `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access -run '^TestLegalHoldMigrationConstraintsAndRollback$' -count=1 -v`; expect RED because migration/table is absent.
-- [ ] Implement migration with composite foreign keys, unique tenant request IDs across both event types, one `placed` and one `released` event per hold, immutable event trigger, one-way release trigger, and protective Down; add `000014` to all four migration-loading fixtures, with reverse Down order in conversation rollback test.
-- [ ] Run the target test and `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access ./internal/policystore ./internal/oidcauth -count=1`; expect PASS, then commit migration and fixture changes.
+- [x] Write `TestLegalHoldMigrationConstraintsAndRollback`: seed two tenants/conversations; assert cross-tenant conversation and actor references fail, partial release fields fail, duplicate active case fails, second case succeeds, event UPDATE/DELETE fails, second release rewrite fails, Down with any history fails; empty Down/Up succeeds.
+- [x] Run `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access -run '^TestLegalHoldMigrationConstraintsAndRollback$' -count=1 -v`; expect RED because migration/table is absent.
+- [x] Implement migration with composite foreign keys, unique tenant request IDs across both event types, one `placed` and one `released` event per hold, immutable event trigger, one-way release trigger, and protective Down; add `000014` to all four migration-loading fixtures, with reverse Down order in conversation rollback test.
+- [x] Run the target test and `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access ./internal/policystore ./internal/oidcauth -count=1`; expect PASS, then commit migration and fixture changes.
 
 ### Task 2: 登记、重试与权限
 
