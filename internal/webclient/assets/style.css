@@ -107,7 +107,7 @@ main{position:relative;z-index:1;min-height:100vh}
 .chat-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
 .chat-header .eyebrow{margin:0 0 6px;font-size:9px}
 .chat-header h2{font-size:20px;line-height:1.35;margin:0;font-weight:760}
-.chat-header p:last-child{margin:5px 0 0;color:#8ba0a1;font-size:12px}
+.chat-header #chat-subtitle,.chat-header #group-policy-recheck-hint{margin:5px 0 0;color:#8ba0a1;font-size:12px;max-width:440px}
 .connection-state{white-space:nowrap;font-size:11px;color:#8a9b9c;background:#edf2f0;border-radius:30px;padding:7px 11px}
 .connection-state.online{color:#177566;background:#e0f4ea}
 .messages{flex:1;overflow-y:auto;padding:28px 34px;background:linear-gradient(#fbfdfb,#f5f9f7);display:flex;flex-direction:column;gap:14px}

@@ -35,6 +35,8 @@ const groupLeaveConfirm = element("group-leave-confirm");
 const groupLeaveRetry = element("group-leave-retry");
 const groupLeaveDiscard = element("group-leave-discard");
 const groupRosterOpenButton = element("group-roster-open");
+const groupPolicyRecheckButton = element("group-policy-recheck");
+const groupPolicyRecheckHint = element("group-policy-recheck-hint");
 const groupRosterDialog = element("group-roster-dialog");
 const groupRosterMembers = element("group-roster-members");
 const groupRosterHint = element("group-roster-hint");
@@ -122,6 +124,8 @@ let preparedGroupRemoval = null;
 let pendingGroupRemoval = null;
 let preparedGroupTransfer = null;
 let pendingGroupTransfer = null;
+const groupPolicyRechecks = new Map();
+let groupPolicyRecheckNotice = null;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
@@ -251,9 +255,11 @@ async function request(path, options = {}, needsMembership = true) {
       throw new Error("当前任职已失效，请重新选择");
     }
     const error = new Error(errorCode === "group_policy_blocked" ?
-      (path.endsWith("/invitations") ? "群通信已暂停，无法邀请成员。" : "群通信已暂停，新消息未保存。") :
+      (path.endsWith("/policy-rechecks") ? "复核未通过，群通信继续暂停。" :
+        path.endsWith("/invitations") ? "群通信已暂停，无法邀请成员。" : "群通信已暂停，新消息未保存。") :
       errorCode === "group_permission_denied" ?
-        (path.endsWith("/removals") ? "当前账号无权移除该群成员。" :
+        (path.endsWith("/policy-rechecks") ? "当前账号无权复核该群策略。" :
+          path.endsWith("/removals") ? "当前账号无权移除该群成员。" :
           path.endsWith("/owner-transfers") ? "当前账号无权转让此群群主。" :
           path.includes("/members") ? "当前账号无权查看群成员。" : "当前账号无权邀请群成员。") :
       errorCode === "retry_window_expired" ? "重试期限已过，请核对历史消息后重新发送。" :
@@ -346,6 +352,8 @@ function logout(message = "已退出当前页面。") {
   closeGroupRemoval(true);
   closeGroupTransfer(true);
   groupListNeedsRefreshID = "";
+  groupPolicyRechecks.clear();
+  groupPolicyRecheckNotice = null;
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -420,6 +428,8 @@ function selectMembership(id) {
   closeGroupRemoval(true);
   closeGroupTransfer(true);
   groupListNeedsRefreshID = "";
+  groupPolicyRechecks.clear();
+  groupPolicyRecheckNotice = null;
   stopRealtime();
   clearSyncRetry();
   identityEpoch++;
@@ -464,6 +474,8 @@ function selectMembership(id) {
 }
 
 function resetChat() {
+  groupPolicyRecheckNotice = null;
+  renderGroupPolicyRecheckAction();
   groupRosterOpenButton.classList.add("hidden");
   groupInviteOpenButton.classList.add("hidden");
   groupLeaveOpenButton.classList.add("hidden");
@@ -1058,6 +1070,86 @@ function renderGroupRosterAction() {
   if (groupRosterDialog.open && (!group || group.id !== groupRosterGroupID ||
       group.role !== groupRosterRole)) closeGroupRoster();
   groupRosterOpenButton.classList.toggle("hidden", !group);
+}
+
+function renderGroupPolicyRecheckAction() {
+  const group = activeConversationKind === "group" ? groups.get(activeConversation) : null;
+  if (group && groupPolicyRecheckNotice?.groupID === group.id &&
+      groupPolicyRecheckNotice.observedStatus !== group.status) {
+    groupPolicyRecheckNotice = group.status === "active" ?
+      { groupID: group.id, observedStatus: "active", text: "群通信已恢复。" } : null;
+  }
+  const canRecheck = !!actingMembership && group?.status === "policy_blocked" &&
+    ["owner", "admin"].includes(group.role);
+  groupPolicyRecheckButton.classList.toggle("hidden", !canRecheck);
+  const pending = group ? groupPolicyRechecks.get(group.id) : null;
+  groupPolicyRecheckButton.disabled = !!pending;
+  groupPolicyRecheckButton.textContent = pending ? "正在复核…" : "复核群策略";
+  const notice = groupPolicyRecheckNotice && groupPolicyRecheckNotice.groupID === group?.id ?
+    groupPolicyRecheckNotice.text : "";
+  groupPolicyRecheckHint.textContent = notice;
+  groupPolicyRecheckHint.classList.toggle("hidden", !notice);
+}
+
+async function recheckGroupPolicy() {
+  const group = activeRosterGroup();
+  if (!group || group.status !== "policy_blocked" || groupPolicyRechecks.has(group.id)) return;
+  const submitted = { groupID: group.id, actor: actingMembership, epoch: identityEpoch,
+    conversationEpoch };
+  groupPolicyRechecks.set(group.id, submitted);
+  groupPolicyRecheckNotice = { groupID: group.id, observedStatus: group.status,
+    text: "正在复核当前群成员与通信策略…" };
+  renderGroupPolicyRecheckAction();
+  const currentIdentity = () => groupPolicyRechecks.get(submitted.groupID) === submitted &&
+    submitted.epoch === identityEpoch && submitted.actor === actingMembership;
+  const currentView = () => currentIdentity() && submitted.conversationEpoch === conversationEpoch &&
+    activeConversationKind === "group" && activeConversation === submitted.groupID;
+  const showResult = (text) => {
+    if (!currentView()) return;
+    groupPolicyRecheckNotice = { groupID: submitted.groupID,
+      observedStatus: groups.get(submitted.groupID)?.status, text };
+    renderGroupPolicyRecheckAction();
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const result = await request(`/api/v1/groups/${encodeURIComponent(submitted.groupID)}/policy-rechecks`, {
+      method: "POST",
+      signal: controller.signal,
+    });
+    if (!currentIdentity()) return;
+    if (result?.status !== "active" || !Number.isSafeInteger(result.policy_version) ||
+        result.policy_version < 0) throw new Error("复核响应无法确认，请核对群状态后重试。");
+    try {
+      await refreshGroups();
+      if (!currentIdentity()) return;
+      showResult(groups.get(submitted.groupID)?.status === "active" ?
+        "复核通过，群通信已恢复。" : "复核已通过，但群状态又发生变化，请核对后重试。");
+    } catch (refreshError) {
+      if (!refreshError.stale) showResult("复核已通过；群列表尚未刷新，请稍后重载。");
+    }
+  } catch (error) {
+    if (error.stale || !currentIdentity()) return;
+    try { await refreshGroups(); } catch (refreshError) {
+      if (refreshError.stale || !currentIdentity()) return;
+    }
+    if (!currentIdentity()) return;
+    if (groups.get(submitted.groupID)?.status === "active") {
+      showResult("已从群列表确认通信恢复。");
+    } else if (error.status === 409 && error.code === "group_policy_blocked") {
+      showResult("复核未通过，群通信继续暂停；请处理冲突成员或联系策略管理员。");
+    } else if ([403, 404].includes(error.status)) {
+      showResult(error.message);
+    } else {
+      showResult("复核结果未确认；群仍显示暂停，可重试或稍后刷新群列表。");
+    }
+  } finally {
+    clearTimeout(timeout);
+    if (groupPolicyRechecks.get(submitted.groupID) === submitted) {
+      groupPolicyRechecks.delete(submitted.groupID);
+      renderGroupPolicyRecheckAction();
+    }
+  }
 }
 
 function groupRemovalStoragePrefix(actor = actingMembership) {
@@ -1883,6 +1975,7 @@ function renderGroups() {
   renderPendingGroupRemovals();
   renderPendingGroupTransfers();
   renderGroupRosterAction();
+  renderGroupPolicyRecheckAction();
   renderGroupInviteAction();
   renderGroupLeaveAction();
   if (activeConversationKind === "group") {
@@ -2050,6 +2143,7 @@ function activateGroupHistory(id) {
   syncPromise = null;
   syncAgain = false;
   pendingMessage = null;
+  groupPolicyRecheckNotice = null;
   messages.replaceChildren();
   const group = groups.get(id);
   element("chat-mode").textContent = "GROUP HISTORY";
@@ -2370,6 +2464,7 @@ groupLeaveDialog.addEventListener("cancel", (event) => {
   closeGroupLeave();
 });
 groupRosterOpenButton.addEventListener("click", openGroupRoster);
+groupPolicyRecheckButton.addEventListener("click", recheckGroupPolicy);
 groupRosterLoadMoreButton.addEventListener("click", () => loadGroupRosterPage(groupRosterCursor));
 groupRosterRetryButton.addEventListener("click", () => loadGroupRosterPage(groupRosterCursor));
 element("group-roster-close").addEventListener("click", closeGroupRoster);
