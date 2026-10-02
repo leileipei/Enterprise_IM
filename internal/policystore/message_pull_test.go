@@ -83,6 +83,31 @@ func TestPullTextMessagesRedactsExpiredBodyWithoutSkippingSequence(t *testing.T)
 	}
 }
 
+func TestPullTextMessagesUsesApprovedTenantRetentionDays(t *testing.T) {
+	conn := db(t)
+	seedDirectConversation(t, conn)
+	svc := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	run(t, conn, `UPDATE tenants SET message_body_retention_days=730,retention_version=1,
+ retention_approval_reference='CAB-730',retention_approved_by_user_id=$2,retention_approved_at=$3
+ WHERE id=$1`, tenantA, adminA, at)
+	if _, err := svc.SendTextMessage(context.Background(), publisher(), directA,
+		clientUUIDv7(at, 240), "approved history"); err != nil {
+		t.Fatal(err)
+	}
+	run(t, conn, "UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2", at.Add(-400*24*time.Hour), directA)
+	page, err := svc.PullTextMessages(context.Background(), publisher(), directA, 0, 10)
+	if err != nil || len(page.Messages) != 1 || page.Messages[0].Redacted ||
+		page.Messages[0].Text != "approved history" {
+		t.Fatalf("approved 730-day retention: %+v %v", page, err)
+	}
+	run(t, conn, "UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2", at.Add(-730*24*time.Hour), directA)
+	page, err = svc.PullTextMessages(context.Background(), publisher(), directA, 0, 10)
+	if err != nil || len(page.Messages) != 1 || !page.Messages[0].Redacted ||
+		page.Messages[0].Text != "" || page.Messages[0].Seq != 1 {
+		t.Fatalf("approved 730-day boundary: %+v %v", page, err)
+	}
+}
+
 func TestPullTextMessagesRedactsLegacyAndHardDeniedButNotOrdinaryIsolation(t *testing.T) {
 	conn := db(t)
 	seedDirectConversation(t, conn)

@@ -51,7 +51,7 @@ func testDB(t *testing.T) *pgx.Conn {
 	if _, err := conn.Exec(ctx, "SET search_path TO "+schema+", public"); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql"} {
+	for _, path := range []string{"../../db/migrations/000001_group_foundation.up.sql", "../../db/migrations/000002_admin_access.up.sql", "../../db/migrations/000005_direct_conversations.up.sql", "../../db/migrations/000006_message_write.up.sql", "../../db/migrations/000013_tenant_retention.up.sql"} {
 		migration, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
