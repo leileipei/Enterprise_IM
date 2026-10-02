@@ -121,7 +121,7 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 当前群主可用 `POST /api/v1/groups/{group_id}/owner-transfers` 提交 `{"client_request_id":"<请求 UUID>","source_interval_id":"<本人当前区间 UUID>","target_interval_id":"<接任成员当前区间 UUID>"}` 转让所有权。接任者须为群内活跃成员，且其来源任职仍有效；原群主降为普通成员，之后可主动退群。首次成功返回 201，同一请求重试返回 200；即使群主后来再次变更，旧请求也不会重新执行。更改同一请求 ID 的内容返回 409。`policy_blocked` 群允许转让，但不会自动解除封锁。批量邀请尚未开放。
 
-群主或群管理员可用 `POST /api/v1/groups/{group_id}/policy-rechecks`（无请求体和查询参数）显式复核暂停的群。服务端以当前发布的策略版本检查所有活跃成员的来源任职及每对成员的双向 `send_message` 决策；全部允许才返回 `200 {"status":"active","policy_version":N}` 并恢复发送与邀请。仍有冲突或成员任职失效时返回 409 `group_policy_blocked`，群继续暂停；普通成员返回 403，非成员与跨租户请求返回 404。已正常的群也可再次复核；成员移除和策略发布本身不会自动解除暂停。状态和审计同事务提交。当前 Web 页面尚无复核操作入口。
+群主或群管理员可用 `POST /api/v1/groups/{group_id}/policy-rechecks`（无请求体和查询参数）显式复核暂停的群。服务端以当前发布的策略版本检查所有活跃成员的来源任职及每对成员的双向 `send_message` 决策；全部允许才返回 `200 {"status":"active","policy_version":N}` 并恢复发送与邀请。仍有冲突或成员任职失效时返回 409 `group_policy_blocked`，群继续暂停；普通成员返回 403，非成员与跨租户请求返回 404。已正常的群也可再次复核；成员移除和策略发布本身不会自动解除暂停。状态和审计同事务提交。当前 Web 页面在策略暂停群的群主或管理员视图显示“复核群策略”；复核后重新读取群列表，确认状态正常才开放新消息和邀请。409 保持暂停并提示处理冲突；请求结果不明时重新核对群列表，仍暂停可重试。切换任职或群聊后不展示旧请求结果。
 
 网页在选择接任者后读取本人当前成员区间，并在确认前仅保存租户、用户、当前任职、群、请求编号及源/目标区间 ID；姓名、组织与访问令牌不会随转让请求持久保存。结果不确定时，侧栏保留原请求，可在刷新或重新登录后重试，即使原群主已降为普通成员。确认成功后刷新群列表，原群主可自行退群；服务端仍会重新校验首次转让的当前权限与接任者状态。
 
@@ -155,6 +155,6 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs` 和 `node internal/webclient/e2e/group_roster.cjs`。
+浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs`、`node internal/webclient/e2e/group_roster.cjs` 和 `node internal/webclient/e2e/group_policy_recheck.cjs`。
 
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000011` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
