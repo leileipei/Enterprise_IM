@@ -49,6 +49,40 @@ func TestPullTextMessagesPagesForBothParticipantsAndPreservesReselectedHistory(t
 	}
 }
 
+func TestPullTextMessagesRedactsExpiredBodyWithoutSkippingSequence(t *testing.T) {
+	conn := db(t)
+	seedDirectConversation(t, conn)
+	svc := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	for i := 1; i <= 2; i++ {
+		if _, err := svc.SendTextMessage(context.Background(), publisher(), directA,
+			clientUUIDv7(at, 200+i), "retained body"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run(t, conn, "UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2 AND seq=1",
+		at.Add(-365*24*time.Hour), directA)
+	run(t, conn, "UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2 AND seq=2",
+		at.Add(-365*24*time.Hour+time.Second), directA)
+	for _, reader := range []access.TrustedIdentity{
+		publisher(),
+		{TenantID: tenantA, UserID: personA, ActingMembershipID: targetM2},
+	} {
+		page, err := svc.PullTextMessages(context.Background(), reader, directA, 0, 1)
+		if err != nil || len(page.Messages) != 1 || page.Messages[0].Seq != 1 ||
+			!page.Messages[0].Redacted || page.Messages[0].MessageID != "" ||
+			page.Messages[0].SenderUserID != "" || page.Messages[0].Text != "" ||
+			!page.Messages[0].ServerTime.IsZero() || !page.HasMore || page.NextAfterSeq != 1 {
+			t.Fatalf("expired first page: %+v %v", page, err)
+		}
+		page, err = svc.PullTextMessages(context.Background(), reader, directA, page.NextAfterSeq, 1)
+		if err != nil || len(page.Messages) != 1 || page.Messages[0].Seq != 2 ||
+			page.Messages[0].Redacted || page.Messages[0].Text != "retained body" ||
+			page.HasMore || page.NextAfterSeq != 2 {
+			t.Fatalf("retained second page: %+v %v", page, err)
+		}
+	}
+}
+
 func TestPullTextMessagesRedactsLegacyAndHardDeniedButNotOrdinaryIsolation(t *testing.T) {
 	conn := db(t)
 	seedDirectConversation(t, conn)

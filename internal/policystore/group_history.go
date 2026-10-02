@@ -41,8 +41,6 @@ type groupHistoryMessage struct {
 	at                 time.Time
 }
 
-const groupMessageBodyRetention = 365 * 24 * time.Hour
-
 // PullGroupTextMessages preserves the group's sequence timeline. A reader sees
 // the body only when both reader and sender occupied a valid interval at seq.
 func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIdentity,
@@ -221,7 +219,7 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 		sender, senderFound := groupIntervalAt(intervals[message.senderID], message.seq)
 		if !groupHardDenied && readerFound && senderFound &&
 			sender.membershipID == message.senderMembershipID &&
-			at.Before(message.at.Add(groupMessageBodyRetention)) && !policy.HistoryHardDeny(actor,
+			at.Before(message.at.Add(messageBodyRetention)) && !policy.HistoryHardDeny(actor,
 			reader.policyMembership(id.TenantID), sender.policyMembership(id.TenantID), at, rules) {
 			item = PulledMessage{MessageID: message.id, Seq: message.seq,
 				SenderUserID: message.senderID, Text: message.text, ServerTime: message.at}
