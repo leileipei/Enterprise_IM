@@ -149,6 +149,35 @@ func TestWebPageAndConfigHaveSafeHeaders(t *testing.T) {
 	}
 }
 
+func TestWebCallbackPageAcceptsOnlyOIDCQuery(t *testing.T) {
+	handler, err := NewHandler(http.NotFoundHandler(), verifierFunc(func(context.Context, string) (httpserver.VerifiedIdentity, error) {
+		return httpserver.VerifiedIdentity{}, nil
+	}), webConfig("https://sso.example.test/group/token"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		path string
+		want int
+	}{
+		{"/web/?code=one&state=two", http.StatusOK},
+		{"/web/?code=one&state=two&iss=https%3A%2F%2Fsso.example.test", http.StatusOK},
+		{"/web/?error=access_denied&state=two", http.StatusOK},
+		{"/web/?code=one", http.StatusBadRequest},
+		{"/web/?code=one&code=two&state=two", http.StatusBadRequest},
+		{"/web/?code=one&state=two&state=three", http.StatusBadRequest},
+		{"/web/?code=one&state=two&error=access_denied", http.StatusBadRequest},
+		{"/web/?code=one&state=two&unexpected=one", http.StatusBadRequest},
+		{"/web/app.js?code=one&state=two", http.StatusBadRequest},
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, test.path, nil))
+		if response.Code != test.want {
+			t.Errorf("callback path %s: got %d want %d", test.path, response.Code, test.want)
+		}
+	}
+}
+
 func TestTokenExchangeRejectsDuplicateTokenFields(t *testing.T) {
 	idp := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

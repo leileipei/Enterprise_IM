@@ -106,7 +106,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		webError(w, http.StatusNotFound, "not_found")
 		return
 	}
-	if r.URL.RawQuery != "" {
+	if r.URL.RawQuery != "" && (r.URL.Path != "/web/" || !validWebCallbackQuery(r.URL.RawQuery)) {
 		webError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
@@ -118,6 +118,36 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
+}
+
+func validWebCallbackQuery(raw string) bool {
+	if len(raw) > 4096 {
+		return false
+	}
+	values, err := url.ParseQuery(raw)
+	if err != nil {
+		return false
+	}
+	for name, items := range values {
+		switch name {
+		case "code", "state", "iss", "error", "error_description", "error_uri":
+		default:
+			return false
+		}
+		if len(items) != 1 || items[0] == "" || len(items[0]) > 2048 {
+			return false
+		}
+	}
+	if _, hasCode := values["code"]; hasCode {
+		if _, hasError := values["error"]; hasError || len(values["state"]) != 1 {
+			return false
+		}
+		return len(values) == 2 || (len(values) == 3 && len(values["iss"]) == 1)
+	}
+	if len(values["error"]) != 1 {
+		return false
+	}
+	return true
 }
 
 func (h *handler) secureHeaders(w http.ResponseWriter) {
