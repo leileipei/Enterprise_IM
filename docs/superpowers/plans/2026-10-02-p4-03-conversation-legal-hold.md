@@ -57,10 +57,10 @@
 
 **Interfaces:** `ReleaseLegalHold(ctx context.Context, id TrustedIdentity, conversationID, holdID, requestID, approvalReference string) (LegalHold, error)`. The same `LegalHold` type from Task 2 reports release metadata; SQL active predicate remains `released_at IS NULL`.
 
-- [ ] Write `TestReleaseLegalHoldKeepsOtherCasesActive`: place two cases on one conversation; release one; assert one active remains, both events remain, first case can be newly placed again after release, the original placement request replays the released state, and using a placement request ID for release returns 409.
-- [ ] Run `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access -run '^TestReleaseLegalHold' -count=1 -v`; expect RED because release method is absent.
-- [ ] Implement release with the same actor/grant → conversation → hold lock order, exact request replay, one-time active-to-released transition, event and audit in one transaction; second distinct request on released hold returns 409.
-- [ ] Add `TestReleaseLegalHoldConcurrentAndAuditRollback`: two distinct concurrent release requests yield one transition, audit/event trigger failure leaves the hold active, and a conversation-lock wait followed by grant expiry leaves no release event; run targeted tests until PASS and commit.
+- [x] Write `TestReleaseLegalHoldKeepsOtherCasesActive`: place two cases on one conversation; release one; assert one active remains, both events remain, first case can be newly placed again after release, the original placement request replays the released state, and using a placement request ID for release returns 409.
+- [x] Run `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access -run '^TestReleaseLegalHold' -count=1 -v`; expect RED because release method is absent.
+- [x] Implement release with the same actor/grant → conversation → hold lock order, exact request replay, one-time active-to-released transition, event and audit in one transaction; second distinct request on released hold returns 409.
+- [x] Add `TestReleaseLegalHoldConcurrentAndAuditRollback`: two distinct concurrent release requests yield one transition, audit/event trigger failure leaves the hold active, and a conversation-lock wait followed by grant expiry leaves no release event; run targeted tests until PASS and commit.
 
 ### Task 4: 分页查询与受保护 HTTP 路由
 
