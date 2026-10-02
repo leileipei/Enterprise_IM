@@ -72,6 +72,12 @@ main{position:relative;z-index:1;min-height:100vh}
 .secondary-button:disabled{cursor:not-allowed;opacity:.55}
 .group-create-dialog{width:min(620px,calc(100vw - 28px));max-height:min(820px,calc(100vh - 28px));overflow-y:auto;border:1px solid #dce8e5;border-radius:16px;padding:25px;background:#fbfdfb;color:#193044;box-shadow:0 24px 70px rgba(20,45,64,.24)}
 .group-leave-dialog{width:min(440px,calc(100vw - 28px))}
+.group-roster-dialog{width:min(520px,calc(100vw - 28px))}
+.group-roster-members{display:grid;gap:8px;max-height:min(470px,50vh);overflow-y:auto}
+.group-roster-member{display:flex;align-items:center;justify-content:space-between;gap:12px;background:white;border:1px solid #e0ebe7;border-radius:10px;padding:11px 12px}
+.group-roster-member strong{font-size:13px;overflow-wrap:anywhere}
+.group-roster-member small{display:block;color:#809396;font-size:11px;margin-top:4px;overflow-wrap:anywhere}
+.group-roster-role{flex:none;color:#397e70;background:#e7f5ee;border-radius:20px;padding:5px 9px;font-size:11px}
 .group-create-dialog::backdrop{background:rgba(17,42,50,.52)}
 .group-create-dialog h2{font-size:20px;margin:0 0 8px}
 .group-create-dialog label{display:block;font-size:12px;font-weight:700;color:#526c72;margin:16px 0 7px}

@@ -111,9 +111,9 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 群主或群管理员可用 `POST /api/v1/groups/{group_id}/invitations` 提交 `{"client_request_id":"<请求 UUID>","target_membership_id":"<目标任职 UUID>"}` 邀请一人。服务对目标与每位现有成员双向检查 `invite_group` 策略，成功返回新区间 `interval_id`、`join_seq` 和 `policy_version`。同一请求重试返回原区间，即使目标已退群或重新入群；更改请求内容返回 409。`policy_blocked` 群暂停新邀请。
 
-网页中，当前活跃群的群主或管理员可点“邀请成员”，从当前任职可见的通讯录中选择一人及其任职。是否有权邀请、目标能否加入仍由服务端判定。结果未确认时，网页按账号、任职、群和请求编号保存待确认邀请，不保存令牌；刷新后重新登录并在“我的群聊”区域打开待确认邀请，可用相同编号和目标重试或放弃，即使原群已不在群列表中。放弃后应先核对成员状态，避免重复邀请。网页目前没有群成员名册界面或批量邀请。
+网页中，当前活跃群的群主或管理员可点“邀请成员”，从当前任职可见的通讯录中选择一人及其任职。是否有权邀请、目标能否加入仍由服务端判定。结果未确认时，网页按账号、任职、群和请求编号保存待确认邀请，不保存令牌；刷新后重新登录并在“我的群聊”区域打开待确认邀请，可用相同编号和目标重试或放弃，即使原群已不在群列表中。放弃后应先核对成员状态，避免重复邀请。网页目前不支持批量邀请。
 
-群主或管理员可用 `GET /api/v1/groups/{group_id}/members?limit=20&cursor=<游标>` 分页读取当前活跃成员，默认每页 20、最多 50。每项只包含成员区间 `interval_id`、姓名、角色和加入时来源组织的当前名称；已退出或移除的旧区间不返回。`policy_blocked` 群仍可读取，以便处理成员；普通成员、已退群者和其他租户均不能查看。结果仅供选择移除或转让目标，具体操作仍由对应写接口再次授权。网页尚未接入此名册。
+群主或管理员可用 `GET /api/v1/groups/{group_id}/members?limit=20&cursor=<游标>` 分页读取当前活跃成员，默认每页 20、最多 50。每项只包含成员区间 `interval_id`、姓名、角色和加入时来源组织的当前名称；已退出或移除的旧区间不返回。`policy_blocked` 群仍可读取，以便处理成员；普通成员、已退群者和其他租户均不能查看。结果仅供选择移除或转让目标，具体操作仍由对应写接口再次授权。网页中群主和管理员可打开只读成员名册并继续加载；关闭、切换群或任职、退出登录时会清空内容，网页不会持久保存名册。网页尚未提供移除成员或转让群主的操作入口。
 
 群主或群管理员可用 `POST /api/v1/groups/{group_id}/removals` 提交 `{"interval_id":"<目标当前区间 UUID>"}` 移除成员。群主可移除管理员或普通成员；管理员只能移除普通成员，不能移除自己或群主。返回 `status=removed` 与 `leave_seq`，同一区间重试安全，目标重新入群后的新区间不受旧请求影响。`policy_blocked` 群允许移除冲突成员，但本接口不会自动恢复群状态；恢复须由后续策略复核能力判定。
 
@@ -149,6 +149,6 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs` 和 `node internal/webclient/e2e/group_leave.cjs`。
+浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs` 和 `node internal/webclient/e2e/group_roster.cjs`。
 
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000011` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。

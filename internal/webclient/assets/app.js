@@ -34,6 +34,12 @@ const groupLeaveDialog = element("group-leave-dialog");
 const groupLeaveConfirm = element("group-leave-confirm");
 const groupLeaveRetry = element("group-leave-retry");
 const groupLeaveDiscard = element("group-leave-discard");
+const groupRosterOpenButton = element("group-roster-open");
+const groupRosterDialog = element("group-roster-dialog");
+const groupRosterMembers = element("group-roster-members");
+const groupRosterHint = element("group-roster-hint");
+const groupRosterLoadMoreButton = element("group-roster-load-more");
+const groupRosterRetryButton = element("group-roster-retry");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -95,6 +101,12 @@ let pendingGroupLeave = null;
 let preparedGroupLeave = null;
 let groupLeaveLookupSerial = 0;
 let groupListNeedsRefreshID = "";
+let groupRosterGroupID = "";
+let groupRosterCursor = "";
+let groupRosterHasMore = false;
+let groupRosterLoading = false;
+let groupRosterError = false;
+let groupRosterGeneration = 0;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
   return `enterprise-im-group-create:${self.tenant_id}:${self.user_id}:${actor}:`;
@@ -224,7 +236,8 @@ async function request(path, options = {}, needsMembership = true) {
     }
     const error = new Error(errorCode === "group_policy_blocked" ?
       (path.endsWith("/invitations") ? "群通信已暂停，无法邀请成员。" : "群通信已暂停，新消息未保存。") :
-      errorCode === "group_permission_denied" ? "当前账号无权邀请群成员。" :
+      errorCode === "group_permission_denied" ?
+        (path.includes("/members") ? "当前账号无权查看群成员。" : "当前账号无权邀请群成员。") :
       errorCode === "retry_window_expired" ? "重试期限已过，请核对历史消息后重新发送。" :
         response.status === 404 ? "目标不可用或无权限" :
         response.status === 409 ? "当前会话状态已变化，请核对后重试" :
@@ -423,6 +436,7 @@ function selectMembership(id) {
 }
 
 function resetChat() {
+  groupRosterOpenButton.classList.add("hidden");
   groupInviteOpenButton.classList.add("hidden");
   groupLeaveOpenButton.classList.add("hidden");
   messages.replaceChildren();
@@ -1006,6 +1020,115 @@ function renderGroupLeaveAction() {
   groupLeaveOpenButton.title = group?.role === "owner" ? "请先转让群主，再退出群聊" : "";
 }
 
+function activeRosterGroup() {
+  const group = activeConversationKind === "group" ? groups.get(activeConversation) : null;
+  return actingMembership && group && ["owner", "admin"].includes(group.role) ? group : null;
+}
+
+function renderGroupRosterAction() {
+  const group = activeRosterGroup();
+  if (groupRosterDialog.open && (!group || group.id !== groupRosterGroupID)) closeGroupRoster();
+  groupRosterOpenButton.classList.toggle("hidden", !group);
+}
+
+function renderGroupRosterControls() {
+  groupRosterLoadMoreButton.classList.toggle("hidden", !groupRosterHasMore || groupRosterError);
+  groupRosterLoadMoreButton.disabled = groupRosterLoading;
+  groupRosterRetryButton.classList.toggle("hidden", !groupRosterError);
+  groupRosterRetryButton.disabled = groupRosterLoading;
+}
+
+function closeGroupRoster() {
+  groupRosterGeneration++;
+  if (groupRosterDialog.open) groupRosterDialog.close();
+  groupRosterGroupID = "";
+  groupRosterCursor = "";
+  groupRosterHasMore = false;
+  groupRosterLoading = false;
+  groupRosterError = false;
+  groupRosterMembers.replaceChildren();
+  groupRosterHint.textContent = "";
+  element("group-roster-group").textContent = "";
+  renderGroupRosterControls();
+}
+
+function renderGroupRosterMember(member) {
+  const item = document.createElement("div");
+  item.className = "group-roster-member";
+  item.setAttribute("role", "listitem");
+  const identity = document.createElement("div");
+  const name = document.createElement("strong");
+  name.textContent = member.display_name;
+  const organization = document.createElement("small");
+  organization.textContent = member.organization_name;
+  identity.append(name, organization);
+  const role = document.createElement("span");
+  role.className = "group-roster-role";
+  role.textContent = { owner: "群主", admin: "管理员", member: "成员" }[member.role];
+  item.append(identity, role);
+  return item;
+}
+
+async function loadGroupRosterPage(cursor = "") {
+  if (!groupRosterDialog.open || !groupRosterGroupID || groupRosterLoading ||
+      (cursor && (!groupRosterHasMore || cursor !== groupRosterCursor))) return;
+  const generation = groupRosterGeneration;
+  const groupID = groupRosterGroupID;
+  const selectedEpoch = identityEpoch;
+  const current = () => generation === groupRosterGeneration && groupRosterDialog.open &&
+    groupRosterGroupID === groupID && selectedEpoch === identityEpoch &&
+    activeConversationKind === "group" && activeConversation === groupID && activeRosterGroup();
+  groupRosterLoading = true;
+  groupRosterError = false;
+  groupRosterHint.textContent = cursor ? "正在加载更多成员…" : "正在加载成员…";
+  renderGroupRosterControls();
+  try {
+    const path = `/api/v1/groups/${encodeURIComponent(groupID)}/members?limit=20` +
+      (cursor ? `&cursor=${encodeURIComponent(cursor)}` : "");
+    const page = await request(path);
+    if (!current()) return;
+    if (!Array.isArray(page.members) || typeof page.has_more !== "boolean" ||
+        (page.has_more && !page.next_cursor) || page.members.some((member) =>
+          typeof member.display_name !== "string" || typeof member.organization_name !== "string" ||
+          !["owner", "admin", "member"].includes(member.role))) {
+      const invalid = new Error("群成员数据暂不可用，请稍后重试。");
+      invalid.invalidRoster = true;
+      throw invalid;
+    }
+    const items = document.createDocumentFragment();
+    for (const member of page.members) items.append(renderGroupRosterMember(member));
+    groupRosterMembers.append(items);
+    groupRosterCursor = page.next_cursor || "";
+    groupRosterHasMore = page.has_more;
+    groupRosterHint.textContent = groupRosterMembers.childElementCount ?
+      `已加载 ${groupRosterMembers.childElementCount} 位成员。` : "暂无当前成员。";
+  } catch (error) {
+    if (error.stale || !current()) return;
+    if (error.invalidRoster || [403, 404].includes(error.status)) {
+      groupRosterMembers.replaceChildren();
+      groupRosterCursor = "";
+      groupRosterHasMore = false;
+    }
+    groupRosterError = true;
+    groupRosterHint.textContent = error.message;
+  } finally {
+    if (generation === groupRosterGeneration) {
+      groupRosterLoading = false;
+      renderGroupRosterControls();
+    }
+  }
+}
+
+function openGroupRoster() {
+  const group = activeRosterGroup();
+  if (!group) return;
+  closeGroupRoster();
+  groupRosterGroupID = group.id;
+  element("group-roster-group").textContent = `群聊：${group.name}`;
+  groupRosterDialog.showModal();
+  loadGroupRosterPage();
+}
+
 function renderGroupLeaveDialog() {
   const saved = !!pendingGroupLeave;
   groupLeaveConfirm.classList.toggle("hidden", saved);
@@ -1286,6 +1409,7 @@ async function loadMoreInbox() {
 }
 
 function resetGroups() {
+  closeGroupRoster();
   groupGeneration++;
   groupRefreshPromise = null;
   groupRefreshAgain = false;
@@ -1328,6 +1452,7 @@ function renderGroups() {
   loadMoreGroupsButton.classList.toggle("hidden", !groupHasMore);
   renderPendingGroupInvites();
   renderPendingGroupLeaves();
+  renderGroupRosterAction();
   renderGroupInviteAction();
   renderGroupLeaveAction();
   if (activeConversationKind === "group") {
@@ -1459,6 +1584,7 @@ function renderConversations() {
 
 function activateConversation(id) {
   if (!conversations.has(id) || !canSwitchChat()) return;
+  closeGroupRoster();
   clearSyncRetry();
   activeConversation = id;
   activeConversationKind = "direct";
@@ -1485,6 +1611,7 @@ function activateConversation(id) {
 
 function activateGroupHistory(id) {
   if (!groups.has(id) || !actingMembership || !canSwitchChat()) return;
+  closeGroupRoster();
   clearSyncRetry();
   activeConversation = id;
   activeConversationKind = "group";
@@ -1811,6 +1938,14 @@ groupLeaveDiscard.addEventListener("click", discardGroupLeave);
 groupLeaveDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeGroupLeave();
+});
+groupRosterOpenButton.addEventListener("click", openGroupRoster);
+groupRosterLoadMoreButton.addEventListener("click", () => loadGroupRosterPage(groupRosterCursor));
+groupRosterRetryButton.addEventListener("click", () => loadGroupRosterPage(groupRosterCursor));
+element("group-roster-close").addEventListener("click", closeGroupRoster);
+groupRosterDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeGroupRoster();
 });
 window.addEventListener("storage", () => {
   renderPendingGroupInvites();
