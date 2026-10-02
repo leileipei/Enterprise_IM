@@ -38,7 +38,7 @@
 
 Outbox Worker 从 PostgreSQL 领取到期事件并写入 Redis Stream，成功后标记 `published`；失败会按最长 5 分钟的指数退避重试。Redis 事件只含 `event_id`、`tenant_id`、`conversation_id`、`message_id`、`seq` 和 `event_type`，不含正文。Redis 发布与数据库标记之间可能发生重复；每个 API 实例独立读取新事件，按稳定的 `event_id` 在本机有界窗口内去重，并让客户端按 PostgreSQL `seq` 补拉、处理乱序与缺口。`published` 只表示 Redis 接受了事件，**不表示消息已送达设备**。生产者暂不裁剪 Stream；上线前必须监控积压容量并制定可检测缺口的保留策略。PostgreSQL 仍为消息事实来源。
 
-单聊文本可通过 `GET /api/v1/conversations/{id}/messages?after_seq=0&limit=100` 按会话序号升序补拉。`after_seq` 必填，`limit` 可选（默认 100，最大 500）。响应中的 `next_after_seq` 用于下一页；`has_more` 表示是否还有后续序号。不可见消息只返回 `seq` 和 `redacted:true`，客户端仍须推进游标。补拉依据消息发送时保存的双方任职及组织快照；迁移前无法证明接收任职的旧消息只能返回不可见占位，不能用当前会话任职自动回填。冻结账户或失效任职不能补拉，现行 `send_message` 强制拒绝会撤销匹配内容的读取，普通通信隔离不追溯删除已授权历史。该接口不提供实时推送或设备送达确认。
+单聊文本可通过 `GET /api/v1/conversations/{id}/messages?after_seq=0&limit=100` 按会话序号升序补拉。`after_seq` 必填，`limit` 可选（默认 100，最大 500）。响应中的 `next_after_seq` 用于下一页；`has_more` 表示是否还有后续序号。不可见消息只返回 `seq` 和 `redacted:true`，客户端仍须推进游标。Web 客户端先检查一页内的序号连续性及页游标，发现缺口则保留原游标并重试，避免把尚未显示的消息跳过去。补拉依据消息发送时保存的双方任职及组织快照；迁移前无法证明接收任职的旧消息只能返回不可见占位，不能用当前会话任职自动回填。冻结账户或失效任职不能补拉，现行 `send_message` 强制拒绝会撤销匹配内容的读取，普通通信隔离不追溯删除已授权历史。该接口不提供实时推送或设备送达确认。
 
 显式配置 `IM_REALTIME_REDIS_URL` 后，浏览器可用相同身份头向 `POST /api/v1/realtime/tickets` 申请 30 秒一次性票据，再以子协议 `enterprise-im.v1`、`ticket.<票据>` 连接同源 `GET /api/v1/realtime` WebSocket。票据不放在 URL；服务器只回显 `enterprise-im.v1`。连接成功首先收到 `{"type":"ready","resync_required":true}`，客户端应立即用上次连续确认的 `seq` 调用上述 HTTP 补拉。新消息发布到 Redis Stream 后，本机在线的单聊双方会收到 `{"type":"sync_required"}`，再次通过 HTTP 补拉；该信号不包含正文、会话 ID 或序号，也不是送达确认。票据不可重复使用，任职或账号失效时连接会关闭。Redis 或通知读者不可用时票据入口和就绪探针返回 503，现有连接关闭并等待重连补拉。
 
@@ -125,7 +125,7 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 网页在选择接任者后读取本人当前成员区间，并在确认前仅保存租户、用户、当前任职、群、请求编号及源/目标区间 ID；姓名、组织与访问令牌不会随转让请求持久保存。结果不确定时，侧栏保留原请求，可在刷新或重新登录后重试，即使原群主已降为普通成员。确认成功后刷新群列表，原群主可自行退群；服务端仍会重新校验首次转让的当前权限与接任者状态。
 
-群历史补拉使用 `GET /api/v1/groups/{group_id}/messages?after_seq=0&limit=100`。当前或历史成员可在账号和选定任职有效时，读取本人曾参与区间内且未满默认 365 天保留期的消息；退出、移除与重新入群之间的序号缺口、错误发送任职及过期正文只返回 `redacted=true` 占位，不包含正文和发送人。普通策略变化不追改保留期内的旧正文；当前 `hard_deny` 命中读者与群内任一成员时会遮蔽整页历史正文，账号冻结也会阻断读取。`policy_blocked` 群仍可按历史授权补拉。保留期配置和物理清理由 P4 实现。
+群历史补拉使用 `GET /api/v1/groups/{group_id}/messages?after_seq=0&limit=100`。当前或历史成员可在账号和选定任职有效时，读取本人曾参与区间内且未满默认 365 天保留期的消息。对于退群、移除与重新入群期间仍存的消息行，以及错误发送任职和正文过期的消息，接口只返回 `redacted=true` 占位，不包含正文和发送人。普通策略变化不追改保留期内的旧正文；当前 `hard_deny` 命中读者与群内任一成员时会遮蔽整页历史正文，账号冻结也会阻断读取。`policy_blocked` 群仍可按历史授权补拉。保留期配置和物理清理由 P4 实现；P4 清理或历史导入必须保留连续序号的安全占位，或同步升级补拉契约，否则 Web 客户端会检测缺口并暂停该会话补拉。
 
 `GET /api/v1/groups?limit=20&cursor=<游标>` 返回本人当前仍在群内的群，默认每页 20、最多 50，按群更新时间和 ID 倒序排列；`has_more` 和 `next_cursor` 用于继续读取。结果包含群名、`active` 或 `policy_blocked` 状态、本人角色、群来源任职 ID、最后消息序号和更新时间，不返回其他成员资料。本人可使用任一当前有效任职读取群列表；发送群消息时仍须选择该群的来源任职并通过实时策略校验。退群、被移除或已结束的群不出现在当前群列表，历史消息仍按区间授权规则通过已知群 ID 补拉。群列表只反映请求时的状态，客户端断线恢复时应重新从第一页核对。
 
@@ -155,6 +155,8 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs`、`node internal/webclient/e2e/group_roster.cjs` 和 `node internal/webclient/e2e/group_policy_recheck.cjs`。
+浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/multi_device_recovery.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs`、`node internal/webclient/e2e/group_roster.cjs` 和 `node internal/webclient/e2e/group_policy_recheck.cjs`。
+
+`multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双设备广播与客户环境断线恢复仍需独立集成验收。
 
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000011` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。

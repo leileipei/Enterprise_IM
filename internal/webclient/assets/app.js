@@ -2219,6 +2219,16 @@ async function syncMessages() {
         const page = await request(`/api/v1/${resource}/${encodeURIComponent(chatID)}/messages?after_seq=${afterSeq}&limit=100`);
         if (activeConversation !== chatID || actingMembership !== selectedMembership ||
             identityEpoch !== selectedEpoch || conversationEpoch !== selectedConversationEpoch) break;
+        let expectedSeq = afterSeq + 1;
+        if (!Array.isArray(page.messages)) throw new Error("消息同步中断，请稍后重试。");
+        for (const message of page.messages) {
+          if (!Number.isSafeInteger(message.seq) || message.seq !== expectedSeq++) {
+            throw new Error("消息同步中断，请稍后重试。");
+          }
+        }
+        if (page.next_after_seq !== expectedSeq - 1) {
+          throw new Error("消息同步中断，请稍后重试。");
+        }
         for (const message of page.messages) {
           if (message.seq > afterSeq) appendMessage(message);
         }
