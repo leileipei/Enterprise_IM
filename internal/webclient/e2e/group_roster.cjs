@@ -6,11 +6,14 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const assets = path.join(__dirname, "..", "assets");
+const tenant = "00000000-0000-4000-8000-000000000001";
+const user = "00000000-0000-4000-8000-000000000002";
 const actor = "00000000-0000-4000-8000-000000000003";
 const secondActor = "00000000-0000-4000-8000-000000000004";
 const ownerGroup = "00000000-0000-4000-8000-000000000011";
 const adminGroup = "00000000-0000-4000-8000-000000000012";
 const memberGroup = "00000000-0000-4000-8000-000000000013";
+const transferGroup = "00000000-0000-4000-8000-000000000014";
 const intervalA = "00000000-0000-4000-8000-000000000021";
 const intervalB = "00000000-0000-4000-8000-000000000022";
 const intervalC = "00000000-0000-4000-8000-000000000023";
@@ -24,6 +27,10 @@ let incompleteNextRemoval = false;
 let deniedNextRemoval = false;
 let unknownNextRemoval = false;
 const removed = new Set();
+let transferRole = "owner";
+let transferStored = null;
+let transferNextOutcome = "";
+const transferCalls = [];
 let failNextRoster = false;
 let holdNextRoster = false;
 let heldRosterResponse;
@@ -52,8 +59,8 @@ const server = http.createServer((req, res) => {
   });
   if (req.headers.authorization !== "Bearer mock-token") return send(401, { error_code: "unauthorized" });
   if (url.pathname === "/api/v1/me") return send(200, {
-    tenant_id: "00000000-0000-4000-8000-000000000001",
-    user_id: "00000000-0000-4000-8000-000000000002", display_name: "测试用户",
+    tenant_id: tenant,
+    user_id: user, display_name: "测试用户",
     global_employee_no: "A001", memberships: [
       { id: actor, organization_name: "集团总部", legal_entity_name: "总部法人", title: "工程师", is_primary: true },
       { id: secondActor, organization_name: "分公司", legal_entity_name: "分公司法人", title: "顾问", is_primary: false },
@@ -69,15 +76,18 @@ const server = http.createServer((req, res) => {
       group(ownerGroup, "群主群", "active", "owner"),
       group(adminGroup, "暂停群", "policy_blocked", "admin"),
       group(memberGroup, "普通成员群", "active", "member"),
+      group(transferGroup, "转让测试群", "policy_blocked", transferRole),
     ], has_more: false,
   });
-  const match = url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/(members|messages|removals)$/);
+  const match = url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/(members|messages|removals|membership|owner-transfers)$/);
   if (match?.[2] === "messages" && req.method === "GET") return send(200, {
     conversation_id: match[1], messages: [], next_after_seq: 0, has_more: false,
   });
   if (match?.[2] === "members" && req.method === "GET") {
     if (req.headers["x-acting-membership-id"] !== actor ||
-        ![ownerGroup, adminGroup].includes(match[1])) return send(403, { error_code: "group_permission_denied" });
+        (![ownerGroup, adminGroup].includes(match[1]) &&
+          !(match[1] === transferGroup && transferRole === "owner")))
+      return send(403, { error_code: "group_permission_denied" });
     if (url.searchParams.get("limit") !== "20") return send(400, { error_code: "invalid_request" });
     rosterCalls++;
     if (failNextRoster) {
@@ -101,6 +111,10 @@ const server = http.createServer((req, res) => {
       { interval_id: intervalB, display_name: "第二位", role: "admin", organization_name: "公司 B" },
       { interval_id: intervalC, display_name: "第三位", role: "member", organization_name: "分公司" },
     ].filter((member) => !removed.has(`${match[1]}:${member.interval_id}`)), has_more: false });
+    if (match[1] === transferGroup) return send(200, { members: [
+      { interval_id: intervalA, display_name: "群主", role: "owner", organization_name: "集团总部" },
+      { interval_id: intervalB, display_name: "接任者", role: "admin", organization_name: "公司 B" },
+    ], has_more: false });
     return send(200, { members: [
       { interval_id: intervalA, display_name: "<img src=x onerror=alert(1)>成员",
         role: "owner", organization_name: "集团总部" },
@@ -130,6 +144,32 @@ const server = http.createServer((req, res) => {
       }
       removed.add(`${match[1]}:${JSON.parse(body).interval_id}`);
       return send(200, { interval_id: JSON.parse(body).interval_id, status: "removed", leave_seq: 2 });
+    });
+    return;
+  }
+  if (match?.[2] === "membership" && req.method === "GET" && match[1] === transferGroup)
+    return send(200, { interval_id: intervalA, role: transferRole, join_seq: 1,
+      group_status: "policy_blocked" });
+  if (match?.[2] === "owner-transfers" && req.method === "POST" && match[1] === transferGroup) {
+    let raw = "";
+    req.on("data", (part) => { raw += part; });
+    req.on("end", () => {
+      const body = JSON.parse(raw);
+      transferCalls.push({ actor: req.headers["x-acting-membership-id"], body });
+      const outcome = transferNextOutcome;
+      transferNextOutcome = "";
+      if (outcome === "denied") return send(403, { error_code: "group_permission_denied" });
+      if (outcome === "proxy") return send(403, "<html>proxy rejected</html>", "text/html");
+      if (outcome === "incomplete") return send(200, { source_interval_id: intervalA });
+      if (transferStored) {
+        if (JSON.stringify(body) !== JSON.stringify(transferStored))
+          return send(409, { error_code: "idempotency_conflict" });
+        return send(200, { source_interval_id: intervalA, target_interval_id: intervalB });
+      }
+      if (transferRole !== "owner") return send(403, { error_code: "group_permission_denied" });
+      transferStored = body;
+      transferRole = "member";
+      return send(503, { error_code: "unavailable" });
     });
     return;
   }
@@ -234,7 +274,8 @@ server.listen(0, "127.0.0.1", async () => {
     await dialog.getByRole("button", { name: "重试" }).click();
     await dialog.getByText("第二位", { exact: true }).waitFor();
     if (await dialog.getByRole("button", { name: "移除第二位" }).count() ||
-        !await dialog.getByRole("button", { name: "移除第三位" }).count())
+        !await dialog.getByRole("button", { name: "移除第三位" }).count() ||
+        await dialog.getByRole("button", { name: /转让给/ }).count())
       throw new Error("administrator removal actions do not match target roles");
     await dialog.getByRole("button", { name: "移除第三位" }).click();
     await removeDialog.getByRole("button", { name: "确认移除" }).click();
@@ -320,11 +361,113 @@ server.listen(0, "127.0.0.1", async () => {
     await dialog.getByRole("button", { name: "加载更多成员" }).click();
     if (await dialog.getByText("第三位", { exact: true }).count())
       throw new Error("retried removal remained in roster");
+    await dialog.getByRole("button", { name: "关闭" }).click();
+
+    await page.locator("#group-list .group-card").filter({ hasText: "转让测试群" }).click();
+    await open.click();
+    await dialog.getByText("接任者", { exact: true }).waitFor();
+    if (!await dialog.getByRole("button", { name: "转让给接任者" }).count())
+      throw new Error("owner cannot select a successor from roster");
+    await dialog.getByRole("button", { name: "转让给接任者" }).click();
+    const transferDialog = page.locator("#group-transfer-dialog");
+    await transferDialog.getByText("接任者").waitFor();
+    if (!await transferDialog.getByText("公司 B").count())
+      throw new Error("transfer confirmation omitted target organization");
+    await transferDialog.getByRole("button", { name: "稍后处理" }).click();
+    if (transferCalls.length) throw new Error("cancel submitted owner transfer");
+    await open.click();
+    await dialog.getByText("接任者", { exact: true }).waitFor();
+    const crossTabRemovalKey = await page.evaluate(({ tenantID, userID, actorID, groupID, intervalID }) => {
+      const key = `enterprise-im-group-remove:${tenantID}:${userID}:${actorID}:${groupID}:${intervalID}`;
+      localStorage.setItem(key, JSON.stringify({ tenantID, userID, actor: actorID, groupID, intervalID }));
+      return key;
+    }, { tenantID: tenant, userID: user, actorID: actor, groupID: transferGroup, intervalID: intervalB });
+    await dialog.getByRole("button", { name: "转让给接任者" }).click();
+    await page.getByText("此群有待确认成员移除").waitFor();
+    if (await transferDialog.isVisible() || transferCalls.length)
+      throw new Error("stale roster action bypassed pending removal guard");
+    await page.evaluate((key) => window.dispatchEvent(new StorageEvent("storage", { key })), crossTabRemovalKey);
+    if (await dialog.isVisible()) throw new Error("cross-tab pending change kept stale roster actions");
+    await page.evaluate((key) => {
+      localStorage.removeItem(key);
+      window.dispatchEvent(new StorageEvent("storage", { key }));
+    }, crossTabRemovalKey);
+    await open.click();
+    await dialog.getByRole("button", { name: "转让给接任者" }).click();
+    transferNextOutcome = "denied";
+    await transferDialog.getByRole("button", { name: "确认转让" }).click();
+    await transferDialog.waitFor({ state: "hidden" });
+    if (await page.locator("#pending-group-transfers button").count())
+      throw new Error("first definitive transfer denial retained pending request");
+    await open.click();
+    await dialog.getByRole("button", { name: "转让给接任者" }).click();
+    transferNextOutcome = "proxy";
+    await transferDialog.getByRole("button", { name: "确认转让" }).click();
+    await transferDialog.getByText("转让结果未确认").waitFor();
+    if (!await page.locator("#pending-group-transfers button").count())
+      throw new Error("unknown proxy response cleared transfer request");
+    const unknownTransfer = transferCalls.at(-1).body;
+    transferNextOutcome = "denied";
+    await transferDialog.getByRole("button", { name: "重试转让" }).click();
+    await transferDialog.getByText("此前转让结果仍未确认").waitFor();
+    if (!await page.locator("#pending-group-transfers button").count() ||
+        JSON.stringify(transferCalls.at(-1).body) !== JSON.stringify(unknownTransfer))
+      throw new Error("later denial cleared or changed uncertain transfer request");
+    await transferDialog.getByRole("button", { name: "放弃待确认" }).click();
+    if (await page.locator("#pending-group-transfers button").count())
+      throw new Error("discard retained uncertain transfer request");
+    await open.click();
+    await dialog.getByRole("button", { name: "转让给接任者" }).click();
+    transferNextOutcome = "incomplete";
+    await transferDialog.getByRole("button", { name: "确认转让" }).click();
+    await transferDialog.getByText("转让结果未确认").waitFor();
+    if (!await page.locator("#pending-group-transfers button").count())
+      throw new Error("incomplete transfer response cleared pending request");
+    await transferDialog.getByRole("button", { name: "放弃待确认" }).click();
+    if (await page.locator("#pending-group-transfers button").count())
+      throw new Error("discard retained incomplete transfer request");
+    const firstCommittedTransfer = transferCalls.length;
+    await open.click();
+    await dialog.getByRole("button", { name: "转让给接任者" }).click();
+    await transferDialog.getByRole("button", { name: "确认转让" }).click();
+    await transferDialog.getByText("转让结果未确认").waitFor();
+    if (transferCalls.length !== firstCommittedTransfer + 1 ||
+        transferCalls[firstCommittedTransfer].actor !== actor ||
+        transferCalls[firstCommittedTransfer].body.source_interval_id !== intervalA ||
+        transferCalls[firstCommittedTransfer].body.target_interval_id !== intervalB ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-7/i.test(transferCalls[firstCommittedTransfer].body.client_request_id))
+      throw new Error("transfer did not submit exact source, target and request ID");
+    const savedTransfer = await page.evaluate(() => Object.entries(localStorage).filter(([key]) => key.includes("group-transfer")));
+    if (savedTransfer.length !== 1 || savedTransfer[0][1].includes("接任者") ||
+        savedTransfer[0][1].includes("公司 B") || savedTransfer[0][1].includes("转让测试群"))
+      throw new Error("pending owner transfer persisted roster PII");
+    await transferDialog.getByRole("button", { name: "稍后处理" }).click();
+    await page.evaluate((membershipID) => selectMembership(membershipID), secondActor);
+    if (await page.locator("#pending-group-transfers button").count())
+      throw new Error("pending owner transfer crossed acting identity");
+    await page.evaluate((membershipID) => selectMembership(membershipID), actor);
+    await page.locator("#pending-group-transfers button").waitFor();
+    await page.reload();
+    await page.getByRole("button", { name: /使用企业账号登录/ }).click();
+    await page.getByRole("button", { name: /集团总部/ }).first().click();
+    await page.locator("#pending-group-transfers button").waitFor();
+    await page.locator("#group-list .group-card").filter({ hasText: "转让测试群" }).click();
+    if (await open.isVisible()) throw new Error("former owner retained roster action");
+    await page.locator("#pending-group-transfers button").click();
+    await transferDialog.getByRole("button", { name: "重试转让" }).click();
+    await page.locator("#pending-group-transfers button").waitFor({ state: "detached" });
+    if (transferCalls.length !== firstCommittedTransfer + 2 ||
+        JSON.stringify(transferCalls[firstCommittedTransfer + 1].body) !==
+        JSON.stringify(transferCalls[firstCommittedTransfer].body))
+      throw new Error("transfer recovery changed request ID or interval IDs");
+    const leaveAction = page.locator("#group-leave-open");
+    await leaveAction.getByText("退出群聊").waitFor();
+    if (await leaveAction.isDisabled()) throw new Error("former owner cannot leave after transfer");
     await page.evaluate(() => logout());
     if (await dialog.isVisible() || await dialog.locator(".group-roster-member").count())
       throw new Error("logout retained roster data");
 
-    process.stdout.write("group roster and removal access, recovery, errors and stale response isolation passed\n");
+    process.stdout.write("group roster, removal and owner transfer access, recovery and isolation passed\n");
   } catch (error) {
     console.error(error);
     process.exitCode = 1;

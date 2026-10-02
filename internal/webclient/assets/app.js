@@ -45,6 +45,11 @@ const groupRemoveDialog = element("group-remove-dialog");
 const groupRemoveConfirm = element("group-remove-confirm");
 const groupRemoveRetry = element("group-remove-retry");
 const groupRemoveDiscard = element("group-remove-discard");
+const pendingGroupTransfers = element("pending-group-transfers");
+const groupTransferDialog = element("group-transfer-dialog");
+const groupTransferConfirm = element("group-transfer-confirm");
+const groupTransferRetry = element("group-transfer-retry");
+const groupTransferDiscard = element("group-transfer-discard");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -115,6 +120,8 @@ let groupRosterError = false;
 let groupRosterGeneration = 0;
 let preparedGroupRemoval = null;
 let pendingGroupRemoval = null;
+let preparedGroupTransfer = null;
+let pendingGroupTransfer = null;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
@@ -247,6 +254,7 @@ async function request(path, options = {}, needsMembership = true) {
       (path.endsWith("/invitations") ? "群通信已暂停，无法邀请成员。" : "群通信已暂停，新消息未保存。") :
       errorCode === "group_permission_denied" ?
         (path.endsWith("/removals") ? "当前账号无权移除该群成员。" :
+          path.endsWith("/owner-transfers") ? "当前账号无权转让此群群主。" :
           path.includes("/members") ? "当前账号无权查看群成员。" : "当前账号无权邀请群成员。") :
       errorCode === "retry_window_expired" ? "重试期限已过，请核对历史消息后重新发送。" :
         response.status === 404 ? "目标不可用或无权限" :
@@ -336,6 +344,7 @@ function logout(message = "已退出当前页面。") {
   closeGroupInvite(true);
   closeGroupLeave(true);
   closeGroupRemoval(true);
+  closeGroupTransfer(true);
   groupListNeedsRefreshID = "";
   stopRealtime();
   clearSyncRetry();
@@ -373,6 +382,8 @@ function logout(message = "已退出当前页面。") {
   pendingGroupLeaves.classList.add("hidden");
   pendingGroupRemovals.replaceChildren();
   pendingGroupRemovals.classList.add("hidden");
+  pendingGroupTransfers.replaceChildren();
+  pendingGroupTransfers.classList.add("hidden");
   results.replaceChildren();
   conversationList.replaceChildren();
   loadMoreConversationsButton.classList.add("hidden");
@@ -407,6 +418,7 @@ function selectMembership(id) {
   closeGroupInvite(true);
   closeGroupLeave(true);
   closeGroupRemoval(true);
+  closeGroupTransfer(true);
   groupListNeedsRefreshID = "";
   stopRealtime();
   clearSyncRetry();
@@ -442,6 +454,7 @@ function selectMembership(id) {
   renderPendingGroupInvites();
   renderPendingGroupLeaves();
   renderPendingGroupRemovals();
+  renderPendingGroupTransfers();
   if (id) {
     scheduleSafetySync();
     refreshInbox().catch(report);
@@ -1138,6 +1151,10 @@ function prepareGroupRemoval(member) {
       (group.role === "admin" && member.role !== "member")) return;
   const saved = savedGroupRemovals().find((removal) => removal.groupID === group.id);
   if (saved) return showGroupRemoval(saved, true);
+  if (savedGroupTransfers().some((transfer) => transfer.groupID === group.id)) {
+    notify("此群有待确认群主转让，请先重试或放弃该请求。");
+    return;
+  }
   const removal = { tenantID: self.tenant_id, userID: self.user_id,
     actor: actingMembership, groupID: group.id, intervalID: member.interval_id,
     name: member.display_name, organization: member.organization_name };
@@ -1150,6 +1167,8 @@ async function submitGroupRemoval() {
   const fresh = !pendingGroupRemoval;
   if (fresh) {
     if (!preparedGroupRemoval) return;
+    if (savedGroupTransfers().some((transfer) => transfer.groupID === preparedGroupRemoval.groupID))
+      return notify("此群有待确认群主转让，请先处理该请求。");
     const { tenantID, userID, actor, groupID, intervalID } = preparedGroupRemoval;
     const saved = { tenantID, userID, actor, groupID, intervalID };
     try {
@@ -1217,6 +1236,201 @@ function discardGroupRemoval() {
   notify("已放弃待确认移除；此前请求可能已成功，请核对群成员状态。");
 }
 
+function groupTransferStoragePrefix(actor = actingMembership) {
+  return `enterprise-im-group-transfer:${self.tenant_id}:${self.user_id}:${actor}:`;
+}
+
+function groupTransferStorageKey(groupID, requestID, actor = actingMembership) {
+  return groupTransferStoragePrefix(actor) + groupID + ":" + requestID;
+}
+
+function savedGroupTransfers() {
+  if (!self || !actingMembership) return [];
+  const found = [];
+  try {
+    const prefix = groupTransferStoragePrefix();
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || "null");
+        if (saved?.tenantID === self.tenant_id && saved.userID === self.user_id &&
+            saved.actor === actingMembership && uuidPattern.test(saved.groupID) &&
+            uuidPattern.test(saved.requestID) && uuidPattern.test(saved.sourceIntervalID) &&
+            uuidPattern.test(saved.targetIntervalID) &&
+            key === groupTransferStorageKey(saved.groupID, saved.requestID)) found.push(saved);
+      } catch (_) { /* Ignore an unreadable saved request. */ }
+    }
+  } catch (_) { /* Storage may be unavailable. */ }
+  return found;
+}
+
+function forgetGroupTransfer(transfer) {
+  try { localStorage.removeItem(groupTransferStorageKey(transfer.groupID, transfer.requestID, transfer.actor)); }
+  catch (_) { /* Storage may be unavailable. */ }
+}
+
+function renderPendingGroupTransfers() {
+  pendingGroupTransfers.replaceChildren();
+  for (const saved of savedGroupTransfers()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.textContent = `待确认转让 · ${groups.get(saved.groupID)?.name || saved.groupID}`;
+    button.addEventListener("click", () => showGroupTransfer(saved, true));
+    pendingGroupTransfers.append(button);
+  }
+  pendingGroupTransfers.classList.toggle("hidden", !pendingGroupTransfers.childElementCount);
+}
+
+function renderGroupTransferDialog() {
+  const saved = !!pendingGroupTransfer;
+  groupTransferConfirm.classList.toggle("hidden", saved);
+  groupTransferRetry.classList.toggle("hidden", !saved);
+  groupTransferDiscard.classList.toggle("hidden", !saved || pendingGroupTransfer.sending);
+  groupTransferConfirm.disabled = !preparedGroupTransfer;
+  groupTransferRetry.disabled = !saved || pendingGroupTransfer.sending;
+  element("group-transfer-cancel").disabled = !!pendingGroupTransfer?.sending;
+}
+
+function closeGroupTransfer(force = false) {
+  if (pendingGroupTransfer?.sending && !force) return;
+  if (groupTransferDialog.open) groupTransferDialog.close();
+  preparedGroupTransfer = null;
+  pendingGroupTransfer = null;
+  element("group-transfer-target").textContent = "";
+  element("group-transfer-hint").textContent = "";
+}
+
+function showGroupTransfer(transfer, saved = false) {
+  if (!self || !actingMembership || transfer.actor !== actingMembership) return;
+  if (groupRosterDialog.open) closeGroupRoster();
+  closeGroupTransfer(true);
+  if (saved) pendingGroupTransfer = { ...transfer, sending: false };
+  else preparedGroupTransfer = transfer;
+  const groupName = groups.get(transfer.groupID)?.name || transfer.groupID;
+  element("group-transfer-target").textContent = saved ?
+    `群聊：${groupName} · 接任成员区间：${transfer.targetIntervalID}` :
+    `群聊：${groupName} · 接任者：${transfer.name} · ${transfer.organization}`;
+  element("group-transfer-hint").textContent = saved ?
+    "转让结果未确认；请用原请求编号和区间重试，或放弃后核对群主。" :
+    "确认后，您将成为普通成员，可自行退出群聊。";
+  renderGroupTransferDialog();
+  groupTransferDialog.showModal();
+  if (saved) groupTransferRetry.focus();
+  else groupTransferConfirm.focus();
+}
+
+async function prepareGroupTransfer(member) {
+  const group = activeRosterGroup();
+  if (!group || group.role !== "owner" || !groupRosterDialog.open ||
+      member.role === "owner" || !uuidPattern.test(member.interval_id)) return;
+  const saved = savedGroupTransfers().find((transfer) => transfer.groupID === group.id);
+  if (saved) return showGroupTransfer(saved, true);
+  if (savedGroupRemovals().some((removal) => removal.groupID === group.id)) {
+    notify("此群有待确认成员移除，请先重试或放弃该请求。");
+    return;
+  }
+  const selectedEpoch = identityEpoch;
+  const selectedConversationEpoch = conversationEpoch;
+  const selectedActor = actingMembership;
+  closeGroupRoster();
+  try {
+    const membership = await request(`/api/v1/groups/${encodeURIComponent(group.id)}/membership`);
+    if (selectedEpoch !== identityEpoch || selectedConversationEpoch !== conversationEpoch ||
+        selectedActor !== actingMembership || activeConversationKind !== "group" ||
+        activeConversation !== group.id) return;
+    if (membership.role !== "owner" || !uuidPattern.test(membership.interval_id)) {
+      notify("群主身份已变化，请刷新群列表后重试。");
+      refreshGroups().catch(report);
+      return;
+    }
+    showGroupTransfer({ tenantID: self.tenant_id, userID: self.user_id,
+      actor: actingMembership, groupID: group.id, requestID: uuidV7(),
+      sourceIntervalID: membership.interval_id, targetIntervalID: member.interval_id,
+      name: member.display_name, organization: member.organization_name });
+  } catch (error) { report(error); }
+}
+
+async function submitGroupTransfer() {
+  if (!actingMembership || pendingGroupTransfer?.sending || !groupTransferDialog.open) return;
+  const fresh = !pendingGroupTransfer;
+  if (fresh) {
+    if (!preparedGroupTransfer) return;
+    if (savedGroupRemovals().some((removal) => removal.groupID === preparedGroupTransfer.groupID))
+      return notify("此群有待确认成员移除，请先处理该请求。");
+    const { tenantID, userID, actor, groupID, requestID, sourceIntervalID,
+      targetIntervalID } = preparedGroupTransfer;
+    const saved = { tenantID, userID, actor, groupID, requestID, sourceIntervalID, targetIntervalID };
+    try {
+      localStorage.setItem(groupTransferStorageKey(groupID, requestID), JSON.stringify(saved));
+    } catch (_) {
+      return notify("浏览器无法保存待确认转让请求，请启用本地存储后重试。");
+    }
+    pendingGroupTransfer = { ...saved, sending: false };
+    preparedGroupTransfer = null;
+    renderPendingGroupTransfers();
+  }
+  const submitted = pendingGroupTransfer;
+  const selectedEpoch = identityEpoch;
+  submitted.sending = true;
+  element("group-transfer-hint").textContent = "正在转让群主…";
+  renderGroupTransferDialog();
+  try {
+    const result = await request(`/api/v1/groups/${encodeURIComponent(submitted.groupID)}/owner-transfers`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_request_id: submitted.requestID,
+        source_interval_id: submitted.sourceIntervalID, target_interval_id: submitted.targetIntervalID }),
+    });
+    if (selectedEpoch !== identityEpoch || submitted !== pendingGroupTransfer ||
+        submitted.actor !== actingMembership) return;
+    if (result.source_interval_id !== submitted.sourceIntervalID ||
+        result.target_interval_id !== submitted.targetIntervalID)
+      throw new Error("转让响应无法确认，请用原请求编号和区间重试。");
+    forgetGroupTransfer(submitted);
+    closeGroupTransfer(true);
+    renderPendingGroupTransfers();
+    try {
+      await refreshGroups();
+      if (selectedEpoch === identityEpoch) notify("已转让群主。您现在可退出该群。");
+    } catch (refreshError) {
+      if (!refreshError.stale && selectedEpoch === identityEpoch)
+        notify("群主转让已确认；群列表尚未刷新，请稍后重载。");
+    }
+  } catch (error) {
+    if (error.stale || selectedEpoch !== identityEpoch || submitted !== pendingGroupTransfer ||
+        submitted.actor !== actingMembership) return;
+    const rejected = (error.status === 400 && error.code === "invalid_request") ||
+      (error.status === 403 && error.code === "group_permission_denied") ||
+      (error.status === 404 && error.code === "not_found") ||
+      (error.status === 409 && error.code === "idempotency_conflict");
+    if (fresh && rejected) {
+      forgetGroupTransfer(submitted);
+      closeGroupTransfer(true);
+      renderPendingGroupTransfers();
+      refreshGroups().catch(report);
+      report(error);
+      return;
+    }
+    element("group-transfer-hint").textContent = error.code && error.status && error.status < 500 ?
+      "当前请求被拒绝；此前转让结果仍未确认，请核对群主状态。" :
+      "转让结果未确认；请用原请求编号和区间重试，或放弃后核对群主。";
+    report(error);
+  } finally {
+    submitted.sending = false;
+    if (submitted === pendingGroupTransfer) renderGroupTransferDialog();
+  }
+}
+
+function discardGroupTransfer() {
+  if (!pendingGroupTransfer || pendingGroupTransfer.sending) return;
+  forgetGroupTransfer(pendingGroupTransfer);
+  closeGroupTransfer(true);
+  renderPendingGroupTransfers();
+  refreshGroups().catch(report);
+  notify("已放弃待确认转让；此前请求可能已成功，请核对当前群主。");
+}
+
 function renderGroupRosterControls() {
   groupRosterLoadMoreButton.classList.toggle("hidden", !groupRosterHasMore || groupRosterError);
   groupRosterLoadMoreButton.disabled = groupRosterLoading;
@@ -1256,13 +1470,24 @@ function renderGroupRosterMember(member) {
   actions.className = "group-roster-actions";
   actions.append(role);
   const group = activeRosterGroup();
+  if (group?.role === "owner" && member.role !== "owner") {
+    const transfer = document.createElement("button");
+    transfer.type = "button";
+    transfer.className = "secondary-button";
+    transfer.textContent = `转让给${member.display_name}`;
+    transfer.disabled = savedGroupTransfers().some((saved) => saved.groupID === group.id) ||
+      savedGroupRemovals().some((saved) => saved.groupID === group.id);
+    transfer.addEventListener("click", () => prepareGroupTransfer(member));
+    actions.append(transfer);
+  }
   if (group && ((group.role === "owner" && member.role !== "owner") ||
       (group.role === "admin" && member.role === "member"))) {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "secondary-button";
     remove.textContent = `移除${member.display_name}`;
-    remove.disabled = savedGroupRemovals().some((saved) => saved.groupID === group.id);
+    remove.disabled = savedGroupRemovals().some((saved) => saved.groupID === group.id) ||
+      savedGroupTransfers().some((saved) => saved.groupID === group.id);
     remove.addEventListener("click", () => prepareGroupRemoval(member));
     actions.append(remove);
   }
@@ -1656,6 +1881,7 @@ function renderGroups() {
   renderPendingGroupInvites();
   renderPendingGroupLeaves();
   renderPendingGroupRemovals();
+  renderPendingGroupTransfers();
   renderGroupRosterAction();
   renderGroupInviteAction();
   renderGroupLeaveAction();
@@ -2159,11 +2385,23 @@ groupRemoveDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeGroupRemoval();
 });
-window.addEventListener("storage", () => {
+element("group-transfer-cancel").addEventListener("click", () => closeGroupTransfer());
+groupTransferConfirm.addEventListener("click", submitGroupTransfer);
+groupTransferRetry.addEventListener("click", submitGroupTransfer);
+groupTransferDiscard.addEventListener("click", discardGroupTransfer);
+groupTransferDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeGroupTransfer();
+});
+window.addEventListener("storage", (event) => {
+  if (self && actingMembership && groupRosterDialog.open &&
+      (!event.key || event.key.startsWith(groupRemovalStoragePrefix()) ||
+        event.key.startsWith(groupTransferStoragePrefix()))) closeGroupRoster();
   renderPendingGroupInvites();
   renderGroupInviteAction();
   renderPendingGroupLeaves();
   renderPendingGroupRemovals();
+  renderPendingGroupTransfers();
 });
 element("person-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); searchPeople(); }
