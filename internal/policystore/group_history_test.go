@@ -182,6 +182,32 @@ func TestPullGroupTextMessagesRedactsExpiredBodyEvenWhenStored(t *testing.T) {
 	}
 }
 
+func TestPullGroupTextMessagesUsesApprovedTenantRetentionDays(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	svc := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	group, err := svc.CreateGroup(context.Background(), publisher(), createGroupRequest(targetM2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	run(t, conn, `UPDATE tenants SET message_body_retention_days=730,retention_version=1,
+ retention_approval_reference='CAB-730',retention_approved_by_user_id=$2,retention_approved_at=$3
+ WHERE id=$1`, tenantA, adminA, at)
+	insertGroupHistoryMessage(t, conn, group.ID, 1, adminA, adminM, "approved group history")
+	run(t, conn, "UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2", at.Add(-400*24*time.Hour), group.ID)
+	page, err := svc.PullGroupTextMessages(context.Background(), groupMemberIdentity(), group.ID, 0, 10)
+	if err != nil || len(page.Messages) != 1 || page.Messages[0].Redacted ||
+		page.Messages[0].Text != "approved group history" {
+		t.Fatalf("approved 730-day group retention: %+v %v", page, err)
+	}
+	run(t, conn, "UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2", at.Add(-730*24*time.Hour), group.ID)
+	page, err = svc.PullGroupTextMessages(context.Background(), groupMemberIdentity(), group.ID, 0, 10)
+	if err != nil || len(page.Messages) != 1 || !page.Messages[0].Redacted ||
+		page.Messages[0].Text != "" || page.Messages[0].Seq != 1 {
+		t.Fatalf("approved 730-day group boundary: %+v %v", page, err)
+	}
+}
+
 func TestPullGroupTextMessagesKeepsOrdinaryHistoryButAppliesHardDeny(t *testing.T) {
 	conn := db(t)
 	seed(t, conn)

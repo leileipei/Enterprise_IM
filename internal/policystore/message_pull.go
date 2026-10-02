@@ -27,8 +27,6 @@ type MessagePage struct {
 	HasMore        bool
 }
 
-const messageBodyRetention = 365 * 24 * time.Hour
-
 func auditMessagePull(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
 	conversationID, outcome, reason string, at time.Time) error {
 	_, err := tx.Exec(ctx, `
@@ -90,6 +88,10 @@ FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
 		}
 		return MessagePage{}, ErrMessageNotAvailable
 	}
+	if err != nil {
+		return MessagePage{}, err
+	}
+	retention, err := messageBodyRetentionForTenant(ctx, tx, id.TenantID)
 	if err != nil {
 		return MessagePage{}, err
 	}
@@ -173,7 +175,7 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 	}
 	for i := range page.Messages {
 		if !page.Messages[i].Redacted &&
-			(!at.Before(page.Messages[i].ServerTime.Add(messageBodyRetention)) ||
+			(!at.Before(page.Messages[i].ServerTime.Add(retention)) ||
 				policy.HistoryHardDeny(actor, histories[i].reader, histories[i].peer, at, rules)) {
 			page.Messages[i] = PulledMessage{Seq: page.Messages[i].Seq, Redacted: true}
 		}
