@@ -18,6 +18,12 @@ const group = (id, name, status, role) => ({ id, type: "group", name, status, ro
   source_membership_id: actor, last_seq: 1, updated_at: "2026-10-02T10:00:00Z" });
 let port;
 let rosterCalls = 0;
+let removalCalls = [];
+let failNextRemoval = false;
+let incompleteNextRemoval = false;
+let deniedNextRemoval = false;
+let unknownNextRemoval = false;
+const removed = new Set();
 let failNextRoster = false;
 let holdNextRoster = false;
 let heldRosterResponse;
@@ -65,7 +71,7 @@ const server = http.createServer((req, res) => {
       group(memberGroup, "普通成员群", "active", "member"),
     ], has_more: false,
   });
-  const match = url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/(members|messages)$/);
+  const match = url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/(members|messages|removals)$/);
   if (match?.[2] === "messages" && req.method === "GET") return send(200, {
     conversation_id: match[1], messages: [], next_after_seq: 0, has_more: false,
   });
@@ -86,14 +92,46 @@ const server = http.createServer((req, res) => {
     }
     if (url.searchParams.has("cursor")) {
       if (url.searchParams.get("cursor") !== "next") return send(400, { error_code: "invalid_request" });
-      return send(200, { members: [{ interval_id: intervalC, display_name: "第三位",
-        role: "member", organization_name: "分公司" }], has_more: false });
+      return send(200, { members: removed.has(`${match[1]}:${intervalC}`) ? [] :
+        [{ interval_id: intervalC, display_name: "第三位",
+          role: "member", organization_name: "分公司" }], has_more: false });
     }
+    if (match[1] === adminGroup) return send(200, { members: [
+      { interval_id: intervalA, display_name: "群主", role: "owner", organization_name: "集团总部" },
+      { interval_id: intervalB, display_name: "第二位", role: "admin", organization_name: "公司 B" },
+      { interval_id: intervalC, display_name: "第三位", role: "member", organization_name: "分公司" },
+    ].filter((member) => !removed.has(`${match[1]}:${member.interval_id}`)), has_more: false });
     return send(200, { members: [
       { interval_id: intervalA, display_name: "<img src=x onerror=alert(1)>成员",
         role: "owner", organization_name: "集团总部" },
       { interval_id: intervalB, display_name: "第二位", role: "admin", organization_name: "公司 B" },
-    ], has_more: true, next_cursor: "next" });
+    ].filter((member) => !removed.has(`${match[1]}:${member.interval_id}`)), has_more: true, next_cursor: "next" });
+  }
+  if (match?.[2] === "removals" && req.method === "POST") {
+    let body = "";
+    req.on("data", (part) => { body += part; });
+    req.on("end", () => {
+      removalCalls.push({ groupID: match[1], actor: req.headers["x-acting-membership-id"], body: JSON.parse(body) });
+      if (failNextRemoval) {
+        failNextRemoval = false;
+        return send(503, { error_code: "unavailable" });
+      }
+      if (deniedNextRemoval) {
+        deniedNextRemoval = false;
+        return send(403, { error_code: "group_permission_denied" });
+      }
+      if (unknownNextRemoval) {
+        unknownNextRemoval = false;
+        return send(403, "<html>proxy rejected</html>", "text/html");
+      }
+      if (incompleteNextRemoval) {
+        incompleteNextRemoval = false;
+        return send(200, { interval_id: JSON.parse(body).interval_id, status: "removed" });
+      }
+      removed.add(`${match[1]}:${JSON.parse(body).interval_id}`);
+      return send(200, { interval_id: JSON.parse(body).interval_id, status: "removed", leave_seq: 2 });
+    });
+    return;
   }
   return send(404, { error_code: "not_found" });
 });
@@ -126,7 +164,7 @@ server.listen(0, "127.0.0.1", async () => {
     if (await dialog.locator(".group-roster-member").count() !== 2)
       throw new Error("transient page failure discarded previously loaded members");
     await dialog.getByRole("button", { name: "重试" }).click();
-    await dialog.getByText("第三位").waitFor();
+    await dialog.getByText("第三位", { exact: true }).waitFor();
     if (await dialog.getByRole("list", { name: "当前群成员" }).getByRole("listitem").count() !== 3)
       throw new Error("roster does not expose accessible list semantics");
     if (!await dialog.locator("#group-roster-hint").getByText("已加载 3 位成员").count())
@@ -138,8 +176,51 @@ server.listen(0, "127.0.0.1", async () => {
     if (await dialog.locator(".group-roster-member").count()) throw new Error("roster remained in DOM after close");
     const priorCalls = rosterCalls;
     await open.click();
-    await dialog.getByText("第二位").waitFor();
+    await dialog.getByText("第二位", { exact: true }).waitFor();
     if (rosterCalls !== priorCalls + 1) throw new Error("reopened roster reused stale data");
+    await dialog.getByRole("button", { name: "关闭" }).click();
+
+    await open.click();
+    await dialog.getByText("第二位", { exact: true }).waitFor();
+    if (await dialog.getByRole("button", { name: "移除群主" }).count() ||
+        !await dialog.getByRole("button", { name: "移除第二位" }).count())
+      throw new Error("owner removal actions do not match target roles");
+    await dialog.getByRole("button", { name: "移除第二位" }).click();
+    const removeDialog = page.locator("#group-remove-dialog");
+    await removeDialog.getByText("第二位").waitFor();
+    if (!await removeDialog.getByText("公司 B").count()) throw new Error("confirmation omitted target organization");
+    await removeDialog.getByRole("button", { name: "稍后处理" }).click();
+    if (removalCalls.length) throw new Error("cancel submitted a removal");
+    await open.click();
+    await dialog.getByRole("button", { name: "移除第二位" }).click();
+    failNextRemoval = true;
+    await removeDialog.getByRole("button", { name: "确认移除" }).click();
+    await removeDialog.getByText("移除结果未确认").waitFor();
+    if (removalCalls.length !== 1 || removalCalls[0].body.interval_id !== intervalB)
+      throw new Error("removal did not submit the selected interval");
+    const saved = await page.evaluate(() => Object.entries(localStorage).filter(([key]) => key.includes("group-remove")));
+    if (saved.length !== 1 || saved[0][1].includes("第二位") || saved[0][1].includes("公司 B") ||
+        saved[0][1].includes("群主群")) throw new Error("pending removal persisted roster PII");
+    await removeDialog.getByRole("button", { name: "稍后处理" }).click();
+    await page.evaluate((membershipID) => selectMembership(membershipID), secondActor);
+    if (await page.locator("#pending-group-removals button").count())
+      throw new Error("pending removal crossed acting identity");
+    await page.evaluate((membershipID) => selectMembership(membershipID), actor);
+    await page.locator("#pending-group-removals button").waitFor();
+    await page.reload();
+    await page.getByRole("button", { name: /使用企业账号登录/ }).click();
+    await page.getByRole("button", { name: /集团总部/ }).first().click();
+    await page.locator("#pending-group-removals button").waitFor();
+    await page.locator("#group-list .group-card").filter({ hasText: "群主群" }).click();
+    await page.locator("#pending-group-removals button").click();
+    await removeDialog.getByRole("button", { name: "重试移除" }).click();
+    await page.locator("#pending-group-removals button").waitFor({ state: "detached" });
+    if (removalCalls.length !== 2 || removalCalls[1].body.interval_id !== intervalB ||
+        removalCalls[1].groupID !== ownerGroup || removalCalls[1].actor !== actor)
+      throw new Error("recovered removal did not replay the original interval and identity");
+    await dialog.getByText("<img src=x onerror=alert(1)>成员", { exact: true }).waitFor();
+    if (await dialog.getByText("第二位", { exact: true }).count())
+      throw new Error("confirmed removal remained in refreshed roster");
     await dialog.getByRole("button", { name: "关闭" }).click();
 
     await page.locator("#group-list .group-card").filter({ hasText: "普通成员群" }).click();
@@ -151,7 +232,19 @@ server.listen(0, "127.0.0.1", async () => {
     await dialog.getByText("服务暂时不可用，请稍后重试").waitFor();
     if (await dialog.locator(".group-roster-member").count()) throw new Error("failed roster retained member data");
     await dialog.getByRole("button", { name: "重试" }).click();
-    await dialog.getByText("第二位").waitFor();
+    await dialog.getByText("第二位", { exact: true }).waitFor();
+    if (await dialog.getByRole("button", { name: "移除第二位" }).count() ||
+        !await dialog.getByRole("button", { name: "移除第三位" }).count())
+      throw new Error("administrator removal actions do not match target roles");
+    await dialog.getByRole("button", { name: "移除第三位" }).click();
+    await removeDialog.getByRole("button", { name: "确认移除" }).click();
+    await page.locator("#pending-group-removals button").waitFor({ state: "detached" });
+    if (removalCalls.length !== 3 || removalCalls[2].groupID !== adminGroup ||
+        removalCalls[2].body.interval_id !== intervalC)
+      throw new Error("policy blocked group administrator could not remove member");
+    await dialog.getByText("第二位", { exact: true }).waitFor();
+    if (await dialog.getByText("第三位", { exact: true }).count())
+      throw new Error("policy blocked group roster retained removed member");
     await dialog.getByRole("button", { name: "关闭" }).click();
 
     await page.locator("#group-list .group-card").filter({ hasText: "群主群" }).click();
@@ -186,12 +279,52 @@ server.listen(0, "127.0.0.1", async () => {
     await page.locator("#group-list .group-card").filter({ hasText: "群主群" }).waitFor();
     await page.locator("#group-list .group-card").filter({ hasText: "群主群" }).click();
     await open.click();
-    await dialog.getByText("第二位").waitFor();
+    await dialog.getByText("<img src=x onerror=alert(1)>成员", { exact: true }).waitFor();
+    await dialog.getByRole("button", { name: "加载更多成员" }).click();
+    await dialog.getByText("第三位", { exact: true }).waitFor();
+    await dialog.getByRole("button", { name: "移除第三位" }).click();
+    deniedNextRemoval = true;
+    await removeDialog.getByRole("button", { name: "确认移除" }).click();
+    await removeDialog.waitFor({ state: "hidden" });
+    if (await page.locator("#pending-group-removals button").count())
+      throw new Error("definitive first-attempt denial retained pending removal");
+    await open.click();
+    await dialog.getByRole("button", { name: "加载更多成员" }).click();
+    await dialog.getByText("第三位", { exact: true }).waitFor();
+    await dialog.getByRole("button", { name: "移除第三位" }).click();
+    unknownNextRemoval = true;
+    await removeDialog.getByRole("button", { name: "确认移除" }).click();
+    await removeDialog.getByText("移除结果未确认").waitFor();
+    if (!await page.locator("#pending-group-removals button").count())
+      throw new Error("unknown proxy rejection cleared pending removal");
+    deniedNextRemoval = true;
+    await removeDialog.getByRole("button", { name: "重试移除" }).click();
+    await removeDialog.getByText("此前请求的结果仍未确认").waitFor();
+    if (!await page.locator("#pending-group-removals button").count())
+      throw new Error("later denial cleared uncertain prior attempt");
+    await removeDialog.getByRole("button", { name: "放弃待确认" }).click();
+    if (await page.locator("#pending-group-removals button").count())
+      throw new Error("discard retained pending removal");
+    await open.click();
+    await dialog.getByRole("button", { name: "加载更多成员" }).click();
+    await dialog.getByText("第三位", { exact: true }).waitFor();
+    await dialog.getByRole("button", { name: "移除第三位" }).click();
+    incompleteNextRemoval = true;
+    await removeDialog.getByRole("button", { name: "确认移除" }).click();
+    await removeDialog.getByText("移除结果未确认").waitFor();
+    if (!await page.locator("#pending-group-removals button").count())
+      throw new Error("incomplete success response cleared pending removal");
+    await removeDialog.getByRole("button", { name: "重试移除" }).click();
+    await page.locator("#pending-group-removals button").waitFor({ state: "detached" });
+    await dialog.getByText("<img src=x onerror=alert(1)>成员", { exact: true }).waitFor();
+    await dialog.getByRole("button", { name: "加载更多成员" }).click();
+    if (await dialog.getByText("第三位", { exact: true }).count())
+      throw new Error("retried removal remained in roster");
     await page.evaluate(() => logout());
     if (await dialog.isVisible() || await dialog.locator(".group-roster-member").count())
       throw new Error("logout retained roster data");
 
-    process.stdout.write("group roster access, pagination, errors and stale response isolation passed\n");
+    process.stdout.write("group roster and removal access, recovery, errors and stale response isolation passed\n");
   } catch (error) {
     console.error(error);
     process.exitCode = 1;
