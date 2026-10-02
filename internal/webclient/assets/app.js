@@ -40,6 +40,11 @@ const groupRosterMembers = element("group-roster-members");
 const groupRosterHint = element("group-roster-hint");
 const groupRosterLoadMoreButton = element("group-roster-load-more");
 const groupRosterRetryButton = element("group-roster-retry");
+const pendingGroupRemovals = element("pending-group-removals");
+const groupRemoveDialog = element("group-remove-dialog");
+const groupRemoveConfirm = element("group-remove-confirm");
+const groupRemoveRetry = element("group-remove-retry");
+const groupRemoveDiscard = element("group-remove-discard");
 const messages = element("messages");
 const messageText = element("message-text");
 const sendButton = element("send-button");
@@ -102,11 +107,15 @@ let preparedGroupLeave = null;
 let groupLeaveLookupSerial = 0;
 let groupListNeedsRefreshID = "";
 let groupRosterGroupID = "";
+let groupRosterRole = "";
 let groupRosterCursor = "";
 let groupRosterHasMore = false;
 let groupRosterLoading = false;
 let groupRosterError = false;
 let groupRosterGeneration = 0;
+let preparedGroupRemoval = null;
+let pendingGroupRemoval = null;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
   return `enterprise-im-group-create:${self.tenant_id}:${self.user_id}:${actor}:`;
@@ -237,7 +246,8 @@ async function request(path, options = {}, needsMembership = true) {
     const error = new Error(errorCode === "group_policy_blocked" ?
       (path.endsWith("/invitations") ? "群通信已暂停，无法邀请成员。" : "群通信已暂停，新消息未保存。") :
       errorCode === "group_permission_denied" ?
-        (path.includes("/members") ? "当前账号无权查看群成员。" : "当前账号无权邀请群成员。") :
+        (path.endsWith("/removals") ? "当前账号无权移除该群成员。" :
+          path.includes("/members") ? "当前账号无权查看群成员。" : "当前账号无权邀请群成员。") :
       errorCode === "retry_window_expired" ? "重试期限已过，请核对历史消息后重新发送。" :
         response.status === 404 ? "目标不可用或无权限" :
         response.status === 409 ? "当前会话状态已变化，请核对后重试" :
@@ -325,6 +335,7 @@ function logout(message = "已退出当前页面。") {
   closeGroupCreate(true);
   closeGroupInvite(true);
   closeGroupLeave(true);
+  closeGroupRemoval(true);
   groupListNeedsRefreshID = "";
   stopRealtime();
   clearSyncRetry();
@@ -360,6 +371,8 @@ function logout(message = "已退出当前页面。") {
   pendingGroupInvites.classList.add("hidden");
   pendingGroupLeaves.replaceChildren();
   pendingGroupLeaves.classList.add("hidden");
+  pendingGroupRemovals.replaceChildren();
+  pendingGroupRemovals.classList.add("hidden");
   results.replaceChildren();
   conversationList.replaceChildren();
   loadMoreConversationsButton.classList.add("hidden");
@@ -393,6 +406,7 @@ function selectMembership(id) {
   closeGroupCreate(true);
   closeGroupInvite(true);
   closeGroupLeave(true);
+  closeGroupRemoval(true);
   groupListNeedsRefreshID = "";
   stopRealtime();
   clearSyncRetry();
@@ -427,6 +441,7 @@ function selectMembership(id) {
   renderMemberships();
   renderPendingGroupInvites();
   renderPendingGroupLeaves();
+  renderPendingGroupRemovals();
   if (id) {
     scheduleSafetySync();
     refreshInbox().catch(report);
@@ -1027,8 +1042,179 @@ function activeRosterGroup() {
 
 function renderGroupRosterAction() {
   const group = activeRosterGroup();
-  if (groupRosterDialog.open && (!group || group.id !== groupRosterGroupID)) closeGroupRoster();
+  if (groupRosterDialog.open && (!group || group.id !== groupRosterGroupID ||
+      group.role !== groupRosterRole)) closeGroupRoster();
   groupRosterOpenButton.classList.toggle("hidden", !group);
+}
+
+function groupRemovalStoragePrefix(actor = actingMembership) {
+  return `enterprise-im-group-remove:${self.tenant_id}:${self.user_id}:${actor}:`;
+}
+
+function groupRemovalStorageKey(groupID, intervalID, actor = actingMembership) {
+  return groupRemovalStoragePrefix(actor) + groupID + ":" + intervalID;
+}
+
+function savedGroupRemovals() {
+  if (!self || !actingMembership) return [];
+  const found = [];
+  try {
+    const prefix = groupRemovalStoragePrefix();
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || "null");
+        if (saved?.tenantID === self.tenant_id && saved.userID === self.user_id &&
+            saved.actor === actingMembership && uuidPattern.test(saved.groupID) &&
+            uuidPattern.test(saved.intervalID) &&
+            key === groupRemovalStorageKey(saved.groupID, saved.intervalID)) found.push(saved);
+      } catch (_) { /* Ignore an unreadable saved request. */ }
+    }
+  } catch (_) { /* Storage may be unavailable. */ }
+  return found;
+}
+
+function forgetGroupRemoval(removal) {
+  try { localStorage.removeItem(groupRemovalStorageKey(removal.groupID, removal.intervalID, removal.actor)); }
+  catch (_) { /* Storage may be unavailable. */ }
+}
+
+function renderPendingGroupRemovals() {
+  pendingGroupRemovals.replaceChildren();
+  for (const saved of savedGroupRemovals()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary-button";
+    button.textContent = `待确认移除 · ${groups.get(saved.groupID)?.name || saved.groupID}`;
+    button.addEventListener("click", () => showGroupRemoval(saved, true));
+    pendingGroupRemovals.append(button);
+  }
+  pendingGroupRemovals.classList.toggle("hidden", !pendingGroupRemovals.childElementCount);
+}
+
+function renderGroupRemovalDialog() {
+  const saved = !!pendingGroupRemoval;
+  groupRemoveConfirm.classList.toggle("hidden", saved);
+  groupRemoveRetry.classList.toggle("hidden", !saved);
+  groupRemoveDiscard.classList.toggle("hidden", !saved || pendingGroupRemoval.sending);
+  groupRemoveConfirm.disabled = !preparedGroupRemoval;
+  groupRemoveRetry.disabled = !saved || pendingGroupRemoval.sending;
+  element("group-remove-cancel").disabled = !!pendingGroupRemoval?.sending;
+}
+
+function closeGroupRemoval(force = false) {
+  if (pendingGroupRemoval?.sending && !force) return;
+  if (groupRemoveDialog.open) groupRemoveDialog.close();
+  preparedGroupRemoval = null;
+  pendingGroupRemoval = null;
+  element("group-remove-target").textContent = "";
+  element("group-remove-hint").textContent = "";
+}
+
+function showGroupRemoval(removal, saved = false) {
+  if (!self || !actingMembership || removal.actor !== actingMembership) return;
+  if (groupRosterDialog.open) closeGroupRoster();
+  closeGroupRemoval(true);
+  if (saved) pendingGroupRemoval = { ...removal, sending: false };
+  else preparedGroupRemoval = removal;
+  const groupName = groups.get(removal.groupID)?.name || removal.groupID;
+  element("group-remove-target").textContent = saved ?
+    `群聊：${groupName} · 目标成员区间：${removal.intervalID}` :
+    `群聊：${groupName} · ${removal.name} · ${removal.organization}`;
+  element("group-remove-hint").textContent = saved ?
+    "移除结果未确认；请用原成员区间重试，或放弃后核对成员状态。" :
+    "请核对姓名和组织，确认后移除该成员。";
+  renderGroupRemovalDialog();
+  groupRemoveDialog.showModal();
+  if (saved) groupRemoveRetry.focus();
+  else groupRemoveConfirm.focus();
+}
+
+function prepareGroupRemoval(member) {
+  const group = activeRosterGroup();
+  if (!group || !groupRosterDialog.open || !uuidPattern.test(member.interval_id) ||
+      (group.role === "owner" && member.role === "owner") ||
+      (group.role === "admin" && member.role !== "member")) return;
+  const saved = savedGroupRemovals().find((removal) => removal.groupID === group.id);
+  if (saved) return showGroupRemoval(saved, true);
+  const removal = { tenantID: self.tenant_id, userID: self.user_id,
+    actor: actingMembership, groupID: group.id, intervalID: member.interval_id,
+    name: member.display_name, organization: member.organization_name };
+  closeGroupRoster();
+  showGroupRemoval(removal);
+}
+
+async function submitGroupRemoval() {
+  if (!actingMembership || pendingGroupRemoval?.sending || !groupRemoveDialog.open) return;
+  const fresh = !pendingGroupRemoval;
+  if (fresh) {
+    if (!preparedGroupRemoval) return;
+    const { tenantID, userID, actor, groupID, intervalID } = preparedGroupRemoval;
+    const saved = { tenantID, userID, actor, groupID, intervalID };
+    try {
+      localStorage.setItem(groupRemovalStorageKey(groupID, intervalID), JSON.stringify(saved));
+    } catch (_) {
+      return notify("浏览器无法保存待确认移除请求，请启用本地存储后重试。");
+    }
+    pendingGroupRemoval = { ...saved, sending: false };
+    preparedGroupRemoval = null;
+    renderPendingGroupRemovals();
+  }
+  const submitted = pendingGroupRemoval;
+  const selectedEpoch = identityEpoch;
+  submitted.sending = true;
+  element("group-remove-hint").textContent = "正在移除成员…";
+  renderGroupRemovalDialog();
+  try {
+    const result = await request(`/api/v1/groups/${encodeURIComponent(submitted.groupID)}/removals`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interval_id: submitted.intervalID }),
+    });
+    if (selectedEpoch !== identityEpoch || submitted !== pendingGroupRemoval ||
+        submitted.actor !== actingMembership) return;
+    if (result.status !== "removed" || result.interval_id !== submitted.intervalID ||
+        !Number.isSafeInteger(result.leave_seq) || result.leave_seq < 0)
+      throw new Error("移除响应无法确认，请用原成员区间重试。");
+    forgetGroupRemoval(submitted);
+    closeGroupRemoval(true);
+    renderPendingGroupRemovals();
+    if (activeConversationKind === "group" && activeConversation === submitted.groupID &&
+        activeRosterGroup()) openGroupRoster();
+    refreshGroups().catch(report);
+    notify("已移除群成员。");
+  } catch (error) {
+    if (error.stale || selectedEpoch !== identityEpoch || submitted !== pendingGroupRemoval ||
+        submitted.actor !== actingMembership) return;
+    const rejected = (error.status === 400 && error.code === "invalid_request") ||
+      (error.status === 403 && error.code === "group_permission_denied") ||
+      (error.status === 404 && error.code === "not_found") ||
+      (error.status === 409 && error.code === "owner_transfer_required");
+    if (fresh && rejected) {
+      forgetGroupRemoval(submitted);
+      closeGroupRemoval(true);
+      renderPendingGroupRemovals();
+      refreshGroups().catch(report);
+      report(error);
+      return;
+    }
+    element("group-remove-hint").textContent = error.code && error.status && error.status < 500 ?
+      "当前请求被拒绝；此前请求的结果仍未确认，请核对成员状态或权限。" :
+      "移除结果未确认；请用原成员区间重试，或放弃后核对成员状态。";
+    report(error);
+  } finally {
+    submitted.sending = false;
+    if (submitted === pendingGroupRemoval) renderGroupRemovalDialog();
+  }
+}
+
+function discardGroupRemoval() {
+  if (!pendingGroupRemoval || pendingGroupRemoval.sending) return;
+  forgetGroupRemoval(pendingGroupRemoval);
+  closeGroupRemoval(true);
+  renderPendingGroupRemovals();
+  if (groupRosterDialog.open) closeGroupRoster();
+  notify("已放弃待确认移除；此前请求可能已成功，请核对群成员状态。");
 }
 
 function renderGroupRosterControls() {
@@ -1042,6 +1228,7 @@ function closeGroupRoster() {
   groupRosterGeneration++;
   if (groupRosterDialog.open) groupRosterDialog.close();
   groupRosterGroupID = "";
+  groupRosterRole = "";
   groupRosterCursor = "";
   groupRosterHasMore = false;
   groupRosterLoading = false;
@@ -1065,7 +1252,21 @@ function renderGroupRosterMember(member) {
   const role = document.createElement("span");
   role.className = "group-roster-role";
   role.textContent = { owner: "群主", admin: "管理员", member: "成员" }[member.role];
-  item.append(identity, role);
+  const actions = document.createElement("div");
+  actions.className = "group-roster-actions";
+  actions.append(role);
+  const group = activeRosterGroup();
+  if (group && ((group.role === "owner" && member.role !== "owner") ||
+      (group.role === "admin" && member.role === "member"))) {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary-button";
+    remove.textContent = `移除${member.display_name}`;
+    remove.disabled = savedGroupRemovals().some((saved) => saved.groupID === group.id);
+    remove.addEventListener("click", () => prepareGroupRemoval(member));
+    actions.append(remove);
+  }
+  item.append(identity, actions);
   return item;
 }
 
@@ -1090,6 +1291,7 @@ async function loadGroupRosterPage(cursor = "") {
     if (!Array.isArray(page.members) || typeof page.has_more !== "boolean" ||
         (page.has_more && !page.next_cursor) || page.members.some((member) =>
           typeof member.display_name !== "string" || typeof member.organization_name !== "string" ||
+          typeof member.interval_id !== "string" || !uuidPattern.test(member.interval_id) ||
           !["owner", "admin", "member"].includes(member.role))) {
       const invalid = new Error("群成员数据暂不可用，请稍后重试。");
       invalid.invalidRoster = true;
@@ -1124,6 +1326,7 @@ function openGroupRoster() {
   if (!group) return;
   closeGroupRoster();
   groupRosterGroupID = group.id;
+  groupRosterRole = group.role;
   element("group-roster-group").textContent = `群聊：${group.name}`;
   groupRosterDialog.showModal();
   loadGroupRosterPage();
@@ -1452,6 +1655,7 @@ function renderGroups() {
   loadMoreGroupsButton.classList.toggle("hidden", !groupHasMore);
   renderPendingGroupInvites();
   renderPendingGroupLeaves();
+  renderPendingGroupRemovals();
   renderGroupRosterAction();
   renderGroupInviteAction();
   renderGroupLeaveAction();
@@ -1947,10 +2151,19 @@ groupRosterDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeGroupRoster();
 });
+element("group-remove-cancel").addEventListener("click", () => closeGroupRemoval());
+groupRemoveConfirm.addEventListener("click", submitGroupRemoval);
+groupRemoveRetry.addEventListener("click", submitGroupRemoval);
+groupRemoveDiscard.addEventListener("click", discardGroupRemoval);
+groupRemoveDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeGroupRemoval();
+});
 window.addEventListener("storage", () => {
   renderPendingGroupInvites();
   renderGroupInviteAction();
   renderPendingGroupLeaves();
+  renderPendingGroupRemovals();
 });
 element("person-query").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); searchPeople(); }
