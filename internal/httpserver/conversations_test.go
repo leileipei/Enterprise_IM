@@ -49,6 +49,10 @@ func (conversationStub) TransferGroupOwner(context.Context, access.TrustedIdenti
 	panic("unexpected group owner transfer")
 }
 
+func (conversationStub) RecheckGroupPolicy(context.Context, access.TrustedIdentity, string) (policystore.GroupPolicyRecheck, error) {
+	panic("unexpected group policy recheck")
+}
+
 func (conversationStub) SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error) {
 	panic("unexpected message send")
 }

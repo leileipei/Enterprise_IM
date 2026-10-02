@@ -27,6 +27,7 @@ type ConversationService interface {
 	InviteGroupMember(context.Context, access.TrustedIdentity, string, policystore.InviteGroupRequest) (policystore.GroupInvitation, error)
 	RemoveGroupMember(context.Context, access.TrustedIdentity, string, string) (policystore.GroupRemoveResult, error)
 	TransferGroupOwner(context.Context, access.TrustedIdentity, string, policystore.GroupOwnerTransferRequest) (policystore.GroupOwnerTransfer, error)
+	RecheckGroupPolicy(context.Context, access.TrustedIdentity, string) (policystore.GroupPolicyRecheck, error)
 	ListDirectConversations(context.Context, access.TrustedIdentity, string, int) (policystore.ConversationListPage, error)
 	ListGroups(context.Context, access.TrustedIdentity, string, int) (policystore.GroupListPage, error)
 	SendTextMessage(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)
