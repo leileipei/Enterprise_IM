@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -137,9 +138,15 @@ func main() {
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		logger.Error("http listener unavailable", "error", err)
+		os.Exit(1)
+	}
+	defer listener.Close()
 	errorsCh := make(chan error, 1)
-	go func() { errorsCh <- server.ListenAndServe() }()
-	logger.Info("im api listening", "address", address)
+	go func() { errorsCh <- server.Serve(listener) }()
+	logger.Info("im api listening", "address", listener.Addr().String())
 	select {
 	case err := <-errorsCh:
 		if !errors.Is(err, http.ErrServerClosed) {
