@@ -45,10 +45,10 @@
 
 **Interfaces:** `LegalHold` contains ID, conversation ID, case reference, placement actor/time and nullable release metadata. `PlaceLegalHold(ctx context.Context, id TrustedIdentity, conversationID, requestID, caseReference string) (LegalHold, bool, error)` returns `created=true` only for a new hold. Define `ErrInvalidLegalHold` for malformed IDs/references and use existing `ErrInvalidIdentity`、`ErrNotFound`、`ErrConflict`、`ErrAuditUnavailable`.
 
-- [ ] Write `TestPlaceLegalHoldAuthorizationAndReplay`: group admin succeeds; org admin and cross-tenant/nonexistent conversation see 404; invalid identity sees 403; same actor/request/payload replays without a second hold or placed event; changed actor, conversation or reference with the same request ID returns 409; second active hold for the same case returns 409.
-- [ ] Run `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access -run '^TestPlaceLegalHoldAuthorizationAndReplay$' -count=1 -v`; expect RED because service method is absent.
-- [ ] Implement validation (UUIDs, 1～128 字符引用、首尾无空白、无控制字符), actor/grant check, conversation lock, final-time recheck, status/event/audit atomic insert and exact replay comparison. Keep lock order: actor/grant and tenant before conversation; no request-supplied tenant/actor.
-- [ ] Add `TestPlaceLegalHoldRechecksExpiredGrantAfterConversationLockWait` and `TestPlaceLegalHoldAuditFailureRollsBack`, using two PostgreSQL connections and a failing audit trigger; run targeted tests until PASS.
+- [x] Write `TestPlaceLegalHoldAuthorizationAndReplay`: group admin succeeds; org admin and cross-tenant/nonexistent conversation see 404; invalid identity sees 403; same actor/request/payload replays without a second hold or placed event; changed actor, conversation or reference with the same request ID returns 409; second active hold for the same case returns 409.
+- [x] Run `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access -run '^TestPlaceLegalHoldAuthorizationAndReplay$' -count=1 -v`; expect RED because service method is absent.
+- [x] Implement validation (UUIDs, 1～128 字符引用、首尾无空白、无控制字符), actor/grant check, conversation lock, final-time recheck, status/event/audit atomic insert and exact replay comparison. Keep lock order: actor/grant and tenant before conversation; no request-supplied tenant/actor.
+- [x] Add `TestPlaceLegalHoldRechecksExpiredGrantAfterConversationLockWait` and `TestPlaceLegalHoldAuditFailureRollsBack`, using two PostgreSQL connections and a failing audit trigger; run targeted tests until PASS.
 - [ ] Add `TestPlaceLegalHoldConcurrentCaseAndMembershipEnd`: distinct concurrent requests for one case create only one active hold, and concurrent `EndMembership` cannot create a lock cycle or commit a hold after authorization is lost; run until PASS and commit.
 
 ### Task 3: 解除与多案件保全
