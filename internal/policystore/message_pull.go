@@ -27,6 +27,8 @@ type MessagePage struct {
 	HasMore        bool
 }
 
+const messageBodyRetention = 365 * 24 * time.Hour
+
 func auditMessagePull(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
 	conversationID, outcome, reason string, at time.Time) error {
 	_, err := tx.Exec(ctx, `
@@ -170,7 +172,9 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 		return MessagePage{}, ErrForbidden
 	}
 	for i := range page.Messages {
-		if !page.Messages[i].Redacted && policy.HistoryHardDeny(actor, histories[i].reader, histories[i].peer, at, rules) {
+		if !page.Messages[i].Redacted &&
+			(!at.Before(page.Messages[i].ServerTime.Add(messageBodyRetention)) ||
+				policy.HistoryHardDeny(actor, histories[i].reader, histories[i].peer, at, rules)) {
 			page.Messages[i] = PulledMessage{Seq: page.Messages[i].Seq, Redacted: true}
 		}
 	}
