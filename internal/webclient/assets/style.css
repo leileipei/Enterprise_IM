@@ -166,3 +166,8 @@ main{position:relative;z-index:1;min-height:100vh}
 .legal-hold-action-form input[type=text]{width:100%;padding:10px;border:1px solid #bed8d0;border-radius:8px;font:inherit}
 .legal-hold-action-form .group-create-actions{flex-wrap:wrap}
 .legal-hold-release{margin-top:14px}
+
+#retention-policy-context,#retention-policy-boundary,#retention-policy-hint{overflow-wrap:anywhere;line-height:1.7}
+#retention-policy-days{width:100%;padding:10px;border:1px solid #bed8d0;border-radius:8px;font:inherit}
+#retention-policy-current:empty{display:none}
+#retention-policy-open{margin-top:12px}

@@ -2,7 +2,8 @@
 
 // Legal hold records and current-page idempotent administration.
 window.LegalHoldRecords = class {
-  constructor(request, context) {
+  constructor(request, context, canOpen = () => true) {
+    this.canOpen = canOpen;
     this.request = request;
     this.context = context;
     this.openButton = document.getElementById("legal-holds-open");
@@ -113,6 +114,7 @@ window.LegalHoldRecords = class {
   }
 
   open() {
+    if (!this.canOpen()) return;
     if (!this.allowed || !this.context().conversation) return;
     this.dialog.showModal();
     if (!this.pending) this.load(true);

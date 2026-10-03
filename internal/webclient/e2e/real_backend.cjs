@@ -111,6 +111,28 @@ async function send(page, text) {
     assert.match(await holds.locator(".legal-holds-card").filter({ hasText: "CASE-BROWSER-ACTIVE" }).innerText(), /保全中/);
     await first.page.locator("#legal-holds-close").click();
     assert.equal(await holds.locator(".legal-holds-card").count(), 0);
+    await first.page.locator("#retention-policy-open").click();
+    const policyCurrent = first.page.locator("#retention-policy-current");
+    const policyHint = first.page.locator("#retention-policy-hint");
+    await policyCurrent.getByText("365 天", { exact: true }).waitFor();
+    await first.page.locator("#retention-policy-days").fill("180");
+    await first.page.locator("#retention-policy-reference").fill("CAB-BROWSER-RETENTION");
+    await first.page.locator("#retention-policy-confirm").check();
+    await first.page.locator("#retention-policy-submit").click();
+    await policyHint.getByText(/服务器已确认/).waitFor();
+    await policyCurrent.getByText("180 天", { exact: true }).waitFor();
+    await policyCurrent.getByText("CAB-BROWSER-RETENTION", { exact: true }).waitFor();
+    // Existing message history must reject extension at the real server.
+    await first.page.locator("#retention-policy-days").fill("366");
+    await first.page.locator("#retention-policy-reference").fill("CAB-BROWSER-EXTEND");
+    await first.page.locator("#retention-policy-confirm").check();
+    await first.page.locator("#retention-policy-submit").click();
+    await policyHint.getByText(/操作冲突/).waitFor();
+    assert.equal(await first.page.locator("#retention-policy-submit").isDisabled(), true);
+    await first.page.locator("#retention-policy-refresh").click();
+    await policyCurrent.getByText("180 天", { exact: true }).waitFor();
+    await first.page.locator("#retention-policy-close").click();
+    assert.equal(await policyCurrent.innerText(), "");
     const second = await openDevice(browser, true);
     const before = second.frames.length;
 
@@ -144,7 +166,7 @@ async function send(page, text) {
 
     await first.context.close();
     await second.context.close();
-    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, realtime sync and offline recovery passed\n");
+    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, retention configuration, realtime sync and offline recovery passed\n");
   } finally {
     await browser.close();
   }
