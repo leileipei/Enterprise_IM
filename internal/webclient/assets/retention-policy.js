@@ -10,6 +10,9 @@ window.RetentionPolicyEditor = class {
     this.contextLabel = el("context"); this.days = el("days"); this.reference = el("reference");
     this.confirm = el("confirm"); this.submitButton = el("submit"); this.refreshButton = el("refresh");
     this.retryButton = el("retry"); this.abandonButton = el("abandon"); this.hint = el("hint");
+    this.history = new window.RetentionPolicyHistory(request, context, policy => this.validate(policy), () => {
+      this.allowed = false; this.clearView(); this.hint.textContent = "权限已失效，已清空配置与审批历史。请联系集团管理员核查。"; this.update();
+    });
     this.identityKey = ""; this.allowed = false; this.policy = null; this.pending = null;
     this.loading = false; this.generation = 0;
     this.openButton.addEventListener("click", () => this.open());
@@ -37,6 +40,7 @@ window.RetentionPolicyEditor = class {
 
   clearView() {
     this.generation++; this.loading = false; this.policy = null;
+    this.history.clear();
     this.current.replaceChildren(); this.days.value = ""; this.reference.value = "";
     this.confirm.checked = false; this.hint.textContent = ""; this.contextLabel.textContent = "";
     this.update();
@@ -70,6 +74,7 @@ window.RetentionPolicyEditor = class {
   canSwitchContext() { if (!this.pending) return true; this.showPending(); return false; }
 
   update() {
+    this.history.setAvailable(this.allowed && !!this.policy && !this.pending && !this.loading);
     this.openButton.classList.toggle("hidden", !this.allowed);
     const busy = this.loading || !!this.pending?.sending;
     const ready = this.allowed && !!this.policy && !busy && !this.pending;

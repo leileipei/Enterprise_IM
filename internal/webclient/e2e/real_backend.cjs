@@ -131,8 +131,16 @@ async function send(page, text) {
     assert.equal(await first.page.locator("#retention-policy-submit").isDisabled(), true);
     await first.page.locator("#retention-policy-refresh").click();
     await policyCurrent.getByText("180 天", { exact: true }).waitFor();
+    await first.page.locator("#retention-history-toggle").click();
+    const history = first.page.locator("#retention-history-list");
+    await history.getByText("CAB-BROWSER-RETENTION", { exact: true }).waitFor();
+    assert.equal(await history.locator(".retention-history-card").count(), 1);
+    assert.match(await history.innerText(), /版本 1/);
+    assert.match(await history.innerText(), /180 天/);
+    assert.equal(await first.page.locator("#retention-history-more").isVisible(), false);
     await first.page.locator("#retention-policy-close").click();
     assert.equal(await policyCurrent.innerText(), "");
+    assert.equal(await history.locator(".retention-history-card").count(), 0);
     const second = await openDevice(browser, true);
     const before = second.frames.length;
 
@@ -166,7 +174,7 @@ async function send(page, text) {
 
     await first.context.close();
     await second.context.close();
-    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, retention configuration, realtime sync and offline recovery passed\n");
+    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, retention configuration and approval history, realtime sync and offline recovery passed\n");
   } finally {
     await browser.close();
   }
