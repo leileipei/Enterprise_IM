@@ -221,9 +221,27 @@ async function send(page, text) {
     assert.equal(found.some(text=>text.includes("断线期间来自浏览器一")),true);
     await send(first.page,"前缀\uFEFFİ工单（真实 Unicode）");
     assert.match((await searchMessages("\uFEFFİ工单",1))[0],/İ工单（真实 Unicode）/);
+    const crossSearch = async (query,kind,count) => {
+      await first.page.locator("#cross-message-search-open").click();
+      await first.page.locator("#cross-message-search-kind").selectOption(kind);
+      await first.page.locator("#cross-message-search-query").fill(query);
+      await first.page.locator("#cross-message-search-apply").click();
+      await first.page.locator("#cross-message-search-hint").getByText(new RegExp(`已显示 ${count} 条`)).waitFor();
+      const cards=first.page.locator(".cross-message-search-card");assert.equal(await cards.count(),count);
+      assert.equal(await first.page.locator("#cross-message-search-more").isVisible(),false);
+      const texts=await cards.allTextContents();
+      await first.page.locator("#cross-message-search-close").click();assert.equal(await cards.count(),0);return texts;
+    };
+    const all=await crossSearch("来自","all",3);
+    assert.equal(all.some(t=>t.includes("来自真实浏览器一")),true);
+    assert.equal(all.some(t=>t.includes("断线期间来自浏览器一")),true);
+    assert.equal(all.some(t=>t.includes("来自真实浏览器群")),true);
+    const directs=await crossSearch("来自","direct",2);assert.equal(directs.some(t=>t.includes("来自真实浏览器群")),false);
+    assert.match((await crossSearch("来自","group",1))[0],/来自真实浏览器群/);
+    assert.match((await crossSearch("\uFEFFİ工单","all",1))[0],/İ工单（真实 Unicode）/);
     await first.context.close();
     await second.context.close();
-    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, retention configuration and approval history, conversation text search and Unicode, realtime sync and offline recovery passed\n");
+    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, retention configuration and approval history, conversation and cross-conversation text search, filters and Unicode, realtime sync and offline recovery passed\n");
   } finally {
     await browser.close();
   }

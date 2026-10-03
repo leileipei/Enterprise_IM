@@ -12,6 +12,7 @@
   <script src="/web/retention-policy.js" defer></script>
   <script src="/web/audit.js" defer></script>
   <script src="/web/message-search.js" defer></script>
+  <script src="/web/cross-message-search.js" defer></script>
   <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -42,6 +43,7 @@
           <div class="section-heading"><span>当前任职</span><span class="tag">身份</span></div>
           <div id="identity-options" class="identity-options"></div>
         </div>
+        <button id="cross-message-search-open" class="secondary-button hidden" type="button">搜索历史消息</button>
         <button id="retention-policy-open" class="secondary-button hidden" type="button">消息保留期配置</button>
         <button id="audit-open" class="secondary-button hidden" type="button">管理审计查询</button>
         <div class="search-panel">
@@ -60,6 +62,19 @@
         <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
       </div>
     </section>
+    <dialog id="cross-message-search-dialog" class="retention-records-dialog" aria-labelledby="cross-message-search-title" aria-describedby="cross-message-search-boundary">
+      <div class="retention-records-heading"><div><h2 id="cross-message-search-title">搜索历史消息</h2><p id="cross-message-search-context" class="microcopy"></p></div><button id="cross-message-search-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="cross-message-search-form" class="legal-hold-action-form" novalidate>
+        <label for="cross-message-search-query">关键词（2～100 字）</label><input id="cross-message-search-query" type="search" autocomplete="off" spellcheck="false" placeholder="输入正文片段，例如工单编号" aria-describedby="cross-message-search-boundary">
+        <label for="cross-message-search-kind">搜索范围</label><select id="cross-message-search-kind"><option value="all">全部</option><option value="direct">单聊</option><option value="group">群聊</option></select>
+        <button id="cross-message-search-apply" class="primary-button" type="submit">搜索</button>
+      </form>
+      <p id="cross-message-search-boundary" class="microcopy">搜索本人可读取的历史正文，每页重新检查权限。空页也可能需要继续查询；新消息可用“刷新，从头查询”重新查找。</p>
+      <button id="cross-message-search-refresh" class="secondary-button" type="button">刷新，从头查询</button>
+      <p id="cross-message-search-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="cross-message-search-list" class="retention-records-list" aria-label="匹配消息"></ul>
+      <button id="cross-message-search-more" class="secondary-button hidden" type="button">继续查询</button>
+    </dialog>
     <dialog id="message-search-dialog" class="retention-records-dialog" aria-labelledby="message-search-title" aria-describedby="message-search-boundary">
       <div class="retention-records-heading"><div><h2 id="message-search-title">搜索会话消息</h2><p id="message-search-context" class="microcopy"></p></div><button id="message-search-close" class="secondary-button" type="button">关闭</button></div>
       <form id="message-search-form" class="legal-hold-action-form" novalidate>
