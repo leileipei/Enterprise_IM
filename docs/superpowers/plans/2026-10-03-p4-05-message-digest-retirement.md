@@ -110,9 +110,9 @@ if result.RetiredCount != 2 || result.BatchID == "" { t.Fatalf("batch: %+v", res
 - [x] 启动本增量专用 PostgreSQL 16／Redis 7 并核对服务实际端口；设置 `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL`、`IM_TEST_BROWSER_NODE`、`NODE_PATH`、`CHROMIUM_EXECUTABLE`，创建 `btree_gist`。依赖就绪后运行 `go test ./... -count=1 -v`、`go test -race ./internal/retention ./cmd/im-retention-worker -count=1`、`go test -race ./internal/policystore -run '^TestDigestRetired' -count=1`、`go vet ./...`、`go build ./...`、`git diff --check`，日志保存并检查各结果。
 - [x] 逐项核对设计验收矩阵、五项 Review Focus 与所有关键测试；真实 `TestRealBrowserLoginRealtimeAndOfflinePull` 必须 PASS，缺依赖 SKIP 不能作为验收。区分 subprocess helper 的正常 SKIP 与未运行的集成用例。
 - [x] 按 `superpowers:executing-plans` 做一次新鲜、独立的整分支评审，重点是延迟约束最终状态、更新 ID 集合、快照判定点、保全与行锁等待、租户隔离、启用／回滚部署顺序。修正确认的问题并重跑受影响测试；记录其余边界与执行判断。
-- [ ] 记录实际测试数及证据、检查提交和干净状态，推送分支，创建并 attach 叠加草稿 PR。PR 明确永久到期键、双开关、全部 API 升级前不得启用及外部副本边界；停止本增量专用服务，保留工作区。
+- [x] 记录实际测试数及证据、检查提交和干净状态，推送分支，创建并 attach 叠加草稿 PR。PR 明确永久到期键、双开关、全部 API 升级前不得启用及外部副本边界；停止本增量专用服务，保留工作区。
 
-**计划状态：**用户已批准，按既定 Native 方式执行；Tasks 1～4 已完成，Task 5 验证与交付进行中。未勾选步骤不作为已完成或生产验收证据。
+**计划状态：**用户已批准，按既定 Native 方式执行；Tasks 1～5 已完成，草稿 PR #52 已交付并关联，尚未合并。此次完成的是本地开发验收，不代表客户环境生产验收。
 
 ## 验收记录（2026-10-03）
 
@@ -121,3 +121,5 @@ if result.RetiredCount != 2 || result.BatchID == "" { t.Fatalf("batch: %+v", res
 独立整分支评审（gpt-6-astra）无 Critical／Important；一项 Minor 留待补强：锁住首会话时，现有测试中的后续候选已退役，未直接断言跳锁后处理另一合格会话。实现使用 SKIP LOCKED，此项不是已确认功能缺陷。
 
 执行判断：整分支评审在 Task 5 PR 前仅执行一次；外部副本及介质另行治理，仍可能残留；消息和回执元数据保留，存储继续增长；超级用户绕过依赖权限治理；本地检查不替代客户容量和生产验收。
+
+交付：[草稿 PR #52](https://github.com/leileipei/Enterprise_IM/pull/52)，基于 `codex/p4-04-body-cleaner`；最终 task-done 再次执行 `go test ./... -count=1` 全套通过。专用 `enterprise-im-p4-05-pg`、`enterprise-im-p4-05-redis` 已停止；工作区保留。执行记录、全套及 race 日志归档至 `/private/tmp/enterprise-im-p4-05-validation/`；此临时归档不作为永久证据库。
