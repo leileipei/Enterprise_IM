@@ -18,10 +18,15 @@
 | `GET /api/v1/admin/conversations/{id}/legal-holds?limit={1..500}&cursor={游标}` | 集团管理员分页查询本租户会话保全 | 200，`holds` 与 `next_cursor` |
 | `POST /api/v1/admin/conversations/{id}/legal-holds` | 集团管理员登记案件保全 | 新建 201，完全相同重试 200 |
 | `POST /api/v1/admin/conversations/{id}/legal-holds/{hold_id}/release` | 集团管理员凭审批引用解除一项保全 | 200 |
+| `GET /api/v1/admin/conversations/{id}/retention-batches?kind={body\|digest}&limit={1..500}&cursor={游标}` | 集团管理员查询本租户会话的已提交清理批次 | 200，`batches` 与 `next_cursor` |
 
 保留期默认 365 个 24 小时天，可设 1～3650 天。PUT 请求体为 `{ "message_body_days": 730, "expected_version": 0, "approval_reference": "CAB-2026-01" }`，审批引用为已取得的外部审批单号，服务端只记录该引用、执行人和时间，不核验外部审批结果。接口要求与管理 API 相同的可信身份头；组织管理员不能读取或修改租户级期限。版本不一致返回 409；租户已有消息时延长期限也返回 409，避免重新显示曾被遮蔽的旧正文，需在首条消息前设定更长期限。每次成功修改都会在 `tenant_retention_policy_history` 留下不可修改的版本记录；当前配置、版本历史与审计同事务提交，审计失败时全部回滚。配置生效后，单聊与群聊补拉都在读取时使用当前租户期限；自动清理由独立进程显式启用，默认关闭。
 
 法务保全应在正文清理前登记。登记请求体为 `{ "request_id": "<uuid>", "case_reference": "CASE-2026-01" }`；解除请求体为 `{ "request_id": "<uuid>", "approval_reference": "CAB-2026-02" }`。`request_id` 在租户内跨登记和解除唯一，完全相同请求可重试；重复用于不同动作、会话、案件或执行人返回 409。同一会话可有多项有效保全，解除一项不影响其他案件。GET 默认每页 100 项、最多 500 项，使用返回的游标继续读取；游标仅适用于原租户和会话。只有当前有效集团管理员可操作，案件与审批引用仅记录，不核验外部审批系统。状态、不可修改事件和审计同事务提交。保全暂停独立 Worker 的正文及摘要清理；当前读取仍按保留期遮蔽到期正文。备份到期和外部审批核验尚未实现。
+
+清理批次查询要求同样的可信身份头，只允许当前有效集团管理员；每页重新验证身份、授权及本租户会话归属。`kind` 必填且仅允许 `body` 或 `digest`；`limit` 默认 100、最大 500。按 `(processed_at, id)` 倒序返回，游标绑定租户、会话、类型，末页 `next_cursor` 为空字符串；空列表为 `[]`。非法参数或游标为 400，身份失效为 403，非集团管理员、跨租户或不存在会话统一为 404，数据库或审计失败为 503；响应禁止缓存。每次成功查询的审计记录区分 `listed_body` 与 `listed_digest`，审计提交成功后才返回证据。
+
+批次公共字段为 `id`、`conversation_id`、`kind`、`processed_at`、`processed_count`、`first_seq`、`last_seq`；正文批次另含 `retention_days`、`cutoff_at`，摘要批次另含 `min_expires_at`、`max_expires_at`。不返回正文、摘要、发送者或客户端重试键。序号边界可能有间隔，不能用 `last_seq-first_seq+1` 代替实际数量。分页不提供跨请求共享快照；新提交批次应刷新首页核查。此入口查询在线库已提交批次，不能证明备份、WAL 或外部副本已擦除。
 
 访问令牌须为签给本 API 的 RFC 9068 JWT，具有 RS256 签名、`at+jwt` 类型、正确发行方及受众，并包含允许的 `client_id`。仅通过 `(issuer, sub)` 查找受控导入的本地身份绑定；选定任职由数据库二次校验。ID Token、邮件地址和请求中的租户 ID 不用于映射。401 表示未认证，400 表示 ID 或请求格式错误，403 表示身份失效，404 隐藏无权限资源，409 表示状态冲突，503 表示认证、审计或数据库不可用。
 
