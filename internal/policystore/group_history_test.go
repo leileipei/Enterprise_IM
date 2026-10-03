@@ -375,3 +375,31 @@ BEGIN IF NEW.action='message_pull' THEN RAISE EXCEPTION 'audit unavailable'; END
 		t.Fatalf("audit failure returned group body: %+v %v", page, err)
 	}
 }
+
+// Protect the final-time check when a group body expires while the page is read.
+func TestHistoryFinalGroupPolicyTime(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	writer := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	group, err := writer.CreateGroup(context.Background(), publisher(), createGroupRequest(targetM2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertGroupHistoryMessage(t, conn, group.ID, 1, adminA, adminM, "到期正文")
+	var days int
+	if err := conn.QueryRow(context.Background(), "SELECT message_body_retention_days FROM tenants WHERE id=$1", tenantA).Scan(&days); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	svc := policystore.Service{DB: conn, Now: func() time.Time {
+		calls++
+		if calls >= 2 {
+			return at.Add(time.Duration(days) * 24 * time.Hour)
+		}
+		return at
+	}}
+	page, err := svc.PullGroupTextMessages(context.Background(), groupMemberIdentity(), group.ID, 0, 20)
+	if err != nil || len(page.Messages) != 1 || !page.Messages[0].Redacted || page.Messages[0].Text != "" || page.Messages[0].Seq != 1 {
+		t.Fatalf("expired body %+v %v", page, err)
+	}
+}
