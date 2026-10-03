@@ -79,6 +79,6 @@
 
 **Interfaces:** No new API. Produce a stacked draft PR based on `codex/p4-02-tenant-retention-policy` (PR #49).
 
-- [ ] Add a PostgreSQL pull regression showing an expired message remains redacted while its conversation is under legal hold; start dedicated PostgreSQL/Redis test services, set `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL` and real browser variables; run `go test ./... -count=1`, `go vet ./...`, `git diff --check`; explicitly run and inspect the browser acceptance test to exclude a skip.
-- [ ] Review migration rollback, tenant isolation, exact retry, row-lock order and read-side redaction; request independent code review and fix confirmed findings, then rerun affected tests.
+- [x] Add a PostgreSQL pull regression showing an expired message remains redacted while its conversation is under legal hold; start dedicated PostgreSQL/Redis test services, set `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL` and real browser variables; run `go test ./... -count=1`, `go vet ./...`, `git diff --check`; explicitly run and inspect the browser acceptance test to exclude a skip.
+- [x] Review migration rollback, tenant isolation, exact retry, row-lock order and read-side redaction; request independent code review and fix confirmed findings, then rerun affected tests.
 - [ ] Confirm clean status, push branch, create and attach stacked draft PR; stop dedicated test services. Report that physical clearing, backup expiry and external approval verification remain deferred.
