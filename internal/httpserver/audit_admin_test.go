@@ -65,7 +65,7 @@ func TestAuditQueryAdminRejectsUnsafeRequests(t *testing.T) {
 		calls++
 		return access.AuditEventPage{}, nil
 	}))
-	for _, query := range []string{"?actor_user_id=", "?actor_user_id=bad", "?actor_user_id=" + actorID + "&actor_user_id=" + actorID, "?actor_user_id=%20" + actorID, "?actor_user_id=" + actorID + "%20", "?actor_user_id=" + strings.ReplaceAll(actorID, "-", ""), "?tenant_id=x", "?action=", "?action=bad%20action", "?action=a&action=b", "?outcome=", "?outcome=ALLOW", "?outcome=deny&outcome=allow", "?limit=0", "?limit=101", "?limit=-1", "?limit=1.5", "?limit=1&limit=2", "?limit=+2", "?cursor=", "?cursor=" + strings.Repeat("a", 1025), "?cursor=x&cursor=y", "?cursor=%zz"} {
+	for _, query := range []string{"?from=", "?until=", "?from=bad", "?until=bad", "?from=2026-10-03T00:00:00Z&from=2026-10-04T00:00:00Z", "?until=2026-10-03T00:00:00Z&until=2026-10-04T00:00:00Z", "?from=2026-10-03T00:00:00Z&until=2026-10-03T00:00:00Z", "?from=2026-10-04T00:00:00Z&until=2026-10-03T00:00:00Z", "?actor_user_id=", "?actor_user_id=bad", "?actor_user_id=" + actorID + "&actor_user_id=" + actorID, "?actor_user_id=%20" + actorID, "?actor_user_id=" + actorID + "%20", "?actor_user_id=" + strings.ReplaceAll(actorID, "-", ""), "?tenant_id=x", "?action=", "?action=bad%20action", "?action=a&action=b", "?outcome=", "?outcome=ALLOW", "?outcome=deny&outcome=allow", "?limit=0", "?limit=101", "?limit=-1", "?limit=1.5", "?limit=1&limit=2", "?limit=+2", "?cursor=", "?cursor=" + strings.Repeat("a", 1025), "?cursor=x&cursor=y", "?cursor=%zz"} {
 		r := httptest.NewRecorder()
 		h.ServeHTTP(r, adminRequest("GET", auditPath+query))
 		if r.Code != 400 || r.Header().Get("Cache-Control") != "no-store" {
@@ -138,5 +138,20 @@ func TestAuditQueryAdminAcceptsActorFilter(t *testing.T) {
 	h.ServeHTTP(r, adminRequest("GET", auditPath+"?limit=20&action=retention_policy_update&outcome=allow&cursor=next&actor_user_id=ABCDEFAB-CDEF-4ABC-8ABC-ABCDEFABCDEF"))
 	if r.Code != 200 {
 		t.Fatalf("actor filter: %d %s", r.Code, r.Body.String())
+	}
+}
+
+// Time range parameters must be accepted together with every existing filter.
+func TestAuditQueryAdminAcceptsTimeRange(t *testing.T) {
+	h, _ := HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(_ context.Context, _ access.TrustedIdentity, filter access.AuditEventFilter, _ string, _ int) (access.AuditEventPage, error) {
+		if filter.From != "2026-10-03T00:00:00Z" || filter.Until != "2026-10-04T00:00:00Z" {
+			t.Fatalf("HTTP time bounds %+v", filter)
+		}
+		return access.AuditEventPage{}, nil
+	}))
+	r := httptest.NewRecorder()
+	h.ServeHTTP(r, adminRequest("GET", auditPath+"?action=retention_policy_update&outcome=allow&actor_user_id="+actorID+"&limit=20&cursor=next&from=2026-10-03T00:00:00Z&until=2026-10-04T00:00:00Z"))
+	if r.Code != 200 {
+		t.Fatalf("time filter: %d %s", r.Code, r.Body.String())
 	}
 }

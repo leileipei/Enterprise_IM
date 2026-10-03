@@ -8,6 +8,9 @@ const rows=Array.from({length:23},(_,i)=>({id:(9007199254740995n-BigInt(i)).toSt
 // Newer fractional timestamp outranks ID, even below millisecond resolution.
 rows[0].id="9";rows[0].occurred_at="2026-10-03T10:00:00.123456002Z";rows[1].id="10";rows[1].occurred_at="2026-10-03T10:00:00.123456001Z";
 const otherRows=Array.from({length:21},(_,i)=>({...rows[2],id:String(7000-i),actor_user_id:otherUser,reason:"other_actor",occurred_at:"2026-10-02T10:00:00Z"}));
+const timeRows=Array.from({length:25},(_,i)=>({...rows[2],id:String(6000-i),occurred_at:`2026-10-03T10:00:00.${String(25-i).padStart(6,"0")}Z`}));
+const fixtureTime=value=>BigInt(Date.parse(value.replace(/\.\d+/,"")))*1000000n+BigInt((/\.(\d+)/.exec(value)?.[1]||"").padEnd(9,"0"));
+let timeDataset=false;
 let port,mode="",held=[],writes=0,empty=false,cycle=false;
 const calls=[];
 const server=http.createServer((req,res)=>{
@@ -22,10 +25,10 @@ const server=http.createServer((req,res)=>{
  if(url.pathname.startsWith("/api/v1/admin/")&&actor!==admin)return send(404,{error_code:"not_found"});
  if(url.pathname==="/api/v1/admin/retention-policy"){if(req.method!=="GET"){writes++;return send(503,{error_code:"unavailable"});}return send(200,{message_body_days:365,version:0,approval_reference:"",approved_by_user_id:"",approved_at:null});}
  if(url.pathname==="/api/v1/admin/audit-events"){
-  assert.equal(req.method,"GET");assert.equal(url.searchParams.get("limit"),"20");assert.equal(actor,admin);assert.equal([...url.searchParams.keys()].some(k=>!["limit","cursor","action","outcome","actor_user_id"].includes(k)),false);
-  const action=url.searchParams.get("action")||"",outcome=url.searchParams.get("outcome")||"",cursor=url.searchParams.get("cursor")||"";const actorFilter=url.searchParams.get("actor_user_id")||"";calls.push({action,outcome,cursor,actor,actorFilter});const fault=mode;mode="";
+  assert.equal(req.method,"GET");assert.equal(url.searchParams.get("limit"),"20");assert.equal(actor,admin);assert.equal([...url.searchParams.keys()].some(k=>!["limit","cursor","action","outcome","actor_user_id","from","until"].includes(k)),false);
+  const action=url.searchParams.get("action")||"",outcome=url.searchParams.get("outcome")||"",cursor=url.searchParams.get("cursor")||"";const actorFilter=url.searchParams.get("actor_user_id")||"";const from=url.searchParams.get("from")||"",until=url.searchParams.get("until")||"";calls.push({action,outcome,cursor,actor,actorFilter,from,until});const fault=mode;mode="";
   if(["400","401","403","404","503"].includes(fault))return send(+fault,{error_code:"rejected"});
-  const filtered=cycle?Array.from({length:60},(_,i)=>({...rows[2],id:String(8000-i)})):empty?[]:(actorFilter?[...rows,...otherRows]:rows).filter(e=>(!action||e.action===action)&&(!outcome||e.outcome===outcome)&&(!actorFilter||e.actor_user_id===actorFilter));
+  const filtered=cycle?Array.from({length:60},(_,i)=>({...rows[2],id:String(8000-i)})):empty?[]:(timeDataset?timeRows:actorFilter?[...rows,...otherRows]:rows).filter(e=>(!action||e.action===action)&&(!outcome||e.outcome===outcome)&&(!actorFilter||e.actor_user_id===actorFilter)&&(!from||fixtureTime(e.occurred_at)>=fixtureTime(from))&&(!until||fixtureTime(e.occurred_at)<fixtureTime(until)));
   const start=cycle?(cursor==="A"?20:cursor==="B"?40:0):cursor?20:0;let result={events:filtered.slice(start,start+20).map(e=>({...e,text:"NEVER_BODY",content_digest:"NEVER_DIGEST"})),next_cursor:cycle?(start===0?"A":start===20?"B":"A"):filtered.length>start+20?"page-20":""};
   if(fault==="duplicate")result.events[1]={...result.events[0]};
   if(fault==="order")result.events.reverse();
@@ -35,6 +38,8 @@ const server=http.createServer((req,res)=>{
   if(fault==="bad-date")result.events[0].occurred_at="2026-02-30T10:00:00Z";
   if(fault==="resource")result.events[0].resource_id="invalid";
   if(fault==="outcome")result.events[0].outcome="accepted";
+  if(fault==="time-before")result.events.at(-1).occurred_at="2026-10-03T10:00:00.000002Z";
+  if(fault==="time-end")result.events[0].occurred_at="2026-10-03T10:00:00.000024Z";
   if(fault==="actor-escape")result.events[0].actor_user_id=user;
   if(fault==="filter-escape")result.events[0].action="group_invite";
   if(fault==="cursor-loop"){result.events=Array.from({length:20},(_,i)=>({...rows[2],id:String(1000-i)}));result.next_cursor=cursor;}
@@ -56,6 +61,7 @@ server.listen(0,"127.0.0.1",async()=>{
   const actor=async name=>page.locator("#identity-options").getByRole("button",{name:new RegExp(name)}).click();await actor("集团总部");
   const entry=page.locator("#audit-open");assert.equal(await entry.count(),1,"audit query entry must exist");await entry.click();
   const actorFilter=page.locator("#audit-actor");assert.equal(await actorFilter.count(),1,"actor filter input must exist");
+  const from=page.locator("#audit-from"),until=page.locator("#audit-until");assert.equal(await from.count(),1,"time range inputs must exist");assert.equal(await until.count(),1);
   const cards=page.locator(".audit-record-card"),hint=page.locator("#audit-hint"),more=page.locator("#audit-more"),refresh=page.locator("#audit-refresh"),apply=page.locator("#audit-apply"),action=page.locator("#audit-action"),outcome=page.locator("#audit-outcome"),close=page.locator("#audit-close");
   await hint.getByText(/已显示 20/).waitFor();assert.equal(await cards.count(),20);assert.match(await cards.first().innerText(),/事件 9/);assert.match(await cards.nth(2).innerText(),/9007199254740993/);
   await more.click();await hint.getByText(/已显示 23/).waitFor();assert.equal(await cards.count(),23);assert.equal(await more.isVisible(),false);assert.match(await cards.last().innerText(),/未指定/);assert.equal(await cards.locator("img").count(),0);assert.equal((await cards.allTextContents()).join("").includes("NEVER_"),false);assert.equal(writes,0);
@@ -67,6 +73,13 @@ server.listen(0,"127.0.0.1",async()=>{
   await actorFilter.fill(otherUser);mode="actor-escape";await apply.click();await hint.getByText(/加载失败/).waitFor();assert.equal(await cards.count(),0);
   mode="hold";await refresh.click();await hint.getByText(/正在加载/).waitFor();await actorFilter.fill(user);await apply.click();await hint.getByText(/已显示 20/).waitFor();assert.equal(calls.at(-1).cursor,"");held.shift()();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));assert.equal((await cards.allTextContents()).some(s=>s.includes(otherUser)),false);
   await actorFilter.fill("");await apply.click();await hint.getByText(/已显示 20/).waitFor();assert.equal(calls.at(-1).actorFilter,"");
+  timeDataset=true;await from.fill("2026-10-03T18:00:00.000003+08:00");await until.fill("2026-10-03T10:00:00.000024Z");assert.equal(await cards.count(),0);await apply.click();await hint.getByText(/已显示 20/).waitFor();assert.match(await cards.first().innerText(),/事件 5998/);assert.equal(calls.at(-1).cursor,"");assert.equal(calls.at(-1).from,"2026-10-03T18:00:00.000003+08:00");await more.click();await hint.getByText(/已显示 21/).waitFor();assert.match(await cards.last().innerText(),/事件 5978/);
+  for(const bad of ["2026-02-30T10:00:00Z","2026-10-03T10:00:00","2026-10-03T10:00:00.1234567Z","0001-01-01T00:00:00+01:00"]){let n=calls.length;await from.fill(bad);await apply.click();await hint.getByText(/时间格式/).waitFor();assert.equal(calls.length,n);assert.equal(await cards.count(),0);}
+  for(const bad of ["2026-10-03T10:00:00.000024Z","2026-10-03T18:00:00.000024+08:00","2026-10-03T10:00:00.000025Z"]){let n=calls.length;await from.fill(bad);await apply.click();await hint.getByText(/开始时间.*早于/).waitFor();assert.equal(calls.length,n);}
+  await from.fill("2026-10-03T10:00:00.000003Z");for(const fault of ["time-before","time-end"]){mode=fault;await apply.click();await hint.getByText(/加载失败/).waitFor();assert.equal(await cards.count(),0);}
+  mode="hold";await refresh.click();await hint.getByText(/正在加载/).waitFor();await until.fill("2026-10-03T10:00:00.000004Z");await apply.click();await hint.getByText(/已显示 1/).waitFor();assert.equal(calls.at(-1).cursor,"");held.shift()();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));assert.equal(await cards.count(),1);assert.match(await cards.first().innerText(),/事件 5978/);
+  await from.fill("");await apply.click();await hint.getByText(/已显示 3/).waitFor();await from.fill("2026-10-03T10:00:00.000026Z");await until.fill("");await apply.click();await hint.getByText(/暂无审计记录/).waitFor();
+  await from.fill("2026-10-03T10:00:00.000003Z");await close.click();assert.equal(await from.inputValue(),"");assert.equal(await until.inputValue(),"");timeDataset=false;await entry.click();await hint.getByText(/已显示 20/).waitFor();
   await action.fill("retention_policy_update");assert.equal(await cards.count(),0);await outcome.selectOption("deny");await apply.click();await hint.getByText(/已显示 11/).waitFor();assert.equal(calls.at(-1).cursor,"");assert.equal(calls.at(-1).outcome,"deny");assert.equal((await cards.allTextContents()).every(s=>s.includes("拒绝")),true);
   let count=calls.length;await action.fill("Bad action");await apply.click();await hint.getByText(/动作格式/).waitFor();assert.equal(calls.length,count);assert.equal(await cards.count(),0);
   await action.fill("unrecorded_action");await apply.click();await hint.getByText(/暂无审计记录/).waitFor();await action.fill("");await outcome.selectOption("");await apply.click();await hint.getByText(/已显示 20/).waitFor();

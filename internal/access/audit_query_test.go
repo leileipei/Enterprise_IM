@@ -324,3 +324,90 @@ func TestAuditQueryLegacyCursorCompatibility(t *testing.T) {
 		t.Fatalf("legacy cursor %+v %v", page, err)
 	}
 }
+
+// Using a closed end, dropping a bound or failing to bind the cursor changes this exact ordered result.
+func TestAuditQueryTimeRangePagingAndCursorBinding(t *testing.T) {
+	conn := testDB(t)
+	svc := seedAuditQuery(t, conn)
+	ctx := context.Background()
+	for _, row := range []struct {
+		id string
+		at time.Time
+	}{{"11", fixedTime.Add(time.Microsecond)}, {"12", fixedTime.Add(2 * time.Microsecond)}} {
+		run(t, conn, `INSERT INTO audit_events(id,tenant_id,actor_user_id,acting_membership_id,action,resource_type,outcome,reason,occurred_at) OVERRIDING SYSTEM VALUE VALUES ($1,$2,$3,$4,'retention_policy_update','tenant','allow','micro_event',$5)`, row.id, tenantA, adminA, adminM, row.at)
+	}
+	f := access.AuditEventFilter{Action: "retention_policy_update", ActorUserID: adminA, From: "2026-09-28T10:00:00Z", Until: "2026-09-28T10:00:00.000002Z"}
+	first, err := svc.ListAuditEvents(ctx, identity(), f, "", 2)
+	if err != nil || len(first.Events) != 2 || first.Events[0].ID != "11" || first.Events[1].ID != "9007199254740993" || first.NextCursor == "" {
+		t.Fatalf("time first %+v %v", first, err)
+	}
+	f.From = "2026-09-28T18:00:00.000000+08:00"
+	f.Until = "2026-09-28T18:00:00.000002+08:00"
+	second, err := svc.ListAuditEvents(ctx, identity(), f, first.NextCursor, 2)
+	if err != nil || len(second.Events) != 2 || second.Events[0].ID != "9007199254740992" || second.Events[1].ID != "10" || second.NextCursor == "" {
+		t.Fatalf("equivalent time cursor %+v %v", second, err)
+	}
+	last, err := svc.ListAuditEvents(ctx, identity(), f, second.NextCursor, 2)
+	if err != nil || len(last.Events) != 1 || last.Events[0].ID != "9" || last.NextCursor != "" {
+		t.Fatalf("time last %+v %v", last, err)
+	}
+	for _, bounds := range [][2]string{{"", f.Until}, {f.From, ""}, {"2026-09-28T10:00:00.000001Z", f.Until}, {f.From, "2026-09-28T10:00:00.000003Z"}} {
+		g := f
+		g.From, g.Until = bounds[0], bounds[1]
+		if _, err := svc.ListAuditEvents(ctx, identity(), g, first.NextCursor, 2); !errors.Is(err, access.ErrInvalidAuditQuery) {
+			t.Fatalf("changed range %v: %v", bounds, err)
+		}
+	}
+	for _, q := range []struct {
+		from, until string
+		ids         []string
+	}{
+		{"2026-09-28T10:00:00.000001Z", "", []string{"12", "11"}},
+		{"", "2026-09-28T10:00:00Z", []string{"8"}},
+		{"2026-09-28T10:00:00.000003Z", "2026-09-28T10:00:00.000004Z", []string{}},
+	} {
+		g := f
+		g.From, g.Until = q.from, q.until
+		page, err := svc.ListAuditEvents(ctx, identity(), g, "", 20)
+		if err != nil || page.Events == nil || len(page.Events) != len(q.ids) || page.NextCursor != "" {
+			t.Fatalf("open/empty range %+v %v", page, err)
+		}
+		for i, id := range q.ids {
+			if page.Events[i].ID != id {
+				t.Fatalf("range order %+v", page)
+			}
+		}
+	}
+	f.Outcome = "allow"
+	page, err := svc.ListAuditEvents(ctx, identity(), f, "", 20)
+	if err != nil || len(page.Events) != 3 || page.Events[0].ID != "11" || page.Events[1].ID != "9007199254740992" || page.Events[2].ID != "10" {
+		t.Fatalf("combined range %+v %v", page, err)
+	}
+	var reads int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM audit_events WHERE action='audit_events_list' AND outcome='allow'`).Scan(&reads); err != nil || reads != 7 {
+		t.Fatalf("range audits %d %v", reads, err)
+	}
+}
+
+func TestAuditQueryRejectsInvalidTimeRange(t *testing.T) {
+	conn := testDB(t)
+	svc := seedAuditQuery(t, conn)
+	ctx := context.Background()
+	invalid := []string{"bad", "2026-10-03", "2026-10-03T10:00:00", "2026-02-30T10:00:00Z", "2026-10-03T24:00:00Z", "2026-10-03T10:00:60Z", "2026-10-03t10:00:00z", "2026-10-03T10:00:00,1Z", "2026-10-03T10:00:00.1234567Z", "2026-10-03T10:00:00+24:00", "2026-10-03T10:00:00+00:60", "0000-01-01T00:00:00Z", "0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00", " 2026-10-03T00:00:00Z", "2026-10-03T00:00:00Z "}
+	for _, bad := range invalid {
+		for _, f := range []access.AuditEventFilter{{From: bad}, {Until: bad}} {
+			if _, err := svc.ListAuditEvents(ctx, identity(), f, "", 20); !errors.Is(err, access.ErrInvalidAuditQuery) {
+				t.Fatalf("bad range %+v: %v", f, err)
+			}
+		}
+	}
+	for _, f := range []access.AuditEventFilter{{From: "2026-10-03T00:00:00Z", Until: "2026-10-03T00:00:00Z"}, {From: "2026-10-03T08:00:00+08:00", Until: "2026-10-03T00:00:00Z"}, {From: "2026-10-04T00:00:00Z", Until: "2026-10-03T00:00:00Z"}} {
+		if _, err := svc.ListAuditEvents(ctx, identity(), f, "", 20); !errors.Is(err, access.ErrInvalidAuditQuery) {
+			t.Fatalf("equal/inverted range %+v: %v", f, err)
+		}
+	}
+	var reads int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM audit_events WHERE action='audit_events_list'`).Scan(&reads); err != nil || reads != 0 {
+		t.Fatalf("invalid range audit %d %v", reads, err)
+	}
+}

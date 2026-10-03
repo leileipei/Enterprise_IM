@@ -149,6 +149,8 @@ async function send(page, text) {
     assert.match(actualActor,/^[0-9a-f-]{36}$/);
     await first.page.locator("#audit-actor").fill(actualActor.toUpperCase());
     assert.equal(await audits.locator(".audit-record-card").count(),0);
+    await first.page.locator("#audit-from").fill(new Date(Date.now()-3600000).toISOString());
+    await first.page.locator("#audit-until").fill(new Date(Date.now()+3600000).toISOString());
     await first.page.locator("#audit-action").fill("retention_policy_update");
     await first.page.locator("#audit-outcome").selectOption("allow");
     await first.page.locator("#audit-apply").click();
