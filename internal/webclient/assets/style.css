@@ -142,3 +142,20 @@ main{position:relative;z-index:1;min-height:100vh}
 .composer-actions{display:flex;align-items:center;gap:9px}
 .secondary-button{border:1px solid #bed8d0;border-radius:9px;background:#f4faf7;color:#2f7569;padding:9px 12px;font-size:12px;font-weight:700}
 .secondary-button:hover{background:#e5f3eb}
+.retention-records-dialog{width:min(680px,calc(100vw - 28px));max-height:85vh;overflow:auto;border:1px solid #c9ded6;border-radius:16px;padding:24px;color:#193044;background:#fbfdfb;box-shadow:0 20px 70px rgba(16,38,56,.2)}
+.retention-records-dialog::backdrop{background:rgba(16,38,56,.38)}
+.retention-records-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.retention-records-heading>div{min-width:0}
+.retention-records-heading h2{margin:0;font-size:20px}
+#retention-records-conversation{margin:8px 0 18px;font-size:13px;overflow-wrap:anywhere;color:#617783}
+.retention-records-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}
+.retention-records-toolbar select{font:inherit;border:1px solid #bed8d0;border-radius:8px;background:white;padding:8px;color:#193044}
+.retention-records-list{list-style:none;padding:0;margin:16px 0;display:grid;gap:12px}
+.retention-record-card{border:1px solid #dce8e2;border-radius:10px;padding:16px;background:white;min-width:0}
+.retention-record-id{font-size:12px;overflow-wrap:anywhere;font-family:ui-monospace,monospace}
+.retention-record-card dl{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;margin:12px 0 0;font-size:13px}
+.retention-record-card dt{color:#617783}
+.retention-record-card dd{margin:0;overflow-wrap:anywhere}
+#retention-records-hint{min-height:20px}
+#retention-records-boundary{line-height:1.7;margin-bottom:0}
+@media(max-width:480px){.retention-records-dialog{padding:18px;max-height:88vh}.retention-record-card{padding:12px}.retention-record-card dl{grid-template-columns:90px minmax(0,1fr);gap:8px}}

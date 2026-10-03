@@ -28,6 +28,8 @@
 
 批次公共字段为 `id`、`conversation_id`、`kind`、`processed_at`、`processed_count`、`first_seq`、`last_seq`；正文批次另含 `retention_days`、`cutoff_at`，摘要批次另含 `min_expires_at`、`max_expires_at`。不返回正文、摘要、发送者或客户端重试键。序号边界可能有间隔，不能用 `last_seq-first_seq+1` 代替实际数量。分页不提供跨请求共享快照；新提交批次应刷新首页核查。此入口查询在线库已提交批次，不能证明备份、WAL 或外部副本已擦除。
 
+Web 会话标题区提供“清理记录”只读弹窗。选定任职通过集团管理员检查后显示入口；检查遇到网络／5xx 故障时可点击“重试清理记录权限检查”。弹窗查询当前单聊或群聊，正文／摘要切换均从首页开始，每页 20 个批次，支持加载更多与刷新。时间按浏览器本机时区显示，数量取实际处理数量。切换任职、会话、关闭或退出会清空当前记录，延迟响应不会恢复旧数据。403／404 清空并禁用入口，401 按现有登录流程退出；503 或不符合合约的响应清空后可刷新重试。记录只保存在当前页面内存，未知字段不保留。此入口仅覆盖用户已选中的会话；按会话 ID 查询本租户其他会话仍可使用上述管理员 API。
+
 访问令牌须为签给本 API 的 RFC 9068 JWT，具有 RS256 签名、`at+jwt` 类型、正确发行方及受众，并包含允许的 `client_id`。仅通过 `(issuer, sub)` 查找受控导入的本地身份绑定；选定任职由数据库二次校验。ID Token、邮件地址和请求中的租户 ID 不用于映射。401 表示未认证，400 表示 ID 或请求格式错误，403 表示身份失效，404 隐藏无权限资源，409 表示状态冲突，503 表示认证、审计或数据库不可用。
 
 浏览器取得访问令牌后，先调用 `GET /api/v1/me` 获取本人身份与当前可选任职。该接口只需 `Authorization: Bearer <access-token>`，不接受 `X-Acting-Membership-ID`、查询参数或请求正文；响应包含 `tenant_id`、`user_id`、`display_name`、`global_employee_no` 和 `memberships` 数组。每项有 `id`、组织与法人 ID/名称、`title`、`is_primary`。有效账号暂无任职时数组为空。仅返回当前有效的任职、组织和法人，主任职排在前面；响应禁止缓存。客户端随后选择一个任职 ID 作为其他业务请求的 `X-Acting-Membership-ID`，服务端仍逐次核验，不以此列表授予权限。当前审计表要求记录选定任职，故选择前的 `/me` 查询暂不写任职审计，后续登录审计需单独设计。
@@ -225,9 +227,9 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/multi_device_recovery.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs`、`node internal/webclient/e2e/group_roster.cjs` 和 `node internal/webclient/e2e/group_policy_recheck.cjs`。
+浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/multi_device_recovery.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs`、`node internal/webclient/e2e/group_roster.cjs`、`node internal/webclient/e2e/group_policy_recheck.cjs` 和 `node internal/webclient/e2e/retention_records.cjs`。
 
-`multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
+`multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复，同时从生产管理员 API 展示正文／摘要清理批次并断言两类查询审计。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
 
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000016` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
 

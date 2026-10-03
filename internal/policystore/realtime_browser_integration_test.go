@@ -52,6 +52,14 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 	}
 	conn := db(t)
 	seedDirectConversation(t, conn)
+	// Read-only evidence fixtures exercise the real authenticated admin API;
+	// they do not run or enable either cleanup worker.
+	run(t, conn, `INSERT INTO admin_grants(id,tenant_id,membership_id,membership_organization_id,role,effective_from)
+ VALUES ('00000000-0000-4000-8000-000000009a07',$1,$2,$3,'group_admin','2020-01-01')`, tenantA, adminM, orgA)
+	run(t, conn, `INSERT INTO message_body_clear_batches(id,tenant_id,conversation_id,retention_days,cutoff_at,cleared_at,first_seq,last_seq,cleared_count)
+ VALUES ('00000000-0000-4000-8000-000000009b07',$1,$2,365,'2025-10-03T10:00:00Z','2026-10-03T10:00:00Z',5,11,2)`, tenantA, directA)
+	run(t, conn, `INSERT INTO message_digest_retirement_batches(id,tenant_id,conversation_id,retired_at,retired_count,first_seq,last_seq,min_expires_at,max_expires_at)
+ VALUES ('00000000-0000-4000-8000-000000009d07',$1,$2,'2026-10-03T10:00:00Z',2,5,11,'2026-10-01T10:00:00Z','2026-10-03T10:00:00Z')`, tenantA, directA)
 	migration, err := os.ReadFile("../../db/migrations/000004_external_identities.up.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -232,6 +240,12 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 	}
 	if authorizations.Load() != 2 || exchanges.Load() != 2 {
 		t.Fatalf("expected two real PKCE logins: authorizations=%d exchanges=%d", authorizations.Load(), exchanges.Load())
+	}
+	var bodyReads, digestReads int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FILTER (WHERE reason='listed_body'),
+ count(*) FILTER (WHERE reason='listed_digest') FROM audit_events
+ WHERE tenant_id=$1 AND action='retention_batches_list' AND outcome='allow'`, tenantA).Scan(&bodyReads, &digestReads); err != nil || bodyReads != 1 || digestReads != 1 {
+		t.Fatalf("browser evidence audits body=%d digest=%d err=%v", bodyReads, digestReads, err)
 	}
 	var persisted int
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM messages WHERE tenant_id=$1 AND conversation_id=$2

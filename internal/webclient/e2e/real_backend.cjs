@@ -3,6 +3,7 @@
 // Invoked by TestRealBrowserLoginRealtimeAndOfflinePull. The page, OIDC
 // redirect, token exchange, API and WebSocket all use live local processes.
 const { chromium } = require("playwright");
+const assert = require("node:assert/strict");
 
 const webURL = process.env.IM_TEST_WEB_URL;
 if (!webURL) throw new Error("IM_TEST_WEB_URL is required");
@@ -69,6 +70,21 @@ async function send(page, text) {
     executablePath: process.env.CHROMIUM_EXECUTABLE || undefined });
   try {
     const first = await openDevice(browser);
+    await first.page.locator("#retention-records-open").click();
+    const evidence = first.page.locator("#retention-records-dialog");
+    await evidence.getByText("00000000-0000-4000-8000-000000009b07", { exact: true }).waitFor();
+    assert.equal(await evidence.locator(".retention-record-card").count(), 1);
+    assert.match(await evidence.innerText(), /2 条/);
+    assert.match(await evidence.innerText(), /5 ～ 11/);
+    assert.match(await evidence.innerText(), /365 天/);
+    assert.equal(await first.page.locator("#retention-records-more").isVisible(), false);
+    await first.page.locator("#retention-records-kind").selectOption("digest");
+    await evidence.getByText("00000000-0000-4000-8000-000000009d07", { exact: true }).waitFor();
+    assert.equal(await evidence.locator(".retention-record-card").count(), 1);
+    assert.match(await evidence.innerText(), /最早到期时间/);
+    assert.match(await evidence.innerText(), /最晚到期时间/);
+    await first.page.locator("#retention-records-close").click();
+    assert.equal(await evidence.locator(".retention-record-card").count(), 0);
     const second = await openDevice(browser, true);
     const before = second.frames.length;
 
@@ -102,7 +118,7 @@ async function send(page, text) {
 
     await first.context.close();
     await second.context.close();
-    process.stdout.write("real browser OIDC, realtime sync and offline recovery passed\n");
+    process.stdout.write("real browser OIDC, retention evidence, realtime sync and offline recovery passed\n");
   } finally {
     await browser.close();
   }
