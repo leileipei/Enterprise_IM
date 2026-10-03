@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 	"github.com/redis/go-redis/v9"
@@ -60,6 +61,21 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
  VALUES ('00000000-0000-4000-8000-000000009b07',$1,$2,365,'2025-10-03T10:00:00Z','2026-10-03T10:00:00Z',5,11,2)`, tenantA, directA)
 	run(t, conn, `INSERT INTO message_digest_retirement_batches(id,tenant_id,conversation_id,retired_at,retired_count,first_seq,last_seq,min_expires_at,max_expires_at)
  VALUES ('00000000-0000-4000-8000-000000009d07',$1,$2,'2026-10-03T10:00:00Z',2,5,11,'2026-10-01T10:00:00Z','2026-10-03T10:00:00Z')`, tenantA, directA)
+	admin := access.TrustedIdentity{TenantID: tenantA, UserID: adminA, ActingMembershipID: adminM}
+	holdService := access.Service{DB: conn}
+	hold, _, err := holdService.PlaceLegalHold(context.Background(), admin, directA,
+		"00000000-0000-4000-8000-00000000ca08", "CASE-BROWSER-RELEASED")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := holdService.ReleaseLegalHold(context.Background(), admin, directA, hold.ID,
+		"00000000-0000-4000-8000-00000000cb08", "CAB-BROWSER-RELEASE"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := holdService.PlaceLegalHold(context.Background(), admin, directA,
+		"00000000-0000-4000-8000-00000000cc08", "CASE-BROWSER-ACTIVE"); err != nil {
+		t.Fatal(err)
+	}
 	migration, err := os.ReadFile("../../db/migrations/000004_external_identities.up.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -246,6 +262,11 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
  count(*) FILTER (WHERE reason='listed_digest') FROM audit_events
  WHERE tenant_id=$1 AND action='retention_batches_list' AND outcome='allow'`, tenantA).Scan(&bodyReads, &digestReads); err != nil || bodyReads != 1 || digestReads != 1 {
 		t.Fatalf("browser evidence audits body=%d digest=%d err=%v", bodyReads, digestReads, err)
+	}
+	var holdReads int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events
+ WHERE tenant_id=$1 AND action='legal_hold_list' AND outcome='allow'`, tenantA).Scan(&holdReads); err != nil || holdReads != 1 {
+		t.Fatalf("browser legal hold audit=%d err=%v", holdReads, err)
 	}
 	var persisted int
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM messages WHERE tenant_id=$1 AND conversation_id=$2
