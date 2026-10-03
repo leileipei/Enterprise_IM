@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/web/style.css">
   <script src="/web/retention.js" defer></script>
   <script src="/web/legal-holds.js" defer></script>
+  <script src="/web/retention-history.js" defer></script>
   <script src="/web/retention-policy.js" defer></script>
   <script src="/web/app.js" defer></script>
 </head>
@@ -67,6 +68,15 @@
       </form>
       <button id="retention-policy-refresh" class="secondary-button" type="button">刷新当前配置</button>
       <p id="retention-policy-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <button id="retention-history-toggle" class="secondary-button" type="button" aria-expanded="false" aria-controls="retention-history-section">查看审批历史</button>
+      <section id="retention-history-section" class="hidden" aria-labelledby="retention-history-title">
+        <h3 id="retention-history-title">保留期变更审批历史</h3>
+        <button id="retention-history-refresh" class="secondary-button" type="button">刷新审批历史</button>
+        <p id="retention-history-hint" class="microcopy" role="status" aria-live="polite"></p>
+        <ul id="retention-history-list" class="retention-records-list" aria-label="已提交保留期变更审批"></ul>
+        <button id="retention-history-more" class="secondary-button hidden" type="button">加载更多版本</button>
+        <p class="microcopy">按版本从新到旧排列；当前页不代表全部记录。翻页期间的新变更请刷新查看。历史只记录已提交的期限、审批引用及登记信息，不核验外部审批，也不代表清理任务已执行。</p>
+      </section>
       <p id="retention-policy-boundary" class="microcopy">此配置属于当前集团（租户），不是单个会话。有消息历史时不能延长期限。保存配置不会启动清理任务，也不能恢复已清除的正文。有效法务保全仍暂停物理清理，但不改变到期正文的读取遮蔽。审批引用仅记录，不核验外部审批。结果待确认时先查询服务器状态；刷新或强制退出会丢失本页核对信息，需重新核查服务器配置和审计记录。时间按本机时区显示。</p>
     </dialog>
     <dialog id="retention-records-dialog" class="retention-records-dialog" aria-labelledby="retention-records-title" aria-describedby="retention-records-boundary">

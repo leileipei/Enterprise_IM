@@ -14,6 +14,7 @@
 | `GET /api/v1/admin/users/{id}` | 查询授权范围内的人员任职 | 200，snake_case JSON |
 | `POST /api/v1/admin/memberships/{id}:end` | 结束一个组织任职 | 204，无响应体 |
 | `GET /api/v1/admin/retention-policy` | 集团管理员查询本租户消息正文保留期与审批记录 | 200，期限、版本与审批元数据 |
+| `GET /api/v1/admin/retention-policy/history?limit={1..100}&cursor={游标}` | 集团管理员分页查询本租户已提交的保留期审批历史 | 200，`history` 与 `next_cursor` |
 | `PUT /api/v1/admin/retention-policy` | 集团管理员按版本更新本租户消息正文保留期 | 200，更新后的配置 |
 | `GET /api/v1/admin/conversations/{id}/legal-holds?limit={1..500}&cursor={游标}` | 集团管理员分页查询本租户会话保全 | 200，`holds` 与 `next_cursor` |
 | `POST /api/v1/admin/conversations/{id}/legal-holds` | 集团管理员登记案件保全 | 新建 201，完全相同重试 200 |
@@ -21,6 +22,8 @@
 | `GET /api/v1/admin/conversations/{id}/retention-batches?kind={body\|digest}&limit={1..500}&cursor={游标}` | 集团管理员查询本租户会话的已提交清理批次 | 200，`batches` 与 `next_cursor` |
 
 保留期默认 365 个 24 小时天，可设 1～3650 天。PUT 请求体为 `{ "message_body_days": 730, "expected_version": 0, "approval_reference": "CAB-2026-01" }`，审批引用为已取得的外部审批单号，服务端只记录该引用、执行人和时间，不核验外部审批结果。接口要求与管理 API 相同的可信身份头；组织管理员不能读取或修改租户级期限。版本不一致返回 409；租户已有消息时延长期限也返回 409，避免重新显示曾被遮蔽的旧正文，需在首条消息前设定更长期限。每次成功修改都会在 `tenant_retention_policy_history` 留下不可修改的版本记录；当前配置、版本历史与审计同事务提交，审计失败时全部回滚。配置生效后，单聊与群聊补拉都在读取时使用当前租户期限；自动清理由独立进程显式启用，默认关闭。
+
+审批历史按版本从新到旧分页，默认每页 20 条、最多 100 条；游标仅适用于原租户，版本 0 默认配置不生成历史记录。每次查询重新检查有效集团管理员权限并登记审计，审计失败不返回历史。分页不共享跨请求快照，新增版本请刷新首页。
 
 法务保全应在正文清理前登记。登记请求体为 `{ "request_id": "<uuid>", "case_reference": "CASE-2026-01" }`；解除请求体为 `{ "request_id": "<uuid>", "approval_reference": "CAB-2026-02" }`。`request_id` 在租户内跨登记和解除唯一，完全相同请求可重试；重复用于不同动作、会话、案件或执行人返回 409。同一会话可有多项有效保全，解除一项不影响其他案件。GET 默认每页 100 项、最多 500 项，使用返回的游标继续读取；游标仅适用于原租户和会话。只有当前有效集团管理员可操作，案件与审批引用仅记录，不核验外部审批系统。状态、不可修改事件和审计同事务提交。保全暂停独立 Worker 的正文及摘要清理；当前读取仍按保留期遮蔽到期正文。备份到期和外部审批核验尚未实现。
 
@@ -220,6 +223,8 @@ export IM_WEB_SCOPE='openid profile'
 
 集团管理员可从侧栏打开“消息保留期配置”，查看当前租户正文期限、版本及审批记录，填写 1～3650 天和已取得的审批引用，并确认作用于全集团后保存。已有消息历史时禁止延长期限，版本冲突须刷新后重新填写。网络异常或超时后先查询服务器状态；只有仍为原版本时才允许以原参数重试，不会自动使用新版本。当前配置一致只代表状态一致，不能独立证明哪次请求已执行。关闭弹窗仍保留待确认参数；未核对完成前不能手动切换任职／会话、退出或发起另一项保全管理操作。放弃核对不撤销服务器操作；刷新、强制退出会丢失本页核对信息。审批引用仅记录，不核验外部审批；保存不会启动清理任务，也不能恢复已清除的正文。详见 [P4-10 验收记录](docs/开发增量-P4-10-验收记录.md)。
 
+同一弹窗可展开“查看审批历史”，每页 20 条展示期限、版本、审批引用、登记人及时间，支持刷新和加载更多。关闭、切换身份、当前配置刷新或写入时清空旧历史；权限失效同时禁用配置入口。历史仅供查询，不能回滚配置。详见 [P4-11 验收记录](docs/开发增量-P4-11-验收记录.md)。
+
 这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。非标准或不透明令牌需另建适配器。
 
 ## 测试
@@ -231,9 +236,9 @@ IM_TEST_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/en
 go vet ./...
 ```
 
-浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/multi_device_recovery.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs`、`node internal/webclient/e2e/group_roster.cjs`、`node internal/webclient/e2e/group_policy_recheck.cjs`、`node internal/webclient/e2e/retention_records.cjs`、`node internal/webclient/e2e/legal_holds.cjs`、`node internal/webclient/e2e/legal_hold_actions.cjs` 和 `node internal/webclient/e2e/retention_policy.cjs`。
+浏览器恢复测试使用 Playwright；将其 `node_modules` 目录设为 `NODE_PATH`，如浏览器未由 Playwright 管理，再将 `CHROMIUM_EXECUTABLE` 设为 Chromium 可执行文件路径，运行 `node internal/webclient/e2e/safety_reconcile.cjs`、`node internal/webclient/e2e/multi_device_recovery.cjs`、`node internal/webclient/e2e/group_list.cjs`、`node internal/webclient/e2e/group_history.cjs`、`node internal/webclient/e2e/group_send.cjs`、`node internal/webclient/e2e/group_create.cjs`、`node internal/webclient/e2e/group_invite.cjs`、`node internal/webclient/e2e/group_leave.cjs`、`node internal/webclient/e2e/group_roster.cjs`、`node internal/webclient/e2e/group_policy_recheck.cjs`、`node internal/webclient/e2e/retention_records.cjs`、`node internal/webclient/e2e/legal_holds.cjs`、`node internal/webclient/e2e/legal_hold_actions.cjs`、`node internal/webclient/e2e/retention_policy.cjs` 和 `node internal/webclient/e2e/retention_history.cjs`。
 
-`multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复，同时从生产管理员 API 展示正文／摘要清理批次与已解除／有效法务保全，并通过浏览器实际登记／解除一项保全，断言查询、写入审计与事件记录；同时实际修改租户正文保留期、验证审批历史及审计、已有消息时拒绝延长和另一租户不受影响。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
+`multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复，同时从生产管理员 API 展示正文／摘要清理批次与已解除／有效法务保全，并通过浏览器实际登记／解除一项保全，断言查询、写入审计与事件记录；同时实际修改租户正文保留期，通过页面读取已提交审批历史并核对查询审计、已有消息时拒绝延长和另一租户不受影响。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
 
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000016` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
 

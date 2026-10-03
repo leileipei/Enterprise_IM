@@ -86,3 +86,22 @@ func TestWebRetentionPolicyBrowser(t *testing.T) {
 	}
 	t.Log(string(output))
 }
+
+func TestWebRetentionHistoryBrowser(t *testing.T) {
+	node := os.Getenv("IM_TEST_BROWSER_NODE")
+	if node == "" {
+		t.Skip("set IM_TEST_BROWSER_NODE to run browser interface tests")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, node, "e2e/retention_history.cjs")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	output, err := cmd.CombinedOutput()
+	if cmd.Process != nil {
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
+	if err != nil {
+		t.Fatalf("retention history browser: %v: %s", err, output)
+	}
+	t.Log(string(output))
+}
