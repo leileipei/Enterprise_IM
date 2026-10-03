@@ -285,6 +285,25 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
  WHERE tenant_id=$1 AND outcome='allow'`, tenantA).Scan(&placedAudits, &releasedAudits); err != nil || placedAudits != 3 || releasedAudits != 2 {
 		t.Fatalf("browser hold write audits place=%d release=%d err=%v", placedAudits, releasedAudits, err)
 	}
+	var policyDays, policyVersion, otherDays, otherVersion, historyCount, updateAudits, extensionDenials int
+	if err := conn.QueryRow(context.Background(), `SELECT message_body_retention_days,retention_version
+ FROM tenants WHERE id=$1`, tenantA).Scan(&policyDays, &policyVersion); err != nil || policyDays != 180 || policyVersion != 1 {
+		t.Fatalf("browser retention policy days=%d version=%d err=%v", policyDays, policyVersion, err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT message_body_retention_days,retention_version
+ FROM tenants WHERE id=$1`, tenantB).Scan(&otherDays, &otherVersion); err != nil || otherDays != 365 || otherVersion != 0 {
+		t.Fatalf("other tenant policy changed days=%d version=%d err=%v", otherDays, otherVersion, err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM tenant_retention_policy_history
+ WHERE tenant_id=$1 AND version=1 AND message_body_retention_days=180 AND approval_reference='CAB-BROWSER-RETENTION'
+ AND approved_by_user_id=$2`, tenantA, adminA).Scan(&historyCount); err != nil || historyCount != 1 {
+		t.Fatalf("browser approval history=%d err=%v", historyCount, err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FILTER (WHERE outcome='allow'),
+ count(*) FILTER (WHERE outcome='deny' AND reason='retention_extension_requires_empty_history')
+ FROM audit_events WHERE tenant_id=$1 AND action='retention_policy_update'`, tenantA).Scan(&updateAudits, &extensionDenials); err != nil || updateAudits != 1 || extensionDenials != 1 {
+		t.Fatalf("browser policy audits allow=%d extension denied=%d err=%v", updateAudits, extensionDenials, err)
+	}
 	var persisted int
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM messages WHERE tenant_id=$1 AND conversation_id=$2
  AND text_body IN ('已有消息','来自真实浏览器一','断线期间来自浏览器一')`, tenantA, directA).Scan(&persisted); err != nil || persisted != 3 {

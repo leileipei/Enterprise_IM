@@ -2,7 +2,8 @@
 
 // Read-only evidence viewer. Records live only in the current page and context.
 window.RetentionRecords = class {
-  constructor(request, context) {
+  constructor(request, context, onAccess = () => {}) {
+    this.onAccess = onAccess;
     this.request = request;
     this.context = context;
     this.openButton = document.getElementById("retention-records-open");
@@ -56,6 +57,7 @@ window.RetentionRecords = class {
       this.allowed = false;
       this.accessFailed = false;
       this.accessPending = false;
+      this.onAccess(false);
       if (this.identityKey) this.checkAccess(this.identityKey);
     }
     this.updateButtons();
@@ -78,6 +80,7 @@ window.RetentionRecords = class {
       this.accessFailed = !error.status || error.status >= 500;
     }
     this.accessPending = false;
+    this.onAccess(this.allowed);
     this.updateButtons();
   }
 
