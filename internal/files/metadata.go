@@ -41,22 +41,22 @@ func (m Metadata) measured() bool {
 	return m.ActualSizeBytes != nil && *m.ActualSizeBytes == m.DeclaredSizeBytes && m.UploadedAt != nil && !m.UploadedAt.IsZero() && !m.UploadedAt.Before(m.CreatedAt) && m.UploadedAt.Before(m.UploadExpiresAt) && !m.UploadedAt.After(m.UpdatedAt)
 }
 func (m Metadata) sealEmpty() bool {
-	return m.ActualSizeBytes == nil && m.UploadedAt == nil && m.ObjectKey == "" && m.ObjectVersionID == "" && m.DetectedMediaType == "" && len(m.SHA256) == 0
+	return m.ActualSizeBytes == nil && m.UploadedAt == nil && m.ObjectKey == "" && m.ObjectVersionID == "" && m.DetectedMediaType == "" && m.SHA256 == nil
 }
 func (m Metadata) sealed() bool {
 	return m.measured() && m.ObjectKey == "tenants/"+m.TenantID+"/files/"+m.ID && opaque(m.ObjectVersionID) && validMediaType(m.DetectedMediaType) && len(m.SHA256) == 32
 }
 func (m Metadata) scanEmpty() bool {
-	return m.ScanJobID == "" && m.ScanEngine == "" && m.ScanDefinitionVersion == "" && m.ScannedAt == nil && len(m.ScanSHA256) == 0
+	return m.ScanJobID == "" && m.ScanEngine == "" && m.ScanDefinitionVersion == "" && m.ScannedAt == nil && m.ScanSHA256 == nil
 }
 func (m Metadata) scanPending() bool {
-	return validUUID(m.ScanJobID) && m.ScanEngine == "" && m.ScanDefinitionVersion == "" && m.ScannedAt == nil && len(m.ScanSHA256) == 0
+	return validUUID(m.ScanJobID) && m.ScanEngine == "" && m.ScanDefinitionVersion == "" && m.ScannedAt == nil && m.ScanSHA256 == nil
 }
 func (m Metadata) scanResult() bool {
 	return validUUID(m.ScanJobID) && opaque(m.ScanEngine) && opaque(m.ScanDefinitionVersion) && m.ScannedAt != nil && !m.ScannedAt.IsZero() && m.UploadedAt != nil && !m.ScannedAt.Before(*m.UploadedAt) && !m.ScannedAt.After(m.UpdatedAt) && len(m.ScanSHA256) == 32 && bytes.Equal(m.ScanSHA256, m.SHA256)
 }
 func (m Metadata) contentCleared() bool {
-	return m.OriginalFilename == "" && m.DeclaredMediaType == "" && m.ObjectKey == "" && m.ObjectVersionID == "" && m.DetectedMediaType == "" && len(m.SHA256) == 0 && m.scanEmpty()
+	return m.OriginalFilename == "" && m.DeclaredMediaType == "" && m.ObjectKey == "" && m.ObjectVersionID == "" && m.DetectedMediaType == "" && m.SHA256 == nil && m.scanEmpty()
 }
 func (m Metadata) intact() bool {
 	p, e := NormalizeCreate(m.CreateParams)

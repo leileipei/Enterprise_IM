@@ -119,6 +119,10 @@ func TestFileMetadataStageCompleteness(t *testing.T) {
 		state State
 		mut   func(*Metadata)
 	}{
+		{"allocated empty bytea", StateAllocated, func(m *Metadata) { m.SHA256 = []byte{} }},
+		{"allocated empty scan bytea", StateAllocated, func(m *Metadata) { m.ScanSHA256 = []byte{} }},
+		{"uploaded empty scan bytea", StateUploaded, func(m *Metadata) { m.ScanSHA256 = []byte{} }},
+		{"deleted empty bytea", StateDeleted, func(m *Metadata) { m.SHA256 = []byte{} }},
 		{"allocated content", StateAllocated, func(m *Metadata) { m.ObjectKey = "unsealed" }},
 		{"allocated job", StateAllocated, func(m *Metadata) { m.ScanJobID = "10000000-0000-4000-8000-000000000061" }},
 		{"missing key", StateUploaded, func(m *Metadata) { m.ObjectKey = "" }},

@@ -8,7 +8,7 @@
 
 **Tech Stack:** 现有 Go 1.27.1、标准库 encoding/json／crypto/sha256／unicode／mime／time、既有 pgx/v5 与 PostgreSQL。无新生产依赖。
 
-**Spec:** [P4-21 书面规格](../specs/2026-10-04-p4-21-file-foundation-design.md)，用户于 2026-10-04 以“继续”确认。实现代码基线 b24f963；规格提交 a21dfca。本计划尚待审阅，不含已执行任务或测试结果。
+**Spec:** [P4-21 书面规格](../specs/2026-10-04-p4-21-file-foundation-design.md)，用户于 2026-10-04 以“继续”确认。实现代码基线 b24f963；规格提交 a21dfca。本计划已获用户确认；以下勾选依据实际执行证据，交付状态见验收记录。
 
 ## Global Constraints
 
@@ -124,9 +124,9 @@ if !errors.Is(err, ErrInvalidMetadata) || out != (CreateParams{}) {
 - Consumes Task 1～3 的模型和迁移；不新增对外接口。
 - Produces 可复验的运行记录、独立评审结论和堆叠草稿 PR。用户已选择当前会话逐项实施；末尾按 requesting-code-review 技能独立评审，不逐任务另开子代理。
 
-- [ ] **1. 验证现有完整链路。**启用真实 PG／Redis／Chrome，运行 `go test ./... -count=1 -v`。确认单聊／群消息、旧搜索与 P4-20 跨会话浏览器及真实 OIDC 流程通过；记录实际顶层 PASS／FAIL／SKIP，辅助 TestRealtimeAPIChild 跳过单独说明，任何新增数据库测试跳过均不能报通过。
-- [ ] **2. 完成静态与竞态检查。**运行 `go test -race ./internal/files ./internal/policystore -run '^(TestNormalizeCreate|TestCreationDigest|TestFile)' -count=1 -v`、`go vet ./...`、`go build ./...`、`git diff --check`，读取全部退出码。已有完整绿色证据后只为具体修复风险重验，不无故反复全量运行。
-- [ ] **3. 写实际中文验收。**记录真实 RED／GREEN、schema约束、迁移Up／Down、CAS／回滚并发、完整回归、环境真实端口及日志路径。明确只是元数据／状态基础，没有上传／扫描／发送／下载、F01 或生产容量验收；模型限制25MiB不是性能证据。P4-19 组合预算测试后续项仍保留，不借本切片宣称已补强。
+- [x] **1. 验证现有完整链路。**启用真实 PG／Redis／Chrome，运行 `go test ./... -count=1 -v`。确认单聊／群消息、旧搜索与 P4-20 跨会话浏览器及真实 OIDC 流程通过；记录实际顶层 PASS／FAIL／SKIP，辅助 TestRealtimeAPIChild 跳过单独说明，任何新增数据库测试跳过均不能报通过。
+- [x] **2. 完成静态与竞态检查。**运行 `go test -race ./internal/files ./internal/policystore -run '^(TestNormalizeCreate|TestCreationDigest|TestFile)' -count=1 -v`、`go vet ./...`、`go build ./...`、`git diff --check`，读取全部退出码。已有完整绿色证据后只为具体修复风险重验，不无故反复全量运行。
+- [x] **3. 写实际中文验收。**记录真实 RED／GREEN、schema约束、迁移Up／Down、CAS／回滚并发、完整回归、环境真实端口及日志路径。明确只是元数据／状态基础，没有上传／扫描／发送／下载、F01 或生产容量验收；模型限制25MiB不是性能证据。P4-19 组合预算测试后续项仍保留，不借本切片宣称已补强。
 - [ ] **4. 独立全分支评审与修正。**按 requesting-code-review 评审 b24f963..HEAD 的功能差异，附规格、计划、实际日志和范围。禁止把评审只读日志写成独立重跑集成；如果代理数量限制使复用评审上下文需如实记录。解决 Critical／Important，Minor明确处理；修复后跑对应真实验证。
 - [ ] **5. 提交／推送／草稿 PR。**继续已有 codex/p4-21-file-foundation-design 分支（保留历史，不重复创建工作树）；以 codex/p4-20-web-cross-message-search 为 base，提交剩余验收文档，推送并创建 P4-21 实现草稿 PR。用临时 UTF-8 正文文件传 gh --body-file，成功创建必须 attach_artifact；记录真实链接，再核对 PR OPEN／DRAFT、base／head、local／remote／PR SHA一致、工作树干净。
 - [ ] **6. 收尾。**停止仅本轮专用测试容器、保留工作树。用户交付包含中文验收记录、PR、实际验证及后续 P4-22。不合并、不部署、不启用 Worker。
@@ -137,4 +137,4 @@ if !errors.Is(err, ErrInvalidMetadata) || out != (CreateParams{}) {
 
 所有函数／字段均由其生产任务定义；迁移编号未占用，新增任务只调整现有 db helper 的迁移清单，Glob helper 自然覆盖。Down 必须保留已登记证据；SQLSTATE精确断言避免因 SQL 自身写错而“测试通过”。计划自检不等同于实际运行验证。
 
-2026-10-04：书面规格已确认，本计划已保存，**待用户审阅确认后**按 superpowers:executing-plans 在当前会话逐项实施；保持用户先前选择的执行方式，不重复询问是否采用子代理。当前尚未编写文件产品代码、执行迁移或运行本增量测试。
+2026-10-04：用户确认计划，按 superpowers:executing-plans 在当前会话逐项实施。任务1～3已提交并验证；任务4的回归、评审和交付按实际证据更新，详见 [验收记录](../../开发增量-P4-21-验收记录.md)。
