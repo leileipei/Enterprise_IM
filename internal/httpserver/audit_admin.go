@@ -42,13 +42,14 @@ func HandlerWithAuditQuery(next http.Handler, authenticator Authenticator, servi
 			return
 		}
 		params, err := url.ParseQuery(r.URL.RawQuery)
-		if err != nil || len(params) > 7 {
+		if err != nil || len(params) > 9 {
 			rejectAdmin(w, r, 400, "invalid_query")
 			return
 		}
 		limit, cursor := 20, ""
 		action, outcome, actorUserID := "", "", ""
 		from, until := "", ""
+		resourceType, resourceID := "", ""
 		for key, values := range params {
 			if len(values) != 1 {
 				rejectAdmin(w, r, 400, "invalid_query")
@@ -66,6 +67,16 @@ func HandlerWithAuditQuery(next http.Handler, authenticator Authenticator, servi
 				if !adminAuditActionPattern.MatchString(action) {
 					rejectAdmin(w, r, 400, "invalid_query")
 					return
+				}
+			case "resource_type", "resource_id":
+				if values[0] == "" {
+					rejectAdmin(w, r, 400, "invalid_query")
+					return
+				}
+				if key == "resource_type" {
+					resourceType = values[0]
+				} else {
+					resourceID = strings.ToLower(values[0])
 				}
 			case "from", "until":
 				if values[0] == "" {
@@ -100,11 +111,15 @@ func HandlerWithAuditQuery(next http.Handler, authenticator Authenticator, servi
 				return
 			}
 		}
+		if err := access.ValidateAuditResourceFilter(resourceType, resourceID); err != nil {
+			rejectAdmin(w, r, 400, "invalid_query")
+			return
+		}
 		if _, _, err := access.ParseAuditTimeRange(from, until); err != nil {
 			rejectAdmin(w, r, 400, "invalid_query")
 			return
 		}
-		page, err := service.ListAuditEvents(r.Context(), id, access.AuditEventFilter{Action: action, Outcome: outcome, ActorUserID: actorUserID, From: from, Until: until}, cursor, limit)
+		page, err := service.ListAuditEvents(r.Context(), id, access.AuditEventFilter{Action: action, Outcome: outcome, ActorUserID: actorUserID, From: from, Until: until, ResourceType: resourceType, ResourceID: resourceID}, cursor, limit)
 		if err != nil {
 			if errors.Is(err, access.ErrInvalidAuditQuery) {
 				writeAdminError(w, 400, "invalid_audit_query")

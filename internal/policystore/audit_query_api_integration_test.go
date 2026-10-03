@@ -34,7 +34,7 @@ func assertProductionAuditQuery(t *testing.T, conn *pgx.Conn, client *http.Clien
 	const route = "/api/v1/admin/audit-events"
 	from := time.Now().UTC().Add(-time.Hour).Truncate(time.Microsecond).Format(time.RFC3339Nano)
 	until := time.Now().UTC().Add(time.Hour).Truncate(time.Microsecond).Format(time.RFC3339Nano)
-	filter := "?action=retention_policy_update&outcome=allow&limit=1&actor_user_id=" + adminA + "&from=" + url.QueryEscape(from) + "&until=" + url.QueryEscape(until)
+	filter := "?action=retention_policy_update&outcome=allow&limit=1&actor_user_id=" + adminA + "&from=" + url.QueryEscape(from) + "&until=" + url.QueryEscape(until) + "&resource_type=tenant&resource_id=" + tenantA
 	var a, b, deny page
 	productionResponse(t, client, productionRequest(t, "GET", first, route+filter, token, nil, true), 200, &a)
 	if len(a.Events) != 1 || a.Next == "" || a.Events[0].ID == "" || a.Events[0].User != adminA || a.Events[0].Member != adminM || a.Events[0].Action != "retention_policy_update" || a.Events[0].ResourceType != "tenant" || a.Events[0].ResourceID == nil || *a.Events[0].ResourceID != tenantA || a.Events[0].Outcome != "allow" || a.Events[0].Reason != "approved_retention_change" || a.Events[0].At.IsZero() {
@@ -51,6 +51,7 @@ func assertProductionAuditQuery(t *testing.T, conn *pgx.Conn, client *http.Clien
 	productionResponse(t, client, productionRequest(t, "GET", second, route+"?action=retention_policy_update&outcome=deny&cursor="+a.Next, token, nil, true), 400, nil)
 	productionResponse(t, client, productionRequest(t, "GET", second, route+"?action=retention_policy_update&outcome=allow&limit=1&actor_user_id="+personA+"&cursor="+a.Next, token, nil, true), 400, nil)
 	productionResponse(t, client, productionRequest(t, "GET", second, route+strings.Replace(filter, url.QueryEscape(until), url.QueryEscape(time.Now().UTC().Add(2*time.Hour).Truncate(time.Microsecond).Format(time.RFC3339Nano)), 1)+"&cursor="+a.Next, token, nil, true), 400, nil)
+	productionResponse(t, client, productionRequest(t, "GET", second, route+strings.Replace(filter, "resource_id="+tenantA, "resource_id="+tenantB, 1)+"&cursor="+a.Next, token, nil, true), 400, nil)
 	for _, addr := range []string{first, second} {
 		productionResponse(t, client, productionRequest(t, "GET", addr, route, "invalid", nil, true), 401, nil)
 	}

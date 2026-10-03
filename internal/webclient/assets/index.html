@@ -65,6 +65,9 @@
         <label for="audit-actor">执行人用户 ID（留空查询全部）</label><input id="audit-actor" type="text" autocomplete="off" spellcheck="false" placeholder="填写完整 UUID，按用户 ID 精确查询">
         <label for="audit-action">动作代码（留空查询全部）</label><input id="audit-action" type="text" autocomplete="off" placeholder="例如 retention_policy_update">
         <label for="audit-outcome">操作结果</label><select id="audit-outcome"><option value="">全部结果</option><option value="allow">允许</option><option value="deny">拒绝</option></select>
+        <label for="audit-resource-type">资源类型（留空查询全部）</label><input id="audit-resource-type" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-resource-help" placeholder="例如 conversation 或 tenant">
+        <label for="audit-resource-id">资源 ID（留空查询该类型全部记录）</label><input id="audit-resource-id" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-resource-help" placeholder="填写完整 UUID">
+        <p id="audit-resource-help" class="microcopy">填写资源 ID 时须同时填写资源类型；按类型和 ID 精确查询已登记审计。</p>
         <label for="audit-from">开始时间（包含）</label><input id="audit-from" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-time-help" placeholder="例如 2026-10-03T00:00:00+08:00">
         <label for="audit-until">结束时间（不包含）</label><input id="audit-until" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-time-help" placeholder="例如 2026-10-04T00:00:00+08:00">
         <p id="audit-time-help" class="microcopy">可只填写一端，留空不限时间。需带时区（Z 或 +08:00 等），小数秒最多 6 位；开始时间须早于结束时间。</p>

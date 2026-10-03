@@ -411,3 +411,85 @@ func TestAuditQueryRejectsInvalidTimeRange(t *testing.T) {
 		t.Fatalf("invalid range audit %d %v", reads, err)
 	}
 }
+
+// Resource ID collisions across types/tenants and nullable IDs must not broaden a targeted page.
+func TestAuditQueryResourcePagingAndCursorBinding(t *testing.T) {
+	conn := testDB(t)
+	svc := seedAuditQuery(t, conn)
+	ctx := context.Background()
+	ptr := func(value string) *string { return &value }
+	const target = "abcdefab-cdef-4abc-8abc-abcdefabcdef"
+	const other = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+	const foreign = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+	for _, row := range []struct {
+		id, tenant, user, member, typ string
+		resource                      *string
+		outcome                       string
+	}{
+		{"11", tenantA, adminA, adminM, "conversation", ptr(target), "allow"},
+		{"12", tenantA, adminA, adminM, "tenant", ptr(target), "allow"},
+		{"13", tenantA, adminA, adminM, "conversation", ptr(other), "allow"},
+		{"14", tenantA, adminA, adminM, "conversation", ptr(target), "deny"},
+		{"15", tenantA, adminA, adminM, "conversation", nil, "deny"},
+		{"16", tenantB, personB, personBM, "conversation", ptr(target), "allow"},
+		{"17", tenantB, personB, personBM, "conversation", ptr(foreign), "allow"},
+	} {
+		run(t, conn, `INSERT INTO audit_events(id,tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at) OVERRIDING SYSTEM VALUE VALUES($1,$2,$3,$4,'resource_check',$5,$6,$7,'checked',$8)`, row.id, row.tenant, row.user, row.member, row.typ, row.resource, row.outcome, fixedTime)
+	}
+	f := access.AuditEventFilter{Action: "resource_check", ResourceType: "conversation", ResourceID: strings.ToUpper(target)}
+	first, err := svc.ListAuditEvents(ctx, identity(), f, "", 1)
+	if err != nil || len(first.Events) != 1 || first.Events[0].ID != "14" || first.NextCursor == "" {
+		t.Fatalf("resource first %+v %v", first, err)
+	}
+	f.ResourceID = target
+	last, err := svc.ListAuditEvents(ctx, identity(), f, first.NextCursor, 1)
+	if err != nil || len(last.Events) != 1 || last.Events[0].ID != "11" || last.NextCursor != "" {
+		t.Fatalf("case equivalent resource %+v %v", last, err)
+	}
+	for _, q := range [][2]string{{"conversation", ""}, {"tenant", target}, {"conversation", other}, {"", ""}} {
+		g := f
+		g.ResourceType, g.ResourceID = q[0], q[1]
+		if _, err := svc.ListAuditEvents(ctx, identity(), g, first.NextCursor, 1); !errors.Is(err, access.ErrInvalidAuditQuery) {
+			t.Fatalf("cursor resource %v: %v", q, err)
+		}
+	}
+	f.ResourceID = ""
+	typed, err := svc.ListAuditEvents(ctx, identity(), f, "", 20)
+	if err != nil || len(typed.Events) != 4 || typed.Events[0].ID != "15" || typed.Events[0].ResourceID != nil || typed.Events[1].ID != "14" || typed.Events[2].ID != "13" || typed.Events[3].ID != "11" {
+		t.Fatalf("type-only nullable %+v %v", typed, err)
+	}
+	f.ResourceID = target
+	f.ActorUserID = adminA
+	f.Outcome = "allow"
+	f.From = "2026-09-28T10:00:00Z"
+	f.Until = "2026-09-28T10:00:00.000001Z"
+	combined, err := svc.ListAuditEvents(ctx, identity(), f, "", 20)
+	if err != nil || len(combined.Events) != 1 || combined.Events[0].ID != "11" {
+		t.Fatalf("combined resource %+v %v", combined, err)
+	}
+	f.ActorUserID = ""
+	f.Outcome = ""
+	f.From = ""
+	f.Until = ""
+	for _, q := range [][2]string{{"unrecorded_type", target}, {"conversation", foreign}} {
+		f.ResourceType, f.ResourceID = q[0], q[1]
+		page, err := svc.ListAuditEvents(ctx, identity(), f, "", 20)
+		if err != nil || page.Events == nil || len(page.Events) != 0 || page.NextCursor != "" {
+			t.Fatalf("unknown/foreign resource %+v %v", page, err)
+		}
+	}
+	var reads int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM audit_events WHERE action='audit_events_list' AND outcome='allow'`).Scan(&reads); err != nil || reads != 6 {
+		t.Fatalf("resource read audits %d %v", reads, err)
+	}
+}
+
+func TestAuditQueryRejectsInvalidResourceFilter(t *testing.T) {
+	conn := testDB(t)
+	svc := seedAuditQuery(t, conn)
+	for _, f := range []access.AuditEventFilter{{ResourceID: tenantA}, {ResourceType: "Bad"}, {ResourceType: "bad type"}, {ResourceType: strings.Repeat("a", 65)}, {ResourceType: "conversation", ResourceID: "bad"}, {ResourceType: "conversation", ResourceID: " " + tenantA}, {ResourceType: "conversation", ResourceID: tenantA + " "}, {ResourceType: "conversation", ResourceID: strings.ReplaceAll(tenantA, "-", "")}} {
+		if _, err := svc.ListAuditEvents(context.Background(), identity(), f, "", 20); !errors.Is(err, access.ErrInvalidAuditQuery) {
+			t.Fatalf("invalid resource %+v: %v", f, err)
+		}
+	}
+}
