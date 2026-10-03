@@ -483,3 +483,35 @@ func TestProcessTenantRetentionLockAndDeadlockRetry(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessTenantOverridesRepeatableReadBeforeLegalHoldRace(t *testing.T) {
+	pool := database(t)
+	seedMessage(t, pool, conversationA, 1, fixedTime.Add(-366*24*time.Hour))
+	config := pool.Config()
+	config.ConnConfig.RuntimeParams["default_transaction_isolation"] = "repeatable read"
+	repeatablePool, err := pgxpool.NewWithConfig(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer repeatablePool.Close()
+	w := testWorker(pool, 0)
+	placed := false
+	w.DB = wrappedDB{Beginner: repeatablePool, wrap: func(tx pgx.Tx) pgx.Tx {
+		return hookedTx{Tx: tx, before: func(ctx context.Context, sql string) error {
+			if strings.Contains(sql, "SELECT clock_timestamp()") && !placed {
+				// The tenant query has already established a snapshot. The real
+				// hold service locks but does not update the conversation row.
+				_, _, err := holdService(pool).PlaceLegalHold(ctx, identity(), conversationA,
+					"00000000-0000-4000-8000-000000009004", "SNAPSHOT-RACE")
+				placed = err == nil
+				return err
+			}
+			return nil
+		}}
+	}}
+	batch, err := w.ProcessTenant(context.Background(), tenantA)
+	if err != nil || batch.ClearedCount != 0 || !placed {
+		t.Fatalf("missed committed legal hold under repeatable read: %+v placed=%v err=%v", batch, placed, err)
+	}
+	assertCounts(t, pool, 0, 0)
+}

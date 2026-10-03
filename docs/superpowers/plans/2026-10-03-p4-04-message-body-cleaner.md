@@ -13,6 +13,7 @@
 ## Global Constraints
 
 - 正文非空时清理时间为空；正文为空时清理时间非空；清理后不得恢复正文或改写清理时间。
+- 任何查询前显式设清理事务为 READ COMMITTED，隔离设置失败则中止；非默认可重复读连接的保全竞态回归必须通过。
 - 任一 `released_at IS NULL` 的会话保全阻断清理；正文与批次证据同事务提交。
 - 默认保留 365 天，持久化期限为 1～3650 天；到期条件为 `accepted_at + 保留天数 × 24 小时 <= 本批实际清理时间`。
 - 每会话每事务默认 100 条，上限 1000；生产清理时间来自取得锁后的数据库 `clock_timestamp()`。
@@ -92,8 +93,8 @@ if !item.Redacted || item.MessageID != "" || item.SenderUserID != "" ||
 
 **Interfaces:** 交付分支 `codex/p4-04-body-cleaner`，stacked draft PR 基于 `codex/p4-03-conversation-legal-hold`（PR #50），验收结果必须区分已实现软件行为与外部存储清除。
 
-- [ ] 启动本增量专用 PostgreSQL/Redis，设置 `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL`、`IM_TEST_BROWSER_NODE`、`NODE_PATH`、`CHROMIUM_EXECUTABLE`；提前创建 `btree_gist`。确认连接隔离及服务就绪后运行 `go test ./... -count=1`、`go vet ./...`、`go build ./...`、`git diff --check`；显式检查 `TestRealBrowserLoginRealtimeAndOfflinePull` 的 PASS，不能把缺少变量的 SKIP 当作验收。
-- [ ] 独立代码复核迁移不变量、锁后保全判断、跨租户筛选、NULL 读取、重发 ACK 和默认关闭行为；修复确认的缺陷，重跑受影响测试。
+- [x] 启动本增量专用 PostgreSQL/Redis，设置 `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL`、`IM_TEST_BROWSER_NODE`、`NODE_PATH`、`CHROMIUM_EXECUTABLE`；提前创建 `btree_gist`。确认连接隔离及服务就绪后运行 `go test ./... -count=1`、`go vet ./...`、`go build ./...`、`git diff --check`；显式检查 `TestRealBrowserLoginRealtimeAndOfflinePull` 的 PASS，不能把缺少变量的 SKIP 当作验收。
+- [x] 独立代码复核迁移不变量、锁后保全判断、跨租户筛选、NULL 读取、重发 ACK 和默认关闭行为；修复确认的缺陷，重跑受影响测试。
 - [ ] 确认 Git 提交与状态，推送分支，创建并 attach stacked draft PR；PR 说明正文置空、摘要保留、迁移锁、验证范围和启用方式。停止本增量专用服务，交付 PR 与测试证据。
 
 执行方式沿用本会话逐项实现（Native），使用 `superpowers:executing-plans`；完成实施后做独立整分支复核。

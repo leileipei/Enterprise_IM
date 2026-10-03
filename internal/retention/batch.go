@@ -14,6 +14,11 @@ func (w Worker) processBatch(ctx context.Context, tenantID string, size int) (Ba
 		return BatchResult{}, err
 	}
 	defer rollback(tx)
+	// Lock-then-recheck requires a fresh snapshot per statement, regardless
+	// of database, role, or connection defaults.
+	if _, err := tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); err != nil {
+		return BatchResult{}, err
+	}
 	var days int
 	err = tx.QueryRow(ctx, `SELECT message_body_retention_days FROM tenants
  WHERE id=$1 AND status='active' FOR SHARE`, tenantID).Scan(&days)

@@ -26,7 +26,7 @@
 
 一次批次的锁顺序与判断：
 
-1. 开启事务，按可信数据库租户 ID 读取有效租户及 `message_body_retention_days`，对租户行取 `FOR SHARE`，使期限更新等待本批次结束；候选筛选只使用初步截止时间，不据此清理。
+1. 开启事务，在任何查询前显式设为 `READ COMMITTED`，确保锁后检查使用新快照，不受数据库、角色或连接默认隔离级别影响；设置失败则中止。按可信数据库租户 ID 读取有效租户及 `message_body_retention_days`，对租户行取 `FOR SHARE`，使期限更新等待本批次结束；候选筛选只使用初步截止时间，不据此清理。
 2. 从该租户选出有到期且未清理正文、并且查询时无有效保全的会话；按稳定会话 ID 顺序取一行 `FOR UPDATE SKIP LOCKED`。已被消息写入、成员操作或另一清理 Worker 锁住的会话暂跳过。查询排除有效保全会话，避免最早的被保全会话反复阻挡后续会话。
 3. **取得会话锁之后**重新查询 `conversation_legal_holds` 中 `released_at IS NULL` 的记录，并以数据库 `clock_timestamp()` 取得本批实际清理时间、重新计算截止时间。若有任一有效保全，本事务不清理该会话；等锁期间跨越到期边界时，仍以取得锁后的时间为准。
 4. 按 `accepted_at,seq` 顺序选最多一批未清理且 `accepted_at + 保留天数 × 24 小时 <= 本批实际清理时间` 的消息，将 `text_body` 置空并填入 `body_cleared_at`；仅根据实际 UPDATE RETURNING 的行写批次证据，提交事务。
