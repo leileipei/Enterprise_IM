@@ -3,11 +3,12 @@ package policystore
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leileipei/Enterprise_IM/internal/access"
-	"strings"
-	"time"
 )
 
 type CrossConversationMatch struct {

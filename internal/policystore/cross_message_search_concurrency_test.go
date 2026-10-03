@@ -3,17 +3,18 @@ package policystore_test
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/leileipei/Enterprise_IM/internal/policy"
-	"github.com/leileipei/Enterprise_IM/internal/policystore"
-	"github.com/leileipei/Enterprise_IM/internal/retention"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/leileipei/Enterprise_IM/internal/policy"
+	"github.com/leileipei/Enterprise_IM/internal/policystore"
+	"github.com/leileipei/Enterprise_IM/internal/retention"
 )
 
 type crossGateDB struct {

@@ -3,11 +3,12 @@ package policystore
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/policy"
-	"strings"
-	"time"
 )
 
 // These private batches retain authorization evidence until the page's final check.

@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/policy"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
-	"strings"
-	"testing"
-	"time"
 )
 
 func crossID(n int) string { return fmt.Sprintf("00000000-0000-4000-8000-%012d", n) }
@@ -283,5 +284,28 @@ func TestCrossMessageSearchVisibilityAndLiteralQuery(t *testing.T) {
 	}
 	if got := crossCollect(t, svc, publisher(), "工单", "all", 20); len(got) != 0 {
 		t.Fatalf("harddeny %+v", got)
+	}
+}
+
+func TestCrossMessageSearchRejoinAndEquivalentQuery(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	g := crossID(9981)
+	seedCrossGroup(t, conn, g)
+	insertGroupHistoryMessage(t, conn, g, 1, adminA, adminM, "ABC工单第一条")
+	run(t, conn, "UPDATE conversation_membership_intervals SET status='left',leave_seq=1,left_at=joined_at WHERE conversation_id=$1 AND user_id=$2", g, personA)
+	insertGroupHistoryMessage(t, conn, g, 2, adminA, adminM, "ABC工单离群缺口")
+	if e := insertInterval(conn, crossID(799981), tenantA, g, personA, targetM2, orgA, legalA, "member", "active", 3, nil); e != nil {
+		t.Fatal(e)
+	}
+	insertGroupHistoryMessage(t, conn, g, 3, adminA, adminM, "ABC工单再入群")
+	svc := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	a, e := svc.SearchAllTextMessages(context.Background(), groupMemberIdentity(), " \u0085ABC工单\u0085 ", "group", "", 1)
+	if e != nil || len(a.Messages) != 1 || a.Messages[0].Message.Seq != 1 || !a.HasMore {
+		t.Fatal(a, e)
+	}
+	b, e := svc.SearchAllTextMessages(context.Background(), groupMemberIdentity(), "abc工单", "group", a.NextCursor, 50)
+	if e != nil || len(b.Messages) != 1 || b.Messages[0].Message.Seq != 3 || b.HasMore {
+		t.Fatal(b, e)
 	}
 }

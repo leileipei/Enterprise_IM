@@ -2,9 +2,10 @@ package policystore
 
 import (
 	"context"
+	"sort"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
-	"sort"
 )
 
 type historyCandidate struct{ ID, Kind string }

@@ -5,11 +5,17 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
 
 func TestCrossMessageSearchIndexesUpDown(t *testing.T) {
 	conn := db(t)
 	seedDirectConversation(t, conn)
+	if _, e := (policystore.Service{DB: conn, Now: func() time.Time { return at }}).SendTextMessage(context.Background(), publisher(), directA, clientUUIDv7(at, 1740), "migration保留正文"); e != nil {
+		t.Fatal(e)
+	}
 	indexes := []string{"conversations_direct_low_search", "conversations_direct_high_search"}
 	check := func(want bool) {
 		t.Helper()
@@ -35,6 +41,10 @@ func TestCrossMessageSearchIndexesUpDown(t *testing.T) {
 			t.Fatal(err)
 		}
 		check(direction == "up")
+		var count int
+		if e := conn.QueryRow(context.Background(), "SELECT count(*) FROM messages WHERE conversation_id=$1 AND text_body=$2", directA, "migration保留正文").Scan(&count); e != nil || count != 1 {
+			t.Fatal("migration lost message", count, e)
+		}
 	}
 	var n int
 	if err := conn.QueryRow(context.Background(), "SELECT count(*) FROM conversations WHERE id=$1", directA).Scan(&n); err != nil || n != 1 {
