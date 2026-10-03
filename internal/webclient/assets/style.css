@@ -175,3 +175,9 @@ main{position:relative;z-index:1;min-height:100vh}
 #audit-open{margin-top:8px}
 #audit-context,#audit-boundary,#audit-hint{overflow-wrap:anywhere;line-height:1.7}
 #audit-outcome{width:100%;padding:10px;border:1px solid #bed8d0;border-radius:8px;background:white;color:#193044;font:inherit}
+
+.message-search-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7;color:#23434c;margin:14px 0}
+#message-search-context{overflow-wrap:anywhere}
+
+#message-search-query{width:100%;min-width:0;padding:11px;border:1px solid #bed8d0;border-radius:8px;background:white;color:#23434c;font:inherit}
+#message-search-query:focus-visible{outline:2px solid #26917f;outline-offset:2px}

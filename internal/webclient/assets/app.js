@@ -138,6 +138,8 @@ const auditRecords = new window.AuditRecords(request, retentionContext, value =>
   () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
 const retentionRecords = new window.RetentionRecords(request, retentionContext, allowed => { retentionPolicyEditor.setAccess(allowed); auditRecords.setAccess(allowed); });
 const legalHoldRecords = new window.LegalHoldRecords(request, retentionContext, () => retentionPolicyEditor.canSwitchContext());
+const messageSearch = new window.MessageSearch(request, () => ({ ...retentionContext(), kind: activeConversationKind }),
+  value => retentionPolicyEditor.validTime(value), () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
@@ -490,6 +492,7 @@ function resetChat() {
   auditRecords.contextChanged();
   retentionRecords.contextChanged();
   legalHoldRecords.contextChanged();
+  messageSearch.contextChanged();
   groupPolicyRecheckNotice = null;
   renderGroupPolicyRecheckAction();
   groupRosterOpenButton.classList.add("hidden");
@@ -2149,6 +2152,7 @@ function activateConversation(id) {
   renderGroups();
   retentionRecords.contextChanged();
   legalHoldRecords.contextChanged();
+  messageSearch.contextChanged();
   syncMessages().catch(report);
 }
 
@@ -2176,6 +2180,7 @@ function activateGroupHistory(id) {
   renderGroups();
   retentionRecords.contextChanged();
   legalHoldRecords.contextChanged();
+  messageSearch.contextChanged();
   syncMessages().catch(report);
 }
 
