@@ -68,10 +68,10 @@
 
 **Interfaces:** `LegalHoldPage{Holds []LegalHold, NextCursor string}` and `ListLegalHolds(ctx context.Context, id TrustedIdentity, conversationID, cursor string, limit int) (LegalHoldPage, error)`. HTTP wrapper `HandlerWithLegalHolds(next http.Handler, authenticator Authenticator, service LegalHoldService) (http.Handler, error)` consumes all three service methods from Tasks 2～4.
 
-- [ ] Write `TestListLegalHoldsTenantScopeAndCursor`: stable `(placed_at,id)` ordering including tied timestamps, no omitted or duplicated records across pages, invalid/foreign cursor rejected, group admin required, audit failure returns no details; run target test and observe RED.
-- [ ] Implement cursor with URL-safe base64 encoded tenant/conversation/time/ID tuple, validate binding and length, query `limit+1`; run target test until PASS.
-- [ ] Write `TestLegalHoldAdminRoutesAndStrictBodies`: verified identity and acting membership forwarded; GET defaults to 100/max 500 and rejects bad query params; POST/release paths, 201 vs 200 replay, 400/403/404/409/503 mapping, `no-store`; duplicate/unknown JSON fields, malformed UTF-8, `null`, oversized/trailing body and spoofed tenant rejected before service; run and observe RED.
-- [ ] Implement route parser and bounded strict JSON decoding following `retention_admin.go`, wire into `cmd/im-api/main.go`, document `000014` migration、API and “保全应在清理前登记” in README; run `go test ./internal/httpserver ./cmd/im-api -count=1` until PASS and commit.
+- [x] Write `TestListLegalHoldsTenantScopeAndCursor`: stable `(placed_at,id)` ordering including tied timestamps, no omitted or duplicated records across pages, invalid/foreign cursor rejected, group admin required, audit failure returns no details; run target test and observe RED.
+- [x] Implement cursor with URL-safe base64 encoded tenant/conversation/time/ID tuple, validate binding and length, query `limit+1`; run target test until PASS.
+- [x] Write `TestLegalHoldAdminRoutesAndStrictBodies`: verified identity and acting membership forwarded; GET defaults to 100/max 500 and rejects bad query params; POST/release paths, 201 vs 200 replay, 400/403/404/409/503 mapping, `no-store`; duplicate/unknown JSON fields, malformed UTF-8, `null`, oversized/trailing body and spoofed tenant rejected before service; run and observe RED.
+- [x] Implement route parser and bounded strict JSON decoding following `retention_admin.go`, wire into `cmd/im-api/main.go`, document `000014` migration、API and “保全应在清理前登记” in README; run `go test ./internal/httpserver ./cmd/im-api -count=1` until PASS and commit.
 
 ### Task 5: 全量验证与交付
 
