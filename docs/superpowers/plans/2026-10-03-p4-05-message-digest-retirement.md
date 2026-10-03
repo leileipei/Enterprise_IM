@@ -107,9 +107,17 @@ if result.RetiredCount != 2 || result.BatchID == "" { t.Fatalf("batch: %+v", res
 
 **Interfaces:** 分支 `codex/p4-05-digest-retirement`，叠加草稿 PR 基于 `codex/p4-04-body-cleaner`（PR #51）。Native 执行结束后、推送和 PR 前做一次独立整分支评审；不增加逐任务独立评审。
 
-- [ ] 启动本增量专用 PostgreSQL 16／Redis 7 并核对服务实际端口；设置 `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL`、`IM_TEST_BROWSER_NODE`、`NODE_PATH`、`CHROMIUM_EXECUTABLE`，创建 `btree_gist`。依赖就绪后运行 `go test ./... -count=1 -v`、`go test -race ./internal/retention ./cmd/im-retention-worker -count=1`、`go test -race ./internal/policystore -run '^TestDigestRetired' -count=1`、`go vet ./...`、`go build ./...`、`git diff --check`，日志保存并检查各结果。
-- [ ] 逐项核对设计验收矩阵、五项 Review Focus 与所有关键测试；真实 `TestRealBrowserLoginRealtimeAndOfflinePull` 必须 PASS，缺依赖 SKIP 不能作为验收。区分 subprocess helper 的正常 SKIP 与未运行的集成用例。
-- [ ] 按 `superpowers:executing-plans` 做一次新鲜、独立的整分支评审，重点是延迟约束最终状态、更新 ID 集合、快照判定点、保全与行锁等待、租户隔离、启用／回滚部署顺序。修正确认的问题并重跑受影响测试；记录其余边界与执行判断。
+- [x] 启动本增量专用 PostgreSQL 16／Redis 7 并核对服务实际端口；设置 `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL`、`IM_TEST_BROWSER_NODE`、`NODE_PATH`、`CHROMIUM_EXECUTABLE`，创建 `btree_gist`。依赖就绪后运行 `go test ./... -count=1 -v`、`go test -race ./internal/retention ./cmd/im-retention-worker -count=1`、`go test -race ./internal/policystore -run '^TestDigestRetired' -count=1`、`go vet ./...`、`go build ./...`、`git diff --check`，日志保存并检查各结果。
+- [x] 逐项核对设计验收矩阵、五项 Review Focus 与所有关键测试；真实 `TestRealBrowserLoginRealtimeAndOfflinePull` 必须 PASS，缺依赖 SKIP 不能作为验收。区分 subprocess helper 的正常 SKIP 与未运行的集成用例。
+- [x] 按 `superpowers:executing-plans` 做一次新鲜、独立的整分支评审，重点是延迟约束最终状态、更新 ID 集合、快照判定点、保全与行锁等待、租户隔离、启用／回滚部署顺序。修正确认的问题并重跑受影响测试；记录其余边界与执行判断。
 - [ ] 记录实际测试数及证据、检查提交和干净状态，推送分支，创建并 attach 叠加草稿 PR。PR 明确永久到期键、双开关、全部 API 升级前不得启用及外部副本边界；停止本增量专用服务，保留工作区。
 
 **计划状态：**用户已批准，按既定 Native 方式执行；Tasks 1～4 已完成，Task 5 验证与交付进行中。未勾选步骤不作为已完成或生产验收证据。
+
+## 验收记录（2026-10-03）
+
+专用 PostgreSQL 16、Redis 7 与真实 Chrome：全套 394 个顶层 PASS，0 FAIL；唯一 SKIP 为多进程辅助入口 TestRealtimeAPIChild。TestRealBrowserLoginRealtimeAndOfflinePull 明确 PASS。retention／cleaner 及新增发送用例 race、go vet、go build、diff 检查通过。实际二进制全关、仅正文、仅摘要、双开与 SIGTERM 通过。
+
+独立整分支评审（gpt-6-astra）无 Critical／Important；一项 Minor 留待补强：锁住首会话时，现有测试中的后续候选已退役，未直接断言跳锁后处理另一合格会话。实现使用 SKIP LOCKED，此项不是已确认功能缺陷。
+
+执行判断：整分支评审在 Task 5 PR 前仅执行一次；外部副本及介质另行治理，仍可能残留；消息和回执元数据保留，存储继续增长；超级用户绕过依赖权限治理；本地检查不替代客户容量和生产验收。
