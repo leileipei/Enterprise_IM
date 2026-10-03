@@ -145,6 +145,10 @@ async function send(page, text) {
     const audits = first.page.locator("#audit-list");
     const auditHint = first.page.locator("#audit-hint");
     await auditHint.getByText(/已显示/).waitFor();
+    const actualActor = await audits.locator(".audit-record-card dd").nth(1).innerText();
+    assert.match(actualActor,/^[0-9a-f-]{36}$/);
+    await first.page.locator("#audit-actor").fill(actualActor.toUpperCase());
+    assert.equal(await audits.locator(".audit-record-card").count(),0);
     await first.page.locator("#audit-action").fill("retention_policy_update");
     await first.page.locator("#audit-outcome").selectOption("allow");
     await first.page.locator("#audit-apply").click();

@@ -5,7 +5,7 @@ window.AuditRecords = class {
   constructor(request, context, validTime, canOpen) {
     this.request = request; this.context = context; this.validTime = validTime; this.canOpen = canOpen;
     const el = id => document.getElementById(`audit-${id}`);
-    this.entry = el("open"); this.dialog = el("dialog"); this.action = el("action"); this.outcome = el("outcome");
+    this.entry = el("open"); this.dialog = el("dialog"); this.action = el("action"); this.outcome = el("outcome"); this.actor = el("actor");
     this.apply = el("apply"); this.refresh = el("refresh"); this.more = el("more");
     this.list = el("list"); this.hint = el("hint"); this.label = el("context");
     this.allowed = false; this.identityKey = ""; this.generation = 0; this.loading = false; this.cursor = ""; this.records = []; this.cursors = new Set();
@@ -17,14 +17,14 @@ window.AuditRecords = class {
     this.refresh.addEventListener("click", () => this.load(true));
     this.more.addEventListener("click", () => this.load(false));
     const changed = () => { this.clear(); this.hint.textContent = "筛选已变化，请查询；翻页将从首页开始。"; };
-    this.action.addEventListener("input", changed); this.outcome.addEventListener("change", changed);
+    this.actor.addEventListener("input", changed); this.action.addEventListener("input", changed); this.outcome.addEventListener("change", changed);
     this.update();
   }
 
   clear(filters = false) {
     this.generation++; this.loading = false; this.cursor = ""; this.records = []; this.cursors = new Set();
     this.list.replaceChildren(); this.hint.textContent = "";
-    if (filters) { this.action.value = ""; this.outcome.value = ""; this.label.textContent = ""; }
+    if (filters) { this.actor.value = ""; this.action.value = ""; this.outcome.value = ""; this.label.textContent = ""; }
     this.update();
   }
 
@@ -42,7 +42,7 @@ window.AuditRecords = class {
 
   update() {
     this.entry.classList.toggle("hidden", !this.allowed);
-    this.action.disabled = !this.allowed; this.outcome.disabled = !this.allowed;
+    this.actor.disabled = !this.allowed; this.action.disabled = !this.allowed; this.outcome.disabled = !this.allowed;
     this.apply.disabled = !this.allowed || this.loading; this.refresh.disabled = !this.allowed || this.loading;
     this.more.classList.toggle("hidden", !this.allowed || !this.cursor); this.more.disabled = this.loading;
     this.list.setAttribute("aria-busy", String(this.loading));
@@ -63,7 +63,7 @@ window.AuditRecords = class {
     return { time, id: BigInt(e.id) };
   }
 
-  validate(page, cursor, action, outcome) {
+  validate(page, cursor, action, outcome, actorUserID) {
     if (!page || !Array.isArray(page.events) || page.events.length > 20 || typeof page.next_cursor !== "string" ||
         page.next_cursor.length > 1024 || (page.next_cursor && (page.events.length !== 20 || page.next_cursor === cursor || this.cursors.has(page.next_cursor)))) throw new Error("invalid audit page");
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,7 +72,7 @@ window.AuditRecords = class {
     if (cursor && !before) throw new Error("missing audit boundary");
     for (const e of page.events) {
       if (!e || typeof e.id !== "string" || !/^[1-9][0-9]{0,18}$/.test(e.id) || BigInt(e.id) > 9223372036854775807n || seen.has(e.id) ||
-          typeof e.actor_user_id !== "string" || !uuid.test(e.actor_user_id) || typeof e.acting_membership_id !== "string" || !uuid.test(e.acting_membership_id) ||
+          typeof e.actor_user_id !== "string" || !uuid.test(e.actor_user_id) || (actorUserID && e.actor_user_id.toLowerCase() !== actorUserID) || typeof e.acting_membership_id !== "string" || !uuid.test(e.acting_membership_id) ||
           typeof e.action !== "string" || !e.action || (action && e.action !== action) || typeof e.resource_type !== "string" || !e.resource_type ||
           (e.resource_id !== null && (typeof e.resource_id !== "string" || !uuid.test(e.resource_id))) ||
           !["allow", "deny"].includes(e.outcome) || (outcome && e.outcome !== outcome) || typeof e.reason !== "string" || !e.reason || !this.validTime(e.occurred_at)) throw new Error("invalid audit event");
@@ -84,20 +84,22 @@ window.AuditRecords = class {
 
   async load(first) {
     if (!this.dialog.open || !this.allowed || this.loading || (!first && !this.cursor)) return;
-    const snapshot = this.context(), action = this.action.value, outcome = this.outcome.value;
+    const snapshot = this.context(), action = this.action.value, outcome = this.outcome.value, actorValue = this.actor.value, actorUserID = actorValue.toLowerCase();
+    if (actorUserID && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(actorUserID)) { this.clear(); this.hint.textContent = "执行人用户 ID 应为完整 UUID，或留空查询全部。"; return; }
     if (action && !/^[a-z][a-z0-9_]{0,63}$/.test(action)) { this.clear(); this.hint.textContent = "动作格式应为 1～64 个小写字母、数字或下划线，并以字母开头。"; return; }
     if (!["", "allow", "deny"].includes(outcome)) { this.clear(); this.hint.textContent = "请选择允许或拒绝结果。"; return; }
     const cursor = first ? "" : this.cursor, generation = ++this.generation;
     const isCurrent = () => this.dialog.open && this.allowed && generation === this.generation && !!snapshot.identityKey &&
-      snapshot.identityKey === this.context().identityKey && this.action.value === action && this.outcome.value === outcome;
+      snapshot.identityKey === this.context().identityKey && this.action.value === action && this.outcome.value === outcome && this.actor.value === actorValue;
     if (first) { this.records = []; this.cursor = ""; this.cursors = new Set(); this.list.replaceChildren(); }
     this.loading = true; this.hint.textContent = "正在加载审计记录…"; this.update();
     const params = new URLSearchParams({ limit: "20" });
+    if (actorUserID) params.set("actor_user_id", actorUserID);
     if (action) params.set("action", action); if (outcome) params.set("outcome", outcome); if (cursor) params.set("cursor", cursor);
     try {
       const page = await this.request(`/api/v1/admin/audit-events?${params}`, { signal: AbortSignal.timeout(15000) });
       if (!isCurrent()) return;
-      this.validate(page, cursor, action, outcome);
+      this.validate(page, cursor, action, outcome, actorUserID);
       this.records.push(...page.events.map(e => ({ id: e.id, actor_user_id: e.actor_user_id, acting_membership_id: e.acting_membership_id,
         action: e.action, resource_type: e.resource_type, resource_id: e.resource_id, outcome: e.outcome, reason: e.reason, occurred_at: e.occurred_at })));
       this.cursor = page.next_cursor; if (this.cursor) this.cursors.add(this.cursor); this.render();

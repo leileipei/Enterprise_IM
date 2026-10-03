@@ -42,7 +42,7 @@ func TestAuditQueryPagingFiltersAndTenantIsolation(t *testing.T) {
 	conn := testDB(t)
 	svc := seedAuditQuery(t, conn)
 	ctx := context.Background()
-	first, err := svc.ListAuditEvents(ctx, identity(), "retention_policy_update", "", "", 2)
+	first, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "retention_policy_update", Outcome: ""}, "", 2)
 	if err != nil || len(first.Events) != 2 || first.NextCursor == "" {
 		t.Fatalf("first %+v %v", first, err)
 	}
@@ -50,29 +50,29 @@ func TestAuditQueryPagingFiltersAndTenantIsolation(t *testing.T) {
 		t.Fatalf("metadata %+v", first)
 	}
 	run(t, conn, `INSERT INTO audit_events(tenant_id,actor_user_id,acting_membership_id,action,resource_type,outcome,reason,occurred_at) VALUES ($1,$2,$3,'retention_policy_update','tenant','allow','new_update',$4)`, tenantA, adminA, adminM, fixedTime.Add(time.Hour))
-	second, err := svc.ListAuditEvents(ctx, identity(), "retention_policy_update", "", first.NextCursor, 2)
+	second, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "retention_policy_update", Outcome: ""}, first.NextCursor, 2)
 	if err != nil || len(second.Events) != 2 || second.Events[0].ID != "10" || second.Events[1].ID != "9" || second.NextCursor == "" {
 		t.Fatalf("second %+v %v", second, err)
 	}
-	last, err := svc.ListAuditEvents(ctx, identity(), "retention_policy_update", "", second.NextCursor, 2)
+	last, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "retention_policy_update", Outcome: ""}, second.NextCursor, 2)
 	if err != nil || len(last.Events) != 1 || last.Events[0].ID != "8" || last.NextCursor != "" {
 		t.Fatalf("last %+v %v", last, err)
 	}
-	fresh, err := svc.ListAuditEvents(ctx, identity(), "retention_policy_update", "", "", 1)
+	fresh, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "retention_policy_update", Outcome: ""}, "", 1)
 	if err != nil || len(fresh.Events) != 1 || fresh.Events[0].Reason != "new_update" {
 		t.Fatalf("refresh %+v %v", fresh, err)
 	}
-	denied, err := svc.ListAuditEvents(ctx, identity(), "retention_policy_update", "deny", "", 10)
+	denied, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "retention_policy_update", Outcome: "deny"}, "", 10)
 	if err != nil || len(denied.Events) != 2 || denied.Events[0].Reason != "version_conflict" || denied.Events[1].Reason != "extension_blocked" {
 		t.Fatalf("filter %+v %v", denied, err)
 	}
-	empty, err := svc.ListAuditEvents(ctx, identity(), "unrecorded_action", "", "", 10)
+	empty, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "unrecorded_action", Outcome: ""}, "", 10)
 	if err != nil || empty.Events == nil || len(empty.Events) != 0 || empty.NextCursor != "" {
 		t.Fatalf("empty %+v %v", empty, err)
 	}
 	run(t, conn, `INSERT INTO admin_grants(id,tenant_id,membership_id,membership_organization_id,role,effective_from) VALUES ('00000000-0000-4000-8000-000000009c12',$1,$2,$3,'group_admin','2020-01-01')`, tenantB, personBM, orgB)
 	foreign := access.TrustedIdentity{TenantID: tenantB, UserID: personB, ActingMembershipID: personBM}
-	b, err := svc.ListAuditEvents(ctx, foreign, "retention_policy_update", "", "", 2)
+	b, err := svc.ListAuditEvents(ctx, foreign, access.AuditEventFilter{Action: "retention_policy_update", Outcome: ""}, "", 2)
 	if err != nil || len(b.Events) != 1 || b.Events[0].ID != "9007199254740994" || b.Events[0].Reason != "foreign_reason" || b.Events[0].ActorUserID != personB {
 		t.Fatalf("other %+v %v", b, err)
 	}
@@ -80,7 +80,7 @@ func TestAuditQueryPagingFiltersAndTenantIsolation(t *testing.T) {
 		id              access.TrustedIdentity
 		action, outcome string
 	}{{foreign, "retention_policy_update", ""}, {identity(), "retention_policy_read", ""}, {identity(), "retention_policy_update", "deny"}} {
-		if _, err := svc.ListAuditEvents(ctx, q.id, q.action, q.outcome, first.NextCursor, 2); !errors.Is(err, access.ErrInvalidAuditQuery) {
+		if _, err := svc.ListAuditEvents(ctx, q.id, access.AuditEventFilter{Action: q.action, Outcome: q.outcome}, first.NextCursor, 2); !errors.Is(err, access.ErrInvalidAuditQuery) {
 			t.Fatalf("cursor context %v", err)
 		}
 	}
@@ -90,7 +90,7 @@ func TestAuditQueryPagingFiltersAndTenantIsolation(t *testing.T) {
 	}
 	// Tenant A has six earlier query audits and six update events; tenant B has its own query audit.
 	// An unfiltered refresh includes earlier query audits, but not its own uncommitted event.
-	all, err := svc.ListAuditEvents(ctx, identity(), "", "", "", 100)
+	all, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 100)
 	if err != nil || len(all.Events) != 12 {
 		t.Fatalf("unfiltered %+v %v", all, err)
 	}
@@ -108,7 +108,7 @@ func TestAuditQueryInvalidInputs(t *testing.T) {
 		action, outcome, cursor string
 		limit                   int
 	}{{"", "", "", 0}, {"", "", "", 101}, {"bad action", "", "", 20}, {"A", "", "", 20}, {strings.Repeat("a", 65), "", "", 20}, {"", "ALLOW", "", 20}, {"", "all", "", 20}, {"", "", "bad", 20}, {"", "", strings.Repeat("a", 1025), 20}} {
-		if _, err := svc.ListAuditEvents(context.Background(), identity(), q.action, q.outcome, q.cursor, q.limit); !errors.Is(err, access.ErrInvalidAuditQuery) {
+		if _, err := svc.ListAuditEvents(context.Background(), identity(), access.AuditEventFilter{Action: q.action, Outcome: q.outcome}, q.cursor, q.limit); !errors.Is(err, access.ErrInvalidAuditQuery) {
 			t.Fatalf("invalid %+v %v", q, err)
 		}
 	}
@@ -121,11 +121,11 @@ func TestAuditQueryInvalidInputs(t *testing.T) {
 		`{"t":"` + tenantA + `","a":"","o":"","at":"2026-09-28T10:00:00Z","id":"9","id":"9"}`,
 	} {
 		c := base64.RawURLEncoding.EncodeToString([]byte(raw))
-		if _, err := svc.ListAuditEvents(context.Background(), identity(), "", "", c, 20); !errors.Is(err, access.ErrInvalidAuditQuery) {
+		if _, err := svc.ListAuditEvents(context.Background(), identity(), access.AuditEventFilter{Action: "", Outcome: ""}, c, 20); !errors.Is(err, access.ErrInvalidAuditQuery) {
 			t.Fatalf("raw %s %v", raw, err)
 		}
 	}
-	if _, err := (access.Service{}).ListAuditEvents(context.Background(), identity(), "", "", "", 20); !errors.Is(err, access.ErrInvalidIdentity) {
+	if _, err := (access.Service{}).ListAuditEvents(context.Background(), identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 20); !errors.Is(err, access.ErrInvalidIdentity) {
 		t.Fatalf("nil db %v", err)
 	}
 }
@@ -136,32 +136,32 @@ func TestAuditQueryAuthorizationAndAuditFailure(t *testing.T) {
 	ctx := context.Background()
 	run(t, conn, `INSERT INTO admin_grants(id,tenant_id,membership_id,membership_organization_id,role,scope_organization_id,effective_from) VALUES ('00000000-0000-4000-8000-000000009d12',$1,$2,$3,'organization_admin',$3,'2020-01-01')`, tenantA, personM, orgA)
 	for _, id := range []access.TrustedIdentity{{TenantID: tenantA, UserID: personA, ActingMembershipID: personM}, {TenantID: tenantA, UserID: personA, ActingMembershipID: personM2}} {
-		if p, err := svc.ListAuditEvents(ctx, id, "", "", "", 20); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 {
+		if p, err := svc.ListAuditEvents(ctx, id, access.AuditEventFilter{Action: "", Outcome: ""}, "", 20); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 {
 			t.Fatalf("scope %+v %v", p, err)
 		}
 	}
-	first, err := svc.ListAuditEvents(ctx, identity(), "retention_policy_update", "", "", 2)
+	first, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "retention_policy_update", Outcome: ""}, "", 2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	run(t, conn, `UPDATE admin_grants SET status='revoked' WHERE id=$1`, retentionGrant)
-	if p, err := svc.ListAuditEvents(ctx, identity(), "retention_policy_update", "", first.NextCursor, 2); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 {
+	if p, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "retention_policy_update", Outcome: ""}, first.NextCursor, 2); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 {
 		t.Fatalf("revoked %+v %v", p, err)
 	}
 	run(t, conn, `UPDATE admin_grants SET status='active' WHERE id=$1`, retentionGrant)
 	run(t, conn, `UPDATE users SET status='frozen' WHERE id=$1`, adminA)
-	if _, err := svc.ListAuditEvents(ctx, identity(), "", "", "", 20); !errors.Is(err, access.ErrInvalidIdentity) {
+	if _, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 20); !errors.Is(err, access.ErrInvalidIdentity) {
 		t.Fatalf("frozen %v", err)
 	}
 	run(t, conn, `UPDATE users SET status='active' WHERE id=$1`, adminA)
 	run(t, conn, `UPDATE user_organizations SET status='ended',effective_to=$1 WHERE id=$2`, fixedTime, adminM)
-	if _, err := svc.ListAuditEvents(ctx, identity(), "", "", "", 20); !errors.Is(err, access.ErrInvalidIdentity) {
+	if _, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 20); !errors.Is(err, access.ErrInvalidIdentity) {
 		t.Fatalf("ended %v", err)
 	}
 	run(t, conn, `UPDATE user_organizations SET status='active',effective_to=NULL WHERE id=$1`, adminM)
 	run(t, conn, `CREATE FUNCTION reject_audit_read() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='audit_events_list' THEN RAISE EXCEPTION 'audit unavailable'; END IF; RETURN NEW; END $$`)
 	run(t, conn, `CREATE TRIGGER reject_audit_read BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION reject_audit_read()`)
-	if p, err := svc.ListAuditEvents(ctx, identity(), "", "", "", 20); !errors.Is(err, access.ErrAuditUnavailable) || len(p.Events) != 0 || p.NextCursor != "" {
+	if p, err := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 20); !errors.Is(err, access.ErrAuditUnavailable) || len(p.Events) != 0 || p.NextCursor != "" {
 		t.Fatalf("audit failure %+v %v", p, err)
 	}
 }
@@ -180,7 +180,7 @@ func TestAuditQueryExpiryRollsBackAllow(t *testing.T) {
 				}
 				return fixedTime
 			}
-			if p, err := svc.ListAuditEvents(context.Background(), identity(), "", "", "", 20); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 {
+			if p, err := svc.ListAuditEvents(context.Background(), identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 20); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 {
 				t.Fatalf("expiry %+v %v", p, err)
 			}
 			var n int
@@ -203,7 +203,7 @@ func TestAuditQueryFreshSnapshotAfterActorLock(t *testing.T) {
 		}
 		return fixedTime
 	}}
-	if p, err := svc.ListAuditEvents(context.Background(), identity(), "", "", "", 2); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 || !changed {
+	if p, err := svc.ListAuditEvents(context.Background(), identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 2); !errors.Is(err, access.ErrNotFound) || len(p.Events) != 0 || !changed {
 		t.Fatalf("stale grant %+v %v", p, err)
 	}
 }
@@ -228,7 +228,7 @@ func TestAuditQueryRechecksAfterTenantLockWait(t *testing.T) {
 	svc := access.Service{DB: other, Now: func() time.Time { return time.Unix(0, clock.Load()) }}
 	result := make(chan error, 1)
 	go func() {
-		p, e := svc.ListAuditEvents(ctx, identity(), "", "", "", 2)
+		p, e := svc.ListAuditEvents(ctx, identity(), access.AuditEventFilter{Action: "", Outcome: ""}, "", 2)
 		if len(p.Events) != 0 {
 			e = fmt.Errorf("history leaked: %+v", p)
 		}
@@ -258,5 +258,69 @@ func TestAuditQueryRechecksAfterTenantLockWait(t *testing.T) {
 	}
 	if err := <-result; !errors.Is(err, access.ErrNotFound) {
 		t.Fatalf("expired after wait %v", err)
+	}
+}
+
+// Dropping actor filtering or cursor binding must leak an interleaved actor or accept the wrong continuation.
+func TestAuditQueryActorFilterPagingAndCursorBinding(t *testing.T) {
+	conn := testDB(t)
+	svc := seedAuditQuery(t, conn)
+	ctx := context.Background()
+	const historicalActor = "abcdefab-cdef-4abc-8abc-abcdefabcdef"
+	run(t, conn, `INSERT INTO audit_events(id,tenant_id,actor_user_id,acting_membership_id,action,resource_type,outcome,reason,occurred_at) OVERRIDING SYSTEM VALUE VALUES (11,$1,$2,$3,'retention_policy_update','tenant','allow','other_actor',$4)`, tenantA, historicalActor, personM, fixedTime)
+	filter := access.AuditEventFilter{Action: "retention_policy_update", ActorUserID: strings.ToUpper(adminA)}
+	first, err := svc.ListAuditEvents(ctx, identity(), filter, "", 3)
+	if err != nil || len(first.Events) != 3 || first.Events[2].ID != "10" || first.NextCursor == "" {
+		t.Fatalf("actor first %+v %v", first, err)
+	}
+	filter.ActorUserID = adminA
+	last, err := svc.ListAuditEvents(ctx, identity(), filter, first.NextCursor, 3)
+	if err != nil || len(last.Events) != 2 || last.Events[0].ID != "9" || last.Events[1].ID != "8" || last.NextCursor != "" {
+		t.Fatalf("actor continuation %+v %v", last, err)
+	}
+	for _, actor := range []string{"", historicalActor, personB} {
+		filter.ActorUserID = actor
+		if _, err := svc.ListAuditEvents(ctx, identity(), filter, first.NextCursor, 3); !errors.Is(err, access.ErrInvalidAuditQuery) {
+			t.Fatalf("cursor actor %q: %v", actor, err)
+		}
+	}
+	run(t, conn, `INSERT INTO audit_events(id,tenant_id,actor_user_id,acting_membership_id,action,resource_type,outcome,reason,occurred_at) OVERRIDING SYSTEM VALUE VALUES (12,$1,$2,$3,'retention_policy_update','tenant','allow','old_other_actor',$4)`, tenantA, historicalActor, personM, fixedTime.Add(-time.Hour))
+	filter.ActorUserID = strings.ToUpper(historicalActor)
+	only, err := svc.ListAuditEvents(ctx, identity(), filter, "", 1)
+	if err != nil || len(only.Events) != 1 || only.Events[0].ID != "11" || only.NextCursor == "" {
+		t.Fatalf("other actor %+v %v", only, err)
+	}
+	filter.ActorUserID = historicalActor
+	continuation, err := svc.ListAuditEvents(ctx, identity(), filter, only.NextCursor, 1)
+	if err != nil || len(continuation.Events) != 1 || continuation.Events[0].ID != "12" || continuation.NextCursor != "" {
+		t.Fatalf("case equivalent cursor %+v %v", continuation, err)
+	}
+	for _, actor := range []string{personB, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"} {
+		filter.ActorUserID = actor
+		page, err := svc.ListAuditEvents(ctx, identity(), filter, "", 20)
+		if err != nil || page.Events == nil || len(page.Events) != 0 || page.NextCursor != "" {
+			t.Fatalf("foreign or unknown actor %+v %v", page, err)
+		}
+	}
+	for _, actor := range []string{"bad", " " + adminA, adminA + " ", strings.ReplaceAll(adminA, "-", "")} {
+		filter.ActorUserID = actor
+		if _, err := svc.ListAuditEvents(ctx, identity(), filter, "", 20); !errors.Is(err, access.ErrInvalidAuditQuery) {
+			t.Fatalf("invalid actor %q: %v", actor, err)
+		}
+	}
+	var reads int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM audit_events WHERE action='audit_events_list' AND outcome='allow'`).Scan(&reads); err != nil || reads != 6 {
+		t.Fatalf("read audits %d %v", reads, err)
+	}
+}
+
+// Previously issued actor-unfiltered cursors keep their wire representation and continuation semantics.
+func TestAuditQueryLegacyCursorCompatibility(t *testing.T) {
+	conn := testDB(t)
+	svc := seedAuditQuery(t, conn)
+	raw := `{"t":"00000000-0000-4000-8000-000000000101","a":"retention_policy_update","o":"","at":"2026-09-28T10:00:00Z","id":"9007199254740992"}`
+	page, err := svc.ListAuditEvents(context.Background(), identity(), access.AuditEventFilter{Action: "retention_policy_update"}, base64.RawURLEncoding.EncodeToString([]byte(raw)), 3)
+	if err != nil || len(page.Events) != 3 || page.Events[0].ID != "10" || page.Events[1].ID != "9" || page.Events[2].ID != "8" || page.NextCursor != "" {
+		t.Fatalf("legacy cursor %+v %v", page, err)
 	}
 }

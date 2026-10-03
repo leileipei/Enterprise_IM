@@ -13,18 +13,18 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/access"
 )
 
-type auditQueryFunc func(context.Context, access.TrustedIdentity, string, string, string, int) (access.AuditEventPage, error)
+type auditQueryFunc func(context.Context, access.TrustedIdentity, access.AuditEventFilter, string, int) (access.AuditEventPage, error)
 
-func (f auditQueryFunc) ListAuditEvents(c context.Context, id access.TrustedIdentity, action, outcome, cursor string, limit int) (access.AuditEventPage, error) {
-	return f(c, id, action, outcome, cursor, limit)
+func (f auditQueryFunc) ListAuditEvents(c context.Context, id access.TrustedIdentity, filter access.AuditEventFilter, cursor string, limit int) (access.AuditEventPage, error) {
+	return f(c, id, filter, cursor, limit)
 }
 
 const auditPath = "/api/v1/admin/audit-events"
 
 func TestAuditQueryAdminDTOAndTrustedIdentity(t *testing.T) {
 	at := time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC)
-	svc := auditQueryFunc(func(_ context.Context, id access.TrustedIdentity, action, outcome, cursor string, limit int) (access.AuditEventPage, error) {
-		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) || action != "retention_policy_update" || outcome != "deny" || cursor != "next" || limit != 2 {
+	svc := auditQueryFunc(func(_ context.Context, id access.TrustedIdentity, filter access.AuditEventFilter, cursor string, limit int) (access.AuditEventPage, error) {
+		if id != (access.TrustedIdentity{TenantID: tenantID, UserID: actorID, ActingMembershipID: actingID}) || filter.Action != "retention_policy_update" || filter.Outcome != "deny" || cursor != "next" || limit != 2 {
 			t.Fatalf("input %+v %q %d", id, cursor, limit)
 		}
 		return access.AuditEventPage{Events: []access.AuditEvent{{ID: "9007199254740993", ActorUserID: actorID, ActingMembershipID: actingID, Action: "retention_policy_update", ResourceType: "tenant", Outcome: "deny", Reason: "version_conflict", OccurredAt: at}}, NextCursor: "more"}, nil
@@ -46,8 +46,8 @@ func TestAuditQueryAdminDTOAndTrustedIdentity(t *testing.T) {
 	if len(p) != 9 || p["id"] != "9007199254740993" || p["actor_user_id"] != actorID || p["acting_membership_id"] != actingID || p["action"] != "retention_policy_update" || p["resource_type"] != "tenant" || p["resource_id"] != nil || p["outcome"] != "deny" || p["reason"] != "version_conflict" || p["occurred_at"] != "2026-10-03T00:00:00Z" {
 		t.Fatalf("DTO %+v", p)
 	}
-	h, _ = HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(_ context.Context, _ access.TrustedIdentity, action, outcome, cursor string, limit int) (access.AuditEventPage, error) {
-		if action != "" || outcome != "" || cursor != "" || limit != 20 {
+	h, _ = HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(_ context.Context, _ access.TrustedIdentity, filter access.AuditEventFilter, cursor string, limit int) (access.AuditEventPage, error) {
+		if filter.Action != "" || filter.Outcome != "" || cursor != "" || limit != 20 {
 			t.Fatalf("defaults %q %d", cursor, limit)
 		}
 		return access.AuditEventPage{}, nil
@@ -61,11 +61,11 @@ func TestAuditQueryAdminDTOAndTrustedIdentity(t *testing.T) {
 
 func TestAuditQueryAdminRejectsUnsafeRequests(t *testing.T) {
 	calls := 0
-	h, _ := HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(context.Context, access.TrustedIdentity, string, string, string, int) (access.AuditEventPage, error) {
+	h, _ := HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(context.Context, access.TrustedIdentity, access.AuditEventFilter, string, int) (access.AuditEventPage, error) {
 		calls++
 		return access.AuditEventPage{}, nil
 	}))
-	for _, query := range []string{"?tenant_id=x", "?action=", "?action=bad%20action", "?action=a&action=b", "?outcome=", "?outcome=ALLOW", "?outcome=deny&outcome=allow", "?limit=0", "?limit=101", "?limit=-1", "?limit=1.5", "?limit=1&limit=2", "?limit=+2", "?cursor=", "?cursor=" + strings.Repeat("a", 1025), "?cursor=x&cursor=y", "?cursor=%zz"} {
+	for _, query := range []string{"?actor_user_id=", "?actor_user_id=bad", "?actor_user_id=" + actorID + "&actor_user_id=" + actorID, "?actor_user_id=%20" + actorID, "?actor_user_id=" + actorID + "%20", "?actor_user_id=" + strings.ReplaceAll(actorID, "-", ""), "?tenant_id=x", "?action=", "?action=bad%20action", "?action=a&action=b", "?outcome=", "?outcome=ALLOW", "?outcome=deny&outcome=allow", "?limit=0", "?limit=101", "?limit=-1", "?limit=1.5", "?limit=1&limit=2", "?limit=+2", "?cursor=", "?cursor=" + strings.Repeat("a", 1025), "?cursor=x&cursor=y", "?cursor=%zz"} {
 		r := httptest.NewRecorder()
 		h.ServeHTTP(r, adminRequest("GET", auditPath+query))
 		if r.Code != 400 || r.Header().Get("Cache-Control") != "no-store" {
@@ -115,7 +115,7 @@ func TestAuditQueryAdminErrorMapping(t *testing.T) {
 		code int
 		key  string
 	}{{access.ErrInvalidAuditQuery, 400, "invalid_audit_query"}, {access.ErrInvalidIdentity, 403, "invalid_identity"}, {access.ErrNotFound, 404, "not_found"}, {access.ErrAuditUnavailable, 503, "unavailable"}, {errors.New("secret-database-approval"), 503, "unavailable"}} {
-		h, _ := HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(context.Context, access.TrustedIdentity, string, string, string, int) (access.AuditEventPage, error) {
+		h, _ := HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(context.Context, access.TrustedIdentity, access.AuditEventFilter, string, int) (access.AuditEventPage, error) {
 			return access.AuditEventPage{}, input.err
 		}))
 		r := httptest.NewRecorder()
@@ -123,5 +123,20 @@ func TestAuditQueryAdminErrorMapping(t *testing.T) {
 		if r.Code != input.code || !strings.Contains(r.Body.String(), `"error_code":"`+input.key+`"`) || strings.Contains(r.Body.String(), "secret-database-approval") || strings.Contains(r.Body.String(), "\"events\"") {
 			t.Fatalf("error %d %s", r.Code, r.Body.String())
 		}
+	}
+}
+
+// A supported actor UUID must reach the authenticated read route.
+func TestAuditQueryAdminAcceptsActorFilter(t *testing.T) {
+	h, _ := HandlerWithAuditQuery(Handler(nil), authFunc(verified), auditQueryFunc(func(_ context.Context, _ access.TrustedIdentity, filter access.AuditEventFilter, _ string, _ int) (access.AuditEventPage, error) {
+		if filter.ActorUserID != "abcdefab-cdef-4abc-8abc-abcdefabcdef" {
+			t.Fatalf("actor not normalized: %+v", filter)
+		}
+		return access.AuditEventPage{}, nil
+	}))
+	r := httptest.NewRecorder()
+	h.ServeHTTP(r, adminRequest("GET", auditPath+"?limit=20&action=retention_policy_update&outcome=allow&cursor=next&actor_user_id=ABCDEFAB-CDEF-4ABC-8ABC-ABCDEFABCDEF"))
+	if r.Code != 200 {
+		t.Fatalf("actor filter: %d %s", r.Code, r.Body.String())
 	}
 }
