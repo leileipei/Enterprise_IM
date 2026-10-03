@@ -11,6 +11,7 @@
   <script src="/web/retention-history.js" defer></script>
   <script src="/web/retention-policy.js" defer></script>
   <script src="/web/audit.js" defer></script>
+  <script src="/web/message-search.js" defer></script>
   <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -54,11 +55,23 @@
         <div class="sidebar-foot">本地页面不会保存你的访问令牌。刷新后需重新登录。</div>
       </aside>
       <div class="chat-column">
-        <header class="chat-header"><div><p class="eyebrow" id="chat-mode">DIRECT MESSAGE</p><h2 id="chat-title">选择一位同事，开始沟通</h2><p id="chat-subtitle">选择任职后搜索可见人员</p><p id="group-policy-recheck-hint" class="hidden" role="status"></p></div><div class="chat-header-actions"><button id="retention-access-retry" class="secondary-button hidden" type="button">重试清理记录权限检查</button><button id="legal-holds-access-retry" class="secondary-button hidden" type="button">重试保全权限检查</button><button id="legal-holds-open" class="secondary-button hidden" type="button">法务保全</button><button id="retention-records-open" class="secondary-button hidden" type="button">清理记录</button><button id="group-policy-recheck" class="secondary-button hidden" type="button">复核群策略</button><button id="group-roster-open" class="secondary-button hidden" type="button">查看成员</button><button id="group-invite-open" class="secondary-button hidden" type="button">邀请成员</button><button id="group-leave-open" class="secondary-button hidden" type="button">退出群聊</button><span id="connection-state" class="connection-state">未连接</span></div></header>
+        <header class="chat-header"><div><p class="eyebrow" id="chat-mode">DIRECT MESSAGE</p><h2 id="chat-title">选择一位同事，开始沟通</h2><p id="chat-subtitle">选择任职后搜索可见人员</p><p id="group-policy-recheck-hint" class="hidden" role="status"></p></div><div class="chat-header-actions"><button id="message-search-open" class="secondary-button hidden" type="button">搜索消息</button><button id="retention-access-retry" class="secondary-button hidden" type="button">重试清理记录权限检查</button><button id="legal-holds-access-retry" class="secondary-button hidden" type="button">重试保全权限检查</button><button id="legal-holds-open" class="secondary-button hidden" type="button">法务保全</button><button id="retention-records-open" class="secondary-button hidden" type="button">清理记录</button><button id="group-policy-recheck" class="secondary-button hidden" type="button">复核群策略</button><button id="group-roster-open" class="secondary-button hidden" type="button">查看成员</button><button id="group-invite-open" class="secondary-button hidden" type="button">邀请成员</button><button id="group-leave-open" class="secondary-button hidden" type="button">退出群聊</button><span id="connection-state" class="connection-state">未连接</span></div></header>
         <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text"><div class="empty-state"><div class="empty-glyph">✦</div><strong>沟通从这里开始</strong><span>选择任职，查找同事，再发起单聊。</span></div></div>
         <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
       </div>
     </section>
+    <dialog id="message-search-dialog" class="retention-records-dialog" aria-labelledby="message-search-title" aria-describedby="message-search-boundary">
+      <div class="retention-records-heading"><div><h2 id="message-search-title">搜索会话消息</h2><p id="message-search-context" class="microcopy"></p></div><button id="message-search-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="message-search-form" class="legal-hold-action-form" novalidate>
+        <label for="message-search-query">关键词（2～100 字）</label><input id="message-search-query" type="search" autocomplete="off" spellcheck="false" placeholder="输入正文片段，例如工单编号" aria-describedby="message-search-boundary">
+        <button id="message-search-apply" class="primary-button" type="submit">搜索</button>
+      </form>
+      <p id="message-search-boundary" class="microcopy">按正文片段匹配，仅展示当前可见的消息。未匹配的一页也可继续查询；每页都会重新检查权限。</p>
+      <button id="message-search-refresh" class="secondary-button" type="button">刷新，从头查询</button>
+      <p id="message-search-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="message-search-list" class="retention-records-list" aria-label="匹配消息"></ul>
+      <button id="message-search-more" class="secondary-button hidden" type="button">继续查询</button>
+    </dialog>
     <dialog id="audit-dialog" class="retention-records-dialog" aria-labelledby="audit-title" aria-describedby="audit-boundary">
       <div class="retention-records-heading"><div><h2 id="audit-title">管理审计查询</h2><p id="audit-context" class="microcopy"></p></div><button id="audit-close" class="secondary-button" type="button">关闭</button></div>
       <form id="audit-form" class="legal-hold-action-form" novalidate>

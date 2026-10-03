@@ -70,6 +70,21 @@ async function send(page, text) {
     executablePath: process.env.CHROMIUM_EXECUTABLE || undefined });
   try {
     const first = await openDevice(browser);
+    const searchMessages = async (query, count) => {
+      await first.page.locator("#message-search-open").click();
+      await first.page.locator("#message-search-query").fill(query);
+      await first.page.locator("#message-search-apply").click();
+      await first.page.locator("#message-search-hint").getByText(new RegExp(`已显示 ${count} 条`)).waitFor();
+      const matches=first.page.locator(".message-search-card");
+      assert.equal(await matches.count(),count);
+      assert.equal(await first.page.locator("#message-search-more").isVisible(),false);
+      const text=await matches.allTextContents();
+      await first.page.locator("#message-search-close").click();
+      assert.equal(await matches.count(),0);
+      return text;
+    };
+    assert.match((await searchMessages("\u0085已有\u0085",1))[0],/已有消息/);
+
     await first.page.locator("#retention-records-open").click();
     const evidence = first.page.locator("#retention-records-dialog");
     await evidence.getByText("00000000-0000-4000-8000-000000009b07", { exact: true }).waitFor();
@@ -200,9 +215,15 @@ async function send(page, text) {
     if (await second.page.getByText("断线期间来自浏览器一", { exact: true }).count() !== 1)
       throw new Error("reconnected browser duplicated the offline message");
 
+
+    const found = await searchMessages("来自",2);
+    assert.equal(found.some(text=>text.includes("来自真实浏览器一")),true);
+    assert.equal(found.some(text=>text.includes("断线期间来自浏览器一")),true);
+    await send(first.page,"前缀\uFEFFİ工单（真实 Unicode）");
+    assert.match((await searchMessages("\uFEFFİ工单",1))[0],/İ工单（真实 Unicode）/);
     await first.context.close();
     await second.context.close();
-    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, retention configuration and approval history, realtime sync and offline recovery passed\n");
+    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, retention configuration and approval history, conversation text search and Unicode, realtime sync and offline recovery passed\n");
   } finally {
     await browser.close();
   }

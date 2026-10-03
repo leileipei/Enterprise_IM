@@ -9,7 +9,7 @@ const calls = [];
 const server = http.createServer((req,res) => {
  const url = new URL(req.url, `http://127.0.0.1:${port}`);
  const send = (code,body,type="application/json") => { res.writeHead(code,{"Content-Type":type,"Cache-Control":"no-store"});res.end(typeof body === "string"?body:JSON.stringify(body)); };
- if (["/web/","/web/app.js","/web/retention.js","/web/legal-holds.js","/web/retention-policy.js","/web/retention-history.js", "/web/audit.js","/web/style.css"].includes(url.pathname)) {
+ if (["/web/","/web/app.js","/web/retention.js","/web/legal-holds.js","/web/retention-policy.js","/web/retention-history.js", "/web/audit.js", "/web/message-search.js","/web/style.css"].includes(url.pathname)) {
   const name=url.pathname==="/web/"?"index.html":url.pathname.slice(5);if(!fs.existsSync(path.join(assets,name)))return send(404,{});
   return send(200,fs.readFileSync(path.join(assets,name),"utf8"),name.endsWith(".js")?"text/javascript":name.endsWith(".css")?"text/css":"text/html");
  }
