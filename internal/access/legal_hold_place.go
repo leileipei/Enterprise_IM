@@ -87,6 +87,9 @@ func (s Service) PlaceLegalHold(ctx context.Context, id TrustedIdentity,
 		return LegalHold{}, false, deny(ctx, tx, id, "legal_hold_place", "conversation",
 			conversationID, "active_case_exists", at, ErrConflict)
 	}
+	if _, err := tx.Exec(ctx, `SAVEPOINT legal_hold_write`); err != nil {
+		return LegalHold{}, false, err
+	}
 	var holdID string
 	err = tx.QueryRow(ctx, `INSERT INTO conversation_legal_holds
  (tenant_id,conversation_id,case_reference,create_request_id,
@@ -110,11 +113,16 @@ func (s Service) PlaceLegalHold(ctx context.Context, id TrustedIdentity,
 	}
 	if fresh := s.currentTime(); fresh.After(at) {
 		grant, err := s.resolve(ctx, tx, id, fresh)
+		if errors.Is(err, ErrInvalidIdentity) {
+			return LegalHold{}, false, denyLegalHoldAfterWrite(ctx, tx, id, "legal_hold_place",
+				conversationID, "invalid_identity", fresh, ErrInvalidIdentity)
+		}
 		if err != nil {
 			return LegalHold{}, false, err
 		}
 		if !grant.all {
-			return LegalHold{}, false, ErrNotFound
+			return LegalHold{}, false, denyLegalHoldAfterWrite(ctx, tx, id, "legal_hold_place",
+				conversationID, "not_group_admin", fresh, ErrNotFound)
 		}
 	}
 	hold, err := loadLegalHold(ctx, tx, id.TenantID, conversationID, holdID)

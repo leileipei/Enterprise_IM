@@ -1,5 +1,7 @@
 BEGIN;
 
+LOCK TABLE conversation_legal_holds, conversation_legal_hold_events IN ACCESS EXCLUSIVE MODE;
+
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM conversation_legal_holds)

@@ -95,6 +95,9 @@ func (s Service) ReleaseLegalHold(ctx context.Context, id TrustedIdentity,
 		return LegalHold{}, deny(ctx, tx, id, "legal_hold_release", "legal_hold",
 			holdID, "already_released", at, ErrConflict)
 	}
+	if _, err := tx.Exec(ctx, `SAVEPOINT legal_hold_write`); err != nil {
+		return LegalHold{}, err
+	}
 	_, err = tx.Exec(ctx, `UPDATE conversation_legal_holds SET
 	 release_approval_reference=$4,release_request_id=$5,released_by_user_id=$6,
 	 released_by_membership_id=$7,released_at=$8
@@ -119,11 +122,16 @@ func (s Service) ReleaseLegalHold(ctx context.Context, id TrustedIdentity,
 	}
 	if fresh := s.currentTime(); fresh.After(at) {
 		grant, err := s.resolve(ctx, tx, id, fresh)
+		if errors.Is(err, ErrInvalidIdentity) {
+			return LegalHold{}, denyLegalHoldAfterWrite(ctx, tx, id, "legal_hold_release",
+				conversationID, "invalid_identity", fresh, ErrInvalidIdentity)
+		}
 		if err != nil {
 			return LegalHold{}, err
 		}
 		if !grant.all {
-			return LegalHold{}, ErrNotFound
+			return LegalHold{}, denyLegalHoldAfterWrite(ctx, tx, id, "legal_hold_release",
+				conversationID, "not_group_admin", fresh, ErrNotFound)
 		}
 	}
 	hold, err := loadLegalHold(ctx, tx, id.TenantID, conversationID, holdID)

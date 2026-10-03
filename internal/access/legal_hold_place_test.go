@@ -186,6 +186,84 @@ func TestPlaceLegalHoldAuditFailureRollsBack(t *testing.T) {
 	}
 }
 
+func TestLegalHoldManagementAuditsExpiredActingMembership(t *testing.T) {
+	conn := testDB(t)
+	seedLegalHoldService(t, conn)
+	svc := access.Service{DB: conn, Now: func() time.Time { return fixedTime }}
+	admin := access.TrustedIdentity{TenantID: tenantA, UserID: adminA, ActingMembershipID: adminM}
+	hold, _, err := svc.PlaceLegalHold(context.Background(), admin, legalHoldConversation,
+		legalHoldRequestOne, "CASE-EXISTING")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run(t, conn, `UPDATE user_organizations SET status='ended',effective_to=$2
+ WHERE tenant_id=$1 AND id=$3`, tenantA, fixedTime, adminM)
+	if _, _, err := svc.PlaceLegalHold(context.Background(), admin, legalHoldConversation,
+		legalHoldRequestTwo, "CASE-DENIED"); !errors.Is(err, access.ErrInvalidIdentity) {
+		t.Fatalf("ended administrator placed hold: %v", err)
+	}
+	if _, err := svc.ReleaseLegalHold(context.Background(), admin, legalHoldConversation,
+		hold.ID, legalHoldRelease, "APPROVAL-DENIED"); !errors.Is(err, access.ErrInvalidIdentity) {
+		t.Fatalf("ended administrator released hold: %v", err)
+	}
+	if _, err := svc.ListLegalHolds(context.Background(), admin, legalHoldConversation,
+		"", 10); !errors.Is(err, access.ErrInvalidIdentity) {
+		t.Fatalf("ended administrator listed holds: %v", err)
+	}
+	var denied, holds, events int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events
+ WHERE tenant_id=$1 AND acting_membership_id=$2 AND outcome='deny'
+ AND action IN ('legal_hold_place','legal_hold_release','legal_hold_list')`,
+		tenantA, adminM).Scan(&denied); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_holds
+ WHERE tenant_id=$1`, tenantA).Scan(&holds); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_hold_events
+ WHERE tenant_id=$1`, tenantA).Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	if denied != 3 || holds != 1 || events != 1 {
+		t.Fatalf("ended administrator evidence: denied=%d holds=%d events=%d", denied, holds, events)
+	}
+}
+
+func TestLegalHoldPlaceAuditsAuthorizationLostAfterWrite(t *testing.T) {
+	conn := testDB(t)
+	seedLegalHoldService(t, conn)
+	run(t, conn, `UPDATE admin_grants SET effective_to=$2
+ WHERE tenant_id=$1 AND membership_id=$3 AND role='group_admin'`,
+		tenantA, fixedTime.Add(time.Hour), adminM)
+	var calls atomic.Int64
+	svc := access.Service{DB: conn, Now: func() time.Time {
+		if calls.Add(1) >= 3 {
+			return fixedTime.Add(2 * time.Hour)
+		}
+		return fixedTime
+	}}
+	admin := access.TrustedIdentity{TenantID: tenantA, UserID: adminA, ActingMembershipID: adminM}
+	if _, _, err := svc.PlaceLegalHold(context.Background(), admin, legalHoldConversation,
+		legalHoldRequestOne, "CASE-EXPIRED-AFTER-WRITE"); !errors.Is(err, access.ErrNotFound) {
+		t.Fatalf("expired grant placed hold: %v", err)
+	}
+	var holds, events, denied int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_holds`).Scan(&holds); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_hold_events`).Scan(&events); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events
+ WHERE action='legal_hold_place' AND outcome='deny'`).Scan(&denied); err != nil {
+		t.Fatal(err)
+	}
+	if holds != 0 || events != 0 || denied != 1 {
+		t.Fatalf("expired grant evidence: holds=%d events=%d denied=%d", holds, events, denied)
+	}
+}
+
 func TestPlaceLegalHoldConcurrentCaseAndMembershipEnd(t *testing.T) {
 	first := testDB(t)
 	seedLegalHoldService(t, first)
@@ -248,5 +326,56 @@ func TestPlaceLegalHoldConcurrentCaseAndMembershipEnd(t *testing.T) {
 	}
 	if placeErr, endErr := <-placeResult, <-endResult; placeErr != nil || endErr != nil {
 		t.Fatalf("hold/end membership lock cycle: place=%v end=%v", placeErr, endErr)
+	}
+}
+
+func TestPlaceLegalHoldSerializesWithActorMembershipEnd(t *testing.T) {
+	first := testDB(t)
+	seedLegalHoldService(t, first)
+	second := secondConnection(t, first)
+	third := secondConnection(t, first)
+	admin := access.TrustedIdentity{TenantID: tenantA, UserID: adminA, ActingMembershipID: adminM}
+	otherAdmin := access.TrustedIdentity{TenantID: tenantA, UserID: personA, ActingMembershipID: personM}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	blocker, err := first.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := blocker.QueryRow(ctx, `SELECT id FROM conversations
+ WHERE tenant_id=$1 AND id=$2 FOR UPDATE`, tenantA, legalHoldConversation).Scan(new(string)); err != nil {
+		t.Fatal(err)
+	}
+	placeStarted, endStarted := make(chan struct{}), make(chan struct{})
+	placeResult, endResult := make(chan error, 1), make(chan error, 1)
+	go func() {
+		_, _, err := (access.Service{DB: &syncedDB{conn: second, started: placeStarted},
+			Now: func() time.Time { return fixedTime }}).PlaceLegalHold(ctx, admin,
+			legalHoldConversation, legalHoldRequestOne, "CASE-ACTOR-END")
+		placeResult <- err
+	}()
+	<-placeStarted
+	time.Sleep(50 * time.Millisecond)
+	go func() {
+		endResult <- (access.Service{DB: &syncedDB{conn: third, started: endStarted},
+			Now: func() time.Time { return fixedTime }}).EndMembership(ctx, otherAdmin, adminM)
+	}()
+	<-endStarted
+	time.Sleep(50 * time.Millisecond)
+	if err := blocker.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if placeErr, endErr := <-placeResult, <-endResult; placeErr != nil || endErr != nil {
+		t.Fatalf("actor end lock ordering: place=%v end=%v", placeErr, endErr)
+	}
+	if _, _, err := (access.Service{DB: first, Now: func() time.Time { return fixedTime.Add(time.Second) }}).
+		PlaceLegalHold(ctx, admin, legalHoldConversation, legalHoldRequestTwo,
+			"CASE-AFTER-END"); !errors.Is(err, access.ErrInvalidIdentity) {
+		t.Fatalf("ended actor placed another hold: %v", err)
+	}
+	var holds int
+	if err := first.QueryRow(ctx, `SELECT count(*) FROM conversation_legal_holds
+ WHERE tenant_id=$1 AND conversation_id=$2`, tenantA, legalHoldConversation).Scan(&holds); err != nil || holds != 1 {
+		t.Fatalf("actor end changed committed holds: %d %v", holds, err)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 )
 
 const (
@@ -100,5 +101,52 @@ func TestLegalHoldMigrationEmptyRollbackReapplies(t *testing.T) {
 	}
 	if _, err := conn.PgConn().Exec(ctx, string(up)).ReadAll(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestLegalHoldMigrationRollbackWaitsForConcurrentEvidence(t *testing.T) {
+	first := testDB(t)
+	seedAccess(t, first)
+	run(t, first, `INSERT INTO conversations
+ (id,tenant_id,direct_user_low_id,direct_user_high_id,direct_low_membership_id,
+ direct_high_membership_id,created_by_user_id)
+ VALUES ($1,$2,$3,$4,$5,$6,$3)`, legalHoldConversation, tenantA, adminA, personA,
+		adminM, personM)
+	second := secondConnection(t, first)
+	writer, err := first.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Exec(context.Background(), `INSERT INTO conversation_legal_holds
+ (id,tenant_id,conversation_id,case_reference,create_request_id,
+ placed_by_user_id,placed_by_membership_id)
+ VALUES ($1,$2,$3,'CASE-CONCURRENT',$4,$5,$6)`,
+		legalHoldOne, tenantA, legalHoldConversation, legalHoldRequestOne, adminA, adminM); err != nil {
+		t.Fatal(err)
+	}
+	down, err := os.ReadFile("../../db/migrations/000014_conversation_legal_hold.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := make(chan struct{})
+	result := make(chan error, 1)
+	go func() {
+		close(started)
+		_, err := second.PgConn().Exec(context.Background(), string(down)).ReadAll()
+		result <- err
+	}()
+	<-started
+	time.Sleep(50 * time.Millisecond)
+	if err := writer.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-result; err == nil {
+		t.Fatal("rollback discarded evidence committed while it waited")
+	}
+	_, _ = second.Exec(context.Background(), "ROLLBACK")
+	var count int
+	if err := first.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_holds
+ WHERE id=$1`, legalHoldOne).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("concurrent evidence lost: count=%d err=%v", count, err)
 	}
 }

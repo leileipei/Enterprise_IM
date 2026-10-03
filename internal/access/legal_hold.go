@@ -84,6 +84,10 @@ func lockLegalHoldRequest(ctx context.Context, tx pgx.Tx, tenantID, requestID st
 func (s Service) legalHoldGrant(ctx context.Context, tx pgx.Tx, id TrustedIdentity,
 	conversationID, action string, at time.Time) error {
 	grant, err := s.resolve(ctx, tx, id, at)
+	if errors.Is(err, ErrInvalidIdentity) {
+		return deny(ctx, tx, id, action, "conversation", conversationID,
+			"invalid_identity", at, ErrInvalidIdentity)
+	}
 	if err != nil {
 		return err
 	}
@@ -99,4 +103,12 @@ func lockLegalHoldConversation(ctx context.Context, tx pgx.Tx, tenantID, convers
 	err := tx.QueryRow(ctx, `SELECT id::text FROM conversations
  WHERE tenant_id=$1 AND id=$2 FOR UPDATE`, tenantID, conversationID).Scan(&found)
 	return err
+}
+
+func denyLegalHoldAfterWrite(ctx context.Context, tx pgx.Tx, id TrustedIdentity,
+	action, conversationID, reason string, at time.Time, result error) error {
+	if _, err := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT legal_hold_write`); err != nil {
+		return err
+	}
+	return deny(ctx, tx, id, action, "conversation", conversationID, reason, at, result)
 }

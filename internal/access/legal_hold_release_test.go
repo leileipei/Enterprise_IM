@@ -125,6 +125,19 @@ func TestReleaseLegalHoldAuditAndGrantExpiryRollback(t *testing.T) {
 	if err := first.QueryRow(context.Background(), `SELECT released_at FROM conversation_legal_holds WHERE id=$1`, hold.ID).Scan(&releasedAt); err != nil || releasedAt != nil {
 		t.Fatalf("release persisted after audit failure: %v %v", releasedAt, err)
 	}
+	run(t, first, `CREATE FUNCTION reject_legal_hold_release_event() RETURNS trigger LANGUAGE plpgsql AS $$
+ BEGIN IF NEW.event_type='released' THEN RAISE EXCEPTION 'event down'; END IF; RETURN NEW; END $$`)
+	run(t, first, `CREATE TRIGGER reject_legal_hold_release_event BEFORE INSERT ON conversation_legal_hold_events
+ FOR EACH ROW EXECUTE FUNCTION reject_legal_hold_release_event()`)
+	if _, err := svc.ReleaseLegalHold(context.Background(), admin, legalHoldConversation, hold.ID,
+		legalHoldReleaseRequestOne, "APPROVAL"); err == nil {
+		t.Fatal("release succeeded without immutable event")
+	}
+	run(t, first, `DROP TRIGGER reject_legal_hold_release_event ON conversation_legal_hold_events`)
+	if err := first.QueryRow(context.Background(), `SELECT released_at FROM conversation_legal_holds
+ WHERE id=$1`, hold.ID).Scan(&releasedAt); err != nil || releasedAt != nil {
+		t.Fatalf("release persisted after event failure: %v %v", releasedAt, err)
+	}
 	run(t, first, `UPDATE admin_grants SET effective_to=$2
  WHERE tenant_id=$1 AND membership_id=$3 AND role='group_admin'`,
 		tenantA, fixedTime.Add(time.Hour), adminM)
@@ -163,5 +176,47 @@ func TestReleaseLegalHoldAuditAndGrantExpiryRollback(t *testing.T) {
 	if err := first.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_hold_events
  WHERE hold_id=$1 AND event_type='released'`, hold.ID).Scan(&events); err != nil || events != 0 {
 		t.Fatalf("expired grant left release event=%d %v", events, err)
+	}
+}
+
+func TestLegalHoldReleaseAuditsAuthorizationLostAfterWrite(t *testing.T) {
+	conn := testDB(t)
+	seedLegalHoldService(t, conn)
+	admin := access.TrustedIdentity{TenantID: tenantA, UserID: adminA, ActingMembershipID: adminM}
+	hold, _, err := (access.Service{DB: conn, Now: func() time.Time { return fixedTime }}).
+		PlaceLegalHold(context.Background(), admin, legalHoldConversation, legalHoldRequestOne, "CASE-A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run(t, conn, `UPDATE admin_grants SET effective_to=$2
+ WHERE tenant_id=$1 AND membership_id=$3 AND role='group_admin'`,
+		tenantA, fixedTime.Add(time.Hour), adminM)
+	var calls atomic.Int64
+	svc := access.Service{DB: conn, Now: func() time.Time {
+		if calls.Add(1) >= 3 {
+			return fixedTime.Add(2 * time.Hour)
+		}
+		return fixedTime
+	}}
+	if _, err := svc.ReleaseLegalHold(context.Background(), admin, legalHoldConversation,
+		hold.ID, legalHoldReleaseRequestOne, "APPROVAL-A"); !errors.Is(err, access.ErrNotFound) {
+		t.Fatalf("expired grant released hold: %v", err)
+	}
+	var releasedAt *time.Time
+	if err := conn.QueryRow(context.Background(), `SELECT released_at FROM conversation_legal_holds
+ WHERE id=$1`, hold.ID).Scan(&releasedAt); err != nil || releasedAt != nil {
+		t.Fatalf("expired grant changed hold: %v %v", releasedAt, err)
+	}
+	var releases, denied int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_hold_events
+ WHERE hold_id=$1 AND event_type='released'`, hold.ID).Scan(&releases); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events
+ WHERE action='legal_hold_release' AND outcome='deny'`).Scan(&denied); err != nil {
+		t.Fatal(err)
+	}
+	if releases != 0 || denied != 1 {
+		t.Fatalf("expired grant evidence: releases=%d denied=%d", releases, denied)
 	}
 }

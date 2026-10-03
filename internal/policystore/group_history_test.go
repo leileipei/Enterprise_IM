@@ -182,6 +182,42 @@ func TestPullGroupTextMessagesRedactsExpiredBodyEvenWhenStored(t *testing.T) {
 	}
 }
 
+func TestPullGroupTextMessagesKeepsExpiredBodyRedactedDuringLegalHold(t *testing.T) {
+	conn := db(t)
+	seed(t, conn)
+	svc := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	group, err := svc.CreateGroup(context.Background(), publisher(), createGroupRequest(targetM2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	run(t, conn, `INSERT INTO admin_grants
+ (id,tenant_id,membership_id,membership_organization_id,role,effective_from)
+ VALUES ('00000000-0000-4000-8000-0000000002f0',$1,$2,$3,'group_admin','2020-01-01')`, tenantA, adminM, orgA)
+	hold, created, err := (access.Service{DB: conn, Now: func() time.Time { return at }}).
+		PlaceLegalHold(context.Background(), publisher(), group.ID,
+			"00000000-0000-4000-8000-0000000002f2", "CASE-GROUP-RETENTION")
+	if err != nil || !created || hold.ReleasedAt != nil {
+		t.Fatalf("place group hold: %+v created=%v err=%v", hold, created, err)
+	}
+	insertGroupHistoryMessage(t, conn, group.ID, 1, adminA, adminM, "过期群正文")
+	run(t, conn, "UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2 AND seq=1",
+		at.Add(-365*24*time.Hour), group.ID)
+	insertGroupHistoryMessage(t, conn, group.ID, 2, adminA, adminM, "保留期内群正文")
+	first, err := svc.PullGroupTextMessages(context.Background(), groupMemberIdentity(), group.ID, 0, 1)
+	if err != nil || len(first.Messages) != 1 || !first.Messages[0].Redacted ||
+		first.Messages[0].Text != "" || first.Messages[0].MessageID != "" ||
+		first.Messages[0].Seq != 1 || first.NextAfterSeq != 1 || !first.HasMore {
+		t.Fatalf("held group expired page: %+v %v", first, err)
+	}
+	second, err := svc.PullGroupTextMessages(context.Background(), groupMemberIdentity(),
+		group.ID, first.NextAfterSeq, 1)
+	if err != nil || len(second.Messages) != 1 || second.Messages[0].Redacted ||
+		second.Messages[0].Text != "保留期内群正文" || second.Messages[0].Seq != 2 ||
+		second.NextAfterSeq != 2 || second.HasMore {
+		t.Fatalf("held group retained page: %+v %v", second, err)
+	}
+}
+
 func TestPullGroupTextMessagesUsesApprovedTenantRetentionDays(t *testing.T) {
 	conn := db(t)
 	seed(t, conn)

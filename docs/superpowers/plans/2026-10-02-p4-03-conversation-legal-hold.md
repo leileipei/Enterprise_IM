@@ -49,7 +49,7 @@
 - [x] Run `test -n "$IM_TEST_DATABASE_URL" && go test ./internal/access -run '^TestPlaceLegalHoldAuthorizationAndReplay$' -count=1 -v`; expect RED because service method is absent.
 - [x] Implement validation (UUIDs, 1～128 字符引用、首尾无空白、无控制字符), actor/grant check, conversation lock, final-time recheck, status/event/audit atomic insert and exact replay comparison. Keep lock order: actor/grant and tenant before conversation; no request-supplied tenant/actor.
 - [x] Add `TestPlaceLegalHoldRechecksExpiredGrantAfterConversationLockWait` and `TestPlaceLegalHoldAuditFailureRollsBack`, using two PostgreSQL connections and a failing audit trigger; run targeted tests until PASS.
-- [ ] Add `TestPlaceLegalHoldConcurrentCaseAndMembershipEnd`: distinct concurrent requests for one case create only one active hold, and concurrent `EndMembership` cannot create a lock cycle or commit a hold after authorization is lost; run until PASS and commit.
+- [x] Add `TestPlaceLegalHoldConcurrentCaseAndMembershipEnd`: distinct concurrent requests for one case create only one active hold, and concurrent `EndMembership` cannot create a lock cycle or commit a hold after authorization is lost; run until PASS and commit.
 
 ### Task 3: 解除与多案件保全
 
