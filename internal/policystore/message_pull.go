@@ -27,18 +27,18 @@ type MessagePage struct {
 	HasMore        bool
 }
 
-func auditMessagePull(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
-	conversationID, outcome, reason string, at time.Time) error {
+func auditMessageRead(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
+	conversationID, outcome, reason string, at time.Time, action string) error {
 	_, err := tx.Exec(ctx, `
 INSERT INTO audit_events (tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at)
-VALUES ($1,$2,$3,'message_pull','conversation',$4,$5,$6,$7)`, id.TenantID, id.UserID,
-		id.ActingMembershipID, nullableID(conversationID), outcome, reason, at)
+VALUES ($1,$2,$3,$8,'conversation',$4,$5,$6,$7)`, id.TenantID, id.UserID,
+		id.ActingMembershipID, nullableID(conversationID), outcome, reason, at, action)
 	return err
 }
 
-func finishMessagePull(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
-	conversationID, outcome, reason string, at time.Time) error {
-	if err := auditMessagePull(ctx, tx, id, conversationID, outcome, reason, at); err != nil {
+func finishMessageRead(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
+	conversationID, outcome, reason string, at time.Time, action string) error {
+	if err := auditMessageRead(ctx, tx, id, conversationID, outcome, reason, at, action); err != nil {
 		return errors.Join(ErrAuditUnavailable, err)
 	}
 	return tx.Commit(ctx)
@@ -49,6 +49,10 @@ func finishMessagePull(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity
 // who was authorized at the time of each send.
 func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity,
 	conversationID string, afterSeq int64, limit int) (MessagePage, error) {
+	return s.readTextMessages(ctx, id, conversationID, afterSeq, limit, "message_pull")
+}
+
+func (s Service) readTextMessages(ctx context.Context, id access.TrustedIdentity, conversationID string, afterSeq int64, limit int, action string) (MessagePage, error) {
 	if !directoryUUIDPattern.MatchString(conversationID) || afterSeq < 0 || limit < 1 || limit > 500 {
 		return MessagePage{}, ErrInvalidMessageRequest
 	}
@@ -64,6 +68,14 @@ func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity
 		return MessagePage{}, err
 	}
 	defer tx.Rollback(ctx)
+	if action == "message_search" {
+		if _, err = tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); err != nil {
+			return MessagePage{}, err
+		}
+	}
+	finish := func(conversationID, outcome, reason string, at time.Time) error {
+		return finishMessageRead(ctx, tx, id, conversationID, outcome, reason, at, action)
+	}
 	at := s.now()
 	actor, found, err := loadMembership(ctx, tx, id.TenantID, id.ActingMembershipID, id.UserID)
 	if err != nil {
@@ -73,7 +85,7 @@ func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity
 		at = fresh
 	}
 	if !found || !memberActiveAt(actor, at) {
-		if err := finishMessagePull(ctx, tx, id, "", "deny", "invalid_identity", at); err != nil {
+		if err := finish("", "deny", "invalid_identity", at); err != nil {
 			return MessagePage{}, err
 		}
 		return MessagePage{}, ErrForbidden
@@ -83,7 +95,7 @@ func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity
 FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
 		id.TenantID, conversationID).Scan(&lowUser, &highUser)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !strings.EqualFold(id.UserID, lowUser) && !strings.EqualFold(id.UserID, highUser)) {
-		if err := finishMessagePull(ctx, tx, id, "", "deny", "conversation_unavailable", at); err != nil {
+		if err := finish("", "deny", "conversation_unavailable", at); err != nil {
 			return MessagePage{}, err
 		}
 		return MessagePage{}, ErrMessageNotAvailable
@@ -170,7 +182,7 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 		at = fresh
 	}
 	if !memberActiveAt(actor, at) {
-		if err := finishMessagePull(ctx, tx, id, "", "deny", "invalid_identity", at); err != nil {
+		if err := finish("", "deny", "invalid_identity", at); err != nil {
 			return MessagePage{}, err
 		}
 		return MessagePage{}, ErrForbidden
@@ -182,7 +194,11 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 			page.Messages[i] = PulledMessage{Seq: page.Messages[i].Seq, Redacted: true}
 		}
 	}
-	if err := finishMessagePull(ctx, tx, id, conversationID, "allow", "history_page", at); err != nil {
+	reason := "history_page"
+	if action == "message_search" {
+		reason = "direct_search_page"
+	}
+	if err := finish(conversationID, "allow", reason, at); err != nil {
 		return MessagePage{}, err
 	}
 	return page, nil

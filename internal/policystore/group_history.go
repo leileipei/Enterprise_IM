@@ -46,6 +46,10 @@ type groupHistoryMessage struct {
 // the body only when both reader and sender occupied a valid interval at seq.
 func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIdentity,
 	groupID string, afterSeq int64, limit int) (MessagePage, error) {
+	return s.readGroupTextMessages(ctx, id, groupID, afterSeq, limit, "message_pull")
+}
+
+func (s Service) readGroupTextMessages(ctx context.Context, id access.TrustedIdentity, groupID string, afterSeq int64, limit int, action string) (MessagePage, error) {
 	if !directoryUUIDPattern.MatchString(groupID) || afterSeq < 0 || limit < 1 || limit > 500 {
 		return MessagePage{}, ErrInvalidMessageRequest
 	}
@@ -61,6 +65,14 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 		return MessagePage{}, err
 	}
 	defer tx.Rollback(ctx)
+	if action == "message_search" {
+		if _, err = tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); err != nil {
+			return MessagePage{}, err
+		}
+	}
+	finish := func(conversationID, outcome, reason string, at time.Time) error {
+		return finishMessageRead(ctx, tx, id, conversationID, outcome, reason, at, action)
+	}
 	actor, found, err := loadMembership(ctx, tx, id.TenantID, id.ActingMembershipID, id.UserID)
 	if err != nil {
 		return MessagePage{}, err
@@ -70,7 +82,7 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 	}
 	at := s.now()
 	if !memberActiveAt(actor, at) {
-		if err := finishMessagePull(ctx, tx, id, "", "deny", "invalid_identity", at); err != nil {
+		if err := finish("", "deny", "invalid_identity", at); err != nil {
 			return MessagePage{}, err
 		}
 		return MessagePage{}, ErrForbidden
@@ -93,13 +105,20 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
  WHERE tenant_id=$1 AND conversation_id=$2 AND user_id=$3 LIMIT 1 FOR SHARE`,
 		id.TenantID, groupID, id.UserID).Scan(&readerIntervalID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		if err := finishMessagePull(ctx, tx, id, "", "deny", "group_history_unavailable", at); err != nil {
+		if err := finish("", "deny", "group_history_unavailable", at); err != nil {
 			return MessagePage{}, err
 		}
 		return MessagePage{}, ErrMessageNotAvailable
 	}
 	if err != nil {
 		return MessagePage{}, err
+	}
+	if action == "message_search" {
+		var pointer int64
+		err = tx.QueryRow(ctx, "SELECT current_version FROM policy_current WHERE tenant_id=$1 FOR SHARE", id.TenantID).Scan(&pointer)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return MessagePage{}, err
+		}
 	}
 	version, err := currentVersion(ctx, tx, id.TenantID)
 	if err != nil {
@@ -173,7 +192,7 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 		at = fresh
 	}
 	if !memberActiveAt(actor, at) {
-		if err := finishMessagePull(ctx, tx, id, "", "deny", "invalid_identity", at); err != nil {
+		if err := finish("", "deny", "invalid_identity", at); err != nil {
 			return MessagePage{}, err
 		}
 		return MessagePage{}, ErrForbidden
@@ -207,7 +226,7 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 			at = fresh
 		}
 		if !memberActiveAt(actor, at) {
-			if err := finishMessagePull(ctx, tx, id, "", "deny", "invalid_identity", at); err != nil {
+			if err := finish("", "deny", "invalid_identity", at); err != nil {
 				return MessagePage{}, err
 			}
 			return MessagePage{}, ErrForbidden
@@ -232,7 +251,11 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 		page.Messages = append(page.Messages, item)
 		page.NextAfterSeq = message.seq
 	}
-	if err := finishMessagePull(ctx, tx, id, groupID, "allow", "group_history_page", at); err != nil {
+	reason := "group_history_page"
+	if action == "message_search" {
+		reason = "group_search_page"
+	}
+	if err := finish(groupID, "allow", reason, at); err != nil {
 		return MessagePage{}, err
 	}
 	return page, nil

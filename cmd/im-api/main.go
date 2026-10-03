@@ -122,6 +122,11 @@ func main() {
 			logger.Error("conversation API unavailable", "error", err)
 			os.Exit(1)
 		}
+		handler, err = httpserver.HandlerWithMessageSearch(handler, authenticator, policystore.Service{DB: pool})
+		if err != nil {
+			logger.Error("message search API unavailable", "error", err)
+			os.Exit(1)
+		}
 		if realtimeOptions != nil {
 			redisClient := redis.NewClient(realtimeOptions)
 			defer redisClient.Close()
