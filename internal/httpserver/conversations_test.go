@@ -417,7 +417,7 @@ func TestMessageRouteRejectsInvalidRequestAndMapsErrors(t *testing.T) {
 		}
 		res := httptest.NewRecorder()
 		failed.ServeHTTP(res, messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`))
-		if res.Code != tc.status || !strings.Contains(res.Body.String(), tc.code) || strings.Contains(res.Body.String(), "private SQL error") {
+		if res.Code != tc.status || !strings.Contains(res.Body.String(), tc.code) || strings.Contains(res.Body.String(), "private SQL error") || strings.Contains(res.Body.String(), "message_id") || strings.Contains(res.Body.String(), "duplicate") {
 			t.Fatalf("error mapping %v: %d %s", tc.err, res.Code, res.Body.String())
 		}
 	}

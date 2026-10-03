@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，P2 单聊与浏览器基础能力，P3 群成员管理、群文本消息写入、区间补拉与群列表 API，并开始 P4 消息正文保留期读取、租户配置与会话级法务保全管理。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认及客户环境的完整断线恢复验收；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，P2 单聊与浏览器基础能力，P3 群成员管理、群文本消息写入、区间补拉与群列表 API，并实现 P4 消息正文保留期、租户配置、会话级法务保全及默认关闭的正文／摘要清理。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认及客户环境的完整断线恢复验收；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -19,9 +19,9 @@
 | `POST /api/v1/admin/conversations/{id}/legal-holds` | 集团管理员登记案件保全 | 新建 201，完全相同重试 200 |
 | `POST /api/v1/admin/conversations/{id}/legal-holds/{hold_id}/release` | 集团管理员凭审批引用解除一项保全 | 200 |
 
-保留期默认 365 个 24 小时天，可设 1～3650 天。PUT 请求体为 `{ "message_body_days": 730, "expected_version": 0, "approval_reference": "CAB-2026-01" }`，审批引用为已取得的外部审批单号，服务端只记录该引用、执行人和时间，不核验外部审批结果。接口要求与管理 API 相同的可信身份头；组织管理员不能读取或修改租户级期限。版本不一致返回 409；租户已有消息时延长期限也返回 409，避免重新显示曾被遮蔽的旧正文，需在首条消息前设定更长期限。每次成功修改都会在 `tenant_retention_policy_history` 留下不可修改的版本记录；当前配置、版本历史与审计同事务提交，审计失败时全部回滚。配置生效后，单聊与群聊补拉都在读取时使用当前租户期限；物理清理仍未启用。
+保留期默认 365 个 24 小时天，可设 1～3650 天。PUT 请求体为 `{ "message_body_days": 730, "expected_version": 0, "approval_reference": "CAB-2026-01" }`，审批引用为已取得的外部审批单号，服务端只记录该引用、执行人和时间，不核验外部审批结果。接口要求与管理 API 相同的可信身份头；组织管理员不能读取或修改租户级期限。版本不一致返回 409；租户已有消息时延长期限也返回 409，避免重新显示曾被遮蔽的旧正文，需在首条消息前设定更长期限。每次成功修改都会在 `tenant_retention_policy_history` 留下不可修改的版本记录；当前配置、版本历史与审计同事务提交，审计失败时全部回滚。配置生效后，单聊与群聊补拉都在读取时使用当前租户期限；自动清理由独立进程显式启用，默认关闭。
 
-法务保全应在正文清理前登记。登记请求体为 `{ "request_id": "<uuid>", "case_reference": "CASE-2026-01" }`；解除请求体为 `{ "request_id": "<uuid>", "approval_reference": "CAB-2026-02" }`。`request_id` 在租户内跨登记和解除唯一，完全相同请求可重试；重复用于不同动作、会话、案件或执行人返回 409。同一会话可有多项有效保全，解除一项不影响其他案件。GET 默认每页 100 项、最多 500 项，使用返回的游标继续读取；游标仅适用于原租户和会话。只有当前有效集团管理员可操作，案件与审批引用仅记录，不核验外部审批系统。状态、不可修改事件和审计同事务提交。此增量仅提供保全管理与未来清理的暂停依据；当前读取仍按保留期遮蔽到期正文，物理清理、备份到期和外部审批核验尚未实现。
+法务保全应在正文清理前登记。登记请求体为 `{ "request_id": "<uuid>", "case_reference": "CASE-2026-01" }`；解除请求体为 `{ "request_id": "<uuid>", "approval_reference": "CAB-2026-02" }`。`request_id` 在租户内跨登记和解除唯一，完全相同请求可重试；重复用于不同动作、会话、案件或执行人返回 409。同一会话可有多项有效保全，解除一项不影响其他案件。GET 默认每页 100 项、最多 500 项，使用返回的游标继续读取；游标仅适用于原租户和会话。只有当前有效集团管理员可操作，案件与审批引用仅记录，不核验外部审批系统。状态、不可修改事件和审计同事务提交。保全暂停独立 Worker 的正文及摘要清理；当前读取仍按保留期遮蔽到期正文。备份到期和外部审批核验尚未实现。
 
 访问令牌须为签给本 API 的 RFC 9068 JWT，具有 RS256 签名、`at+jwt` 类型、正确发行方及受众，并包含允许的 `client_id`。仅通过 `(issuer, sub)` 查找受控导入的本地身份绑定；选定任职由数据库二次校验。ID Token、邮件地址和请求中的租户 ID 不用于映射。401 表示未认证，400 表示 ID 或请求格式错误，403 表示身份失效，404 隐藏无权限资源，409 表示状态冲突，503 表示认证、审计或数据库不可用。
 
@@ -74,6 +74,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000013_tenant_retention.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000014_conversation_legal_hold.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000015_message_body_clear.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000016_message_digest_retirement.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -107,11 +108,11 @@ export IM_BODY_CLEANER_BATCH_SIZE=100
 go run ./cmd/im-retention-worker
 ```
 
-`IM_BODY_CLEANER_ENABLED` 只接受空、`false` 或 `true`；未启用时进程直接退出且不连接数据库。批量默认 100，配置范围 1～1000，每租户每轮最多处理一个会话批次；成功或空轮询间隔为 1 秒，错误退避为 1～30 秒。每次租户枚举和批次处理设置 5 秒上下文，单租户错误仍继续处理后续租户；数据库恢复后重新轮询。Worker 只需要 PostgreSQL，Redis 故障不会改变保留与保全判定。
+`IM_BODY_CLEANER_ENABLED` 只接受空、`false` 或 `true`；正文和摘要两个开关都关闭时进程直接退出且不连接数据库。批量默认 100，配置范围 1～1000，每租户每轮最多处理一个会话批次；成功或空轮询间隔为 1 秒，错误退避为 1～30 秒。每次租户枚举和批次处理设置 5 秒上下文，单租户错误仍继续处理后续租户；数据库恢复后重新轮询。Worker 只需要 PostgreSQL，Redis 故障不会改变保留与保全判定。
 
-清理事务在任何查询前显式设为 READ COMMITTED，再锁租户期限和会话；数据库、角色或连接配置的默认隔离级别不会改变锁后检查。取得会话锁后重新检查有效保全与数据库时钟。任一案件仍有效时，该会话不清理；只解除部分案件不会解除阻断。清理与登记保全通过会话锁串行化，**保全应在清理前登记**，后续保全不能恢复已经清空的正文。保全只暂停清理，读取仍按期限遮蔽。正文与批次记录一起提交，失败或取消整批回滚；消息行、序号、幂等 ACK、Outbox 和成员区间保留。批次记录的首末序号为实际 min/max，不表示区间内每条消息都被清理。
+清理事务在任何查询前显式设为 READ COMMITTED，再锁租户期限和会话；数据库、角色或连接配置的默认隔离级别不会改变锁后检查。取得会话锁后重新检查有效保全与数据库时钟。任一案件仍有效时，该会话不清理；只解除部分案件不会解除阻断。清理与登记保全通过会话锁串行化，**保全应在清理前登记**，后续保全不能恢复已经清空的正文。保全只暂停清理，读取仍按期限遮蔽。正文与批次记录一起提交，失败或取消整批回滚；消息行、序号、Outbox 和成员区间保留；正文清理不改变摘要退役前的幂等 ACK。批次记录的首末序号为实际 min/max，不表示区间内每条消息都被清理。
 
-暂停全部自动清理时，向所有清理进程发送 SIGTERM，并用 `IM_BODY_CLEANER_ENABLED=false` 重启或停止对应服务；仅修改环境变量不会改变已经运行的进程。当前事务在提交或回滚后退出，已提交批次不撤销。可通过数据库只读查询观察批次：
+暂停全部自动清理时，向所有清理进程发送 SIGTERM，并用 `IM_BODY_CLEANER_ENABLED=false` 和 `IM_DIGEST_CLEANER_ENABLED=false` 重启或停止对应服务；仅修改环境变量不会改变已经运行的进程。当前事务在提交或回滚后退出，已提交批次不撤销。可通过数据库只读查询观察批次：
 
 ```sql
 SELECT tenant_id, conversation_id, id, retention_days, cutoff_at,
@@ -120,7 +121,35 @@ FROM message_body_clear_batches
 ORDER BY cleared_at DESC, id DESC LIMIT 100;
 ```
 
-`000015` 的表变更与索引构建可能阻塞写入，部署前需按表规模评估维护窗口、锁超时及耗时；在线 Worker 不等于无锁迁移。有任何清理行或批次证据后，`000015` Down 拒绝回滚，不能通过回滚恢复正文。清空的是在线当前行的 `text_body`，`messages.content_digest` 与幂等记录中的 SHA-256 摘要继续保留，低熵正文可能被猜测比对。PostgreSQL MVCC 旧版本、WAL、归档、备份及存储介质残留需独立治理，本增量不证明安全擦除或生产保留合规。数据库异常日志仅输出固定类别，批次日志包含标识与计数，不记录正文或连接 URL。
+`000015` 的表变更与索引构建可能阻塞写入，部署前需按表规模评估维护窗口、锁超时及耗时；在线 Worker 不等于无锁迁移。有任何清理行或批次证据后，`000015` Down 拒绝回滚，不能通过回滚恢复正文。清空的是在线当前行的 `text_body`，摘要未退役前，两处 SHA-256 仍保留，低熵正文可能被猜测比对；摘要退役规则见下节。PostgreSQL MVCC 旧版本、WAL、归档、备份及存储介质残留需独立治理，本增量不证明安全擦除或生产保留合规。数据库异常日志仅输出固定类别，批次日志包含标识与计数，不记录正文或连接 URL。
+
+### 消息摘要与永久到期幂等键
+
+摘要清理使用同一进程的独立开关，正文开关不会隐式启用它。先执行 `000016`，部署所有支持可空摘要及永久到期判定的 API 实例和新 Worker，确认没有旧 API 实例后，才可启用：
+
+```bash
+export IM_DIGEST_CLEANER_ENABLED=true
+export IM_DIGEST_CLEANER_BATCH_SIZE=100
+# IM_DATABASE_URL 沿用已配置数据库；正文开关可保持 false。
+go run ./cmd/im-retention-worker
+```
+
+`IM_DIGEST_CLEANER_ENABLED` 只接受空、`false` 或 `true`，默认关闭；摘要批量默认 100，范围 1～1000。每轮枚举一次租户，分别执行已启用的正文和摘要批次，各有独立 5 秒上下文。一类失败或超时仍处理同租户另一类及后续租户；父取消则退出。仅摘要启用时要求数据库 URL，但不执行正文清理。
+
+只有正文已清理、幂等 `expires_at` 到期、正文清理时间不晚于实际数据库时间且无任一有效法务保全时，才同事务清空消息与幂等表两处 `content_digest`，写相同不可改的 `digest_retired_at` 及证据。幂等至少保留 30 天；正文默认保留 365 天时，摘要通常等待正文清理后才退役。仍保留幂等键、原始 ACK 元数据和消息行，不能把本增量当作完整元数据删除。
+
+现有 UUIDv7 超过 7 天返回 `410 retry_window_expired`；即使服务时钟回退使旧 ID 通过窗口校验，退役键也返回同一 410，不比较正文、不返回重复 ACK、不再写消息或 Outbox。摘要退役前，窗口内同内容仍返回原 ACK，不同内容仍返回 409。两种发送事务显式 READ COMMITTED，查重以一条 SQL 的快照判定；先于清理提交读到旧状态的在途请求可完成原 ACK，清理提交后的新查重只能得到到期拒绝。
+
+可通过只读查询观察摘要批次；最小／最大序号只描述实际集合边界：
+
+```sql
+SELECT tenant_id, conversation_id, retired_at, retired_count,
+       first_seq, last_seq, min_expires_at, max_expires_at
+FROM message_digest_retirement_batches
+ORDER BY retired_at DESC, id DESC LIMIT 100;
+```
+
+有退役行或批次证据时 `000016` Down 拒绝。开始摘要清理后，不能回退到不认识 NULL 摘要／退役标记的旧 API；发生问题时关闭摘要开关并部署兼容修复版本。表变更、索引和触发器有迁移锁与运行成本，须评估维护窗口。两处当前摘要清空不证明 MVCC、WAL、归档、备份或外部副本已擦除；超级用户禁用触发器或 TRUNCATE 的防护仍依赖数据库权限治理。
 
 默认 `IM_OIDC_ENABLED` 为空，服务只暴露健康检查。启用受保护管理 API 前，先核对 IdP 能签发上述 JWT 访问令牌，迁移数据库，并导入与本地用户一一核对的 `external_identities` 绑定及管理员授权。然后配置：
 
@@ -161,7 +190,7 @@ export IM_REALTIME_STREAM='enterprise-im:message-created:v1'
 
 网页在选择接任者后读取本人当前成员区间，并在确认前仅保存租户、用户、当前任职、群、请求编号及源/目标区间 ID；姓名、组织与访问令牌不会随转让请求持久保存。结果不确定时，侧栏保留原请求，可在刷新或重新登录后重试，即使原群主已降为普通成员。确认成功后刷新群列表，原群主可自行退群；服务端仍会重新校验首次转让的当前权限与接任者状态。
 
-群历史补拉使用 `GET /api/v1/groups/{group_id}/messages?after_seq=0&limit=100`。当前或历史成员可在账号和选定任职有效时，读取本人曾参与区间内且未满当前租户正文保留期的消息。对于退群、移除与重新入群期间仍存的消息行，以及错误发送任职和正文过期的消息，接口只返回 `redacted=true` 占位，不包含正文和发送人。普通策略变化不追改保留期内的旧正文；当前 `hard_deny` 命中读者与群内任一成员时会遮蔽整页历史正文，账号冻结也会阻断读取。`policy_blocked` 群仍可按历史授权补拉。租户级正文保留期已可配置，物理清理仍待 P4 后续实现；P4 清理或历史导入必须保留连续序号的安全占位，或同步升级补拉契约，否则 Web 客户端会检测缺口并暂停该会话补拉。
+群历史补拉使用 `GET /api/v1/groups/{group_id}/messages?after_seq=0&limit=100`。当前或历史成员可在账号和选定任职有效时，读取本人曾参与区间内且未满当前租户正文保留期的消息。对于退群、移除与重新入群期间仍存的消息行，以及错误发送任职和正文过期的消息，接口只返回 `redacted=true` 占位，不包含正文和发送人。普通策略变化不追改保留期内的旧正文；当前 `hard_deny` 命中读者与群内任一成员时会遮蔽整页历史正文，账号冻结也会阻断读取。`policy_blocked` 群仍可按历史授权补拉。租户级正文保留期已可配置，启用独立清理进程后清空到期正文；P4 清理或历史导入必须保留连续序号的安全占位，或同步升级补拉契约，否则 Web 客户端会检测缺口并暂停该会话补拉。
 
 `GET /api/v1/groups?limit=20&cursor=<游标>` 返回本人当前仍在群内的群，默认每页 20、最多 50，按群更新时间和 ID 倒序排列；`has_more` 和 `next_cursor` 用于继续读取。结果包含群名、`active` 或 `policy_blocked` 状态、本人角色、群来源任职 ID、最后消息序号和更新时间，不返回其他成员资料。本人可使用任一当前有效任职读取群列表；发送群消息时仍须选择该群的来源任职并通过实时策略校验。退群、被移除或已结束的群不出现在当前群列表，历史消息仍按区间授权规则通过已知群 ID 补拉。群列表只反映请求时的状态，客户端断线恢复时应重新从第一页核对。
 
@@ -195,6 +224,6 @@ go vet ./...
 
 `multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000015` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000016` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
 
 真实浏览器集成测试在 macOS/Linux 上运行，需额外设置 `IM_TEST_BROWSER_NODE`（Node 可执行文件）、`NODE_PATH`（包含 Playwright 的 `node_modules`）；使用外部安装的 Chrome/Chromium 时设置 `CHROMIUM_EXECUTABLE`，再运行 `go test ./internal/policystore -run '^TestRealBrowserLoginRealtimeAndOfflinePull$' -count=1`。未设置 `IM_TEST_BROWSER_NODE` 时该用例跳过；需同时设置上述 PostgreSQL 与 Redis 测试 URL。

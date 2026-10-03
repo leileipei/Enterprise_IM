@@ -15,13 +15,15 @@ import (
 )
 
 type workerConfig struct {
-	DatabaseURL string
-	Enabled     bool
-	BatchSize   int
+	DatabaseURL     string
+	Enabled         bool
+	BatchSize       int
+	DigestEnabled   bool
+	DigestBatchSize int
 }
 
 func configFromEnv(getenv func(string) string) (workerConfig, error) {
-	cfg := workerConfig{DatabaseURL: getenv("IM_DATABASE_URL"), BatchSize: retention.DefaultBatchSize}
+	cfg := workerConfig{DatabaseURL: getenv("IM_DATABASE_URL"), BatchSize: retention.DefaultBatchSize, DigestBatchSize: retention.DefaultBatchSize}
 	switch getenv("IM_BODY_CLEANER_ENABLED") {
 	case "", "false":
 	case "true":
@@ -36,56 +38,24 @@ func configFromEnv(getenv func(string) string) (workerConfig, error) {
 		}
 		cfg.BatchSize = size
 	}
-	if cfg.Enabled && cfg.DatabaseURL == "" {
-		return workerConfig{}, errors.New("IM_DATABASE_URL is required when body clearing is enabled")
+	switch getenv("IM_DIGEST_CLEANER_ENABLED") {
+	case "", "false":
+	case "true":
+		cfg.DigestEnabled = true
+	default:
+		return workerConfig{}, errors.New("IM_DIGEST_CLEANER_ENABLED must be true or false")
+	}
+	if raw := getenv("IM_DIGEST_CLEANER_BATCH_SIZE"); raw != "" {
+		size, err := strconv.Atoi(raw)
+		if err != nil || size < 1 || size > retention.MaxBatchSize {
+			return workerConfig{}, errors.New("IM_DIGEST_CLEANER_BATCH_SIZE must be between 1 and 1000")
+		}
+		cfg.DigestBatchSize = size
+	}
+	if (cfg.Enabled || cfg.DigestEnabled) && cfg.DatabaseURL == "" {
+		return workerConfig{}, errors.New("IM_DATABASE_URL is required when retention clearing is enabled")
 	}
 	return cfg, nil
-}
-
-type sweepWorker interface {
-	ListActiveTenants(context.Context) ([]string, error)
-	ProcessTenant(context.Context, string) (retention.BatchResult, error)
-}
-
-var errSweepFailed = errors.New("retention sweep unavailable or partially failed")
-
-func runSweep(ctx context.Context, worker sweepWorker, logger *slog.Logger) (int, error) {
-	listCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	tenants, err := worker.ListActiveTenants(listCtx)
-	cancel()
-	if err != nil {
-		if ctx.Err() != nil {
-			return 0, ctx.Err()
-		}
-		logger.Warn("retention tenant listing unavailable")
-		return 0, errSweepFailed
-	}
-	count := 0
-	failed := false
-	for _, tenantID := range tenants {
-		if err := ctx.Err(); err != nil {
-			return count, err
-		}
-		batchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		batch, err := worker.ProcessTenant(batchCtx, tenantID)
-		cancel()
-		if err != nil {
-			if ctx.Err() != nil {
-				return count, ctx.Err()
-			}
-			failed = true
-			logger.Warn("retention batch failed; will retry", "tenant_id", tenantID)
-			continue
-		}
-		count += batch.ClearedCount
-		if batch.ClearedCount > 0 {
-			logger.Info("message bodies cleared", "tenant_id", batch.TenantID, "conversation_id", batch.ConversationID, "batch_id", batch.BatchID, "cleared_count", batch.ClearedCount)
-		}
-	}
-	if failed {
-		return count, errSweepFailed
-	}
-	return count, nil
 }
 
 func sweepDelay(failures int) time.Duration {
@@ -99,8 +69,8 @@ func sweepDelay(failures int) time.Duration {
 }
 
 func run(ctx context.Context, cfg workerConfig, logger *slog.Logger) error {
-	if !cfg.Enabled {
-		logger.Info("retention body cleaner disabled")
+	if !cfg.Enabled && !cfg.DigestEnabled {
+		logger.Info("retention cleaners disabled")
 		return nil
 	}
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
@@ -109,10 +79,18 @@ func run(ctx context.Context, cfg workerConfig, logger *slog.Logger) error {
 	}
 	defer pool.Close()
 	worker := retention.Worker{DB: pool, BatchSize: cfg.BatchSize}
-	logger.Info("retention body cleaner started", "batch_size", cfg.BatchSize)
+	var body bodyProcessor
+	var digest digestProcessor
+	if cfg.Enabled {
+		body = worker
+	}
+	if cfg.DigestEnabled {
+		digest = retention.DigestWorker{DB: pool, BatchSize: cfg.DigestBatchSize}
+	}
+	logger.Info("retention cleaners started", "body_enabled", cfg.Enabled, "digest_enabled", cfg.DigestEnabled, "body_batch_size", cfg.BatchSize, "digest_batch_size", cfg.DigestBatchSize)
 	failures := 0
 	for ctx.Err() == nil {
-		_, err := runSweep(ctx, worker, logger)
+		_, err := runSweep(ctx, worker, body, digest, logger)
 		if ctx.Err() != nil {
 			break
 		}
@@ -130,7 +108,7 @@ func run(ctx context.Context, cfg workerConfig, logger *slog.Logger) error {
 		case <-timer.C:
 		}
 	}
-	logger.Info("retention body cleaner stopped")
+	logger.Info("retention cleaners stopped")
 	return nil
 }
 

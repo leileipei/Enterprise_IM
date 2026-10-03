@@ -21,11 +21,19 @@ func seedBodyMessage(t *testing.T, conn *pgx.Conn) {
 
 func bodyMigration(t *testing.T, conn *pgx.Conn, direction string) error {
 	t.Helper()
+	if direction == "down" {
+		if err := digestMigration(t, conn, "down"); err != nil {
+			return err
+		}
+	}
 	data, err := os.ReadFile("../../db/migrations/000015_message_body_clear." + direction + ".sql")
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = conn.PgConn().Exec(context.Background(), string(data)).ReadAll()
+	if err == nil && direction == "up" {
+		return digestMigration(t, conn, "up")
+	}
 	return err
 }
 
@@ -110,6 +118,11 @@ func TestBodyClearMigrationRollback(t *testing.T) {
 			t.Fatal(err)
 		}
 		data, err := os.ReadFile("../../db/migrations/000015_message_body_clear.down.sql")
+		prefix, prefixErr := os.ReadFile("../../db/migrations/000016_message_digest_retirement.down.sql")
+		if prefixErr != nil {
+			t.Fatal(prefixErr)
+		}
+		data = append(prefix, data...)
 		if err != nil {
 			t.Fatal(err)
 		}

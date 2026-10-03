@@ -95,9 +95,9 @@ func TestCleanerSweepFairnessAndCancellation(t *testing.T) {
 			}
 			return retention.BatchResult{TenantID: id, ConversationID: "c", BatchID: "batch", ClearedCount: 1}, nil
 		}}
-		count, err := runSweep(context.Background(), worker, logger)
-		if count != 1 || err == nil || strings.Join(worker.calls, ",") != "a,b" {
-			t.Fatalf("unfair sweep: %d %v %v", count, worker.calls, err)
+		count, err := runSweep(context.Background(), worker, worker, nil, logger)
+		if count.BodiesCleared != 1 || err == nil || strings.Join(worker.calls, ",") != "a,b" {
+			t.Fatalf("unfair sweep: %+v %v %v", count, worker.calls, err)
 		}
 		if strings.Contains(logs.String(), "sensitive-message-body-and-DSN") {
 			t.Fatalf("logged database details: %s", logs.String())
@@ -110,19 +110,19 @@ func TestCleanerSweepFairnessAndCancellation(t *testing.T) {
 			cancel()
 			return retention.BatchResult{}, nil
 		}}
-		if _, err := runSweep(ctx, worker, testLogger()); !errors.Is(err, context.Canceled) || len(worker.calls) != 1 {
+		if _, err := runSweep(ctx, worker, worker, nil, testLogger()); !errors.Is(err, context.Canceled) || len(worker.calls) != 1 {
 			t.Fatalf("processed after cancellation: %v %v", worker.calls, err)
 		}
 	})
 	t.Run("database unavailable", func(t *testing.T) {
 		worker := &fakeSweepWorker{listErr: errors.New("private DSN")}
-		if _, err := runSweep(context.Background(), worker, testLogger()); err == nil {
+		if _, err := runSweep(context.Background(), worker, worker, nil, testLogger()); err == nil {
 			t.Fatal("database outage ignored")
 		}
 		worker.listErr = nil
 		worker.ids = []string{}
-		if count, err := runSweep(context.Background(), worker, testLogger()); err != nil || count != 0 {
-			t.Fatalf("did not recover: %d %v", count, err)
+		if count, err := runSweep(context.Background(), worker, worker, nil, testLogger()); err != nil || count.BodiesCleared != 0 {
+			t.Fatalf("did not recover: %+v %v", count, err)
 		}
 	})
 }
@@ -135,7 +135,9 @@ func TestCleanerBackoff(t *testing.T) {
 	}
 }
 
-func TestCleanerProductionProcess(t *testing.T) {
+func TestCleanerProductionProcess(t *testing.T) { testCleanerProductionProcess(t, "body") }
+
+func testCleanerProductionProcess(t *testing.T, mode string) {
 	dsn := os.Getenv("IM_TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("set IM_TEST_DATABASE_URL for PostgreSQL process test")
@@ -182,6 +184,14 @@ func TestCleanerProductionProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := conn.Exec(ctx, `INSERT INTO message_idempotency(tenant_id,conversation_id,sender_user_id,client_msg_id,message_id,content_digest,accepted_at,expires_at) SELECT tenant_id,conversation_id,sender_user_id,client_msg_id,id,content_digest,accepted_at,accepted_at+INTERVAL '720 hours' FROM messages`); err != nil {
+		t.Fatal(err)
+	}
+	if mode == "digest" {
+		if _, err := conn.Exec(ctx, "UPDATE messages SET text_body=NULL,body_cleared_at=clock_timestamp()-INTERVAL '1 hour'"); err != nil {
+			t.Fatal(err)
+		}
+	}
 	parsed, err := url.Parse(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -195,12 +205,12 @@ func TestCleanerProductionProcess(t *testing.T) {
 		t.Fatalf("build: %s %v", out, err)
 	}
 	disabled := exec.CommandContext(ctx, binary)
-	disabled.Env = append(os.Environ(), "IM_DATABASE_URL="+parsed.String(), "IM_BODY_CLEANER_ENABLED=", "IM_BODY_CLEANER_BATCH_SIZE=100")
+	disabled.Env = append(os.Environ(), "IM_DATABASE_URL="+parsed.String(), "IM_BODY_CLEANER_ENABLED=", "IM_BODY_CLEANER_BATCH_SIZE=100", "IM_DIGEST_CLEANER_ENABLED=false", "IM_DIGEST_CLEANER_BATCH_SIZE=100")
 	if out, err := disabled.CombinedOutput(); err != nil {
 		t.Fatalf("disabled process: %s %v", out, err)
 	}
 	var count int
-	if err := conn.QueryRow(ctx, "SELECT count(*) FROM messages WHERE text_body IS NOT NULL").Scan(&count); err != nil || count != 1 {
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM messages WHERE text_body IS NOT NULL").Scan(&count); err != nil || (mode != "digest" && count != 1) || (mode == "digest" && count != 0) {
 		t.Fatalf("default cleaner changed data: %d %v", count, err)
 	}
 	logPath := filepath.Join(t.TempDir(), "process.log")
@@ -210,7 +220,14 @@ func TestCleanerProductionProcess(t *testing.T) {
 	}
 	defer logFile.Close()
 	child := exec.CommandContext(ctx, binary)
-	child.Env = append(os.Environ(), "IM_DATABASE_URL="+parsed.String(), "IM_BODY_CLEANER_ENABLED=true", "IM_BODY_CLEANER_BATCH_SIZE=100")
+	bodyEnabled, digestEnabled := "true", "false"
+	if mode == "digest" {
+		bodyEnabled = "false"
+	}
+	if mode != "body" {
+		digestEnabled = "true"
+	}
+	child.Env = append(os.Environ(), "IM_DATABASE_URL="+parsed.String(), "IM_BODY_CLEANER_ENABLED="+bodyEnabled, "IM_BODY_CLEANER_BATCH_SIZE=100", "IM_DIGEST_CLEANER_ENABLED="+digestEnabled, "IM_DIGEST_CLEANER_BATCH_SIZE=100")
 	child.Stdout = logFile
 	child.Stderr = logFile
 	if err := child.Start(); err != nil {
@@ -219,8 +236,12 @@ func TestCleanerProductionProcess(t *testing.T) {
 	defer child.Process.Kill()
 	done := make(chan error, 1)
 	go func() { done <- child.Wait() }()
+	batchTable := "message_body_clear_batches"
+	if mode != "body" {
+		batchTable = "message_digest_retirement_batches"
+	}
 	for {
-		if err := conn.QueryRow(ctx, "SELECT count(*) FROM message_body_clear_batches").Scan(&count); err != nil {
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM "+batchTable).Scan(&count); err != nil {
 			t.Fatal(err)
 		}
 		if count == 1 {
@@ -248,11 +269,15 @@ func TestCleanerProductionProcess(t *testing.T) {
 	if err := conn.QueryRow(ctx, "SELECT count(*) FROM messages WHERE text_body IS NULL AND body_cleared_at IS NOT NULL").Scan(&count); err != nil || count != 1 {
 		t.Fatalf("enabled process did not clear: %d %v", count, err)
 	}
+	var digestCount int
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM messages WHERE content_digest IS NULL").Scan(&digestCount); err != nil || (mode == "body" && digestCount != 0) || (mode != "body" && digestCount != 1) {
+		t.Fatalf("digest result: %d %v", digestCount, err)
+	}
 	logs, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(logs), "process-private-body") || strings.Contains(string(logs), "local_p4_04_test") {
+	if strings.Contains(string(logs), "process-private-body") || strings.Contains(string(logs), "local_p4_05_test") {
 		t.Fatalf("process leaked private data: %s", logs)
 	}
 }
