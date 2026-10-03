@@ -171,3 +171,7 @@ main{position:relative;z-index:1;min-height:100vh}
 #retention-policy-days{width:100%;padding:10px;border:1px solid #bed8d0;border-radius:8px;font:inherit}
 #retention-policy-current:empty{display:none}
 #retention-policy-open{margin-top:12px}
+
+#audit-open{margin-top:8px}
+#audit-context,#audit-boundary,#audit-hint{overflow-wrap:anywhere;line-height:1.7}
+#audit-outcome{width:100%;padding:10px;border:1px solid #bed8d0;border-radius:8px;background:white;color:#193044;font:inherit}

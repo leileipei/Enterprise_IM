@@ -10,6 +10,7 @@
   <script src="/web/legal-holds.js" defer></script>
   <script src="/web/retention-history.js" defer></script>
   <script src="/web/retention-policy.js" defer></script>
+  <script src="/web/audit.js" defer></script>
   <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -41,6 +42,7 @@
           <div id="identity-options" class="identity-options"></div>
         </div>
         <button id="retention-policy-open" class="secondary-button hidden" type="button">消息保留期配置</button>
+        <button id="audit-open" class="secondary-button hidden" type="button">管理审计查询</button>
         <div class="search-panel">
           <label for="person-query" class="section-heading">查找同事</label>
           <div class="search-row"><input id="person-query" type="search" placeholder="输入姓名，至少 2 个字" autocomplete="off"><button id="search-button" type="button" aria-label="搜索">⌕</button></div>
@@ -57,6 +59,18 @@
         <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
       </div>
     </section>
+    <dialog id="audit-dialog" class="retention-records-dialog" aria-labelledby="audit-title" aria-describedby="audit-boundary">
+      <div class="retention-records-heading"><div><h2 id="audit-title">管理审计查询</h2><p id="audit-context" class="microcopy"></p></div><button id="audit-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="audit-form" class="legal-hold-action-form" novalidate>
+        <label for="audit-action">动作代码（留空查询全部）</label><input id="audit-action" type="text" autocomplete="off" placeholder="例如 retention_policy_update">
+        <label for="audit-outcome">操作结果</label><select id="audit-outcome"><option value="">全部结果</option><option value="allow">允许</option><option value="deny">拒绝</option></select>
+        <div class="group-create-actions"><button id="audit-apply" class="primary-button" type="submit">查询</button><button id="audit-refresh" class="secondary-button" type="button">刷新首页</button></div>
+      </form>
+      <p id="audit-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="audit-list" class="retention-records-list" aria-label="集团管理审计记录"></ul>
+      <button id="audit-more" class="secondary-button hidden" type="button">加载更多记录</button>
+      <p id="audit-boundary" class="microcopy">按发生时间从新到旧排列，当前页不代表全部记录。新事件请刷新首页查看；查询操作本身也会留下审计，可在后续查询中看到。时间按本机时区显示，括号中保留原始时间精度。此处只读查询已登记操作，不包含规则命中明细，也不代表审批核验或清理任务已执行。</p>
+    </dialog>
     <dialog id="retention-policy-dialog" class="retention-records-dialog" aria-labelledby="retention-policy-title" aria-describedby="retention-policy-boundary">
       <div class="retention-records-heading"><div><h2 id="retention-policy-title">消息保留期配置</h2><p id="retention-policy-context" class="microcopy"></p></div><button id="retention-policy-close" class="secondary-button" type="button">关闭</button></div>
       <div id="retention-policy-current" class="retention-record-card" aria-label="当前租户保留期配置"></div>
