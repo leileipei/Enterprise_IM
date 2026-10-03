@@ -128,65 +128,10 @@ func (s Service) readGroupTextMessages(ctx context.Context, id access.TrustedIde
 	if err != nil {
 		return MessagePage{}, err
 	}
-	page := MessagePage{ConversationID: groupID,
-		Messages: make([]PulledMessage, 0, min(limit, 100)), NextAfterSeq: afterSeq}
-	rows, err := tx.Query(ctx, `SELECT id::text,seq,sender_user_id::text,sender_membership_id::text,text_body,accepted_at,body_cleared_at
- FROM messages WHERE tenant_id=$1 AND conversation_id=$2 AND seq>$3
- ORDER BY seq LIMIT $4`, id.TenantID, groupID, afterSeq, limit+1)
+	scope := historyReadContext{Identity: id, Actor: actor, Rules: rules, Retention: retention}
+	batch, err := readGroupHistoryBatchTx(ctx, tx, scope, groupID, afterSeq, limit)
 	if err != nil {
 		return MessagePage{}, err
-	}
-	var messages []groupHistoryMessage
-	senderIDs := map[string]bool{id.UserID: true}
-	for rows.Next() {
-		var message groupHistoryMessage
-		if err := rows.Scan(&message.id, &message.seq, &message.senderID,
-			&message.senderMembershipID, &message.text, &message.at, &message.clearedAt); err != nil {
-			rows.Close()
-			return MessagePage{}, err
-		}
-		if len(messages) == limit {
-			page.HasMore = true
-			break
-		}
-		messages = append(messages, message)
-		senderIDs[message.senderID] = true
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return MessagePage{}, err
-	}
-	intervals := make(map[string][]groupHistoryInterval, len(senderIDs))
-	if len(messages) > 0 {
-		users := make([]string, 0, len(senderIDs))
-		for userID := range senderIDs {
-			users = append(users, userID)
-		}
-		rows, err := tx.Query(ctx, `SELECT user_id::text,source_membership_id::text,
- source_organization_id::text,join_seq,leave_seq
- FROM conversation_membership_intervals
- WHERE tenant_id=$1 AND conversation_id=$2 AND user_id=ANY($3::uuid[])
-   AND join_seq<=$4 AND (leave_seq IS NULL OR leave_seq>=$5)
- ORDER BY user_id,join_seq FOR SHARE`, id.TenantID, groupID, users,
-			messages[len(messages)-1].seq, messages[0].seq)
-		if err != nil {
-			return MessagePage{}, err
-		}
-		for rows.Next() {
-			var interval groupHistoryInterval
-			if err := rows.Scan(&interval.userID, &interval.membershipID,
-				&interval.organizationID, &interval.joinSeq, &interval.leaveSeq); err != nil {
-				rows.Close()
-				return MessagePage{}, err
-			}
-			intervals[interval.userID] = append(intervals[interval.userID], interval)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return MessagePage{}, err
-		}
 	}
 	if fresh := s.now(); fresh.After(at) {
 		at = fresh
@@ -197,59 +142,9 @@ func (s Service) readGroupTextMessages(ctx context.Context, id access.TrustedIde
 		}
 		return MessagePage{}, ErrForbidden
 	}
-	groupHardDenied := false
-	if len(messages) > 0 && hasGroupHistoryHardDeny(rules) {
-		var readerIntervals []groupHistoryInterval
-		rows, err := tx.Query(ctx, `SELECT user_id::text,source_membership_id::text,
- source_organization_id::text,join_seq,leave_seq
- FROM conversation_membership_intervals
- WHERE tenant_id=$1 AND conversation_id=$2 AND user_id=$3
- ORDER BY join_seq FOR SHARE`, id.TenantID, groupID, id.UserID)
-		if err != nil {
-			return MessagePage{}, err
-		}
-		for rows.Next() {
-			var interval groupHistoryInterval
-			if err := rows.Scan(&interval.userID, &interval.membershipID,
-				&interval.organizationID, &interval.joinSeq, &interval.leaveSeq); err != nil {
-				rows.Close()
-				return MessagePage{}, err
-			}
-			readerIntervals = append(readerIntervals, interval)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return MessagePage{}, err
-		}
-		if fresh := s.now(); fresh.After(at) {
-			at = fresh
-		}
-		if !memberActiveAt(actor, at) {
-			if err := finish("", "deny", "invalid_identity", at); err != nil {
-				return MessagePage{}, err
-			}
-			return MessagePage{}, ErrForbidden
-		}
-		groupHardDenied, err = groupHistoryHardDenied(ctx, tx, id, groupID, actor,
-			readerIntervals, rules, at)
-		if err != nil {
-			return MessagePage{}, err
-		}
-	}
-	for _, message := range messages {
-		item := PulledMessage{Seq: message.seq, Redacted: true}
-		reader, readerFound := groupIntervalAt(intervals[id.UserID], message.seq)
-		sender, senderFound := groupIntervalAt(intervals[message.senderID], message.seq)
-		if message.text != nil && message.clearedAt == nil && !groupHardDenied && readerFound && senderFound &&
-			sender.membershipID == message.senderMembershipID &&
-			at.Before(message.at.Add(retention)) && !policy.HistoryHardDeny(actor,
-			reader.policyMembership(id.TenantID), sender.policyMembership(id.TenantID), at, rules) {
-			item = PulledMessage{MessageID: message.id, Seq: message.seq,
-				SenderUserID: message.senderID, Text: *message.text, ServerTime: message.at}
-		}
-		page.Messages = append(page.Messages, item)
-		page.NextAfterSeq = message.seq
+	page, err := filterGroupHistoryBatchTx(ctx, tx, scope, batch, at)
+	if err != nil {
+		return MessagePage{}, err
 	}
 	reason := "group_history_page"
 	if action == "message_search" {

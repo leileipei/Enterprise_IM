@@ -293,4 +293,5 @@ func TestProductionAPIWithOIDCAndRealtimeProcesses(t *testing.T) {
 	pull(firstURL, 1, 2, "生产 API 消息二")
 	reconnected.CloseNow()
 	assertProductionMessageSearch(t, conn, httpClient, firstURL, secondURL, token)
+	assertProductionCrossMessageSearch(t, conn, httpClient, firstURL, secondURL, token)
 }

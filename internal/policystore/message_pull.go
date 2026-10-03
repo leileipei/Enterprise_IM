@@ -8,7 +8,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
-	"github.com/leileipei/Enterprise_IM/internal/policy"
 )
 
 type PulledMessage struct {
@@ -123,58 +122,8 @@ FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
 	if err != nil {
 		return MessagePage{}, err
 	}
-	page := MessagePage{ConversationID: conversationID,
-		Messages: make([]PulledMessage, 0, min(limit, 100)), NextAfterSeq: afterSeq}
-	type historicalPair struct{ reader, peer policy.Membership }
-	histories := make([]historicalPair, 0, min(limit, 100))
-	rows, err := tx.Query(ctx, `
-SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,
- COALESCE(m.recipient_user_id::text,''),COALESCE(m.recipient_membership_id::text,''),
- m.text_body,m.accepted_at,m.body_cleared_at,
- COALESCE(m.sender_organization_id::text,''),COALESCE(m.recipient_organization_id::text,'')
-FROM messages m
-WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3
-ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
-	if err != nil {
-		return MessagePage{}, err
-	}
-	for rows.Next() {
-		var messageID, senderUser, senderMember, recipientUser, recipientMember string
-		var senderOrg, recipientOrg string
-		var body *string
-		var clearedAt *time.Time
-		var seq int64
-		var acceptedAt time.Time
-		if err := rows.Scan(&messageID, &seq, &senderUser, &senderMember,
-			&recipientUser, &recipientMember, &body, &acceptedAt, &clearedAt, &senderOrg, &recipientOrg); err != nil {
-			rows.Close()
-			return MessagePage{}, err
-		}
-		if len(page.Messages) == limit {
-			page.HasMore = true
-			break
-		}
-		item := PulledMessage{Seq: seq, Redacted: true}
-		history := historicalPair{}
-		validPair := (senderUser == lowUser && recipientUser == highUser) ||
-			(senderUser == highUser && recipientUser == lowUser)
-		if body != nil && clearedAt == nil && validPair && senderMember != "" && recipientMember != "" && senderOrg != "" && recipientOrg != "" {
-			sender := policy.Membership{ID: senderMember, TenantID: id.TenantID, OrganizationID: senderOrg}
-			recipient := policy.Membership{ID: recipientMember, TenantID: id.TenantID, OrganizationID: recipientOrg}
-			historicalReader, peer := sender, recipient
-			if strings.EqualFold(id.UserID, recipientUser) {
-				historicalReader, peer = recipient, sender
-			}
-			item = PulledMessage{MessageID: messageID, Seq: seq, SenderUserID: senderUser,
-				Text: *body, ServerTime: acceptedAt, Redacted: false}
-			history = historicalPair{reader: historicalReader, peer: peer}
-		}
-		page.Messages = append(page.Messages, item)
-		histories = append(histories, history)
-		page.NextAfterSeq = seq
-	}
-	err = rows.Err()
-	rows.Close()
+	scope := historyReadContext{Identity: id, Actor: actor, Rules: rules, Retention: retention}
+	batch, err := readDirectHistoryBatchTx(ctx, tx, scope, conversationID, afterSeq, limit)
 	if err != nil {
 		return MessagePage{}, err
 	}
@@ -187,13 +136,7 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 		}
 		return MessagePage{}, ErrForbidden
 	}
-	for i := range page.Messages {
-		if !page.Messages[i].Redacted &&
-			(!at.Before(page.Messages[i].ServerTime.Add(retention)) ||
-				policy.HistoryHardDeny(actor, histories[i].reader, histories[i].peer, at, rules)) {
-			page.Messages[i] = PulledMessage{Seq: page.Messages[i].Seq, Redacted: true}
-		}
-	}
+	page := filterDirectHistoryBatch(scope, batch, at)
 	reason := "history_page"
 	if action == "message_search" {
 		reason = "direct_search_page"
