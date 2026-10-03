@@ -4,7 +4,7 @@
 
 ## 当前开发增量
 
-本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，P2 单聊与浏览器基础能力，P3 群成员管理、群文本消息写入、区间补拉与群列表 API，并开始 P4 消息正文保留期读取与租户配置。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认及客户环境的完整断线恢复验收；客户身份提供方尚未联调。**
+本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，P2 单聊与浏览器基础能力，P3 群成员管理、群文本消息写入、区间补拉与群列表 API，并开始 P4 消息正文保留期读取、租户配置与会话级法务保全管理。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认及客户环境的完整断线恢复验收；客户身份提供方尚未联调。**
 
 受保护管理 API 合约：
 
@@ -15,8 +15,13 @@
 | `POST /api/v1/admin/memberships/{id}:end` | 结束一个组织任职 | 204，无响应体 |
 | `GET /api/v1/admin/retention-policy` | 集团管理员查询本租户消息正文保留期与审批记录 | 200，期限、版本与审批元数据 |
 | `PUT /api/v1/admin/retention-policy` | 集团管理员按版本更新本租户消息正文保留期 | 200，更新后的配置 |
+| `GET /api/v1/admin/conversations/{id}/legal-holds?limit={1..500}&cursor={游标}` | 集团管理员分页查询本租户会话保全 | 200，`holds` 与 `next_cursor` |
+| `POST /api/v1/admin/conversations/{id}/legal-holds` | 集团管理员登记案件保全 | 新建 201，完全相同重试 200 |
+| `POST /api/v1/admin/conversations/{id}/legal-holds/{hold_id}/release` | 集团管理员凭审批引用解除一项保全 | 200 |
 
 保留期默认 365 个 24 小时天，可设 1～3650 天。PUT 请求体为 `{ "message_body_days": 730, "expected_version": 0, "approval_reference": "CAB-2026-01" }`，审批引用为已取得的外部审批单号，服务端只记录该引用、执行人和时间，不核验外部审批结果。接口要求与管理 API 相同的可信身份头；组织管理员不能读取或修改租户级期限。版本不一致返回 409；租户已有消息时延长期限也返回 409，避免重新显示曾被遮蔽的旧正文，需在首条消息前设定更长期限。每次成功修改都会在 `tenant_retention_policy_history` 留下不可修改的版本记录；当前配置、版本历史与审计同事务提交，审计失败时全部回滚。配置生效后，单聊与群聊补拉都在读取时使用当前租户期限；物理清理仍未启用。
+
+法务保全应在正文清理前登记。登记请求体为 `{ "request_id": "<uuid>", "case_reference": "CASE-2026-01" }`；解除请求体为 `{ "request_id": "<uuid>", "approval_reference": "CAB-2026-02" }`。`request_id` 在租户内跨登记和解除唯一，完全相同请求可重试；重复用于不同动作、会话、案件或执行人返回 409。同一会话可有多项有效保全，解除一项不影响其他案件。GET 默认每页 100 项、最多 500 项，使用返回的游标继续读取；游标仅适用于原租户和会话。只有当前有效集团管理员可操作，案件与审批引用仅记录，不核验外部审批系统。状态、不可修改事件和审计同事务提交。此增量仅提供保全管理与未来清理的暂停依据；当前读取仍按保留期遮蔽到期正文，物理清理、备份到期和外部审批核验尚未实现。
 
 访问令牌须为签给本 API 的 RFC 9068 JWT，具有 RS256 签名、`at+jwt` 类型、正确发行方及受众，并包含允许的 `client_id`。仅通过 `(issuer, sub)` 查找受控导入的本地身份绑定；选定任职由数据库二次校验。ID Token、邮件地址和请求中的租户 ID 不用于映射。401 表示未认证，400 表示 ID 或请求格式错误，403 表示身份失效，404 隐藏无权限资源，409 表示状态冲突，503 表示认证、审计或数据库不可用。
 
@@ -67,6 +72,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000011_group_invitation.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000012_group_owner_transfer.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000013_tenant_retention.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000014_conversation_legal_hold.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -164,6 +170,6 @@ go vet ./...
 
 `multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000013` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000014` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
 
 真实浏览器集成测试在 macOS/Linux 上运行，需额外设置 `IM_TEST_BROWSER_NODE`（Node 可执行文件）、`NODE_PATH`（包含 Playwright 的 `node_modules`）；使用外部安装的 Chrome/Chromium 时设置 `CHROMIUM_EXECUTABLE`，再运行 `go test ./internal/policystore -run '^TestRealBrowserLoginRealtimeAndOfflinePull$' -count=1`。未设置 `IM_TEST_BROWSER_NODE` 时该用例跳过；需同时设置上述 PostgreSQL 与 Redis 测试 URL。

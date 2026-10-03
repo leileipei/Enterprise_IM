@@ -83,6 +83,33 @@ func TestPullTextMessagesRedactsExpiredBodyWithoutSkippingSequence(t *testing.T)
 	}
 }
 
+func TestPullTextMessagesKeepsExpiredBodyRedactedDuringLegalHold(t *testing.T) {
+	conn := db(t)
+	seedDirectConversation(t, conn)
+	run(t, conn, `INSERT INTO admin_grants
+ (id,tenant_id,membership_id,membership_organization_id,role,effective_from)
+ VALUES ('00000000-0000-4000-8000-0000000002f0',$1,$2,$3,'group_admin','2020-01-01')`, tenantA, adminM, orgA)
+	admin := access.TrustedIdentity{TenantID: tenantA, UserID: adminA, ActingMembershipID: adminM}
+	holdService := access.Service{DB: conn, Now: func() time.Time { return at }}
+	hold, created, err := holdService.PlaceLegalHold(context.Background(), admin, directA,
+		"00000000-0000-4000-8000-0000000002f1", "CASE-RETENTION")
+	if err != nil || !created || hold.ReleasedAt != nil {
+		t.Fatalf("place hold: %+v created=%v err=%v", hold, created, err)
+	}
+	svc := policystore.Service{DB: conn, Now: func() time.Time { return at }}
+	if _, err := svc.SendTextMessage(context.Background(), publisher(), directA,
+		clientUUIDv7(at, 250), "body under hold"); err != nil {
+		t.Fatal(err)
+	}
+	run(t, conn, `UPDATE messages SET accepted_at=$1 WHERE conversation_id=$2`,
+		at.Add(-365*24*time.Hour), directA)
+	page, err := svc.PullTextMessages(context.Background(), publisher(), directA, 0, 10)
+	if err != nil || len(page.Messages) != 1 || !page.Messages[0].Redacted ||
+		page.Messages[0].Seq != 1 || page.Messages[0].Text != "" || page.Messages[0].MessageID != "" {
+		t.Fatalf("legal hold revealed expired body: %+v %v", page, err)
+	}
+}
+
 func TestPullTextMessagesUsesApprovedTenantRetentionDays(t *testing.T) {
 	conn := db(t)
 	seedDirectConversation(t, conn)
