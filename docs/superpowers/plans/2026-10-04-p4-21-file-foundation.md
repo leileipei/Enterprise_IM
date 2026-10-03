@@ -128,7 +128,7 @@ if !errors.Is(err, ErrInvalidMetadata) || out != (CreateParams{}) {
 - [x] **2. 完成静态与竞态检查。**运行 `go test -race ./internal/files ./internal/policystore -run '^(TestNormalizeCreate|TestCreationDigest|TestFile)' -count=1 -v`、`go vet ./...`、`go build ./...`、`git diff --check`，读取全部退出码。已有完整绿色证据后只为具体修复风险重验，不无故反复全量运行。
 - [x] **3. 写实际中文验收。**记录真实 RED／GREEN、schema约束、迁移Up／Down、CAS／回滚并发、完整回归、环境真实端口及日志路径。明确只是元数据／状态基础，没有上传／扫描／发送／下载、F01 或生产容量验收；模型限制25MiB不是性能证据。P4-19 组合预算测试后续项仍保留，不借本切片宣称已补强。
 - [x] **4. 独立全分支评审与修正。**按 requesting-code-review 评审 b24f963..HEAD 的功能差异，附规格、计划、实际日志和范围。禁止把评审只读日志写成独立重跑集成；如果代理数量限制使复用评审上下文需如实记录。解决 Critical／Important，Minor明确处理；修复后跑对应真实验证。
-- [ ] **5. 提交／推送／草稿 PR。**继续已有 codex/p4-21-file-foundation-design 分支（保留历史，不重复创建工作树）；以 codex/p4-20-web-cross-message-search 为 base，提交剩余验收文档，推送并创建 P4-21 实现草稿 PR。用临时 UTF-8 正文文件传 gh --body-file，成功创建必须 attach_artifact；记录真实链接，再核对 PR OPEN／DRAFT、base／head、local／remote／PR SHA一致、工作树干净。
+- [x] **5. 提交／推送／草稿 PR。**继续已有 codex/p4-21-file-foundation-design 分支（保留历史，不重复创建工作树）；以 codex/p4-20-web-cross-message-search 为 base，提交剩余验收文档，推送并创建 P4-21 实现草稿 PR。用临时 UTF-8 正文文件传 gh --body-file，成功创建必须 attach_artifact；记录真实链接，再核对 PR OPEN／DRAFT、base／head、local／remote／PR SHA一致、工作树干净。
 - [ ] **6. 收尾。**停止仅本轮专用测试容器、保留工作树。用户交付包含中文验收记录、PR、实际验证及后续 P4-22。不合并、不部署、不启用 Worker。
 
 ## 自检与执行交接
