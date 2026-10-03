@@ -60,11 +60,11 @@
 - Produces `NormalizeCreate(p CreateParams) (CreateParams,error)`；UUID 使用既有 8-4-4-4-12 十六进制形态、只归一为小写，不自动去空白；其他输入原样验证，错误返回零值。
 - Produces `CreationDigest(p CreateParams) ([32]byte,error)`，内部先 NormalizeCreate。固定 json.Marshal 字符串数组顺序：v1、tenant、conversation、uploader user、uploader membership、filename、MIME、规范十进制 size，随后 SHA-256；不用 map、拼接分隔符或客户端摘要。
 
-- [ ] **0. 准备并记录干净基线。**核对现有隔离工作树和产品代码基线；启动本轮专用 PG／Redis，以 docker port 实测地址生成私有测试环境，不打印凭据；核对 Go／Node／Chrome 路径。在任何产品实现修改前运行 `go test ./... -count=1 -v`，读取退出码与真实计数，保留日志。没有真实 PG／Redis／Chrome 时不把跳过当作完整基线通过。
-- [ ] **1. 写 RED 输入用例。**`TestNormalizeCreateBoundaries` 在 create_test.go 定义私有 `validCreateFixture() CreateParams`，以五个规范不同 UUID、报告.pdf、application/pdf、size=1 构造独立本地数据；检查 1／26,214,400 通过，0／-1／26,214,401／MaxInt64 拒绝；文件名85个“中”（255字节）通过、再加一个a（256字节）拒绝；无效 UUID、乱码、.／..、斜杠／反斜杠／冒号、NUL、C1、首尾 NBSP／全角空白拒绝，内部正常空格及 FEFF 按规格保留。`TestNormalizeCreateMIME` 检查 application/vnd.openxmlformats-officedocument.wordprocessingml.document 等合法小写、合法 token 字符、127字节通过／128字节拒绝，拒绝大写、参数、空格、换行、非 ASCII、无 type／subtype。不得将类型通过当作允许上传 Office 内容。
-- [ ] **2. 运行 RED。**`go test ./internal/files -run '^TestNormalizeCreate' -count=1 -v`，预期类型／方法未定义而失败，保留日志；不要先补生产占位绕过 RED。
-- [ ] **3. 实现 create.go。**使用 unicode/utf8、unicode.IsControl、strings.TrimSpace；文件名限定字节数。MIME 以 ASCII token/type/subtype 和标准库解析双检，要求输入本身规范且无参数，不把解析器接受的空白当作规范输入。
-- [ ] **4. 固定 RF5 摘要测试。**`TestCreationDigestCanonicalJSON` 使用独立显式字符串数组＋json.Marshal 的期望值，检查 UUID 大小写等价、request ID 改变不变、字段逐一改变均不同、中文／引号／HTML特殊字符安全编码、名称 Unicode 组合形式不合并；非法参数 errors.Is(ErrInvalidMetadata) 且摘要为 [32]byte{}。测试不调用待测摘要函数来生成期望值。
+- [x] **0. 准备并记录干净基线。**核对现有隔离工作树和产品代码基线；启动本轮专用 PG／Redis，以 docker port 实测地址生成私有测试环境，不打印凭据；核对 Go／Node／Chrome 路径。在任何产品实现修改前运行 `go test ./... -count=1 -v`，读取退出码与真实计数，保留日志。没有真实 PG／Redis／Chrome 时不把跳过当作完整基线通过。
+- [x] **1. 写 RED 输入用例。**`TestNormalizeCreateBoundaries` 在 create_test.go 定义私有 `validCreateFixture() CreateParams`，以五个规范不同 UUID、报告.pdf、application/pdf、size=1 构造独立本地数据；检查 1／26,214,400 通过，0／-1／26,214,401／MaxInt64 拒绝；文件名85个“中”（255字节）通过、再加一个a（256字节）拒绝；无效 UUID、乱码、.／..、斜杠／反斜杠／冒号、NUL、C1、首尾 NBSP／全角空白拒绝，内部正常空格及 FEFF 按规格保留。`TestNormalizeCreateMIME` 检查 application/vnd.openxmlformats-officedocument.wordprocessingml.document 等合法小写、合法 token 字符、127字节通过／128字节拒绝，拒绝大写、参数、空格、换行、非 ASCII、无 type／subtype。不得将类型通过当作允许上传 Office 内容。
+- [x] **2. 运行 RED。**`go test ./internal/files -run '^TestNormalizeCreate' -count=1 -v`，预期类型／方法未定义而失败，保留日志；不要先补生产占位绕过 RED。
+- [x] **3. 实现 create.go。**使用 unicode/utf8、unicode.IsControl、strings.TrimSpace；文件名限定字节数。MIME 以 ASCII token/type/subtype 和标准库解析双检，要求输入本身规范且无参数，不把解析器接受的空白当作规范输入。
+- [x] **4. 固定 RF5 摘要测试。**`TestCreationDigestCanonicalJSON` 使用独立显式字符串数组＋json.Marshal 的期望值，检查 UUID 大小写等价、request ID 改变不变、字段逐一改变均不同、中文／引号／HTML特殊字符安全编码、名称 Unicode 组合形式不合并；非法参数 errors.Is(ErrInvalidMetadata) 且摘要为 [32]byte{}。测试不调用待测摘要函数来生成期望值。
 
 ```go
 bad := validCreateFixture()
@@ -75,7 +75,7 @@ if !errors.Is(err, ErrInvalidMetadata) || out != (CreateParams{}) {
 }
 ```
 
-- [ ] **5. 运行 GREEN 并提交。**`go test ./internal/files -count=1 -v` 全部通过；提交 `feat(files): add canonical creation metadata and digest`。本任务不生成预约／实际文件。
+- [x] **5. 运行 GREEN 并提交。**`go test ./internal/files -count=1 -v` 全部通过；提交 `feat(files): add canonical creation metadata and digest`。本任务不生成预约／实际文件。
 
 ### Task 2：元数据阶段、状态机与事件
 
