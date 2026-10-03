@@ -93,6 +93,22 @@ async function send(page, text) {
     assert.match(await holds.locator(".legal-holds-card").filter({ hasText: "CASE-BROWSER-RELEASED" }).innerText(), /已解除/);
     await holds.getByText("CAB-BROWSER-RELEASE", { exact: true }).waitFor();
     assert.equal(await first.page.locator("#legal-holds-more").isVisible(), false);
+    const reference = first.page.locator("#legal-hold-reference");
+    const actionHint = first.page.locator("#legal-hold-action-hint");
+    await reference.fill("CASE-BROWSER-WEB-NEW");
+    await first.page.locator("#legal-hold-submit").click();
+    await actionHint.getByText(/服务器已确认/).waitFor();
+    const webHold = holds.locator(".legal-holds-card").filter({ hasText: "CASE-BROWSER-WEB-NEW" });
+    await webHold.waitFor(); assert.match(await webHold.innerText(), /保全中/);
+    await webHold.getByRole("button", { name: "解除此项保全" }).click();
+    await reference.fill("CAB-BROWSER-WEB-RELEASE");
+    await first.page.locator("#legal-hold-confirm").check();
+    await first.page.locator("#legal-hold-submit").click();
+    await actionHint.getByText(/服务器已确认/).waitFor();
+    await holds.getByText("CAB-BROWSER-WEB-RELEASE", { exact: true }).waitFor();
+    assert.match(await webHold.innerText(), /已解除/);
+    assert.equal(await webHold.getByRole("button", { name: "解除此项保全" }).count(), 0);
+    assert.match(await holds.locator(".legal-holds-card").filter({ hasText: "CASE-BROWSER-ACTIVE" }).innerText(), /保全中/);
     await first.page.locator("#legal-holds-close").click();
     assert.equal(await holds.locator(".legal-holds-card").count(), 0);
     const second = await openDevice(browser, true);
@@ -128,7 +144,7 @@ async function send(page, text) {
 
     await first.context.close();
     await second.context.close();
-    process.stdout.write("real browser OIDC, retention evidence, legal hold status, realtime sync and offline recovery passed\n");
+    process.stdout.write("real browser OIDC, retention evidence, legal hold administration, realtime sync and offline recovery passed\n");
   } finally {
     await browser.close();
   }

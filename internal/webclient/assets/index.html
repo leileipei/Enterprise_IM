@@ -64,6 +64,16 @@
     </dialog>
     <dialog id="legal-holds-dialog" class="retention-records-dialog" aria-labelledby="legal-holds-title" aria-describedby="legal-holds-boundary">
       <div class="retention-records-heading"><div><h2 id="legal-holds-title">法务保全</h2><p id="legal-holds-conversation"></p></div><button id="legal-holds-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="legal-hold-action-form" class="legal-hold-action-form">
+        <h3 id="legal-hold-action-title">登记保全</h3>
+        <p id="legal-hold-action-target" class="microcopy"></p>
+        <label id="legal-hold-reference-label" for="legal-hold-reference">案件引用（1～128 个字符）</label>
+        <input id="legal-hold-reference" type="text" autocomplete="off" required>
+        <label id="legal-hold-confirm-label" class="hidden"><input id="legal-hold-confirm" type="checkbox">已取得解除审批，并确认仅解除上述这一项保全。</label>
+        <div class="group-create-actions"><button id="legal-hold-submit" class="primary-button" type="submit">登记保全</button><button id="legal-hold-cancel" class="secondary-button" type="button">取消填写</button><button id="legal-hold-retry" class="secondary-button hidden" type="button">按原编号重试</button><button id="legal-hold-abandon" class="secondary-button hidden" type="button">放弃本次重试</button></div>
+        <p id="legal-hold-action-hint" class="microcopy" role="status" aria-live="polite"></p>
+        <p class="microcopy">提交前须取得相应授权。审批引用仅记录，不核验外部审批。结果待确认时请先重试或明确放弃；刷新或强制退出会丢失本页重试信息，需重新核查服务器记录。</p>
+      </form>
       <button id="legal-holds-refresh" class="secondary-button" type="button">刷新</button>
       <p id="legal-holds-hint" class="microcopy" role="status" aria-live="polite"></p>
       <ul id="legal-holds-list" class="retention-records-list" aria-label="会话法务保全记录"></ul>

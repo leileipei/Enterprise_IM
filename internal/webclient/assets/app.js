@@ -127,6 +127,7 @@ let pendingGroupTransfer = null;
 const groupPolicyRechecks = new Map();
 let groupPolicyRecheckNotice = null;
 const retentionContext = () => ({
+  userId: self?.user_id, membershipId: actingMembership,
   identityKey: accessToken && actingMembership ? `${identityEpoch}:${actingMembership}` : "",
   conversation: activeConversation,
   conversationEpoch,
@@ -1824,6 +1825,7 @@ function discardGroupLeave() {
 }
 
 function canSwitchChat() {
+  if (!legalHoldRecords.canSwitchContext()) return false;
   if (!pendingMessage) return true;
   notify("当前消息结果尚未确认，请先重试或放弃待确认消息。");
   return false;
@@ -2439,7 +2441,7 @@ async function connectRealtime() {
 
 loginButton.disabled = true;
 loginButton.addEventListener("click", startLogin);
-element("logout-button").addEventListener("click", () => logout());
+element("logout-button").addEventListener("click", () => { if (legalHoldRecords.canSwitchContext()) logout(); });
 element("search-button").addEventListener("click", searchPeople);
 loadMoreConversationsButton.addEventListener("click", loadMoreInbox);
 loadMoreGroupsButton.addEventListener("click", loadMoreGroups);

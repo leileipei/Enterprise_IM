@@ -265,8 +265,25 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 	}
 	var holdReads int
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events
- WHERE tenant_id=$1 AND action='legal_hold_list' AND outcome='allow'`, tenantA).Scan(&holdReads); err != nil || holdReads != 1 {
+ WHERE tenant_id=$1 AND action='legal_hold_list' AND outcome='allow'`, tenantA).Scan(&holdReads); err != nil || holdReads != 3 {
 		t.Fatalf("browser legal hold audit=%d err=%v", holdReads, err)
+	}
+	var webHolds, webEvents int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_holds
+ WHERE tenant_id=$1 AND conversation_id=$2 AND case_reference='CASE-BROWSER-WEB-NEW'
+ AND release_approval_reference='CAB-BROWSER-WEB-RELEASE' AND released_at IS NOT NULL`, tenantA, directA).Scan(&webHolds); err != nil || webHolds != 1 {
+		t.Fatalf("browser administered holds=%d err=%v", webHolds, err)
+	}
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM conversation_legal_hold_events e
+ JOIN conversation_legal_holds h ON h.tenant_id=e.tenant_id AND h.id=e.hold_id
+ WHERE h.tenant_id=$1 AND h.case_reference='CASE-BROWSER-WEB-NEW'`, tenantA).Scan(&webEvents); err != nil || webEvents != 2 {
+		t.Fatalf("browser hold events=%d err=%v", webEvents, err)
+	}
+	var placedAudits, releasedAudits int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FILTER (WHERE action='legal_hold_place' AND reason='case_placed'),
+ count(*) FILTER (WHERE action='legal_hold_release' AND reason='case_released') FROM audit_events
+ WHERE tenant_id=$1 AND outcome='allow'`, tenantA).Scan(&placedAudits, &releasedAudits); err != nil || placedAudits != 3 || releasedAudits != 2 {
+		t.Fatalf("browser hold write audits place=%d release=%d err=%v", placedAudits, releasedAudits, err)
 	}
 	var persisted int
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM messages WHERE tenant_id=$1 AND conversation_id=$2
