@@ -16,6 +16,7 @@ var auditActionPattern = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
 type AuditEventFilter struct {
 	Action, Outcome, ActorUserID string
+	From, Until                  string
 }
 
 type AuditEvent struct {
@@ -32,11 +33,13 @@ type auditCursor struct {
 	Action      string `json:"a"`
 	Outcome     string `json:"o"`
 	ActorUserID string `json:"u,omitempty"`
+	From        string `json:"f,omitempty"`
+	Until       string `json:"e,omitempty"`
 	At          string `json:"at"`
 	ID          string `json:"id"`
 }
 
-func parseAuditCursor(value, tenantID, action, outcome, actorUserID string) (*time.Time, *int64, error) {
+func parseAuditCursor(value, tenantID string, filter AuditEventFilter) (*time.Time, *int64, error) {
 	if value == "" {
 		return nil, nil, nil
 	}
@@ -48,7 +51,7 @@ func parseAuditCursor(value, tenantID, action, outcome, actorUserID string) (*ti
 		return nil, nil, ErrInvalidAuditQuery
 	}
 	var c auditCursor
-	if json.Unmarshal(raw, &c) != nil || c.TenantID != strings.ToLower(tenantID) || c.Action != action || c.Outcome != outcome || c.ActorUserID != actorUserID {
+	if json.Unmarshal(raw, &c) != nil || c.TenantID != strings.ToLower(tenantID) || c.Action != filter.Action || c.Outcome != filter.Outcome || c.ActorUserID != filter.ActorUserID || c.From != filter.From || c.Until != filter.Until {
 		return nil, nil, ErrInvalidAuditQuery
 	}
 	canonical, _ := json.Marshal(c)
@@ -75,7 +78,13 @@ func (s Service) ListAuditEvents(ctx context.Context, id TrustedIdentity, filter
 	if s.DB == nil || id.TenantID == "" || id.UserID == "" || id.ActingMembershipID == "" {
 		return AuditEventPage{}, ErrInvalidIdentity
 	}
-	beforeAt, beforeID, err := parseAuditCursor(cursor, id.TenantID, action, outcome, actorUserID)
+	from, until, err := ParseAuditTimeRange(filter.From, filter.Until)
+	if err != nil {
+		return AuditEventPage{}, err
+	}
+	filter.ActorUserID = actorUserID
+	filter.From, filter.Until = auditTimeText(from), auditTimeText(until)
+	beforeAt, beforeID, err := parseAuditCursor(cursor, id.TenantID, filter)
 	if err != nil {
 		return AuditEventPage{}, err
 	}
@@ -120,8 +129,10 @@ func (s Service) ListAuditEvents(ctx context.Context, id TrustedIdentity, filter
  resource_type,resource_id::text,outcome,reason,occurred_at
  FROM audit_events WHERE tenant_id=$1 AND ($2::text='' OR action=$2) AND ($3::text='' OR outcome=$3)
  AND ($7::uuid IS NULL OR actor_user_id=$7)
+ AND ($8::timestamptz IS NULL OR occurred_at >= $8)
+ AND ($9::timestamptz IS NULL OR occurred_at < $9)
  AND ($4::timestamptz IS NULL OR (occurred_at,id)<($4,$5::bigint))
- ORDER BY audit_events.occurred_at DESC,audit_events.id DESC LIMIT $6`, id.TenantID, action, outcome, beforeAt, beforeID, limit+1, actorParam)
+ ORDER BY audit_events.occurred_at DESC,audit_events.id DESC LIMIT $6`, id.TenantID, action, outcome, beforeAt, beforeID, limit+1, actorParam, from, until)
 	if err != nil {
 		return AuditEventPage{}, err
 	}
@@ -147,7 +158,7 @@ func (s Service) ListAuditEvents(ctx context.Context, id TrustedIdentity, filter
 	if len(events) > limit {
 		page.Events = events[:limit]
 		last := page.Events[limit-1]
-		raw, _ := json.Marshal(auditCursor{TenantID: strings.ToLower(id.TenantID), Action: action, Outcome: outcome, ActorUserID: actorUserID, At: last.OccurredAt.UTC().Format(time.RFC3339Nano), ID: last.ID})
+		raw, _ := json.Marshal(auditCursor{TenantID: strings.ToLower(id.TenantID), Action: action, Outcome: outcome, ActorUserID: actorUserID, From: filter.From, Until: filter.Until, At: last.OccurredAt.UTC().Format(time.RFC3339Nano), ID: last.ID})
 		page.NextCursor = base64.RawURLEncoding.EncodeToString(raw)
 	}
 	if err = audit(ctx, tx, id, queryAction, "tenant", id.TenantID, "allow", "listed_audit_events", at); err != nil {

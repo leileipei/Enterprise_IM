@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -55,24 +56,40 @@ func TestDigestProcessTenantHoldsAndConcurrency(t *testing.T) {
 		pool := database(t)
 		seedDigestCandidate(t, pool, conversationA, 1, fixedTime, true)
 		seedDigestCandidate(t, pool, conversationA2, 1, fixedTime, true)
-		result := make(chan DigestBatchResult, 2)
-		errs := make(chan error, 2)
-		for n := 0; n < 2; n++ {
-			go func() {
-				b, e := testDigestWorker(pool, 0).ProcessTenant(context.Background(), tenantA)
-				result <- b
-				errs <- e
-			}()
+		// Hold the first conversation lock until the second worker proves SKIP LOCKED.
+		// Uncoordinated calls need not overlap, so one-shot totals are not a concurrency guarantee.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		reached, proceed := make(chan struct{}, 1), make(chan struct{})
+		var releaseOnce sync.Once
+		release := func() { releaseOnce.Do(func() { close(proceed) }) }
+		defer release()
+		first := testDigestWorker(pool, 0)
+		first.DB = pausedDB(pool, "INSERT INTO message_digest_retirement_batches", reached, proceed)
+		type outcome struct {
+			batch DigestBatchResult
+			err   error
 		}
-		total := 0
-		for n := 0; n < 2; n++ {
-			total += (<-result).RetiredCount
-			if err := <-errs; err != nil {
-				t.Fatal(err)
-			}
+		done := make(chan outcome, 1)
+		go func() { batch, err := first.ProcessTenant(ctx, tenantA); done <- outcome{batch, err} }()
+		select {
+		case <-reached:
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
 		}
-		if total != 2 {
-			t.Fatalf("count: %d", total)
+		second, err := testDigestWorker(pool, 0).ProcessTenant(ctx, tenantA)
+		if err != nil || second.ConversationID != conversationA2 || second.RetiredCount != 1 {
+			t.Fatalf("second worker did not skip locked conversation: %+v %v", second, err)
+		}
+		release()
+		var result outcome
+		select {
+		case result = <-done:
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+		if result.err != nil || result.batch.ConversationID != conversationA || result.batch.RetiredCount != 1 {
+			t.Fatalf("first worker: %+v %v", result.batch, result.err)
 		}
 		assertDigestCounts(t, pool, 2, 2)
 	})
