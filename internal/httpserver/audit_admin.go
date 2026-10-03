@@ -8,13 +8,14 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/leileipei/Enterprise_IM/internal/access"
 )
 
 type AuditQueryService interface {
-	ListAuditEvents(context.Context, access.TrustedIdentity, string, string, string, int) (access.AuditEventPage, error)
+	ListAuditEvents(context.Context, access.TrustedIdentity, access.AuditEventFilter, string, int) (access.AuditEventPage, error)
 }
 
 func HandlerWithAuditQuery(next http.Handler, authenticator Authenticator, service AuditQueryService) (http.Handler, error) {
@@ -41,12 +42,12 @@ func HandlerWithAuditQuery(next http.Handler, authenticator Authenticator, servi
 			return
 		}
 		params, err := url.ParseQuery(r.URL.RawQuery)
-		if err != nil || len(params) > 4 {
+		if err != nil || len(params) > 5 {
 			rejectAdmin(w, r, 400, "invalid_query")
 			return
 		}
 		limit, cursor := 20, ""
-		action, outcome := "", ""
+		action, outcome, actorUserID := "", "", ""
 		for key, values := range params {
 			if len(values) != 1 {
 				rejectAdmin(w, r, 400, "invalid_query")
@@ -62,6 +63,12 @@ func HandlerWithAuditQuery(next http.Handler, authenticator Authenticator, servi
 			case "action":
 				action = values[0]
 				if !adminAuditActionPattern.MatchString(action) {
+					rejectAdmin(w, r, 400, "invalid_query")
+					return
+				}
+			case "actor_user_id":
+				actorUserID = strings.ToLower(values[0])
+				if !validUUID(actorUserID) {
 					rejectAdmin(w, r, 400, "invalid_query")
 					return
 				}
@@ -82,7 +89,7 @@ func HandlerWithAuditQuery(next http.Handler, authenticator Authenticator, servi
 				return
 			}
 		}
-		page, err := service.ListAuditEvents(r.Context(), id, action, outcome, cursor, limit)
+		page, err := service.ListAuditEvents(r.Context(), id, access.AuditEventFilter{Action: action, Outcome: outcome, ActorUserID: actorUserID}, cursor, limit)
 		if err != nil {
 			if errors.Is(err, access.ErrInvalidAuditQuery) {
 				writeAdminError(w, 400, "invalid_audit_query")

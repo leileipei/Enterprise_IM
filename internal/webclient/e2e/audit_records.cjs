@@ -3,9 +3,11 @@ const assert=require("node:assert/strict"),http=require("node:http"),fs=require(
 const {chromium}=require("playwright");
 const assets=path.join(__dirname,"..","assets");
 const tenant="00000000-0000-4000-8000-000000000001",user="00000000-0000-4000-8000-000000000002",admin="00000000-0000-4000-8000-000000000003",employee="00000000-0000-4000-8000-000000000004";
+const otherUser="abcdefab-cdef-4abc-8abc-abcdefabcdef";
 const rows=Array.from({length:23},(_,i)=>({id:(9007199254740995n-BigInt(i)).toString(),actor_user_id:user,acting_membership_id:admin,action:"retention_policy_update",resource_type:"tenant",resource_id:i===22?null:tenant,outcome:i%2?"deny":"allow",reason:i===21?"<img src=x onerror=alert(1)>version_conflict":i%2?"version_conflict":"approved_retention_change",occurred_at:"2026-10-03T10:00:00.123456000Z"}));
 // Newer fractional timestamp outranks ID, even below millisecond resolution.
 rows[0].id="9";rows[0].occurred_at="2026-10-03T10:00:00.123456002Z";rows[1].id="10";rows[1].occurred_at="2026-10-03T10:00:00.123456001Z";
+const otherRows=Array.from({length:21},(_,i)=>({...rows[2],id:String(7000-i),actor_user_id:otherUser,reason:"other_actor",occurred_at:"2026-10-02T10:00:00Z"}));
 let port,mode="",held=[],writes=0,empty=false,cycle=false;
 const calls=[];
 const server=http.createServer((req,res)=>{
@@ -20,10 +22,10 @@ const server=http.createServer((req,res)=>{
  if(url.pathname.startsWith("/api/v1/admin/")&&actor!==admin)return send(404,{error_code:"not_found"});
  if(url.pathname==="/api/v1/admin/retention-policy"){if(req.method!=="GET"){writes++;return send(503,{error_code:"unavailable"});}return send(200,{message_body_days:365,version:0,approval_reference:"",approved_by_user_id:"",approved_at:null});}
  if(url.pathname==="/api/v1/admin/audit-events"){
-  assert.equal(req.method,"GET");assert.equal(url.searchParams.get("limit"),"20");assert.equal(actor,admin);assert.equal([...url.searchParams.keys()].some(k=>!["limit","cursor","action","outcome"].includes(k)),false);
-  const action=url.searchParams.get("action")||"",outcome=url.searchParams.get("outcome")||"",cursor=url.searchParams.get("cursor")||"";calls.push({action,outcome,cursor,actor});const fault=mode;mode="";
+  assert.equal(req.method,"GET");assert.equal(url.searchParams.get("limit"),"20");assert.equal(actor,admin);assert.equal([...url.searchParams.keys()].some(k=>!["limit","cursor","action","outcome","actor_user_id"].includes(k)),false);
+  const action=url.searchParams.get("action")||"",outcome=url.searchParams.get("outcome")||"",cursor=url.searchParams.get("cursor")||"";const actorFilter=url.searchParams.get("actor_user_id")||"";calls.push({action,outcome,cursor,actor,actorFilter});const fault=mode;mode="";
   if(["400","401","403","404","503"].includes(fault))return send(+fault,{error_code:"rejected"});
-  const filtered=cycle?Array.from({length:60},(_,i)=>({...rows[2],id:String(8000-i)})):empty?[]:rows.filter(e=>(!action||e.action===action)&&(!outcome||e.outcome===outcome));
+  const filtered=cycle?Array.from({length:60},(_,i)=>({...rows[2],id:String(8000-i)})):empty?[]:(actorFilter?[...rows,...otherRows]:rows).filter(e=>(!action||e.action===action)&&(!outcome||e.outcome===outcome)&&(!actorFilter||e.actor_user_id===actorFilter));
   const start=cycle?(cursor==="A"?20:cursor==="B"?40:0):cursor?20:0;let result={events:filtered.slice(start,start+20).map(e=>({...e,text:"NEVER_BODY",content_digest:"NEVER_DIGEST"})),next_cursor:cycle?(start===0?"A":start===20?"B":"A"):filtered.length>start+20?"page-20":""};
   if(fault==="duplicate")result.events[1]={...result.events[0]};
   if(fault==="order")result.events.reverse();
@@ -33,6 +35,7 @@ const server=http.createServer((req,res)=>{
   if(fault==="bad-date")result.events[0].occurred_at="2026-02-30T10:00:00Z";
   if(fault==="resource")result.events[0].resource_id="invalid";
   if(fault==="outcome")result.events[0].outcome="accepted";
+  if(fault==="actor-escape")result.events[0].actor_user_id=user;
   if(fault==="filter-escape")result.events[0].action="group_invite";
   if(fault==="cursor-loop"){result.events=Array.from({length:20},(_,i)=>({...rows[2],id:String(1000-i)}));result.next_cursor=cursor;}
   if(fault==="cross-page-order")result.events[0]={...rows[0],id:"9223372036854775807"};
@@ -52,10 +55,18 @@ server.listen(0,"127.0.0.1",async()=>{
   await page.goto(`http://127.0.0.1:${port}/web/`);await page.locator("#login-button").click();await page.locator("#workspace").waitFor({state:"visible"});
   const actor=async name=>page.locator("#identity-options").getByRole("button",{name:new RegExp(name)}).click();await actor("集团总部");
   const entry=page.locator("#audit-open");assert.equal(await entry.count(),1,"audit query entry must exist");await entry.click();
+  const actorFilter=page.locator("#audit-actor");assert.equal(await actorFilter.count(),1,"actor filter input must exist");
   const cards=page.locator(".audit-record-card"),hint=page.locator("#audit-hint"),more=page.locator("#audit-more"),refresh=page.locator("#audit-refresh"),apply=page.locator("#audit-apply"),action=page.locator("#audit-action"),outcome=page.locator("#audit-outcome"),close=page.locator("#audit-close");
   await hint.getByText(/已显示 20/).waitFor();assert.equal(await cards.count(),20);assert.match(await cards.first().innerText(),/事件 9/);assert.match(await cards.nth(2).innerText(),/9007199254740993/);
   await more.click();await hint.getByText(/已显示 23/).waitFor();assert.equal(await cards.count(),23);assert.equal(await more.isVisible(),false);assert.match(await cards.last().innerText(),/未指定/);assert.equal(await cards.locator("img").count(),0);assert.equal((await cards.allTextContents()).join("").includes("NEVER_"),false);assert.equal(writes,0);
-  if(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR){fs.mkdirSync(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR,{recursive:true});await page.locator("#audit-form").scrollIntoViewIfNeeded();await page.screenshot({path:path.join(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR,"desktop.png")});await page.setViewportSize({width:390,height:844});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await cards.last().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR,"mobile.png")});assert.equal(await page.locator("#audit-dialog").evaluate(d=>d.scrollWidth<=d.clientWidth+1),true);await page.setViewportSize({width:1280,height:850});}
+  if(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR){fs.mkdirSync(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR,{recursive:true});await page.locator("#audit-form").scrollIntoViewIfNeeded();await page.screenshot({path:path.join(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR,"desktop.png")});await page.setViewportSize({width:390,height:844});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.locator("#audit-form").scrollIntoViewIfNeeded();await page.screenshot({path:path.join(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR,"mobile-form.png")});await cards.last().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(process.env.IM_TEST_AUDIT_SCREENSHOT_DIR,"mobile.png")});assert.equal(await page.locator("#audit-dialog").evaluate(d=>d.scrollWidth<=d.clientWidth+1),true);await page.setViewportSize({width:1280,height:850});}
+  await actorFilter.fill(otherUser.toUpperCase());assert.equal(await cards.count(),0);await apply.click();await hint.getByText(/已显示 20/).waitFor();assert.equal(calls.at(-1).actorFilter,otherUser);assert.equal(calls.at(-1).cursor,"");assert.equal((await cards.allTextContents()).every(s=>s.includes(otherUser)),true);
+  await more.click();await hint.getByText(/已显示 21/).waitFor();assert.equal(await cards.count(),21);assert.equal(calls.at(-1).actorFilter,otherUser);
+  let actorCalls=calls.length;await actorFilter.fill("invalid UUID");await apply.click();await hint.getByText(/执行人.*UUID/).waitFor();assert.equal(calls.length,actorCalls);assert.equal(await cards.count(),0);
+  await actorFilter.fill("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");await apply.click();await hint.getByText(/暂无审计记录/).waitFor();
+  await actorFilter.fill(otherUser);mode="actor-escape";await apply.click();await hint.getByText(/加载失败/).waitFor();assert.equal(await cards.count(),0);
+  mode="hold";await refresh.click();await hint.getByText(/正在加载/).waitFor();await actorFilter.fill(user);await apply.click();await hint.getByText(/已显示 20/).waitFor();assert.equal(calls.at(-1).cursor,"");held.shift()();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));assert.equal((await cards.allTextContents()).some(s=>s.includes(otherUser)),false);
+  await actorFilter.fill("");await apply.click();await hint.getByText(/已显示 20/).waitFor();assert.equal(calls.at(-1).actorFilter,"");
   await action.fill("retention_policy_update");assert.equal(await cards.count(),0);await outcome.selectOption("deny");await apply.click();await hint.getByText(/已显示 11/).waitFor();assert.equal(calls.at(-1).cursor,"");assert.equal(calls.at(-1).outcome,"deny");assert.equal((await cards.allTextContents()).every(s=>s.includes("拒绝")),true);
   let count=calls.length;await action.fill("Bad action");await apply.click();await hint.getByText(/动作格式/).waitFor();assert.equal(calls.length,count);assert.equal(await cards.count(),0);
   await action.fill("unrecorded_action");await apply.click();await hint.getByText(/暂无审计记录/).waitFor();await action.fill("");await outcome.selectOption("");await apply.click();await hint.getByText(/已显示 20/).waitFor();
@@ -68,7 +79,7 @@ server.listen(0,"127.0.0.1",async()=>{
   await action.fill("retention_policy_update");mode="filter-escape";await apply.click();await hint.getByText(/加载失败/).waitFor();assert.equal(await cards.count(),0);
   // Changed filter invalidates a delayed request and starts from the first page.
   mode="hold";await refresh.click();await hint.getByText(/正在加载/).waitFor();await outcome.selectOption("deny");await apply.click();await hint.getByText(/已显示 11/).waitFor();held.shift()();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));assert.equal(await cards.count(),11);
-  mode="hold";await refresh.click();await hint.getByText(/正在加载/).waitFor();await close.click();held.shift()();assert.equal(await cards.count(),0);await entry.click();await hint.getByText(/已显示 23|已显示 20/).waitFor();
+  mode="hold";await refresh.click();await hint.getByText(/正在加载/).waitFor();await close.click();held.shift()();assert.equal(await cards.count(),0);await entry.click();await hint.getByText(/已显示 23|已显示 20/).waitFor();assert.equal(await actorFilter.inputValue(),"");
   mode="hold";await refresh.click();await hint.getByText(/正在加载/).waitFor();await close.click();await actor("分公司");held.shift()();assert.equal(await cards.count(),0);await page.waitForFunction(()=>document.getElementById("audit-open").classList.contains("hidden"));await actor("集团总部");await entry.click();await hint.getByText(/已显示 20/).waitFor();
   for(const status of ["403","404"]){mode=status;await more.click();await hint.getByText(/权限已失效/).waitFor();assert.equal(await cards.count(),0);assert.equal(await apply.isDisabled(),true);assert.equal(await entry.isVisible(),false);await close.click();await actor("分公司");await actor("集团总部");await entry.click();await hint.getByText(/已显示 20/).waitFor();}
   mode="timeout";await refresh.click();await hint.getByText(/加载失败/).waitFor({timeout:20000});assert.equal(await cards.count(),0);await refresh.click();await hint.getByText(/已显示 20/).waitFor();held.shift()();
