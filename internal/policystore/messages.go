@@ -1,7 +1,6 @@
 package policystore
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -83,27 +82,6 @@ func (c directMessageContext) sameSelection(other directMessageContext) bool {
 		c.lowMember == other.lowMember && c.highMember == other.highMember
 }
 
-func existingMessageACK(ctx context.Context, tx pgx.Tx, tenantID, conversationID, senderUserID,
-	clientMessageID string, digest [32]byte) (MessageACK, bool, bool, error) {
-	var ack MessageACK
-	var storedDigest []byte
-	err := tx.QueryRow(ctx, `
-SELECT i.content_digest,m.id::text,m.seq,m.accepted_at
-FROM message_idempotency i JOIN messages m
-  ON m.tenant_id=i.tenant_id AND m.id=i.message_id
-WHERE i.tenant_id=$1 AND i.conversation_id=$2 AND i.sender_user_id=$3 AND i.client_msg_id=$4`,
-		tenantID, conversationID, senderUserID, clientMessageID).
-		Scan(&storedDigest, &ack.MessageID, &ack.Seq, &ack.ServerTime)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return MessageACK{}, false, false, nil
-	}
-	if err != nil {
-		return MessageACK{}, false, false, err
-	}
-	ack.ConversationID = conversationID
-	return ack, true, bytes.Equal(storedDigest, digest[:]), nil
-}
-
 func reserveMessageRate(ctx context.Context, tx pgx.Tx, tenantID, senderUserID string, at time.Time, maxPerSecond int) (bool, error) {
 	var count int
 	err := tx.QueryRow(ctx, `
@@ -145,6 +123,9 @@ func (s Service) SendTextMessage(ctx context.Context, id access.TrustedIdentity,
 		return MessageACK{}, err
 	}
 	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); err != nil {
+		return MessageACK{}, err
+	}
 	at := s.now()
 	preflightActor, found, err := loadMembershipSnapshot(ctx, tx, id.TenantID, id.ActingMembershipID, id.UserID)
 	if err != nil {

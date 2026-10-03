@@ -86,6 +86,7 @@ func TestGroupMessageRouteRejectsMalformedAndMapsBlocked(t *testing.T) {
 		status int
 		code   string
 	}{
+		{policystore.ErrRetryExpired, 410, "retry_window_expired"},
 		{policystore.ErrConversationContextChanged, 409, "conversation_context_changed"},
 		{policystore.ErrGroupPolicyBlocked, 409, "group_policy_blocked"},
 		{policystore.ErrMessageNotAvailable, 404, "not_found"},
@@ -98,7 +99,7 @@ func TestGroupMessageRouteRejectsMalformedAndMapsBlocked(t *testing.T) {
 		res := httptest.NewRecorder()
 		f.ServeHTTP(res, messageRequest(path, `{"client_msg_id":"`+clientID+`","text":"ok"}`))
 		if res.Code != failure.status || !strings.Contains(res.Body.String(), failure.code) ||
-			strings.Contains(res.Body.String(), "private SQL detail") {
+			strings.Contains(res.Body.String(), "private SQL detail") || strings.Contains(res.Body.String(), "message_id") || strings.Contains(res.Body.String(), "duplicate") {
 			t.Fatalf("group send error: %d %s", res.Code, res.Body.String())
 		}
 	}
