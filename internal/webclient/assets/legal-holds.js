@@ -1,6 +1,6 @@
 "use strict";
 
-// Read-only legal hold viewer. Records live only in the current page and context.
+// Legal hold records and current-page idempotent administration.
 window.LegalHoldRecords = class {
   constructor(request, context) {
     this.request = request;
@@ -13,6 +13,25 @@ window.LegalHoldRecords = class {
     this.hint = document.getElementById("legal-holds-hint");
     this.refreshButton = document.getElementById("legal-holds-refresh");
     this.moreButton = document.getElementById("legal-holds-more");
+    this.actionForm = document.getElementById("legal-hold-action-form");
+    this.actionTitle = document.getElementById("legal-hold-action-title");
+    this.actionTarget = document.getElementById("legal-hold-action-target");
+    this.reference = document.getElementById("legal-hold-reference");
+    this.confirm = document.getElementById("legal-hold-confirm");
+    this.confirmLabel = document.getElementById("legal-hold-confirm-label");
+    this.submitButton = document.getElementById("legal-hold-submit");
+    this.retryButton = document.getElementById("legal-hold-retry");
+    this.abandonButton = document.getElementById("legal-hold-abandon");
+    this.actionHint = document.getElementById("legal-hold-action-hint");
+    this.draft = null;
+    this.pending = null;
+    this.actionForm.addEventListener("submit", event => { event.preventDefault(); this.submitAction(); });
+    this.retryButton.addEventListener("click", () => this.submitAction());
+    this.abandonButton.addEventListener("click", () => this.abandon());
+    document.getElementById("legal-hold-cancel").addEventListener("click", () => { if (!this.pending) this.resetDraft(); });
+    window.addEventListener("beforeunload", event => {
+      if (this.pending) { event.preventDefault(); event.returnValue = ""; }
+    });
     this.identityKey = "";
     this.allowed = false;
     this.accessFailed = false;
@@ -38,6 +57,7 @@ window.LegalHoldRecords = class {
     this.list.replaceChildren();
     this.hint.textContent = "";
     this.title.textContent = "";
+    if (!this.pending) this.resetDraft();
     this.updateButtons();
   }
 
@@ -47,8 +67,9 @@ window.LegalHoldRecords = class {
   }
 
   contextChanged() {
-    this.close();
     const current = this.context();
+    if (this.pending && !this.sameContext(this.pending, current)) this.pending = null;
+    this.close();
     if (this.identityKey !== current.identityKey) {
       this.identityKey = current.identityKey;
       this.allowed = false;
@@ -84,16 +105,18 @@ window.LegalHoldRecords = class {
     this.openButton.classList.toggle("hidden", !available);
     this.accessRetry.classList.toggle("hidden", !this.accessFailed || !this.context().identityKey);
     this.accessRetry.disabled = this.accessPending;
-    this.refreshButton.disabled = !available || this.loading;
+    this.refreshButton.disabled = !available || this.loading || !!this.pending;
     this.moreButton.classList.toggle("hidden", !available || !this.cursor);
-    this.moreButton.disabled = this.loading;
+    this.moreButton.disabled = this.loading || !!this.pending;
     this.list.setAttribute("aria-busy", String(this.loading));
+    this.updateAction();
   }
 
   open() {
     if (!this.allowed || !this.context().conversation) return;
     this.dialog.showModal();
-    this.load(true);
+    if (!this.pending) this.load(true);
+    else this.showPending();
   }
 
   isCurrent(generation, current) {
@@ -105,7 +128,7 @@ window.LegalHoldRecords = class {
 
   async load(firstPage) {
     const current = this.context();
-    if (!this.dialog.open || !this.allowed || !current.conversation || (!firstPage && (this.loading || !this.cursor))) return;
+    if (!this.dialog.open || !this.allowed || this.pending || !current.conversation || (!firstPage && (this.loading || !this.cursor))) return;
     const generation = ++this.generation;
     const cursor = firstPage ? "" : this.cursor;
     if (firstPage) {
@@ -151,7 +174,7 @@ window.LegalHoldRecords = class {
     }
   }
 
-  validatePage(page, conversation, cursor) {
+  validatePage(page, conversation, cursor, knownRecords = this.records) {
     const uuid = value => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
     const time = value => typeof value === "string" && Number.isFinite(Date.parse(value));
     const reference = value => typeof value === "string" && Array.from(value).length >= 1 &&
@@ -159,7 +182,7 @@ window.LegalHoldRecords = class {
     if (!page || !Array.isArray(page.holds) || page.holds.length > 20 ||
         typeof page.next_cursor !== "string" || page.next_cursor.length > 1024 ||
         (page.next_cursor && (page.next_cursor === cursor || !page.holds.length))) throw new Error("invalid hold page");
-    const seen = new Set(this.records.map(record => record.id.toLowerCase()));
+    const seen = new Set(knownRecords.map(record => record.id.toLowerCase()));
     for (const h of page.holds) {
       if (!h || !uuid(h.id) || h.conversation_id !== conversation || !reference(h.case_reference) ||
           !time(h.placed_at) || !uuid(h.placed_by_user_id) || !uuid(h.placed_by_membership_id) ||
@@ -199,7 +222,143 @@ window.LegalHoldRecords = class {
         field("解除人 ID", record.released_by_user_id);
         field("解除任职 ID", record.released_by_membership_id);
       }
-      card.append(id, details); this.list.append(card);
+      card.append(id, details);
+      if (!record.released_at) {
+        const release = document.createElement("button");
+        release.type = "button"; release.className = "secondary-button legal-hold-release";
+        release.textContent = "解除此项保全";
+        release.disabled = this.loading || !!this.pending || !this.allowed;
+        release.addEventListener("click", () => this.prepareRelease(record));
+        card.append(release);
+      }
+      this.list.append(card);
     }
   }
+
+  sameContext(operation, current = this.context()) {
+    return operation.identityKey === current.identityKey && operation.conversation === current.conversation &&
+      operation.conversationEpoch === current.conversationEpoch;
+  }
+
+  resetDraft() {
+    this.draft = null;
+    this.reference.value = "";
+    this.confirm.checked = false;
+    this.actionHint.textContent = "";
+    this.updateAction();
+  }
+
+  updateAction() {
+    const ready = this.allowed && !!this.context().conversation && !this.loading;
+    const operation = this.pending || this.draft;
+    const release = operation?.type === "release";
+    this.actionTitle.textContent = release ? "解除一项保全" : "登记保全";
+    this.actionTarget.textContent = release ? `${operation.caseReference} · ${operation.holdID}` : "请输入调查或诉讼的案件引用。";
+    document.getElementById("legal-hold-reference-label").textContent = release ? "已取得的解除审批引用（1～128 个字符）" : "案件引用（1～128 个字符）";
+    this.confirmLabel.classList.toggle("hidden", !release || !!this.pending);
+    this.reference.disabled = !ready || !!this.pending;
+    this.confirm.disabled = !ready || !!this.pending;
+    this.submitButton.textContent = release ? "确认解除" : "登记保全";
+    this.submitButton.disabled = !ready || !!this.pending;
+    document.getElementById("legal-hold-cancel").disabled = !!this.pending;
+    this.retryButton.classList.toggle("hidden", !this.pending);
+    this.abandonButton.classList.toggle("hidden", !this.pending);
+    this.retryButton.disabled = !ready || !!this.pending?.sending;
+    this.abandonButton.disabled = !!this.pending?.sending;
+    for (const button of this.list.querySelectorAll(".legal-hold-release")) button.disabled = !ready || !!this.pending;
+  }
+
+  prepareRelease(record) {
+    if (!this.allowed || this.loading || this.pending || record.released_at) return;
+    this.resetDraft();
+    this.draft = { type: "release", holdID: record.id, caseReference: record.case_reference };
+    this.updateAction();
+    this.actionForm.scrollIntoView({ block: "nearest" });
+    this.reference.focus();
+  }
+
+  showPending() {
+    if (!this.pending) return;
+    this.title.textContent = `${this.pending.title} · ${this.pending.conversation}`;
+    if (!this.dialog.open) this.dialog.showModal();
+    this.reference.value = this.pending.reference;
+    this.actionHint.textContent = `结果待确认，请使用原编号重试：${this.pending.requestID}。放弃重试不代表撤销服务器操作。`;
+    this.updateAction();
+  }
+
+  canSwitchContext() {
+    if (!this.pending) return true;
+    this.showPending();
+    return false;
+  }
+
+  abandon() {
+    if (!this.pending || this.pending.sending || !window.confirm("放弃本次重试不代表撤销服务器操作。请核对服务器保全记录后再操作。确认放弃？")) return;
+    this.pending = null;
+    this.resetDraft();
+    this.actionHint.textContent = "已放弃重试，不代表撤销服务器操作，请刷新核对保全记录。";
+    this.updateButtons();
+  }
+
+  async submitAction() {
+    if (!this.allowed || this.loading || this.pending?.sending) return;
+    const current = this.context();
+    if (!current.identityKey || !current.conversation) return;
+    if (!this.pending) {
+      const reference = this.reference.value.trim();
+      if (!reference || Array.from(reference).length > 128 || /[\u0000-\u001f\u007f-\u009f]/u.test(reference) ||
+          /[\uD800-\uDFFF]/u.test(reference)) {
+        this.actionHint.textContent = "引用需为 1～128 个字符，不得包含控制字符。";
+        return;
+      }
+      if (this.draft?.type === "release" && !this.confirm.checked) {
+        this.actionHint.textContent = "请先确认已取得审批，并核对解除的是这一项保全。";
+        return;
+      }
+      this.pending = { ...current, type: this.draft?.type || "place", holdID: this.draft?.holdID,
+        caseReference: this.draft?.caseReference, reference, requestID: crypto.randomUUID(), sending: false };
+    }
+    const operation = this.pending;
+    if (!this.sameContext(operation, current)) return;
+    operation.sending = true;
+    this.actionHint.textContent = "正在提交，请等待服务器确认…";
+    this.updateButtons();
+    try {
+      const releasing = operation.type === "release";
+      const path = `/api/v1/admin/conversations/${encodeURIComponent(operation.conversation)}/legal-holds` +
+        (releasing ? `/${encodeURIComponent(operation.holdID)}/release` : "");
+      const result = await this.request(path, { method: "POST", signal: AbortSignal.timeout(15000), headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request_id: operation.requestID,
+          [releasing ? "approval_reference" : "case_reference"]: operation.reference }) });
+      if (this.pending !== operation || !this.sameContext(operation)) return;
+      this.validatePage({ holds: [result], next_cursor: "" }, operation.conversation, "", []);
+      if (releasing ? result.id !== operation.holdID || result.case_reference !== operation.caseReference ||
+          result.release_approval_reference !== operation.reference || result.released_by_user_id !== operation.userId ||
+          result.released_by_membership_id !== operation.membershipId : result.case_reference !== operation.reference ||
+          result.placed_by_user_id !== operation.userId || result.placed_by_membership_id !== operation.membershipId) {
+        throw new Error("write result mismatch");
+      }
+      this.pending = null;
+      this.resetDraft();
+      this.actionHint.textContent = "服务器已确认保全记录，请以刷新后的状态为准。";
+      this.updateButtons();
+      if (this.dialog.open) await this.load(true);
+    } catch (error) {
+      if (this.pending !== operation || !this.sameContext(operation) || error.stale) return;
+      if ([400, 403, 404, 409].includes(error.status)) {
+        this.pending = null;
+        this.resetDraft();
+        if (error.status === 403 || error.status === 404) {
+          this.allowed = false; this.records = []; this.cursor = ""; this.list.replaceChildren();
+          this.actionHint.textContent = "权限已失效或会话不可用，请核查服务器保全记录。";
+        } else this.actionHint.textContent = error.status === 409 ? "操作冲突，请刷新核对保全记录后再操作。" : "请求被拒绝，请检查引用后再操作。";
+      } else {
+        this.actionHint.textContent = `结果待确认，请使用原编号重试：${operation.requestID}。`;
+      }
+    } finally {
+      operation.sending = false;
+      if (this.sameContext(operation)) this.updateButtons();
+    }
+  }
+
 };

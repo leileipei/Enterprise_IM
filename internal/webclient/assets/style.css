@@ -160,3 +160,9 @@ main{position:relative;z-index:1;min-height:100vh}
 #retention-records-hint,#legal-holds-hint{min-height:20px}
 #retention-records-boundary,#legal-holds-boundary{line-height:1.7;margin-bottom:0}
 @media(max-width:480px){.retention-records-dialog{padding:18px;max-height:88vh}.retention-record-card{padding:12px}.retention-record-card dl{grid-template-columns:90px minmax(0,1fr);gap:8px}}
+
+.legal-hold-action-form{margin:12px 0 20px;padding:16px;border:1px solid #dce8e2;border-radius:10px;display:grid;gap:10px;font-size:13px}
+.legal-hold-action-form h3,.legal-hold-action-form p{margin:0;overflow-wrap:anywhere}
+.legal-hold-action-form input[type=text]{width:100%;padding:10px;border:1px solid #bed8d0;border-radius:8px;font:inherit}
+.legal-hold-action-form .group-create-actions{flex-wrap:wrap}
+.legal-hold-release{margin-top:14px}
