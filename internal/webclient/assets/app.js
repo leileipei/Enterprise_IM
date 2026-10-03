@@ -126,12 +126,14 @@ let preparedGroupTransfer = null;
 let pendingGroupTransfer = null;
 const groupPolicyRechecks = new Map();
 let groupPolicyRecheckNotice = null;
-const retentionRecords = new window.RetentionRecords(request, () => ({
+const retentionContext = () => ({
   identityKey: accessToken && actingMembership ? `${identityEpoch}:${actingMembership}` : "",
   conversation: activeConversation,
   conversationEpoch,
   title: activeConversation ? element("chat-title").textContent : "",
-}));
+});
+const retentionRecords = new window.RetentionRecords(request, retentionContext);
+const legalHoldRecords = new window.LegalHoldRecords(request, retentionContext);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
@@ -481,6 +483,7 @@ function selectMembership(id) {
 
 function resetChat() {
   retentionRecords.contextChanged();
+  legalHoldRecords.contextChanged();
   groupPolicyRecheckNotice = null;
   renderGroupPolicyRecheckAction();
   groupRosterOpenButton.classList.add("hidden");
@@ -2137,6 +2140,7 @@ function activateConversation(id) {
   renderConversations();
   renderGroups();
   retentionRecords.contextChanged();
+  legalHoldRecords.contextChanged();
   syncMessages().catch(report);
 }
 
@@ -2163,6 +2167,7 @@ function activateGroupHistory(id) {
   renderConversations();
   renderGroups();
   retentionRecords.contextChanged();
+  legalHoldRecords.contextChanged();
   syncMessages().catch(report);
 }
 

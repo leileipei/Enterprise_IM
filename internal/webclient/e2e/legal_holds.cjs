@@ -13,15 +13,17 @@ const employee = "00000000-0000-4000-8000-000000000004";
 const chat = "00000000-0000-4000-8000-000000000011";
 const other = "00000000-0000-4000-8000-000000000012";
 const group = "00000000-0000-4000-8000-000000000013";
-let port, holdNext = false, held = null, holdPolicy = false, heldPolicy = null;
-let granted = true, nextFailure = "", emptyNext = false, failPolicy = false;
+let port, holdNext = false, held = null, holdPolicy = 0, heldPolicy = null;
+let granted = true, nextFailure = "", emptyNext = false, failPolicy = 0;
 const calls = [];
-function batch(id, conversation, kind, at = "2026-10-03T10:00:00Z") {
+function hold(id, conversation, released = false) {
   return { id: `00000000-0000-4000-8000-00000000900${id}`, conversation_id: conversation,
-    kind, processed_at: at, processed_count: 2, first_seq: 5, last_seq: 11,
-    ...(kind === "body" ? { retention_days: 365, cutoff_at: "2025-10-03T10:00:00Z" } :
-      { min_expires_at: "2026-10-01T10:00:00Z", max_expires_at: "2026-10-03T10:00:00Z" }),
+    case_reference: id === 2 ? "<img src=x onerror=alert(1)>CASE-A" : "CASE-B",
+    placed_at: "2026-10-01T10:00:00Z", placed_by_user_id: user, placed_by_membership_id: admin,
+    ...(released ? { released_at: "2026-10-03T10:00:00Z", release_approval_reference: "CAB-2026-01",
+      released_by_user_id: user, released_by_membership_id: admin } : {}),
     text: "MUST_NOT_RENDER_CONTENT", content_digest: "MUST_NOT_RENDER_DIGEST" };
+
 }
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${port}`);
@@ -49,9 +51,9 @@ const server = http.createServer((req, res) => {
   if (![admin, employee].includes(actor)) return send(403, { error_code: "invalid_identity" });
   if (url.pathname === "/api/v1/admin/retention-policy") {
     if (actor !== admin || !granted) return send(404, { error_code: "not_found" });
-    if (failPolicy) { failPolicy = false; return send(503, { error_code: "unavailable" }); }
+    if (failPolicy > 0) { failPolicy--; return send(503, { error_code: "unavailable" }); }
     const policy = { message_body_days: 365, version: 0, configured: false };
-    if (holdPolicy) { holdPolicy = false; heldPolicy = () => send(200, policy); return; }
+    if (holdPolicy > 0 && --holdPolicy === 0) { heldPolicy = () => send(200, policy); return; }
     return send(200, policy);
   }
   if (url.pathname === "/api/v1/conversations") return send(200, { conversations: [chat, other].map((id, n) =>
@@ -61,20 +63,19 @@ const server = http.createServer((req, res) => {
     status: "active", role: "member", source_membership_id: actor, last_seq: 0, updated_at: "2026-10-03T10:00:00Z" }], has_more: false });
   if (/\/messages$/.test(url.pathname)) return send(200, { messages: [], next_after_seq: 0, has_more: false });
   if (url.pathname === "/api/v1/realtime/tickets") return send(404, { error_code: "not_found" });
-  const match = url.pathname.match(/^\/api\/v1\/admin\/conversations\/([^/]+)\/retention-batches$/);
+  const match = url.pathname.match(/^\/api\/v1\/admin\/conversations\/([^/]+)\/legal-holds$/);
   if (match) {
-    calls.push({ conversation: match[1], kind: url.searchParams.get("kind"), cursor: url.searchParams.get("cursor"), actor });
+    calls.push({ conversation: match[1], cursor: url.searchParams.get("cursor"), actor });
     if (req.method !== "GET" || url.searchParams.get("limit") !== "20") return send(400, { error_code: "invalid_query" });
     if (actor !== admin || !granted) return send(404, { error_code: "not_found" });
-    const kind = url.searchParams.get("kind"), cursor = url.searchParams.get("cursor");
-    if (!["body", "digest"].includes(kind)) return send(400, { error_code: "invalid_query" });
-    const fail = nextFailure; nextFailure = "";
-    if (fail === "503" || fail === "404" || fail === "401") return send(Number(fail), { error_code: fail === "401" ? "unauthorized" : fail === "404" ? "not_found" : "unavailable" });
-    let value = { batches: [batch(kind === "digest" ? 3 : cursor ? 1 : 2, match[1], kind)], next_cursor: kind === "body" && !cursor ? "body-page-2" : "" };
-    if (fail === "malformed") value = { batches: [{ ...batch(2, match[1], kind), processed_count: -1 }], next_cursor: "" };
-    if (fail === "wrong-context") value.batches[0].conversation_id = other;
+    const cursor = url.searchParams.get("cursor"), fail = nextFailure; nextFailure = "";
+    if (["503", "404", "403", "401"].includes(fail)) return send(Number(fail), { error_code: "unavailable" });
+    let value = { holds: [hold(cursor ? 1 : 2, match[1], !cursor)], next_cursor: cursor ? "" : "hold-page-2" };
+    if (fail === "malformed") delete value.holds[0].release_approval_reference;
+    if (fail === "wrong-context") value.holds[0].conversation_id = other;
     if (fail === "cursor-loop") value.next_cursor = cursor;
-    if (emptyNext) { emptyNext = false; value = { batches: [], next_cursor: "" }; }
+    if (fail === "duplicate") value.holds[0] = hold(2, match[1]);
+    if (emptyNext) { emptyNext = false; value = { holds: [], next_cursor: "" }; }
     if (holdNext) { holdNext = false; held = () => send(200, value); return; }
     return send(200, value);
   }
@@ -103,75 +104,72 @@ server.listen(0, "127.0.0.1", async () => {
     await page.goto(`http://127.0.0.1:${port}/web/`);
     await page.getByRole("button", { name: /使用企业账号登录/ }).click();
     await page.locator("#workspace").waitFor({ state: "visible" });
-    const open = page.locator("#retention-records-open"), dialog = page.locator("#retention-records-dialog");
-    const cards = dialog.locator(".retention-record-card"), hint = page.locator("#retention-records-hint");
-    const close = page.locator("#retention-records-close"), refresh = page.locator("#retention-records-refresh");
-    const more = page.locator("#retention-records-more"), kind = page.locator("#retention-records-kind");
+    const open = page.locator("#legal-holds-open"), dialog = page.locator("#legal-holds-dialog");
+    const cards = dialog.locator(".legal-holds-card"), hint = page.locator("#legal-holds-hint");
+    const close = page.locator("#legal-holds-close"), refresh = page.locator("#legal-holds-refresh");
+    const more = page.locator("#legal-holds-more");
     const selectActor = async (name) => { await page.locator("#identity-options").getByRole("button", { name: new RegExp(name) }).click(); await page.locator("#conversation-list .conversation-button").first().waitFor(); };
     const chooseChat = async (index = 0) => { await page.locator("#conversation-list .conversation-button").nth(index).click(); };
     const waitHeld = async (policy = false) => { for (let n = 0; n < 60; n++) { if (policy ? heldPolicy : held) return; await new Promise(r => setTimeout(r, 10)); } throw new Error("expected held request"); };
     const releaseHeld = async (policy = false) => {
-      const path = policy ? "/retention-policy" : "/retention-batches";
+      const path = policy ? "/retention-policy" : "/legal-holds";
       const before = await page.evaluate(path => Object.entries(window.fixtureSettled).filter(([url]) => url.includes(path)).reduce((n, [, count]) => n + count, 0), path);
       const fn = policy ? heldPolicy : held; if (policy) heldPolicy = null; else held = null; fn();
       await page.waitForFunction(({ path, before }) => Object.entries(window.fixtureSettled).filter(([url]) => url.includes(path)).reduce((n, [, count]) => n + count, 0) > before, { path, before });
       await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     };
     await selectActor("分公司"); await chooseChat();
-    assert.equal(await open.isVisible(), false, "ordinary member entry visible");
-    assert.equal(calls.length, 0, "ordinary member queried batches");
-    failPolicy = true; await selectActor("集团总部"); await chooseChat();
-    const retryAccess = page.locator("#retention-access-retry");
-    await retryAccess.waitFor({ state: "visible" });
-    assert.equal(await open.isVisible(), false, "unverified admin entry visible");
-    await retryAccess.click(); await open.waitFor({ state: "visible" });
-    assert.equal(await retryAccess.isVisible(), false);
+    assert.equal(await open.isVisible(), false); assert.equal(calls.length, 0);
+    failPolicy = 2; await selectActor("集团总部"); await chooseChat();
+    const retryAccess = page.locator("#legal-holds-access-retry");
+    await retryAccess.waitFor({ state: "visible" }); assert.equal(await open.isVisible(), false);
+    await retryAccess.click(); await open.waitFor({ state: "visible" }); assert.equal(await retryAccess.isVisible(), false);
     await open.click(); await cards.first().waitFor();
-    assert.equal(await cards.count(), 1); assert.match(await cards.first().innerText(), /2 条/);
-    assert.match(await cards.first().innerText(), /5.*11/); assert.match(await cards.first().innerText(), /365/);
-    assert.equal(await dialog.locator("img").count(), 0, "HTML injected into title");
-    assert.equal((await dialog.innerText()).includes("MUST_NOT_RENDER"), false, "sensitive unknown fields rendered");
-    await more.click(); await cards.nth(1).waitFor(); assert.equal(await more.isVisible(), false);
-    assert.equal(calls.at(-1).cursor, "body-page-2", "pagination lost cursor");
-    await kind.selectOption("digest"); await dialog.getByText("00000000-0000-4000-8000-000000009003", { exact: true }).waitFor();
-    assert.equal(await cards.count(), 1); assert.match(await dialog.innerText(), /最早到期/);
-    assert.equal(await more.isVisible(), false);
-    await kind.selectOption("body"); await cards.first().waitFor();
-    if (process.env.IM_TEST_RETENTION_SCREENSHOT_DIR) { fs.mkdirSync(process.env.IM_TEST_RETENTION_SCREENSHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(process.env.IM_TEST_RETENTION_SCREENSHOT_DIR, "desktop.png") }); }
+    assert.equal(await cards.count(), 1); assert.match(await cards.first().innerText(), /已解除/);
+    assert.match(await cards.first().innerText(), /CAB-2026-01/);
+    assert.match(await cards.first().innerText(), /00000000-0000-4000-8000-000000000003/);
+    assert.equal(await dialog.locator("img").count(), 0); assert.equal((await dialog.innerText()).includes("MUST_NOT_RENDER"), false);
+    assert.match(await hint.innerText(), /继续加载/); assert.doesNotMatch(await hint.innerText(), /未保全|没有保全/);
+    await more.click(); await cards.nth(1).waitFor(); assert.match(await cards.nth(1).innerText(), /保全中/);
+    assert.equal(await more.isVisible(), false); assert.equal(calls.at(-1).cursor, "hold-page-2");
+    if (process.env.IM_TEST_LEGAL_HOLD_SCREENSHOT_DIR) { fs.mkdirSync(process.env.IM_TEST_LEGAL_HOLD_SCREENSHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(process.env.IM_TEST_LEGAL_HOLD_SCREENSHOT_DIR, "desktop.png") }); }
     await page.setViewportSize({ width: 390, height: 844 });
-    assert.equal(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), true, "mobile dialog overflows");
-    if (process.env.IM_TEST_RETENTION_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.IM_TEST_RETENTION_SCREENSHOT_DIR, "mobile.png") });
+    assert.equal(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), true, "mobile holds overflow");
+    if (process.env.IM_TEST_LEGAL_HOLD_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.IM_TEST_LEGAL_HOLD_SCREENSHOT_DIR, "mobile.png") });
+    await dialog.evaluate(el => { el.scrollTop = el.scrollHeight; });
+    const boundary = await page.locator("#legal-holds-boundary").boundingBox();
+    assert.ok(boundary && boundary.y >= 0 && boundary.y + boundary.height <= 844, "mobile boundary cannot be scrolled into view");
+    await dialog.evaluate(el => { el.scrollTop = 0; });
     await page.setViewportSize({ width: 1280, height: 850 });
-    nextFailure = "503"; await refresh.click(); await hint.getByText(/刷新重试/).waitFor(); assert.equal(await cards.count(), 0);
-    await refresh.click(); await cards.first().waitFor();
-    nextFailure = "malformed"; await refresh.click(); await hint.getByText(/刷新重试/).waitFor(); assert.equal(await cards.count(), 0);
-    await refresh.click(); await cards.first().waitFor();
-    nextFailure = "cursor-loop"; await more.click(); await hint.getByText(/刷新重试/).waitFor(); assert.equal(await cards.count(), 0);
-    await refresh.click(); await cards.first().waitFor();
-    nextFailure = "wrong-context"; await refresh.click(); await hint.getByText(/刷新重试/).waitFor(); assert.equal(await cards.count(), 0);
+    for (const failure of ["503", "malformed", "wrong-context"]) {
+      nextFailure = failure; await refresh.click(); await hint.getByText(/刷新重试/).waitFor(); assert.equal(await cards.count(), 0);
+      await refresh.click(); await cards.first().waitFor();
+    }
+    for (const failure of ["cursor-loop", "duplicate"]) {
+      nextFailure = failure; await more.click(); await hint.getByText(/刷新重试/).waitFor(); assert.equal(await cards.count(), 0);
+      await refresh.click(); await cards.first().waitFor();
+    }
     emptyNext = true; await refresh.click(); await hint.getByText(/暂无/).waitFor(); assert.equal(await more.isVisible(), false);
-
-    holdNext = true; await refresh.click(); await waitHeld();
-    await kind.selectOption("digest"); await dialog.getByText("00000000-0000-4000-8000-000000009003", { exact: true }).waitFor();
-    await releaseHeld(); assert.equal(await kind.inputValue(), "digest"); assert.equal(await cards.count(), 1); assert.match(await cards.first().innerText(), /009003/);
-    holdNext = true; await refresh.click(); await waitHeld();
-    await close.click(); await chooseChat(1); await open.click(); await cards.first().waitFor();
-    await releaseHeld(); assert.equal((await dialog.innerText()).includes("项目会话"), false, "old chat title restored");
-    assert.equal(calls.at(-1).conversation, other);
-    await close.click(); await page.locator("#group-list .group-card").first().click(); await open.click(); await cards.first().waitFor(); assert.equal(calls.at(-1).conversation, group, "group used wrong route");
-    holdNext = true; await refresh.click(); await waitHeld();
-    await close.click(); await selectActor("分公司"); await chooseChat(); await releaseHeld();
-    assert.equal(await open.isVisible(), false); assert.equal(await cards.count(), 0);
-    holdPolicy = true; await selectActor("集团总部"); await waitHeld(true); await selectActor("分公司"); await chooseChat();
-    await releaseHeld(true); assert.equal(await open.isVisible(), false, "stale admin probe restored access");
-    await selectActor("集团总部"); await chooseChat(); await open.waitFor({ state: "visible" }); await open.click(); await cards.first().waitFor();
-    nextFailure = "404"; await refresh.click(); await hint.getByText(/权限已失效|会话不可用/).waitFor();
-    assert.equal(await cards.count(), 0); assert.equal(await open.isVisible(), false); assert.equal(await refresh.isDisabled(), true);
-    await close.click(); await selectActor("分公司"); await selectActor("集团总部"); await chooseChat(); await open.waitFor({ state: "visible" }); await open.click(); await cards.first().waitFor();
+    holdNext = true; await refresh.click(); await waitHeld(); await close.click();
+    await chooseChat(1); await open.click(); await cards.first().waitFor(); await releaseHeld();
+    assert.equal((await dialog.innerText()).includes("项目会话"), false); assert.equal(calls.at(-1).conversation, other);
+    await close.click(); await page.locator("#group-list .group-card").first().click(); await open.click(); await cards.first().waitFor(); assert.equal(calls.at(-1).conversation, group);
+    holdNext = true; await refresh.click(); await waitHeld(); await close.click();
+    await selectActor("分公司"); await chooseChat(); await releaseHeld(); assert.equal(await open.isVisible(), false); assert.equal(await cards.count(), 0);
+    holdPolicy = 2; await selectActor("集团总部"); await waitHeld(true);
+    await selectActor("分公司"); await chooseChat(); await releaseHeld(true);
+    assert.equal(await open.isVisible(), false, "old probe restored admin entry");
+    for (const failure of ["403", "404"]) {
+      await selectActor("集团总部"); await chooseChat(); await open.click(); await cards.first().waitFor();
+      nextFailure = failure; await refresh.click(); await hint.getByText(/权限已失效|会话不可用/).waitFor();
+      assert.equal(await cards.count(), 0); assert.equal(await open.isVisible(), false); assert.equal(await refresh.isDisabled(), true);
+      await close.click(); await selectActor("分公司");
+    }
+    await selectActor("集团总部"); await chooseChat(); await open.click(); await cards.first().waitFor();
     nextFailure = "401"; await refresh.click(); await page.locator("#login-view").waitFor({ state: "visible" });
     assert.equal(await cards.count(), 0); assert.equal(await dialog.isVisible(), false);
     assert.equal(errors.length, 0, `page errors: ${errors.join("; ")}`);
-    console.log("PASS retention records: privilege, metadata, paging, retry, malformed data, kind/chat/identity/probe races, group, expiry, responsive layout");
+    console.log("PASS legal holds: privilege, release metadata, active hold on later page, paging, retry, malformed data, chat/identity races, group, expiry, responsive layout");
   } catch (error) { console.error(error); process.exitCode = 1; }
   finally { if (held) held(); if (heldPolicy) heldPolicy(); await browser?.close(); server.closeAllConnections(); server.close(); }
 });

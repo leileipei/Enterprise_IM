@@ -145,9 +145,10 @@ main{position:relative;z-index:1;min-height:100vh}
 .retention-records-dialog{width:min(680px,calc(100vw - 28px));max-height:85vh;overflow:auto;border:1px solid #c9ded6;border-radius:16px;padding:24px;color:#193044;background:#fbfdfb;box-shadow:0 20px 70px rgba(16,38,56,.2)}
 .retention-records-dialog::backdrop{background:rgba(16,38,56,.38)}
 .retention-records-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.retention-records-heading .secondary-button{flex-shrink:0;white-space:nowrap}
 .retention-records-heading>div{min-width:0}
 .retention-records-heading h2{margin:0;font-size:20px}
-#retention-records-conversation{margin:8px 0 18px;font-size:13px;overflow-wrap:anywhere;color:#617783}
+#retention-records-conversation,#legal-holds-conversation{margin:8px 0 18px;font-size:13px;overflow-wrap:anywhere;color:#617783}
 .retention-records-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}
 .retention-records-toolbar select{font:inherit;border:1px solid #bed8d0;border-radius:8px;background:white;padding:8px;color:#193044}
 .retention-records-list{list-style:none;padding:0;margin:16px 0;display:grid;gap:12px}
@@ -156,6 +157,6 @@ main{position:relative;z-index:1;min-height:100vh}
 .retention-record-card dl{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;margin:12px 0 0;font-size:13px}
 .retention-record-card dt{color:#617783}
 .retention-record-card dd{margin:0;overflow-wrap:anywhere}
-#retention-records-hint{min-height:20px}
-#retention-records-boundary{line-height:1.7;margin-bottom:0}
+#retention-records-hint,#legal-holds-hint{min-height:20px}
+#retention-records-boundary,#legal-holds-boundary{line-height:1.7;margin-bottom:0}
 @media(max-width:480px){.retention-records-dialog{padding:18px;max-height:88vh}.retention-record-card{padding:12px}.retention-record-card dl{grid-template-columns:90px minmax(0,1fr);gap:8px}}

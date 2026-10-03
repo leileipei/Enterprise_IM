@@ -85,6 +85,16 @@ async function send(page, text) {
     assert.match(await evidence.innerText(), /最晚到期时间/);
     await first.page.locator("#retention-records-close").click();
     assert.equal(await evidence.locator(".retention-record-card").count(), 0);
+    await first.page.locator("#legal-holds-open").click();
+    const holds = first.page.locator("#legal-holds-dialog");
+    await holds.getByText("CASE-BROWSER-ACTIVE", { exact: true }).waitFor();
+    assert.equal(await holds.locator(".legal-holds-card").count(), 2);
+    assert.match(await holds.locator(".legal-holds-card").filter({ hasText: "CASE-BROWSER-ACTIVE" }).innerText(), /保全中/);
+    assert.match(await holds.locator(".legal-holds-card").filter({ hasText: "CASE-BROWSER-RELEASED" }).innerText(), /已解除/);
+    await holds.getByText("CAB-BROWSER-RELEASE", { exact: true }).waitFor();
+    assert.equal(await first.page.locator("#legal-holds-more").isVisible(), false);
+    await first.page.locator("#legal-holds-close").click();
+    assert.equal(await holds.locator(".legal-holds-card").count(), 0);
     const second = await openDevice(browser, true);
     const before = second.frames.length;
 
@@ -118,7 +128,7 @@ async function send(page, text) {
 
     await first.context.close();
     await second.context.close();
-    process.stdout.write("real browser OIDC, retention evidence, realtime sync and offline recovery passed\n");
+    process.stdout.write("real browser OIDC, retention evidence, legal hold status, realtime sync and offline recovery passed\n");
   } finally {
     await browser.close();
   }
