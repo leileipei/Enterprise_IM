@@ -37,7 +37,8 @@ type groupHistoryMessage struct {
 	seq                int64
 	senderID           string
 	senderMembershipID string
-	text               string
+	text               *string
+	clearedAt          *time.Time
 	at                 time.Time
 }
 
@@ -110,7 +111,7 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 	}
 	page := MessagePage{ConversationID: groupID,
 		Messages: make([]PulledMessage, 0, min(limit, 100)), NextAfterSeq: afterSeq}
-	rows, err := tx.Query(ctx, `SELECT id::text,seq,sender_user_id::text,sender_membership_id::text,text_body,accepted_at
+	rows, err := tx.Query(ctx, `SELECT id::text,seq,sender_user_id::text,sender_membership_id::text,text_body,accepted_at,body_cleared_at
  FROM messages WHERE tenant_id=$1 AND conversation_id=$2 AND seq>$3
  ORDER BY seq LIMIT $4`, id.TenantID, groupID, afterSeq, limit+1)
 	if err != nil {
@@ -121,7 +122,7 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 	for rows.Next() {
 		var message groupHistoryMessage
 		if err := rows.Scan(&message.id, &message.seq, &message.senderID,
-			&message.senderMembershipID, &message.text, &message.at); err != nil {
+			&message.senderMembershipID, &message.text, &message.at, &message.clearedAt); err != nil {
 			rows.Close()
 			return MessagePage{}, err
 		}
@@ -221,12 +222,12 @@ func (s Service) PullGroupTextMessages(ctx context.Context, id access.TrustedIde
 		item := PulledMessage{Seq: message.seq, Redacted: true}
 		reader, readerFound := groupIntervalAt(intervals[id.UserID], message.seq)
 		sender, senderFound := groupIntervalAt(intervals[message.senderID], message.seq)
-		if !groupHardDenied && readerFound && senderFound &&
+		if message.text != nil && message.clearedAt == nil && !groupHardDenied && readerFound && senderFound &&
 			sender.membershipID == message.senderMembershipID &&
 			at.Before(message.at.Add(retention)) && !policy.HistoryHardDeny(actor,
 			reader.policyMembership(id.TenantID), sender.policyMembership(id.TenantID), at, rules) {
 			item = PulledMessage{MessageID: message.id, Seq: message.seq,
-				SenderUserID: message.senderID, Text: message.text, ServerTime: message.at}
+				SenderUserID: message.senderID, Text: *message.text, ServerTime: message.at}
 		}
 		page.Messages = append(page.Messages, item)
 		page.NextAfterSeq = message.seq

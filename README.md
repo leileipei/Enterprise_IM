@@ -47,7 +47,7 @@
 
 Outbox Worker 从 PostgreSQL 领取到期事件并写入 Redis Stream，成功后标记 `published`；失败会按最长 5 分钟的指数退避重试。Redis 事件只含 `event_id`、`tenant_id`、`conversation_id`、`message_id`、`seq` 和 `event_type`，不含正文。Redis 发布与数据库标记之间可能发生重复；每个 API 实例独立读取新事件，按稳定的 `event_id` 在本机有界窗口内去重，并让客户端按 PostgreSQL `seq` 补拉、处理乱序与缺口。`published` 只表示 Redis 接受了事件，**不表示消息已送达设备**。生产者暂不裁剪 Stream；上线前必须监控积压容量并制定可检测缺口的保留策略。PostgreSQL 仍为消息事实来源。
 
-单聊文本可通过 `GET /api/v1/conversations/{id}/messages?after_seq=0&limit=100` 按会话序号升序补拉。`after_seq` 必填，`limit` 可选（默认 100，最大 500）。响应中的 `next_after_seq` 用于下一页；`has_more` 表示是否还有后续序号。不可见或已满当前租户正文保留期的消息只返回 `seq` 和 `redacted:true`，不返回消息 ID、发送者、正文或时间；客户端仍须推进游标。当前仅在读取时遮蔽过期正文，物理清理尚未实现。Web 客户端先检查一页内的序号连续性及页游标，发现缺口则保留原游标并重试，避免把尚未显示的消息跳过去。补拉依据消息发送时保存的双方任职及组织快照；迁移前无法证明接收任职的旧消息只能返回不可见占位，不能用当前会话任职自动回填。冻结账户或失效任职不能补拉，现行 `send_message` 强制拒绝会撤销匹配内容的读取，普通通信隔离不追溯删除已授权历史。该接口不提供实时推送或设备送达确认。
+单聊文本可通过 `GET /api/v1/conversations/{id}/messages?after_seq=0&limit=100` 按会话序号升序补拉。`after_seq` 必填，`limit` 可选（默认 100，最大 500）。响应中的 `next_after_seq` 用于下一页；`has_more` 表示是否还有后续序号。不可见或已满当前租户正文保留期的消息只返回 `seq` 和 `redacted:true`，不返回消息 ID、发送者、正文或时间；客户端仍须推进游标。过期消息在读取时遮蔽；启用独立正文清理 Worker 后，在线库的到期正文会被置空，已清理消息始终返回遮蔽占位。Web 客户端先检查一页内的序号连续性及页游标，发现缺口则保留原游标并重试，避免把尚未显示的消息跳过去。补拉依据消息发送时保存的双方任职及组织快照；迁移前无法证明接收任职的旧消息只能返回不可见占位，不能用当前会话任职自动回填。冻结账户或失效任职不能补拉，现行 `send_message` 强制拒绝会撤销匹配内容的读取，普通通信隔离不追溯删除已授权历史。该接口不提供实时推送或设备送达确认。
 
 显式配置 `IM_REALTIME_REDIS_URL` 后，浏览器可用相同身份头向 `POST /api/v1/realtime/tickets` 申请 30 秒一次性票据，再以子协议 `enterprise-im.v1`、`ticket.<票据>` 连接同源 `GET /api/v1/realtime` WebSocket。票据不放在 URL；服务器只回显 `enterprise-im.v1`。连接成功首先收到 `{"type":"ready","resync_required":true}`，客户端应立即用上次连续确认的 `seq` 调用上述 HTTP 补拉。新消息发布到 Redis Stream 后，本机在线的单聊双方会收到 `{"type":"sync_required"}`，再次通过 HTTP 补拉；该信号不包含正文、会话 ID 或序号，也不是送达确认。票据不可重复使用，任职或账号失效时连接会关闭。Redis 或通知读者不可用时票据入口和就绪探针返回 503，现有连接关闭并等待重连补拉。
 
@@ -73,6 +73,7 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000012_group_owner_transfer.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000013_tenant_retention.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000014_conversation_legal_hold.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000015_message_body_clear.up.sql
 ```
 
 迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
@@ -96,6 +97,30 @@ go run ./cmd/im-outbox-worker
 ```
 
 `IM_OUTBOX_REDIS_URL` 必须使用 `redis://` 或 `rediss://`；可用 `IM_OUTBOX_STREAM` 覆盖默认 Stream `enterprise-im:message-created:v1`。Worker 启动时检查数据库和 Redis，运行中按 250 毫秒空闲间隔轮询，收到终止信号后停止领取新事件。Redis Stream 不能代替客户端补拉；Redis 数据丢失时，已 ACK 的消息仍保存在 PostgreSQL。
+
+在线消息正文清理由独立 `im-retention-worker` 执行，默认关闭。部署顺序为：先执行 `000015`，部署兼容可空正文的 API，再核对租户保留期限与会话法务保全，最后显式启用清理：
+
+```sh
+export IM_DATABASE_URL='postgres://postgres:local_only_password@127.0.0.1:55432/enterprise_im?sslmode=disable'
+export IM_BODY_CLEANER_ENABLED=true
+export IM_BODY_CLEANER_BATCH_SIZE=100
+go run ./cmd/im-retention-worker
+```
+
+`IM_BODY_CLEANER_ENABLED` 只接受空、`false` 或 `true`；未启用时进程直接退出且不连接数据库。批量默认 100，配置范围 1～1000，每租户每轮最多处理一个会话批次；成功或空轮询间隔为 1 秒，错误退避为 1～30 秒。每次租户枚举和批次处理设置 5 秒上下文，单租户错误仍继续处理后续租户；数据库恢复后重新轮询。Worker 只需要 PostgreSQL，Redis 故障不会改变保留与保全判定。
+
+清理事务在任何查询前显式设为 READ COMMITTED，再锁租户期限和会话；数据库、角色或连接配置的默认隔离级别不会改变锁后检查。取得会话锁后重新检查有效保全与数据库时钟。任一案件仍有效时，该会话不清理；只解除部分案件不会解除阻断。清理与登记保全通过会话锁串行化，**保全应在清理前登记**，后续保全不能恢复已经清空的正文。保全只暂停清理，读取仍按期限遮蔽。正文与批次记录一起提交，失败或取消整批回滚；消息行、序号、幂等 ACK、Outbox 和成员区间保留。批次记录的首末序号为实际 min/max，不表示区间内每条消息都被清理。
+
+暂停全部自动清理时，向所有清理进程发送 SIGTERM，并用 `IM_BODY_CLEANER_ENABLED=false` 重启或停止对应服务；仅修改环境变量不会改变已经运行的进程。当前事务在提交或回滚后退出，已提交批次不撤销。可通过数据库只读查询观察批次：
+
+```sql
+SELECT tenant_id, conversation_id, id, retention_days, cutoff_at,
+       cleared_at, first_seq, last_seq, cleared_count
+FROM message_body_clear_batches
+ORDER BY cleared_at DESC, id DESC LIMIT 100;
+```
+
+`000015` 的表变更与索引构建可能阻塞写入，部署前需按表规模评估维护窗口、锁超时及耗时；在线 Worker 不等于无锁迁移。有任何清理行或批次证据后，`000015` Down 拒绝回滚，不能通过回滚恢复正文。清空的是在线当前行的 `text_body`，`messages.content_digest` 与幂等记录中的 SHA-256 摘要继续保留，低熵正文可能被猜测比对。PostgreSQL MVCC 旧版本、WAL、归档、备份及存储介质残留需独立治理，本增量不证明安全擦除或生产保留合规。数据库异常日志仅输出固定类别，批次日志包含标识与计数，不记录正文或连接 URL。
 
 默认 `IM_OIDC_ENABLED` 为空，服务只暴露健康检查。启用受保护管理 API 前，先核对 IdP 能签发上述 JWT 访问令牌，迁移数据库，并导入与本地用户一一核对的 `external_identities` 绑定及管理员授权。然后配置：
 
@@ -170,6 +195,6 @@ go vet ./...
 
 `multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000014` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000015` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
 
 真实浏览器集成测试在 macOS/Linux 上运行，需额外设置 `IM_TEST_BROWSER_NODE`（Node 可执行文件）、`NODE_PATH`（包含 Playwright 的 `node_modules`）；使用外部安装的 Chrome/Chromium 时设置 `CHROMIUM_EXECUTABLE`，再运行 `go test ./internal/policystore -run '^TestRealBrowserLoginRealtimeAndOfflinePull$' -count=1`。未设置 `IM_TEST_BROWSER_NODE` 时该用例跳过；需同时设置上述 PostgreSQL 与 Redis 测试 URL。

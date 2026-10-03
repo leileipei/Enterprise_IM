@@ -118,7 +118,7 @@ FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
 	rows, err := tx.Query(ctx, `
 SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,
  COALESCE(m.recipient_user_id::text,''),COALESCE(m.recipient_membership_id::text,''),
- m.text_body,m.accepted_at,
+ m.text_body,m.accepted_at,m.body_cleared_at,
  COALESCE(m.sender_organization_id::text,''),COALESCE(m.recipient_organization_id::text,'')
 FROM messages m
 WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3
@@ -128,11 +128,13 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 	}
 	for rows.Next() {
 		var messageID, senderUser, senderMember, recipientUser, recipientMember string
-		var senderOrg, recipientOrg, body string
+		var senderOrg, recipientOrg string
+		var body *string
+		var clearedAt *time.Time
 		var seq int64
 		var acceptedAt time.Time
 		if err := rows.Scan(&messageID, &seq, &senderUser, &senderMember,
-			&recipientUser, &recipientMember, &body, &acceptedAt, &senderOrg, &recipientOrg); err != nil {
+			&recipientUser, &recipientMember, &body, &acceptedAt, &clearedAt, &senderOrg, &recipientOrg); err != nil {
 			rows.Close()
 			return MessagePage{}, err
 		}
@@ -144,7 +146,7 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 		history := historicalPair{}
 		validPair := (senderUser == lowUser && recipientUser == highUser) ||
 			(senderUser == highUser && recipientUser == lowUser)
-		if validPair && senderMember != "" && recipientMember != "" && senderOrg != "" && recipientOrg != "" {
+		if body != nil && clearedAt == nil && validPair && senderMember != "" && recipientMember != "" && senderOrg != "" && recipientOrg != "" {
 			sender := policy.Membership{ID: senderMember, TenantID: id.TenantID, OrganizationID: senderOrg}
 			recipient := policy.Membership{ID: recipientMember, TenantID: id.TenantID, OrganizationID: recipientOrg}
 			historicalReader, peer := sender, recipient
@@ -152,7 +154,7 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 				historicalReader, peer = recipient, sender
 			}
 			item = PulledMessage{MessageID: messageID, Seq: seq, SenderUserID: senderUser,
-				Text: body, ServerTime: acceptedAt, Redacted: false}
+				Text: *body, ServerTime: acceptedAt, Redacted: false}
 			history = historicalPair{reader: historicalReader, peer: peer}
 		}
 		page.Messages = append(page.Messages, item)

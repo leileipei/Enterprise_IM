@@ -69,6 +69,7 @@ func TestDirectConversationMigrationRollsBackAndReapplies(t *testing.T) {
 	conn := db(t)
 	ctx := context.Background()
 	for _, path := range []string{
+		"../../db/migrations/000015_message_body_clear.down.sql",
 		"../../db/migrations/000014_conversation_legal_hold.down.sql",
 		"../../db/migrations/000013_tenant_retention.down.sql",
 		"../../db/migrations/000012_group_owner_transfer.down.sql",
@@ -127,6 +128,7 @@ func TestDirectConversationMigrationRollsBackAndReapplies(t *testing.T) {
 		"../../db/migrations/000012_group_owner_transfer.up.sql",
 		"../../db/migrations/000013_tenant_retention.up.sql",
 		"../../db/migrations/000014_conversation_legal_hold.up.sql",
+		"../../db/migrations/000015_message_body_clear.up.sql",
 	} {
 		sql, err := os.ReadFile(path)
 		if err != nil {
