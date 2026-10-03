@@ -122,7 +122,7 @@
 - [x] **4. 写真实生产 RED。**在两个真实 OIDC 认证 API 上请求新路径，注册前404；注册后 q=生产、kindall、limit1交替节点续查收集两条单聊及一条群消息，核对完整集合、ID／kind／seq与排序。成功审计数量按实际成功页数（含合法空末页）精确比较，不假定3次分页请求。kinddirect／group分别验证过滤，变词／变kind游标400，无效令牌401；原 message_search 的3条审计数量不受影响。
 - [x] **5. 跑生产与全量验证。**`go test ./internal/httpserver ./internal/policystore -run '^(TestCross|TestProductionAPIWithOIDCAndRealtimeProcesses)' -count=1 -v`；再跑 `go test ./... -count=1 -v`、必要 race、`go vet ./...`、`go build ./...`、`git diff --check`。启用 DB／Redis／Chrome，记录真实退出码／顶层计数／唯一辅助skip；原 P4-18 页面和 OIDC 实时／离线恢复必须通过。
 - [x] **6. 更新实际验收文档并独立评审。**只记录已运行的行为、计数、迁移、SQL规模、风险与日志；P4-19为API交付，不写成Web跨会话搜索。按 requesting-code-review 技能请求一次独立全分支评审，解决发现问题，再运行受影响验证；不得把评审只读日志当作评审独立跑过集成。
-- [ ] **7. 提交／推送／草稿 PR。**`git commit -m 'feat(api): expose cross conversation text search'`；推送 codex/p4-19-cross-conversation-search，以确认计划的设计分支为base创建草稿PR并attach，核对OPEN／DRAFT、base／headSHA与远端一致、工作树干净。关闭本轮专用测试容器，保留工作树；中文交付链接、验证、边界和P4-20后续。
+- [x] **7. 提交／推送／草稿 PR。**`git commit -m 'feat(api): expose cross conversation text search'`；推送 codex/p4-19-cross-conversation-search，以确认计划的设计分支为base创建草稿PR并attach，核对OPEN／DRAFT、base／headSHA与远端一致、工作树干净。关闭本轮专用测试容器，保留工作树；中文交付链接、验证、边界和P4-20后续。
 
 ## 自检与执行交接
 
@@ -132,4 +132,4 @@
 
 执行调整：上下文构造器采用 Service 方法以使用注入时钟；实际策略发布先锁 tenant FOR UPDATE，搜索持有 tenant FOR SHARE，因此首版发布测试验证发布等待当前页提交、下一页应用 hard_deny。保留最终策略指针复核。
 
-最终实施源码 472 个顶层 PASS／0 FAIL／1 辅助 SKIP，独立评审无 Critical／Important；一个组合边界测试 Minor 记录为后续补强，详见验收记录。推送／草稿核对为最后交付步骤。
+最终实施源码 472 个顶层 PASS／0 FAIL／1 辅助 SKIP，独立评审无 Critical／Important；一个组合边界测试 Minor 记录为后续补强，详见验收记录。已创建并附加实现草稿 PR #67，最终远端 SHA／状态核对后结束本轮。
