@@ -95,6 +95,12 @@ if !item.Redacted || item.MessageID != "" || item.SenderUserID != "" ||
 
 - [x] 启动本增量专用 PostgreSQL/Redis，设置 `IM_TEST_DATABASE_URL`、`IM_TEST_REDIS_URL`、`IM_TEST_BROWSER_NODE`、`NODE_PATH`、`CHROMIUM_EXECUTABLE`；提前创建 `btree_gist`。确认连接隔离及服务就绪后运行 `go test ./... -count=1`、`go vet ./...`、`go build ./...`、`git diff --check`；显式检查 `TestRealBrowserLoginRealtimeAndOfflinePull` 的 PASS，不能把缺少变量的 SKIP 当作验收。
 - [x] 独立代码复核迁移不变量、锁后保全判断、跨租户筛选、NULL 读取、重发 ACK 和默认关闭行为；修复确认的缺陷，重跑受影响测试。
-- [ ] 确认 Git 提交与状态，推送分支，创建并 attach stacked draft PR；PR 说明正文置空、摘要保留、迁移锁、验证范围和启用方式。停止本增量专用服务，交付 PR 与测试证据。
+- [x] 确认 Git 提交与状态，推送分支，创建并 attach stacked draft PR；PR 说明正文置空、摘要保留、迁移锁、验证范围和启用方式。停止本增量专用服务，交付 PR 与测试证据。
 
 执行方式沿用本会话逐项实现（Native），使用 `superpowers:executing-plans`；完成实施后做独立整分支复核。
+
+验收记录（2026-10-03）：PostgreSQL 16、Redis 7、真实 Chrome 的全套测试共 383 个顶层 PASS，0 FAIL；唯一 SKIP 为多进程辅助入口 TestRealtimeAPIChild。真实浏览器登录、通知与离线补拉明确 PASS。retention race、go vet、go build 和 diff 检查通过；生产清理进程默认关闭、启用清理与 SIGTERM 退出已验证。
+
+独立整分支评审发现默认 REPEATABLE READ 可能漏掉新保全；TestProcessTenantOverridesRepeatableReadBeforeLegalHoldRace 在真实默认隔离连接与实际保全服务下先复现失败，显式固定 READ COMMITTED 后通过，并重新通过全套测试。无其他阻塞评审项。交付叠加草稿 PR #51（基于 PR #50）；专用测试容器已停止，保留工作树供后续修改。
+
+执行判断：整分支评审在 PR 交付前执行一次（只改变流程顺序）；MVCC/WAL/备份/介质治理保持外部范围（这些副本可能保留）；保留摘要以支持原幂等语义（低熵内容可被猜测比对）；高权限 TRUNCATE 或禁用触发器依赖数据库权限治理（应用约束无法阻止管理权限绕过）。未遗留 Minor 评审项。
