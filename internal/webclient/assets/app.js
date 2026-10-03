@@ -126,6 +126,12 @@ let preparedGroupTransfer = null;
 let pendingGroupTransfer = null;
 const groupPolicyRechecks = new Map();
 let groupPolicyRecheckNotice = null;
+const retentionRecords = new window.RetentionRecords(request, () => ({
+  identityKey: accessToken && actingMembership ? `${identityEpoch}:${actingMembership}` : "",
+  conversation: activeConversation,
+  conversationEpoch,
+  title: activeConversation ? element("chat-title").textContent : "",
+}));
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function groupCreateStoragePrefix(actor = actingMembership) {
@@ -474,6 +480,7 @@ function selectMembership(id) {
 }
 
 function resetChat() {
+  retentionRecords.contextChanged();
   groupPolicyRecheckNotice = null;
   renderGroupPolicyRecheckAction();
   groupRosterOpenButton.classList.add("hidden");
@@ -2129,6 +2136,7 @@ function activateConversation(id) {
   element("send-hint").textContent = "服务端保存成功后显示“已保存”，不代表对方已收到。";
   renderConversations();
   renderGroups();
+  retentionRecords.contextChanged();
   syncMessages().catch(report);
 }
 
@@ -2154,6 +2162,7 @@ function activateGroupHistory(id) {
   discardPendingButton.classList.add("hidden");
   renderConversations();
   renderGroups();
+  retentionRecords.contextChanged();
   syncMessages().catch(report);
 }
 
