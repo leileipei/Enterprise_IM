@@ -53,6 +53,8 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 	}
 	conn := db(t)
 	seedDirectConversation(t, conn)
+	seedCrossGroup(t, conn, crossID(10020))
+	insertGroupHistoryMessage(t, conn, crossID(10020), 1, adminA, adminM, "来自真实浏览器群")
 	// Read-only evidence fixtures exercise the real authenticated admin API;
 	// they do not run or enable either cleanup worker.
 	run(t, conn, `INSERT INTO admin_grants(id,tenant_id,membership_id,membership_organization_id,role,effective_from)
@@ -319,6 +321,10 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events
  WHERE tenant_id=$1 AND action='message_search' AND outcome='allow'`, tenantA).Scan(&searchReads); err != nil || searchReads != 3 {
 		t.Fatalf("browser message search reads=%d err=%v", searchReads, err)
+	}
+	var crossReads int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events WHERE tenant_id=$1 AND action='message_search_all' AND outcome='allow' AND reason='cross_conversation_search_page' AND resource_type='tenant' AND resource_id=$1`, tenantA).Scan(&crossReads); err != nil || crossReads != 4 {
+		t.Fatalf("browser cross search reads=%d err=%v", crossReads, err)
 	}
 	var persisted int
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM messages WHERE tenant_id=$1 AND conversation_id=$2
