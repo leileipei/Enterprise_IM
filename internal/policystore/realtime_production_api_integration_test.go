@@ -292,4 +292,5 @@ func TestProductionAPIWithOIDCAndRealtimeProcesses(t *testing.T) {
 	reconnected := realtimeE2EConnect(t, firstURL, issueTicket(firstURL))
 	pull(firstURL, 1, 2, "生产 API 消息二")
 	reconnected.CloseNow()
+	assertProductionMessageSearch(t, conn, httpClient, firstURL, secondURL, token)
 }
