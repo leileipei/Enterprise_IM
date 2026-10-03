@@ -227,6 +227,7 @@ func TestProductionAPIWithOIDCAndRealtimeProcesses(t *testing.T) {
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 	assertProductionRetentionBatches(t, conn, httpClient, firstURL, secondURL, token)
 	assertProductionRetentionHistory(t, conn, httpClient, firstURL, secondURL, token)
+	assertProductionAuditQuery(t, conn, httpClient, firstURL, secondURL, token)
 	productionResponse(t, httpClient, productionRequest(t, http.MethodGet, firstURL, "/api/v1/me", "invalid", nil, false), http.StatusUnauthorized, nil)
 	productionResponse(t, httpClient, productionRequest(t, http.MethodGet, firstURL, "/api/v1/me", wrongSignatureToken, nil, false), http.StatusUnauthorized, nil)
 	productionResponse(t, httpClient, productionRequest(t, http.MethodGet, firstURL, "/api/v1/me", unboundToken, nil, false), http.StatusUnauthorized, nil)

@@ -87,6 +87,11 @@ func main() {
 			logger.Error("retention policy API unavailable", "error", err)
 			os.Exit(1)
 		}
+		handler, err = httpserver.HandlerWithAuditQuery(handler, authenticator, access.Service{DB: pool})
+		if err != nil {
+			logger.Error("audit query API unavailable", "error", err)
+			os.Exit(1)
+		}
 		handler, err = httpserver.HandlerWithRetentionHistory(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
 			logger.Error("retention history API unavailable", "error", err)
