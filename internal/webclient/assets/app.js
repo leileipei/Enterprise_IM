@@ -134,7 +134,9 @@ const retentionContext = () => ({
   title: activeConversation ? element("chat-title").textContent : "",
 });
 const retentionPolicyEditor = new window.RetentionPolicyEditor(request, retentionContext, () => legalHoldRecords.canSwitchContext());
-const retentionRecords = new window.RetentionRecords(request, retentionContext, allowed => retentionPolicyEditor.setAccess(allowed));
+const auditRecords = new window.AuditRecords(request, retentionContext, value => retentionPolicyEditor.validTime(value),
+  () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
+const retentionRecords = new window.RetentionRecords(request, retentionContext, allowed => { retentionPolicyEditor.setAccess(allowed); auditRecords.setAccess(allowed); });
 const legalHoldRecords = new window.LegalHoldRecords(request, retentionContext, () => retentionPolicyEditor.canSwitchContext());
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -485,6 +487,7 @@ function selectMembership(id) {
 
 function resetChat() {
   retentionPolicyEditor.contextChanged();
+  auditRecords.contextChanged();
   retentionRecords.contextChanged();
   legalHoldRecords.contextChanged();
   groupPolicyRecheckNotice = null;

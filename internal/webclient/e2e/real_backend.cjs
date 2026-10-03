@@ -141,6 +141,24 @@ async function send(page, text) {
     await first.page.locator("#retention-policy-close").click();
     assert.equal(await policyCurrent.innerText(), "");
     assert.equal(await history.locator(".retention-history-card").count(), 0);
+    await first.page.locator("#audit-open").click();
+    const audits = first.page.locator("#audit-list");
+    const auditHint = first.page.locator("#audit-hint");
+    await auditHint.getByText(/已显示/).waitFor();
+    await first.page.locator("#audit-action").fill("retention_policy_update");
+    await first.page.locator("#audit-outcome").selectOption("allow");
+    await first.page.locator("#audit-apply").click();
+    await audits.getByText("approved_retention_change", { exact: true }).waitFor();
+    assert.equal(await audits.locator(".audit-record-card").count(), 1);
+    assert.match(await audits.innerText(), /允许/);
+    await first.page.locator("#audit-outcome").selectOption("deny");
+    assert.equal(await audits.locator(".audit-record-card").count(), 0);
+    await first.page.locator("#audit-apply").click();
+    await audits.getByText("retention_extension_requires_empty_history", { exact: true }).waitFor();
+    assert.equal(await audits.locator(".audit-record-card").count(), 1);
+    assert.match(await audits.innerText(), /拒绝/);
+    await first.page.locator("#audit-close").click();
+    assert.equal(await audits.locator(".audit-record-card").count(), 0);
     const second = await openDevice(browser, true);
     const before = second.frames.length;
 

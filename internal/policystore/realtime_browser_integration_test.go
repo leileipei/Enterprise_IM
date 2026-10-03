@@ -309,6 +309,11 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
  WHERE tenant_id=$1 AND action='retention_policy_history_list' AND outcome='allow'`, tenantA).Scan(&historyReads); err != nil || historyReads != 1 {
 		t.Fatalf("browser history audits=%d err=%v", historyReads, err)
 	}
+	var auditReads int
+	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events
+ WHERE tenant_id=$1 AND action='audit_events_list' AND outcome='allow'`, tenantA).Scan(&auditReads); err != nil || auditReads != 3 {
+		t.Fatalf("browser audit reads=%d err=%v", auditReads, err)
+	}
 	var persisted int
 	if err := conn.QueryRow(context.Background(), `SELECT count(*) FROM messages WHERE tenant_id=$1 AND conversation_id=$2
  AND text_body IN ('已有消息','来自真实浏览器一','断线期间来自浏览器一')`, tenantA, directA).Scan(&persisted); err != nil || persisted != 3 {
