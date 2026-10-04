@@ -1,0 +1,11 @@
+# Verified local fixture pins, 2026-10-04; not production release approval.
+aws-sdk-go-v2 = v1.47.1
+aws-sdk-go-v2-service-s3 = v1.114.0
+aws-sdk-go-v2-credentials = v1.20.6
+smithy-go = v1.28.1
+minio-source = https://github.com/minio/minio/tree/RELEASE.2024-11-07T00-52-20Z
+minio-image = minio/minio@sha256:ac591851803a79aee64bc37f66d77c56b0a4b6e12d9e5356380f4105510f2332
+postgres-image = postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+qpdf = pending-task-8
+clamav = pending-task-8
+clamd-config-sha256 = pending-task-8
