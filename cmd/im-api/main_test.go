@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
 )
@@ -177,6 +178,15 @@ func TestFileDownloadProductionAssemblyClosed(t *testing.T) {
 		h.ServeHTTP(w, req)
 		if w.Code != 503 || !strings.Contains(w.Body.String(), "file_download_unavailable") {
 			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestProductionFileCapabilitiesClosed(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		got := productionFileCapabilities(enabled)
+		if got != (httpserver.FileCapabilities{UploadEnabled: enabled}) {
+			t.Fatal("production file sharing capability opened", got)
 		}
 	}
 }

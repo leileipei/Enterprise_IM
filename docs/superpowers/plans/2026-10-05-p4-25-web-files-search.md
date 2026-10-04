@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27.1、pgx/v5、PostgreSQL、现有 S3 SDK、OIDC、原生 JavaScript、现有 Playwright／Chrome、Redis、ClamAV／qpdf；不新增产品框架或第三方产品依赖。
 
-**Spec:** [已确认书面规格](../specs/2026-10-05-p4-25-web-files-search-design.md)，用户于 2026-10-05 回复“确认”；确认时文档提交 `43b04af`，产品基线为 P4-24 `84aa1d9`。本计划待用户书面审阅，尚未实施。
+**Spec:** [已确认书面规格](../specs/2026-10-05-p4-25-web-files-search-design.md)，用户于 2026-10-05 回复“确认”；确认时文档提交 `43b04af`，产品基线为 P4-24 `84aa1d9`。用户于 2026-10-05 确认本实施计划，已开始 Task 1；后续任务及整体验收未完成。
 
 ## Global Constraints
 
@@ -26,7 +26,7 @@
 - 名称资格沿用 P4-24 完整下载资格，含历史及当前参与、上传者有效、双方 send_message／file_download、hard deny、正文和文件期限、ready／完整扫描来源。无管理员旁路，不把历史卡片元数据当下载授权。
 - 管理编辑 expected_version CAS＋approval_reference；保留 1～3650 天适用于已有文件。cleanup_enabled 不启动默认关闭命令；延长不能恢复 pending／deleted。上传 TTL 60～3600 秒、预算 25 MiB～1 TiB。
 - 新必选真实场景 0 FAIL／0 SKIP；所有规定门禁固定产品 commit 归档执行；旧辅助入口 SKIP 单列。只清理本轮可证明归属资源，凭据文件 0600、证据目录 0700。
-- 当前阶段仅书面计划；Task 1 之前需用户审阅本计划。M4、生产启用、客户联调、HA／容量／备份 DR 继续单独验收。
+- 用户已审阅并确认本计划；按下面任务逐项执行。M4、生产启用、客户联调、HA／容量／备份 DR 继续单独验收。
 
 ## Review Focus
 
@@ -75,7 +75,7 @@
 - `access.Service.ValidateFileIdentity(ctx context.Context,id TrustedIdentity) error`；HTTP 消费相同方法的窄 interface。
 - `HandlerWithFileCapabilities(next http.Handler,auth Authenticator,identity FileIdentityValidator,caps FileCapabilities)(http.Handler,error)`。
 
-- [ ] **Step 1：新增失败测试。** TestFileCapabilitiesStrictRequest／TestFileCapabilitiesCurrentIdentity／TestProductionFileCapabilitiesClosed；合法／退出任职、错 tenant、GET body、重复头、query／ForceQuery、HEAD 和缺依赖。
+- [x] **Step 1：新增失败测试。** TestFileCapabilitiesStrictRequest／TestFileCapabilitiesCurrentIdentity／TestProductionFileCapabilitiesClosed；合法／退出任职、错 tenant、GET body、重复头、query／ForceQuery、HEAD 和缺依赖。
 
 ```text
 GET validIdentity -> status=200, exact four booleans, no-store/nosniff
@@ -91,10 +91,10 @@ if res.Code != 200 || res.Header().Get("Cache-Control") != "no-store" { t.Fatal(
 if got.MessageSendEnabled || got.DownloadEnabled || got.FilenameSearchEnabled { t.Fatal("production capability opened") }
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/httpserver ./internal/access ./cmd/im-api -run 'Test(FileCapabilities|ProductionFileCapabilities)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** ValidateFileIdentity 用现有身份 snapshot 和 DB 时间，不能以 token 合法代替当前任职。生产路由按实际 fileEnabled 构造，关闭能力仍可已认证查询，不向前端输出角色／对象／凭据。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(files): expose authenticated assembly capabilities"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/httpserver ./internal/access ./cmd/im-api -run 'Test(FileCapabilities|ProductionFileCapabilities)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** ValidateFileIdentity 用现有身份 snapshot 和 DB 时间，不能以 token 合法代替当前任职。生产路由按实际 fileEnabled 构造，关闭能力仍可已认证查询，不向前端输出角色／对象／凭据。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(files): expose authenticated assembly capabilities"`。
 
 ## Task 2：共用文件可见性证据与最终纯判断
 
@@ -530,4 +530,4 @@ scripts/test-file-runtime.sh run-all
 
 自检：各Task都有固定Files／Interfaces、具名失败断言、RED／GREEN命令和提交；跨模块签名一致，Task2输出无副作用纯判定，Task3输出的Match／Page被Task4／5消费；四个能力名称与JS上下文一致；Review Focus五项均有归属。file-download.js是§3的file-messages下载职责的内部拆分，不扩大功能。无名称数据副本／新增生产开关，浏览器真实夹具不进入产品装配。没有把14项复选框或拟运行门禁写为已完成。
 
-**交接：** 用户已确认书面规格和当前助手执行方式；请审阅本实施计划，确认后由当前助手使用 executing-plans 自Task1逐项实现。本轮没有编写产品代码、安装依赖、启动Worker、运行迁移或执行P4-25验收。
+**交接：** 用户已确认书面规格、本实施计划和当前助手执行方式；当前助手使用 executing-plans 自 Task 1 逐项实现。任务状态以复选框和本计划专用台账为准，完整 P4-25 验收与交付尚未完成。
