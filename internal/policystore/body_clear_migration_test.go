@@ -122,7 +122,11 @@ func TestBodyClearMigrationRollback(t *testing.T) {
 		if prefixErr != nil {
 			t.Fatal(prefixErr)
 		}
-		data = append(prefix, data...)
+		newPrefix, pe := os.ReadFile("../../db/migrations/000020_file_message.down.sql")
+		if pe != nil {
+			t.Fatal(pe)
+		}
+		data = append(newPrefix, append(prefix, data...)...)
 		if err != nil {
 			t.Fatal(err)
 		}
