@@ -181,3 +181,20 @@ main{position:relative;z-index:1;min-height:100vh}
 
 #message-search-query,#cross-message-search-query,#cross-message-search-kind{width:100%;min-width:0;padding:11px;border:1px solid #bed8d0;border-radius:8px;background:white;color:#23434c;font:inherit}
 #message-search-query:focus-visible,#cross-message-search-query:focus-visible,#cross-message-search-kind:focus-visible{outline:2px solid #26917f;outline-offset:2px}
+
+.file-controls { margin: 0 24px 12px; padding: 12px; border: 1px solid var(--line, #dce3eb); border-radius: 12px; }
+.file-controls[hidden] { display: none; }
+.file-controls legend { font-weight: 600; }
+.file-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.file-controls p { font-size: 12px; color: var(--muted, #637083); }
+
+.file-message-card strong { overflow-wrap: anywhere; }
+.file-message-card p { margin: 6px 0; font-size: 12px; }
+
+.file-policy-summary { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; padding: 12px; background: #f5f7fa; border-radius: 8px; }
+#file-policy-history li { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.file-search-card strong { overflow-wrap: anywhere; }
+.file-search-card button { margin-right: 8px; }
+.file-save { padding: 0 24px; font-size: 13px; }
+.file-save:empty { display: none; }

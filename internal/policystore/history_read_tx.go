@@ -103,14 +103,15 @@ func readDirectHistoryBatchTxMode(ctx context.Context, tx pgx.Tx, scope historyR
 	page := MessagePage{ConversationID: conversationID,
 		Messages: make([]PulledMessage, 0, min(limit, 100)), NextAfterSeq: afterSeq}
 	histories := make([]historicalPair, 0, min(limit, 100))
+	// Bound message rows before joining card metadata; each message has at most one attachment.
+	// This preserves the lookahead while avoiding a full-conversation join for every proof.
 	rows, err := tx.Query(ctx, `
 SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,
  COALESCE(m.recipient_user_id::text,''),COALESCE(m.recipient_membership_id::text,''),
  m.text_body,m.accepted_at,m.body_cleared_at,
  COALESCE(m.sender_organization_id::text,''),COALESCE(m.recipient_organization_id::text,'')`+historyAttachmentSelect+`
-FROM messages m`+historyAttachmentJoin+`
-WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+`
-ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
+FROM (SELECT * FROM messages m WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+` ORDER BY m.seq LIMIT $4) m`+historyAttachmentJoin+`
+ORDER BY m.seq`, id.TenantID, conversationID, afterSeq, limit+1)
 	if err != nil {
 		return historyReadBatch{}, err
 	}

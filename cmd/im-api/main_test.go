@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
 )
@@ -176,6 +178,34 @@ func TestFileDownloadProductionAssemblyClosed(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/files/00000000-0000-4000-8000-000000000001/content", nil)
 		h.ServeHTTP(w, req)
 		if w.Code != 503 || !strings.Contains(w.Body.String(), "file_download_unavailable") {
+			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestProductionFileCapabilitiesClosed(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		got := productionFileCapabilities(enabled)
+		if got != (httpserver.FileCapabilities{UploadEnabled: enabled}) {
+			t.Fatal("production file sharing capability opened", got)
+		}
+	}
+}
+
+type fileSearchAssemblyAuth struct{}
+
+func (fileSearchAssemblyAuth) Authenticate(context.Context, string) (httpserver.VerifiedIdentity, error) {
+	return httpserver.VerifiedIdentity{TenantID: "11111111-1111-4111-8111-111111111111", UserID: "22222222-2222-4222-8222-222222222222"}, nil
+}
+func TestFileSearchProductionAssembly(t *testing.T) {
+	h := productionFileSearchHandler(http.NotFoundHandler(), fileSearchAssemblyAuth{})
+	for _, p := range []string{"/api/v1/files/search?q=ab", "/api/v1/conversations/11111111-1111-4111-8111-111111111111/files/search?q=ab", "/api/v1/groups/11111111-1111-4111-8111-111111111111/files/search?q=ab"} {
+		r := httptest.NewRequest("GET", p, nil)
+		r.Header.Set("Authorization", "Bearer approved-test")
+		r.Header.Set("X-Acting-Membership-ID", "33333333-3333-4333-8333-333333333333")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != 503 || !strings.Contains(w.Body.String(), "file_search_unavailable") {
 			t.Fatal(w.Code, w.Body.String())
 		}
 	}

@@ -98,6 +98,18 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/web/":
 		filename, contentType = "assets/index.html", "text/html; charset=utf-8"
+	case "/web/file-transport.js":
+		filename, contentType = "assets/file-transport.js", "text/javascript; charset=utf-8"
+	case "/web/file-transfer.js":
+		filename, contentType = "assets/file-transfer.js", "text/javascript; charset=utf-8"
+	case "/web/file-messages.js":
+		filename, contentType = "assets/file-messages.js", "text/javascript; charset=utf-8"
+	case "/web/file-download.js":
+		filename, contentType = "assets/file-download.js", "text/javascript; charset=utf-8"
+	case "/web/file-policy.js":
+		filename, contentType = "assets/file-policy.js", "text/javascript; charset=utf-8"
+	case "/web/file-search.js":
+		filename, contentType = "assets/file-search.js", "text/javascript; charset=utf-8"
 	case "/web/app.js":
 		filename, contentType = "assets/app.js", "text/javascript; charset=utf-8"
 	case "/web/legal-holds.js":

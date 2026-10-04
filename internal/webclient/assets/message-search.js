@@ -3,10 +3,12 @@
 // Search results are separate from the synchronization timeline and stay in memory.
 window.MessageSearch = class {
   constructor(request, context, validTime, canOpen) {
+    this.mode="text";this.fileSearch=null;
     this.request = request; this.context = context; this.validTime = validTime; this.canOpen = canOpen;
     const el = id => document.getElementById(`message-search-${id}`);
     this.entry = el("open"); this.dialog = el("dialog"); this.query = el("query"); this.apply = el("apply");
     this.refresh = el("refresh"); this.more = el("more"); this.list = el("list"); this.hint = el("hint"); this.label = el("context");
+    this.modeSelect=el("mode");this.modeSelect?.addEventListener("change",()=>this.setMode(this.modeSelect.value));
     this.generation = 0; this.loading = false; this.records = []; this.cursor = ""; this.cursors = new Set(); this.controller = null;
     this.entry.addEventListener("click", () => this.open());
     el("close").addEventListener("click", () => this.close());
@@ -23,15 +25,19 @@ window.MessageSearch = class {
     const c = this.context();
     return !!c.identityKey && !!c.conversation && ["direct", "group"].includes(c.kind);
   }
+  setMode(mode){if(!["text","file"].includes(mode) || (mode==="file" && !this.context().filenameSearchEnabled))mode="text";this.mode=mode;if(this.modeSelect)this.modeSelect.value=mode;this.clear();this.hint.textContent=mode==="file"?"仅搜索文件名称，不搜索正文或附件说明。":"请输入正文关键词。";}
   clear(reset = false) {
+    this.fileSearch?.clear();
     this.generation++; this.controller?.abort(); this.controller = null; this.loading = false;
     this.records = []; this.cursor = ""; this.cursors = new Set(); this.list.replaceChildren(); this.hint.textContent = "";
     if (reset) { this.query.value = ""; this.label.textContent = ""; }
     this.update();
   }
   close() { this.clear(true); if (this.dialog.open) this.dialog.close(); }
-  contextChanged() { this.close(); }
+  contextChanged() { this.setMode("text");this.close(); }
   update() {
+    this.modeSelect?.classList.toggle("hidden",!this.context().filenameSearchEnabled);
+    if(this.mode==="file"){this.fileSearch?.update();return;}
     const available = this.available();
     this.entry.classList.toggle("hidden", !available);
     this.query.disabled = !available; this.apply.disabled = !available || this.loading; this.refresh.disabled = !available || this.loading;
@@ -71,6 +77,7 @@ window.MessageSearch = class {
     }
   }
   async load(first) {
+    if(this.mode==="file")return this.fileSearch?.load(first);
     if (!this.dialog.open || !this.available() || this.loading || (!first && !this.cursor)) return;
     const raw = this.query.value, value = this.trim(raw);
     if (!this.unicode(value) || value.includes("\0") || [...value].length < 2 || [...value].length > 100) {
