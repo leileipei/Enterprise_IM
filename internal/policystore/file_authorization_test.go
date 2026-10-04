@@ -164,6 +164,7 @@ func TestFileReservationPolicyExpiresDuringWait(t *testing.T) {
 		_, e := (policystore.Service{DB: peer}).ReserveFile(ctx, publisher(), reservationParams())
 		ch <- e
 	}()
+	waitFileLock(t, c, peer, "", func() { tx.Rollback(ctx) })
 	time.Sleep(2300 * time.Millisecond)
 	if e = tx.Commit(ctx); e != nil {
 		t.Fatal(e)
@@ -191,7 +192,7 @@ func TestFileReservationBlockedDuringConversationWait(t *testing.T) {
 		_, e := (policystore.Service{DB: peer}).ReserveFile(ctx, publisher(), reservationParams())
 		ch <- e
 	}()
-	time.Sleep(100 * time.Millisecond)
+	waitFileLock(t, c, peer, "", func() { tx.Rollback(ctx) })
 	if _, e = tx.Exec(ctx, "UPDATE conversations SET status='policy_blocked' WHERE id=$1", directA); e != nil {
 		t.Fatal(e)
 	}

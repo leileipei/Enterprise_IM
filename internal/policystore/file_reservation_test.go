@@ -128,6 +128,7 @@ func TestFileReservationWaitAuthorization(t *testing.T) {
 		_, e := (policystore.Service{DB: peer}).ReserveFile(ctx, publisher(), reservationParams())
 		ch <- e
 	}()
+	waitFileLock(t, c, peer, "", func() { tx.Rollback(ctx) })
 	time.Sleep(2300 * time.Millisecond)
 	if e = tx.Commit(ctx); e != nil {
 		t.Fatal(e)
