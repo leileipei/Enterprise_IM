@@ -75,10 +75,20 @@ func TestS3PrivateIntegration(t *testing.T) {
 }
 
 func TestS3PrivatePolicyIntegration(t *testing.T) {
-	store := integrationS3(t)
+	bucketName := os.Getenv("IM_TEST_S3_POLICY_BUCKET")
+	if bucketName == "" {
+		t.Skip("dedicated policy fixture bucket required")
+	}
+	if bucketName == os.Getenv("IM_TEST_S3_BUCKET") {
+		t.Fatal("policy fixture must be isolated")
+	}
+	store, e := NewS3(Config{Endpoint: os.Getenv("IM_TEST_S3_ENDPOINT"), Region: "us-east-1", Bucket: bucketName, CredentialSource: "environment", PathStyle: true})
+	if e != nil {
+		t.Fatal(e)
+	}
 	s := store.(*s3Store)
 	ctx := context.Background()
-	bucket := aws.String(os.Getenv("IM_TEST_S3_BUCKET"))
+	bucket := aws.String(bucketName)
 	policy := `{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::` + *bucket + `/*"]}]}`
 	if _, e := s.client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{Bucket: bucket, Policy: aws.String(policy)}); e != nil {
 		t.Fatal("fixture policy setup failed")

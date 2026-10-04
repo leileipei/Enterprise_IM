@@ -13,3 +13,6 @@ clamav-source = https://github.com/Cisco-Talos/clamav/releases/tag/clamav-1.5.4
 clamd-config-sha256 = requires-deployment-generated-readonly-manifest
 scanner-limit-contract = stream25MiB-child0-global250MiB-recursion16-files10000
 scanner-runtime-acceptance = requires-bound-process-and-live-probes
+alpine-resource-image = alpine@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
+mc-test-client-source = https://github.com/minio/mc/releases/tag/RELEASE.2024-11-05T11-29-45Z
+mc-test-client-sha256-darwin-arm64 = e745d9866fc40ff7cf876abeb28e05e153a8cfeba601bcc8daa6e124b81384c5
