@@ -115,7 +115,7 @@ func (s Service) ClaimFileDelete(ctx context.Context, ownerID string) (fileclean
 	ownerID = strings.ToLower(ownerID)
 	ticket, e := cleanupTransaction(ctx, s, func(tx pgx.Tx) (filecleanup.Ticket, error) {
 		// A bounded selection is rechecked after all locks. No storage I/O occurs here.
-		rows, e := tx.Query(ctx, `SELECT f.tenant_id::text,f.conversation_id::text,f.id::text FROM file_objects f JOIN tenant_file_retention_policy p ON p.tenant_id=f.tenant_id LEFT JOIN file_delete_jobs j ON j.tenant_id=f.tenant_id AND j.file_id=f.id WHERE p.cleanup_enabled AND f.state<>'deleted' AND NOT EXISTS(SELECT 1 FROM conversation_legal_holds h WHERE h.tenant_id=f.tenant_id AND h.conversation_id=f.conversation_id AND h.released_at IS NULL) AND NOT EXISTS(SELECT 1 FROM file_delete_versions v WHERE v.tenant_id=f.tenant_id AND v.conversation_id=f.conversation_id AND v.phase IN ('committed','uncertain')) AND (j.id IS NULL OR (j.phase<>'finished' AND (j.owner_id=$1 OR j.lease_expires_at<=clock_timestamp()) AND (j.next_retry_at IS NULL OR j.next_retry_at<=clock_timestamp()))) AND (f.state='delete_pending' OR EXISTS(SELECT 1 FROM message_attachments a JOIN messages msg ON msg.tenant_id=a.tenant_id AND msg.id=a.message_id WHERE a.tenant_id=f.tenant_id AND a.file_id=f.id AND msg.accepted_at+p.file_retention_days*interval '24 hours'<=clock_timestamp()) OR (NOT EXISTS(SELECT 1 FROM message_attachments a WHERE a.tenant_id=f.tenant_id AND a.file_id=f.id) AND f.upload_expires_at<=clock_timestamp())) ORDER BY f.updated_at,f.id LIMIT 20`, ownerID)
+		rows, e := tx.Query(ctx, `SELECT f.tenant_id::text,f.conversation_id::text,f.id::text FROM file_objects f JOIN tenant_file_retention_policy p ON p.tenant_id=f.tenant_id LEFT JOIN file_delete_jobs j ON j.tenant_id=f.tenant_id AND j.file_id=f.id WHERE p.cleanup_enabled AND f.state<>'deleted' AND NOT EXISTS(SELECT 1 FROM file_scan_jobs sj WHERE sj.tenant_id=f.tenant_id AND sj.file_id=f.id AND sj.status='running') AND NOT EXISTS(SELECT 1 FROM conversation_legal_holds h WHERE h.tenant_id=f.tenant_id AND h.conversation_id=f.conversation_id AND h.released_at IS NULL) AND NOT EXISTS(SELECT 1 FROM file_delete_versions v WHERE v.tenant_id=f.tenant_id AND v.conversation_id=f.conversation_id AND v.phase IN ('committed','uncertain')) AND (j.id IS NULL OR (j.phase<>'finished' AND (j.owner_id=$1 OR j.lease_expires_at<=clock_timestamp()) AND (j.next_retry_at IS NULL OR j.next_retry_at<=clock_timestamp()))) AND (EXISTS(SELECT 1 FROM message_attachments a JOIN messages msg ON msg.tenant_id=a.tenant_id AND msg.id=a.message_id WHERE a.tenant_id=f.tenant_id AND a.file_id=f.id AND msg.accepted_at+p.file_retention_days*interval '24 hours'<=clock_timestamp()) OR (NOT EXISTS(SELECT 1 FROM message_attachments a WHERE a.tenant_id=f.tenant_id AND a.file_id=f.id) AND f.upload_expires_at<=clock_timestamp())) ORDER BY f.updated_at,f.id LIMIT 20`, ownerID)
 		if e != nil {
 			return zero, e
 		}
@@ -146,7 +146,16 @@ func (s Service) ClaimFileDelete(ctx context.Context, ownerID string) (fileclean
 			if held || !p.CleanupEnabled || m.State == files.StateDeleted {
 				continue
 			}
-			if m.State != files.StateDeletePending {
+			// A running scanner must retain its normal state/claim so it can settle.
+			// File lock serializes this recheck with scan claim and completion.
+			var scanning bool
+			if e = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM file_scan_jobs WHERE tenant_id=$1 AND file_id=$2 AND status='running')`, m.TenantID, m.ID).Scan(&scanning); e != nil {
+				return zero, e
+			}
+			if scanning {
+				continue
+			}
+			{
 				due, e := deleteDue(ctx, tx, m, p, at)
 				if e != nil {
 					return zero, e
@@ -219,6 +228,9 @@ func (s Service) ClaimFileDelete(ctx context.Context, ownerID string) (fileclean
 				if e != nil {
 					return zero, e
 				}
+			}
+			if reason == "" && exists && j.Phase == "blocked" && j.Reason != "in_flight" && j.Reason != "unknown_upload" {
+				reason = j.Reason
 			}
 			if reason != "" {
 				_, e = tx.Exec(ctx, `UPDATE file_delete_jobs SET phase='blocked',reason_code=$2,source_safe=false,inventory_exhausted=false,next_retry_at=$3 WHERE id=$1`, job, reason, deleteRetryAt(at, retryCount))

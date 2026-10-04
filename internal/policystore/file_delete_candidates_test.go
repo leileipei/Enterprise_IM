@@ -10,6 +10,7 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/filecleanup"
 	"github.com/leileipei/Enterprise_IM/internal/filedownload"
 	"github.com/leileipei/Enterprise_IM/internal/files"
+	"github.com/leileipei/Enterprise_IM/internal/objectstore"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
 
@@ -142,6 +143,12 @@ func TestFileDeleteCandidatesInFlight(t *testing.T) {
 					runtimeScanJob(t, c, m)
 				}
 			}
+			if kind == "scan" {
+				if _, found, e := s.ClaimFileDelete(context.Background(), uploadOwner); e != nil || found {
+					t.Fatal("running scan lost settlement state", found, e)
+				}
+				return
+			}
 			ticket := claimDelete(t, s)
 			phase, _, safe, reason := deleteJobFacts(t, c, ticket)
 			if phase != "blocked" || safe || reason != "in_flight" && reason != "unknown_upload" {
@@ -207,5 +214,83 @@ func TestFileDeleteCandidatesResumeAfterDownloadRepair(t *testing.T) {
 	}
 	if inventory.Exhausted {
 		t.Fatal("retry reused stale inventory")
+	}
+}
+
+type quarantineQueueObjects struct {
+	t       *testing.T
+	blocked string
+	lists   int
+}
+
+func (o *quarantineQueueObjects) ListVersions(_ context.Context, l objectstore.Location, _ objectstore.VersionCursor, _ int) (objectstore.VersionPage, error) {
+	if l.FileID == o.blocked {
+		o.t.Fatal("quarantined source was relisted automatically")
+	}
+	o.lists++
+	return objectstore.VersionPage{Exhausted: true}, nil
+}
+func (o *quarantineQueueObjects) ProbeVersion(context.Context, objectstore.VersionRef) (objectstore.VersionPresence, error) {
+	o.t.Fatal("unexpected probe")
+	return objectstore.VersionUnknown, nil
+}
+func (o *quarantineQueueObjects) DeleteVersion(context.Context, objectstore.VersionRef) error {
+	o.t.Fatal("unexpected delete")
+	return nil
+}
+func TestFileDeleteCandidatesQuarantineDoesNotStarveQueue(t *testing.T) {
+	for _, reason := range []string{"unknown_version", "delete_marker"} {
+		t.Run(reason, func(t *testing.T) {
+			c, s, m := deleteCandidateFixture(t, "ready")
+			ctx := context.Background()
+			ticket := claimDelete(t, s)
+			if e := s.RecordFileDeleteInventory(ctx, ticket, filecleanup.Inventory{Exhausted: true, Reason: reason}); !errors.Is(e, filecleanup.ErrBlocked) {
+				t.Fatal(e)
+			}
+			objects := &quarantineQueueObjects{t: t, blocked: m.ID}
+			w, e := filecleanup.NewWorker(s, objects, uploadOwner)
+			if e != nil {
+				t.Fatal(e)
+			}
+			for round := 0; round < 3; round++ {
+				good := freshFile()
+				good.UpdatedAt = downloadDeadline(t, c, 0)
+				if e = writeFile(c, good, true); e != nil {
+					t.Fatal(e)
+				}
+				run(t, c, `SELECT pg_sleep(GREATEST(0,EXTRACT(EPOCH FROM ((SELECT next_retry_at FROM file_delete_jobs WHERE id=$1)-clock_timestamp())))+0.01)`, ticket.JobID)
+				if found, e := w.Step(ctx); !found || !errors.Is(e, filecleanup.ErrBlocked) {
+					t.Fatal("quarantine step", found, e)
+				}
+				var retry bool
+				if e = c.QueryRow(ctx, `SELECT next_retry_at>clock_timestamp() FROM file_delete_jobs WHERE id=$1`, ticket.JobID).Scan(&retry); e != nil || !retry {
+					t.Fatal("quarantine lost its bounded retry", retry, e)
+				}
+				if found, e := w.Step(ctx); e != nil || !found {
+					t.Fatal("healthy queue starved", found, e)
+				}
+				var state string
+				if e = c.QueryRow(ctx, "SELECT state FROM file_objects WHERE id=$1", good.ID).Scan(&state); e != nil || state != "deleted" {
+					t.Fatal(state, e)
+				}
+			}
+			var permits int
+			if e = c.QueryRow(ctx, "SELECT count(*) FROM file_delete_versions WHERE file_id=$1", m.ID).Scan(&permits); e != nil || permits != 0 || objects.lists != 3 {
+				t.Fatal(permits, objects.lists, e)
+			}
+		})
+	}
+}
+func TestFileDeleteCandidatesRetentionExtensionSkipsPending(t *testing.T) {
+	c, s, _, m := fileHistoryFixture(t, "direct")
+	cleanupPolicy(t, c, 1, true)
+	ticket := claimDelete(t, s)
+	cleanupPolicy(t, c, 365, true)
+	if _, found, e := s.ClaimFileDelete(context.Background(), uploadOwner); e != nil || found {
+		t.Fatal("extended pending job monopolized admission", found, e)
+	}
+	var state string
+	if e := c.QueryRow(context.Background(), "SELECT state FROM file_objects WHERE id=$1", m.ID).Scan(&state); e != nil || state != "delete_pending" || ticket.FileID != m.ID {
+		t.Fatal(state, e)
 	}
 }

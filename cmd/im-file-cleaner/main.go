@@ -90,10 +90,15 @@ func runCleaner(ctx context.Context, args []string, getenv func(string) string, 
 		sweep, cancel := context.WithTimeout(ctx, 120*time.Second)
 		repaired, repairErr := ops.Repair(sweep)
 		var stepErr error
-		processed := 0
+		processed, blocked := 0, 0
 		if repairErr == nil {
 			for processed < 20 {
 				found, e := ops.Step(sweep)
+				if found && errors.Is(e, filecleanup.ErrBlocked) {
+					blocked++
+					processed++
+					continue
+				}
 				if e != nil {
 					stepErr = e
 					break
@@ -109,7 +114,7 @@ func runCleaner(ctx context.Context, args []string, getenv func(string) string, 
 		if repairErr != nil || stepErr != nil {
 			status = "file_cleaner_unavailable"
 		}
-		if e = json.NewEncoder(out).Encode(map[string]any{"status": status, "processed": processed, "repaired": repaired}); e != nil {
+		if e = json.NewEncoder(out).Encode(map[string]any{"status": status, "processed": processed, "blocked": blocked, "repaired": repaired}); e != nil {
 			return e
 		}
 		if *once {

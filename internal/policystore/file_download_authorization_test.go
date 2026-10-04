@@ -300,3 +300,46 @@ func TestFileDownloadAuthorizationLateGroupHistoryHardDeny(t *testing.T) {
 		t.Fatal("late group history deny", e)
 	}
 }
+
+type delayedLastGroupDenialTx struct {
+	pgx.Tx
+	begins  time.Time
+	queries *int
+}
+
+func (d delayedLastGroupDenialTx) QueryRow(ctx context.Context, q string, args ...any) pgx.Row {
+	if strings.Contains(q, "user_id<>$3") {
+		*d.queries++
+		if *d.queries >= 2 {
+			d.Tx.Exec(ctx, `SELECT pg_sleep(GREATEST(0,EXTRACT(EPOCH FROM ($1::timestamptz-clock_timestamp())))+0.01)`, d.begins)
+		}
+	}
+	return d.Tx.QueryRow(ctx, q, args...)
+}
+func TestFileDownloadAuthorizationHardDenyDuringLastGroupQuery(t *testing.T) {
+	c, s, _, m := fileHistoryFixture(t, "group")
+	grantPublisher(t, c)
+	ctx := context.Background()
+	var begins time.Time
+	if e := c.QueryRow(ctx, "SELECT clock_timestamp()+interval '1 second'").Scan(&begins); e != nil {
+		t.Fatal(e)
+	}
+	// The active rule forces a late peer lookup but has no matching group peer.
+	rules := []policy.Rule{
+		{ID: "force-last-peer-query", TenantID: tenantA, Effect: policy.EffectHardDeny, Action: policy.ActionSendMessage, SourceOrganizationID: orgA, TargetOrganizationID: orgA2, SourceMembershipID: targetM2, TargetMembershipID: targetM, EffectiveFrom: at.Add(-time.Hour), Reason: "outside group"},
+		{ID: "during-last-peer-query", TenantID: tenantA, Effect: policy.EffectHardDeny, Action: policy.ActionSendMessage, SourceOrganizationID: orgA, TargetOrganizationID: orgA, SourceMembershipID: targetM2, TargetMembershipID: groupMemberC, EffectiveFrom: begins, Reason: "scheduled group history block"},
+	}
+	if _, e := s.Publish(ctx, publisher(), 0, rules, "last query"); e != nil {
+		t.Fatal(e)
+	}
+	tx, e := c.Begin(ctx)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer tx.Rollback(ctx)
+	queries := 0
+	_, _, _, _, e = policystore.FileDownloadAuthorizationForTest(ctx, delayedLastGroupDenialTx{Tx: tx, begins: begins, queries: &queries}, groupMemberIdentity(), m.ID)
+	if !errors.Is(e, filedownload.ErrNotFound) {
+		t.Fatal("future whole-group deny activated during final peer lookup", queries, e)
+	}
+}

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/filedownload"
 	"github.com/leileipei/Enterprise_IM/internal/files"
@@ -212,10 +213,15 @@ func TestFileDownloadRealOIDCScan(t *testing.T) {
 	base, _, spool := explicitDownload(t, f, realTransferObjects(t), evidence)
 	errs := make(chan error, 2)
 	for _, who := range []struct{ subject, member string }{{"admin", adminM}, {"peer", targetM2}} {
-		token := sign(who.subject, time.Now().Add(15*time.Second))
-		r := downloadRequest(t, base, token, who.member, m.ID)
+		user := adminA
+		if who.subject == "peer" {
+			user = personA
+		}
 		go func() {
-			for attempt := 0; attempt < 20; attempt++ {
+			lastStatus, lastCode := 0, ""
+			operatorDeadline := time.Now().Add(45 * time.Second)
+			for time.Now().Before(operatorDeadline) {
+				r := downloadRequest(t, base, sign(who.subject, time.Now().Add(15*time.Second)), who.member, m.ID)
 				res, e := (&http.Client{Timeout: 10 * time.Second}).Do(r)
 				if e != nil {
 					errs <- e
@@ -224,9 +230,37 @@ func TestFileDownloadRealOIDCScan(t *testing.T) {
 
 				data, e := io.ReadAll(res.Body)
 				res.Body.Close()
+				lastStatus = res.StatusCode
+				if bytes.Contains(data, []byte("download_audit_pending")) {
+					lastCode = "audit_pending"
+				} else if bytes.Contains(data, []byte("download_in_progress")) {
+					lastCode = "busy"
+				} else {
+					lastCode = "other"
+				}
 				if res.StatusCode == 409 || res.StatusCode == 503 {
-					f.repo.RepairFileDownloadAudit(context.Background(), clientB, 20)
-					time.Sleep(20 * time.Millisecond)
+					// This is explicit test-operator recovery. A failed settlement
+					// cannot be repaired by guessing that the full HTTP body meant completion.
+					var retryAt *time.Time
+					var dbNow time.Time
+					if qe := f.pool.QueryRow(context.Background(), `SELECT max(deadline),clock_timestamp() FROM file_download_sessions WHERE file_id=$1 AND requester_user_id=$2 AND NOT audit_acked`, m.ID, user).Scan(&retryAt, &dbNow); qe != nil {
+						errs <- errors.New("operator session query failed")
+						return
+					}
+					if retryAt != nil && retryAt.After(dbNow) {
+						wait := retryAt.Sub(dbNow) + 10*time.Millisecond
+						if wait > time.Until(operatorDeadline) {
+							errs <- errors.New("operator recovery exceeded bound")
+							return
+						}
+						time.Sleep(wait)
+					} else {
+						time.Sleep(20 * time.Millisecond)
+					}
+					if _, qe := f.repo.RepairFileDownloadAudit(context.Background(), clientB, 20); qe != nil {
+						errs <- errors.New("operator audit repair failed")
+						return
+					}
 					continue
 				}
 				_, params, headerErr := mime.ParseMediaType(res.Header.Get("Content-Disposition"))
@@ -237,12 +271,28 @@ func TestFileDownloadRealOIDCScan(t *testing.T) {
 				errs <- nil
 				return
 			}
-			errs <- errors.New("download admission retry exhausted")
+			errs <- fmt.Errorf("download admission retry exhausted status=%d code=%s", lastStatus, lastCode)
 		}()
 	}
+	var admissionErr error
 	for i := 0; i < 2; i++ {
-		if e := <-errs; e != nil {
-			t.Fatal(e)
+		admissionErr = errors.Join(admissionErr, <-errs)
+	}
+	{
+		if e := admissionErr; e != nil {
+			var preparing, authorized, terminal int
+			f.conn.QueryRow(context.Background(), `SELECT count(*) FILTER (WHERE phase='preparing'),count(*) FILTER (WHERE phase='authorized'),count(*) FILTER (WHERE phase IN ('completed','interrupted','unknown')) FROM file_download_sessions`).Scan(&preparing, &authorized, &terminal)
+			select {
+			case se := <-evidence.settled:
+				var pe *pgconn.PgError
+				code := "none"
+				if errors.As(se, &pe) {
+					code = pe.Code
+				}
+				t.Logf("settlement pgcode=%s busy=%t unavailable=%t", code, errors.Is(se, filedownload.ErrBusy), errors.Is(se, filedownload.ErrUnavailable))
+			default:
+			}
+			t.Fatalf("%v sessions preparing=%d authorized=%d terminal=%d", e, preparing, authorized, terminal)
 		}
 	}
 	for i := 0; i < 2; i++ {
@@ -331,8 +381,15 @@ func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
 	sign := downloadJWTIssuer(t, f)
 	m := scanDownloadBody(t, f, bytes.Repeat([]byte("x"), 8<<20))
 	evidence := &tcpEvidence{first: make(chan struct{})}
-	base, _, _ := explicitDownload(t, f, realTransferObjects(t), evidence)
-	expiry := time.Unix(time.Now().Add(3*time.Second).Unix(), 0)
+	objects := &gatedObjects{Store: realTransferObjects(t), entered: make(chan struct{}), release: make(chan struct{})}
+	base, _, _ := explicitDownload(t, f, objects, evidence)
+	expiry := time.Unix(time.Now().Add(4*time.Second).Unix(), 0)
+	go func() {
+		timer := time.NewTimer(time.Until(expiry.Add(-800 * time.Millisecond)))
+		defer timer.Stop()
+		<-timer.C
+		close(objects.release)
+	}()
 	token := sign("admin", expiry)
 	address := strings.TrimPrefix(base, "http://")
 	conn, e := net.Dial("tcp", address)
@@ -359,9 +416,9 @@ func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
 	}
 	// Stop reading the real TCP connection; the kernel buffer is deliberately small.
 	deadline := time.Now().Add(8 * time.Second)
-	var phase string
+	var phase, reason string
 	for time.Now().Before(deadline) {
-		if e = f.conn.QueryRow(context.Background(), `SELECT phase FROM file_download_sessions WHERE file_id=$1`, m.ID).Scan(&phase); e != nil {
+		if e = f.conn.QueryRow(context.Background(), `SELECT phase,COALESCE(reason_code,'') FROM file_download_sessions WHERE file_id=$1`, m.ID).Scan(&phase, &reason); e != nil {
 			t.Fatal(e)
 		}
 		if phase == "interrupted" {
@@ -371,8 +428,8 @@ func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
 	}
 	evidence.mu.Lock()
 	defer evidence.mu.Unlock()
-	if phase != "interrupted" || !evidence.timeout || evidence.deadline.After(expiry) || evidence.last.After(expiry.Add(300*time.Millisecond)) || evidence.accepted >= 8<<20 {
-		t.Fatal("blocked writer crossed bound", phase, evidence.timeout, evidence.deadline.Sub(expiry), evidence.accepted)
+	if reason != "token_expired" || !evidence.started.Before(expiry) || phase != "interrupted" || !evidence.timeout || !evidence.deadline.Equal(expiry) || evidence.last.After(expiry.Add(300*time.Millisecond)) || evidence.accepted >= 8<<20 {
+		t.Fatal("blocked writer crossed bound", phase, reason, evidence.timeout, evidence.deadline.Sub(expiry), evidence.accepted, evidence.started.Sub(expiry))
 	}
 	t.Logf("TCP accepted=%d client-buffered=%d last-writer=%s timeout-start=%s exp=%s deadline=%s", evidence.accepted, reader.Buffered(), evidence.last.UTC().Format(time.RFC3339Nano), evidence.started.UTC().Format(time.RFC3339Nano), expiry.UTC().Format(time.RFC3339Nano), evidence.deadline.UTC().Format(time.RFC3339Nano))
 }

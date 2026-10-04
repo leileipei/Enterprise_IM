@@ -127,15 +127,37 @@ func TestFileDeleteConcurrentLateScan(t *testing.T) {
 		t.Fatal(e)
 	}
 	cleanupPolicy(t, c, 365, true)
+	if _, found, e := s.ClaimFileDelete(ctx, uploadOwner); e != nil || found {
+		t.Fatal("running scan was stranded by cleanup", found, e)
+	}
+	decision := cleanScan(job)
+	copy(decision.SHA256[:], job.File.SHA256)
+	if e = s.CompleteFileScan(ctx, job, decision); e != nil {
+		t.Fatal("active scan could not settle", e)
+	}
 	ticket := claimDelete(t, s)
 	if ticket.FileID != m.ID {
 		t.Fatal(ticket)
 	}
-	if e = s.CompleteFileScan(ctx, job, cleanScan(job)); !errors.Is(e, files.ErrLeaseLost) {
+	if e = s.CompleteFileScan(ctx, job, decision); !errors.Is(e, files.ErrLeaseLost) {
 		t.Fatal("late scanner resurrected pending", e)
 	}
-	var state string
-	if e = c.QueryRow(ctx, "SELECT state FROM file_objects WHERE id=$1", m.ID).Scan(&state); e != nil || state != "delete_pending" {
-		t.Fatal(state, e)
+	if e = s.RecordFileDeleteInventory(ctx, ticket, filecleanup.Inventory{Exhausted: true}); e != nil {
+		t.Fatal(e)
+	}
+	permit := commitDelete(t, s, ticket, m.ObjectVersionID)
+	if e = s.SettleFileDeleteVersion(ctx, permit, filecleanup.AbsenceProof{VersionID: permit.VersionID, Absent: true, CheckedAt: downloadDeadline(t, c, 0)}); e != nil {
+		t.Fatal(e)
+	}
+	if e = s.RecordFileDeleteInventory(ctx, ticket, filecleanup.Inventory{Exhausted: true}); e != nil {
+		t.Fatal(e)
+	}
+	if e = s.FinalizeFileDelete(ctx, ticket); e != nil {
+		t.Fatal("settled scan could not release cleanup", e)
+	}
+	var state, status string
+	var quota int64
+	if e = c.QueryRow(ctx, `SELECT f.state,j.status,(SELECT COALESCE(sum(declared_size_bytes),0) FROM file_objects WHERE state<>'deleted') FROM file_objects f JOIN file_scan_jobs j ON j.file_id=f.id WHERE f.id=$1`, m.ID).Scan(&state, &status, &quota); e != nil || state != "deleted" || status != "completed" || quota != 0 {
+		t.Fatal(state, status, quota, e)
 	}
 }

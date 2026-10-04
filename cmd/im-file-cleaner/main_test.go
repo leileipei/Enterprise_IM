@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"github.com/leileipei/Enterprise_IM/internal/filecleanup"
 	"testing"
 )
 
@@ -40,5 +41,26 @@ func TestFileCleanerPausedStillRepairsAudit(t *testing.T) {
 	e := runCleaner(context.Background(), []string{"-execute", "-once"}, func(string) string { return "" }, &out, func(context.Context, func(string) string) (cleanerOperations, error) { return ops, nil })
 	if e != nil || len(ops.calls) != 3 || ops.calls[0] != "repair" || ops.calls[1] != "step" || ops.calls[2] != "close" {
 		t.Fatal(e, ops.calls)
+	}
+}
+
+type blockedCleanerOps struct {
+	cleanerOpsStub
+	steps int
+}
+
+func (o *blockedCleanerOps) Step(context.Context) (bool, error) {
+	o.steps++
+	if o.steps == 1 {
+		return true, filecleanup.ErrBlocked
+	}
+	return o.steps == 2, nil
+}
+func TestFileCleanerContinuesAfterQuarantine(t *testing.T) {
+	ops := &blockedCleanerOps{}
+	var out bytes.Buffer
+	e := runCleaner(context.Background(), []string{"-execute", "-once"}, func(string) string { return "" }, &out, func(context.Context, func(string) string) (cleanerOperations, error) { return ops, nil })
+	if e != nil || ops.steps != 3 || !bytes.Contains(out.Bytes(), []byte(`"blocked":1`)) {
+		t.Fatal("quarantine stopped sweep", e, ops.steps, out.String())
 	}
 }

@@ -195,18 +195,12 @@ func authorizeFileDownloadTx(ctx context.Context, tx pgx.Tx, id access.TrustedId
 	if !memberActiveAt(actor, fresh) {
 		return fail(filedownload.ErrInvalidIdentity)
 	}
-	// Reapply historical checks after participation I/O, including the group's
-	// whole-history hard deny. A future rule may have activated during that I/O.
+	var groupDenials []policy.Rule
 	if kind == "group" {
-		page, e = filterGroupHistoryBatchTx(ctx, tx, scope, batch, fresh)
-	} else {
-		page = filterDirectHistoryBatch(scope, batch, fresh)
-	}
-	if e != nil {
-		return fail(e)
-	}
-	if len(page.Messages) != 1 || page.Messages[0].Redacted {
-		return fail(filedownload.ErrNotFound)
+		groupDenials, e = groupHistoryMatchingDenials(ctx, tx, id, m.ConversationID, actor, batch.ReaderIntervals, rules)
+		if e != nil {
+			return fail(e)
+		}
 	}
 	fresh, e = fileClock(ctx, tx)
 	if e != nil {
@@ -215,7 +209,7 @@ func authorizeFileDownloadTx(ctx context.Context, tx pgx.Tx, id access.TrustedId
 	if !memberActiveAt(actor, fresh) {
 		return fail(filedownload.ErrInvalidIdentity)
 	}
-	if p := filterDirectHistoryBatch(scope, batch, fresh); len(p.Messages) != 1 || p.Messages[0].Redacted {
+	if p := filterDirectHistoryBatch(scope, batch, fresh); len(p.Messages) != 1 || p.Messages[0].Redacted || groupHistoryDenialsActive(groupDenials, fresh) {
 		return fail(filedownload.ErrNotFound)
 	}
 	uploader, found := loaded[m.UploaderMembershipID]
