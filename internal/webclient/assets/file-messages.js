@@ -3,8 +3,8 @@
  const validText=v => typeof v === "string" && !v.includes("\0") && new TextEncoder().encode(v).length <= 16384 && new TextDecoder("utf-8",{fatal:true}).decode(new TextEncoder().encode(v)) === v;
  const types=["application/pdf","image/png","image/jpeg","text/plain"];
  class FileMessages {
-  #request;#context;#uuid;#canSend;#onPending;#onACK;#ready=null;#pending=null;#busy=false;#generation=0;#controller=null;
-  constructor({request,context,uuidV7,canSend,onPending,onACK}) {this.#request=request;this.#context=context;this.#uuid=uuidV7;this.#canSend=canSend;this.#onPending=onPending;this.#onACK=onACK;}
+  #request;#context;#uuid;#canSend;#onPending;#onACK;#download;#capabilities;#ready=null;#pending=null;#busy=false;#generation=0;#controller=null;
+  constructor({request,context,uuidV7,canSend,onPending,onACK,download,capabilities}) {this.#request=request;this.#context=context;this.#uuid=uuidV7;this.#canSend=canSend;this.#onPending=onPending;this.#onACK=onACK;this.#download=download;this.#capabilities=capabilities;}
   attach(ready) {
    if(this.#pending || this.#busy || !this.#canSend() || !window.FileTransport.validUUID(ready?.fileID) || !window.FileTransport.sameContext(ready.context,this.#context()))throw new Error("当前发送槽不可用");
    this.#ready=Object.freeze({fileID:ready.fileID,context:Object.freeze({...ready.context})});
@@ -40,7 +40,9 @@
    if(!available){card.textContent="附件当前不可用";return card;}
    const name=document.createElement("strong");name.textContent=a.original_filename;
    const meta=document.createElement("p");meta.textContent=`${a.actual_size_bytes} 字节 · ${a.detected_media_type}`;
-   const caption=document.createElement("p");caption.textContent=message.caption;card.append(name,meta,caption);card.setAttribute("data-file-id",a.file_id);return card;
+   const caption=document.createElement("p");caption.textContent=message.caption;card.append(name,meta,caption);
+   if(this.#download && this.#capabilities?.()?.download_enabled===true){const button=document.createElement("button");button.type="button";button.className="secondary-button";button.textContent="请求下载";button.addEventListener("click",async()=>{button.disabled=true;try{await this.#download.request(a.file_id);}catch(_){/* Shared save container reports safe failure. */}finally{button.disabled=false;}});card.append(button);}
+   card.setAttribute("data-file-id",a.file_id);return card;
   }
  }
  window.FileMessages=FileMessages;

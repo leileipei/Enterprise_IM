@@ -153,10 +153,12 @@ const fileTransport = new window.FileTransport({snapshot:() => ({...fileContext(
 let fileCapabilities = Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
 let fileMessagePending = false;
 let fileEffectivePolicy = null, fileReady = null, fileAccessController = null, fileAccessGeneration = 0;
+const fileDownload=new window.FileDownload({transport:fileTransport,context:fileContext,capabilities:()=>fileCapabilities,saveContainer:element("file-save")});
 const fileTransfer = new window.FileTransfer({request,transport:fileTransport,context:fileContext,
  onReady:ready => {try{fileMessages.attach(ready);fileReady=ready;}catch(_){fileReady=null;element("file-status").textContent="发送槽已被占用，请取消后核对。";}},
  onClear:() => {fileReady=null;fileMessages.contextChanged();}});
 const fileMessages=new window.FileMessages({request,context:fileContext,uuidV7,canSend:canSendFileInContext,
+ download:fileDownload,capabilities:()=>fileCapabilities,
  onPending:pending => {fileMessagePending=pending;renderFileAccess();},
  onACK:async () => {fileTransfer.contextChanged();messageText.value="";messageText.readOnly=false;discardPendingButton.classList.add("hidden");element("send-hint").textContent="已保存";await syncMessages();}});
 function canSendFileInContext() {
@@ -194,7 +196,7 @@ async function refreshFileAccess(generation) {
  finally {clearTimeout(timer);if(generation === fileAccessGeneration){fileAccessController=null;renderFileAccess();}}
 }
 function filesContextChanged() {
- fileTransport.contextChanged(); fileTransfer.contextChanged(); fileMessages.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
+ fileTransport.contextChanged(); fileTransfer.contextChanged(); fileMessages.contextChanged(); fileDownload.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
  fileEffectivePolicy=null;fileCapabilities=Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
  element("file-controls").hidden=true;
  const generation=++fileAccessGeneration;queueMicrotask(() => refreshFileAccess(generation));

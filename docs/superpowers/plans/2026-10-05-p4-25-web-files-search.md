@@ -331,7 +331,7 @@ assert.equal(redactedCard.textContent.includes(privateFilename), false);
 - `request(fileID:string):Promise<void>`；`save():void`；`contextChanged():void`。
 - Task 8 卡片可用＋capabilities.download_enabled 时调用 request；不依赖保留为 false 的 download_available 判断实际授权。
 
-- [ ] **Step 1：新增失败测试。** TestWebFileDownload；fileDownloadDispositionSafety／fileDownloadNoPartialSave／fileDownloadBlobLifetime／fileDownloadOneAtTime。
+- [x] **Step 1：新增失败测试。** TestWebFileDownload；fileDownloadDispositionSafety／fileDownloadNoPartialSave／fileDownloadBlobLifetime／fileDownloadOneAtTime。
 
 ```text
 filename*=UTF-8 Chinese valid -> parsed safe filename
@@ -351,10 +351,10 @@ assert.equal(createdObjectURLs.length, 0);
 assert.deepEqual(revokedObjectURLs, createdObjectURLsAfterCompleteRead);
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileDownload -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** Transport 完整返回后再次确认 FileContext 再创建临时 Blob URL，用户显式保存；controller／对象 URL／定时器全部按上下文取消。解析 disposition 仅接收安全明确名称，CSP 维持原限制；浏览器不支持保存则显示失败，不改为导航 token URL 或预览。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add complete verified download save lifecycle"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileDownload -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** Transport 完整返回后再次确认 FileContext 再创建临时 Blob URL，用户显式保存；controller／对象 URL／定时器全部按上下文取消。解析 disposition 仅接收安全明确名称，CSP 维持原限制；浏览器不支持保存则显示失败，不改为导航 token URL 或预览。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add complete verified download save lifecycle"`。
 
 ## Task 10：管理员文件设置与变更历史
 
