@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27.1（沿用 go.mod）、pgx/v5、PostgreSQL、现有 Redis／WebSocket／OIDC／Chrome 测试工具、P4-22 私有版本化 S3 与真实 ClamAV／qpdf。无新产品依赖。
 
-**Spec:** [已确认规格](../specs/2026-10-04-p4-23-file-message-design.md)，确认版本 `885f62fd1ace1bf40bc896bf76298f1175254e65`；产品基线 `b03a1977cf39f2f19db9d45cd4bce9a7338a2372`。本计划尚待用户审阅，复选框均未实施。
+**Spec:** [已确认规格](../specs/2026-10-04-p4-23-file-message-design.md)，确认版本 `885f62fd1ace1bf40bc896bf76298f1175254e65`；产品基线 `b03a1977cf39f2f19db9d45cd4bce9a7338a2372`。用户已确认实施计划。Task 1～8 已提交并通过逐项门禁；Task 9 等待满足病毒库新鲜度要求，Task 10 尚未执行。详见阶段验收记录。
 
 ## Global Constraints
 
@@ -69,7 +69,7 @@
 
 **Interfaces:** 产出 messages.message_type 和规格第 5 节 message_attachments 六类字段；主键 (tenant_id,message_id)，唯一 (tenant_id,file_id)。测试助手 `fileMessageFixture(t *testing.T,c *pgx.Conn,conversationID,userID,membershipID string) files.Metadata` 只建立专用 SQL 约束夹具，不充当真实扫描证据。Task 3～8 的数据库边界测试可使用该夹具，真实扫描和端到端成功证明必须来自 Task 9。
 
-- [ ] **1. 写 RED 测试**：TestFileMessageMigrationPreservesText、TestFileMessageSchemaSources、TestFileMessageSchemaCardinality、TestFileMessageSchemaReadyBinding、TestFileMessageSchemaFingerprintRetirement、TestFileMessageDownGuards、TestFileMessageDownConcurrentInsert。断言跨租户／会话／用户／任职、text 带附件、file 无附件／两附件、错误扫描指纹、未 ready 插入均被真实 SQL 拒绝；空 caption 合法，清理后不可恢复；退役只改两份或一份指纹均拒绝。RF5 以第二连接证明 down 锁后不会漏掉并发提交。
+- [x] **1. 写 RED 测试**：TestFileMessageMigrationPreservesText、TestFileMessageSchemaSources、TestFileMessageSchemaCardinality、TestFileMessageSchemaReadyBinding、TestFileMessageSchemaFingerprintRetirement、TestFileMessageDownGuards、TestFileMessageDownConcurrentInsert。断言跨租户／会话／用户／任职、text 带附件、file 无附件／两附件、错误扫描指纹、未 ready 插入均被真实 SQL 拒绝；空 caption 合法，清理后不可恢复；退役只改两份或一份指纹均拒绝。RF5 以第二连接证明 down 锁后不会漏掉并发提交。
 代表断言（TestFileMessageSchemaCardinality 中建立 file 消息而不写关联，提交应失败）：
 ```go
 err := tx.Commit(ctx)
@@ -77,10 +77,10 @@ if err == nil { t.Fatal("file message without attachment committed") }
 expectFileSQLState(t, err, "23514")
 ```
 
-- [ ] **2. 运行 RED**：`go test ./internal/policystore -run '^TestFileMessage(Migration|Schema|Down)' -count=1 -v`，在已配置专用 IM_TEST_DATABASE_URL 下因缺少 000020／列失败；数据库连接错误或 SKIP 不计 RED。
-- [ ] **3. 实现 SQL 与夹具顺序**：为消息和文件来源增加必要复合唯一键／FK；绑定守卫按会话→文件锁序校验 ready／同指纹。用延迟约束证明 file 恰一个、text 零附件及三份退役时间一致；默认 text 前进兼容。down 在结构修改前按固定次序锁 messages／message_attachments，检查存在 file／绑定则拒绝。显式回退链先 down20，再 down19／18；重新前进逆序。旧 body_clear／digest_retirement 的回退夹具也先移除 20，使其拒绝仍由被测 15／16 的原保护产生，不能用新依赖冲突替代原证明。新测试按旧迁移版本验证前进后的历史正文和摘要未变化。
-- [ ] **4. GREEN**：重复上述命令，再 `go test ./internal/policystore ./internal/retention -run 'Migration|Schema|Down' -count=1 -v`；所有涉及真实数据库的用例 PASS，无跳过，旧清理／退役约束继续有效。
-- [ ] **5. 提交**：仅暂存本任务列出的文件；`git commit -m "feat(db): enforce single file message bindings"`。
+- [x] **2. 运行 RED**：`go test ./internal/policystore -run '^TestFileMessage(Migration|Schema|Down)' -count=1 -v`，在已配置专用 IM_TEST_DATABASE_URL 下因缺少 000020／列失败；数据库连接错误或 SKIP 不计 RED。
+- [x] **3. 实现 SQL 与夹具顺序**：为消息和文件来源增加必要复合唯一键／FK；绑定守卫按会话→文件锁序校验 ready／同指纹。用延迟约束证明 file 恰一个、text 零附件及三份退役时间一致；默认 text 前进兼容。down 在结构修改前按固定次序锁 messages／message_attachments，检查存在 file／绑定则拒绝。显式回退链先 down20，再 down19／18；重新前进逆序。旧 body_clear／digest_retirement 的回退夹具也先移除 20，使其拒绝仍由被测 15／16 的原保护产生，不能用新依赖冲突替代原证明。新测试按旧迁移版本验证前进后的历史正文和摘要未变化。
+- [x] **4. GREEN**：重复上述命令，再 `go test ./internal/policystore ./internal/retention -run 'Migration|Schema|Down' -count=1 -v`；所有涉及真实数据库的用例 PASS，无跳过，旧清理／退役约束继续有效。
+- [x] **5. 提交**：仅暂存本任务列出的文件；`git commit -m "feat(db): enforce single file message bindings"`。
 
 ## Task 2：类型化内容、规范摘要与重放证据
 
@@ -93,7 +93,7 @@ expectFileSQLState(t, err, "23514")
 - `existingTypedMessageACK(ctx context.Context,tx pgx.Tx,id access.TrustedIdentity,conversationID string,req MessageSendRequest) (MessageACK,bool,bool,error)`：分别表示 ACK、exists、same、error；一条 SELECT 同时读取消息、幂等和附件证据。
 - ErrFileNotBindable、ErrFileMessageUnavailable 为 policystore 可 errors.Is 的新增错误；损坏证据用既有 errInvalidMessageIdempotency；文本现有错误保持。
 
-- [ ] **1. 写 RED 测试**：TestMessageContentBounds、TestFileMessageDigestCanonical、TestFileMessageReplayEvidence。RF1／RF2 断言 16,384 字节通过、16,385 拒绝、空／空白 caption 通过，NUL／无效 UTF-8 拒绝；固定含 <&、CRLF、组合字符的编码向量；UUID 大小写同摘要；caption 内容变化不同摘要。SQL 测试同键跨类型必冲突、删除后绑定指纹可重建、三份退役只返回 ErrRetryExpired；缺失／损坏证据通过单查询行测试替身验证失败封闭，不放宽真实数据库约束来制造坏数据。
+- [x] **1. 写 RED 测试**：TestMessageContentBounds、TestFileMessageDigestCanonical、TestFileMessageReplayEvidence。RF1／RF2 断言 16,384 字节通过、16,385 拒绝、空／空白 caption 通过，NUL／无效 UTF-8 拒绝；固定含 <&、CRLF、组合字符的编码向量；UUID 大小写同摘要；caption 内容变化不同摘要。SQL 测试同键跨类型必冲突、删除后绑定指纹可重建、三份退役只返回 ErrRetryExpired；缺失／损坏证据通过单查询行测试替身验证失败封闭，不放宽真实数据库约束来制造坏数据。
 代表断言（TestFileMessageDigestCanonical 以固定字面规范向量求预期，不调用摘要函数生成预期）：
 ```go
 want := sha256.Sum256([]byte(wantCanonicalJSON)) // wantCanonicalJSON 是写在测试里的规范字面向量
@@ -101,10 +101,10 @@ if got != want { t.Fatalf("canonical digest mismatch: got %x want %x", got, want
 if gotUppercaseUUID != got { t.Fatal("UUID alias changed the logical request") }
 ```
 
-- [ ] **2. 运行 RED**：`go test ./internal/policystore -run 'TestMessageContent|TestFileMessageDigest|TestFileMessageReplayEvidence' -count=1 -v`，期望新类型／函数尚不存在或行为不满足，不能把环境失败当 RED。
-- [ ] **3. 实现契约**：每个新函数放在上述确切文件；共享单查询读取解析助手，防止两次查询跨越退役。existingMessageACK 的旧签名保留，但只将 text 记录判定为同请求；新入口使用 existingTypedMessageACK。保持旧文本 raw SHA；file 重放使用关联指纹且不查文件状态，不复制 caption 或另存低熵正文摘要。
-- [ ] **4. GREEN**：上述命令及 `go test ./internal/policystore -run 'Test.*(Idempotency|DigestRetirement|MessageContent|FileMessageDigest|FileMessageReplayEvidence)' -count=1 -v` 全部 PASS；固定向量须以字面规范字节校验，不能由被测函数生成预期值。
-- [ ] **5. 提交**：仅本任务文件；`git commit -m "feat(messages): define typed file content and replay proofs"`。
+- [x] **2. 运行 RED**：`go test ./internal/policystore -run 'TestMessageContent|TestFileMessageDigest|TestFileMessageReplayEvidence' -count=1 -v`，期望新类型／函数尚不存在或行为不满足，不能把环境失败当 RED。
+- [x] **3. 实现契约**：每个新函数放在上述确切文件；共享单查询读取解析助手，防止两次查询跨越退役。existingMessageACK 的旧签名保留，但只将 text 记录判定为同请求；新入口使用 existingTypedMessageACK。保持旧文本 raw SHA；file 重放使用关联指纹且不查文件状态，不复制 caption 或另存低熵正文摘要。
+- [x] **4. GREEN**：上述命令及 `go test ./internal/policystore -run 'Test.*(Idempotency|DigestRetirement|MessageContent|FileMessageDigest|FileMessageReplayEvidence)' -count=1 -v` 全部 PASS；固定向量须以字面规范字节校验，不能由被测函数生成预期值。
+- [x] **5. 提交**：仅本任务文件；`git commit -m "feat(messages): define typed file content and replay proofs"`。
 
 ## Task 3：单聊附件原子发送与最终授权复核
 
@@ -116,17 +116,17 @@ if gotUppercaseUUID != got { t.Fatal("UUID alias changed the logical request") }
 - `insertFileBindingTx(ctx context.Context,tx pgx.Tx,id access.TrustedIdentity,ack MessageACK,binding preparedFileBinding) error`；只写关联，无独立 commit。
 - `Service.finishFileMessageSend(ctx context.Context,tx pgx.Tx,id access.TrustedIdentity,conversationID,reason string,at time.Time,recheck func(time.Time) error) error`：成功审计先写，后用 s.now() 的新鲜时间调用复核，再 commit；复核回调不自行 commit，返回否决后调用方回滚 savepoint 再登记拒绝／群暂停证据。调用方的 savepoint 包含配额／seq／消息／绑定／幂等／Outbox／成功审计。
 
-- [ ] **1. 写 RED 测试**：TestFileMessageDirectAtomic、TestFileMessageDirectReplay、TestFileMessageDirectOrigin、TestFileMessageDirectPolicy、TestFileMessageDirectAuditRollback。断言新发送六类记录同提交；同请求 duplicate=true 且消息／绑定／幂等／Outbox／seq／配额不增加，允许既有 idempotent_replay 审计；文件删除／caption 清理后 ACK 相同；同键不同内容冲突。RF2 原任职变化拒绝；RF3 当前配置 disabled、声明／检测类型不允许、大小降限、身份期限或规则期限跨过审计等待拒绝；失败 seq 和限流计数不增长。旧文本 ACK 与原摘要保持。
+- [x] **1. 写 RED 测试**：TestFileMessageDirectAtomic、TestFileMessageDirectReplay、TestFileMessageDirectOrigin、TestFileMessageDirectPolicy、TestFileMessageDirectAuditRollback。断言新发送六类记录同提交；同请求 duplicate=true 且消息／绑定／幂等／Outbox／seq／配额不增加，允许既有 idempotent_replay 审计；文件删除／caption 清理后 ACK 相同；同键不同内容冲突。RF2 原任职变化拒绝；RF3 当前配置 disabled、声明／检测类型不允许、大小降限、身份期限或规则期限跨过审计等待拒绝；失败 seq 和限流计数不增长。旧文本 ACK 与原摘要保持。
 代表断言（TestFileMessageDirectReplay，两个请求的 ACK 和实际数据库计数）：
 ```go
 if !replay.Duplicate || replay.MessageID != first.MessageID || replay.Seq != first.Seq || !replay.ServerTime.Equal(first.ServerTime) { t.Fatal(first, replay) }
 if messageCount != 1 || bindingCount != 1 || keyCount != 1 || outboxCount != 1 { t.Fatal("duplicate send produced extra records") }
 ```
 
-- [ ] **2. 运行 RED**：`go test ./internal/policystore -run '^TestFileMessageDirect' -count=1 -v`，先确认缺少 SendMessage 或未绑定的具体失败。
-- [ ] **3. 实现单聊接入**：复用原成员选择、双方策略和 recipient 身份快照；附件分支先验证原当前参与资格再读重放证据。附件新发送锁定 policy_current 当前版本后加载规则，避免发布并发越过本次授权；调用 prepareFileBindingTx，消息 INSERT 指明 type 并以 caption 作受清理正文，绑定加入同一事务；成功审计后的 recheck 验证原选任职、当前身份／目标及规则期限。事务异常全部回滚；有界处理 40P01／55P03，最多 3 次；不调用独立 fileTransaction。
-- [ ] **4. GREEN**：上述命令与 `go test ./internal/policystore -run 'Test.*(SendText|MessageSend|FileMessageDirect|DigestRetirementSend)' -count=1 -v` 全部 PASS；证据断言通过 SELECT 实际数据库计数和原 ACK 字段完成。
-- [ ] **5. 提交**：仅本任务文件；`git commit -m "feat(messages): send direct file messages atomically"`。
+- [x] **2. 运行 RED**：`go test ./internal/policystore -run '^TestFileMessageDirect' -count=1 -v`，先确认缺少 SendMessage 或未绑定的具体失败。
+- [x] **3. 实现单聊接入**：复用原成员选择、双方策略和 recipient 身份快照；附件分支先验证原当前参与资格再读重放证据。附件新发送锁定 policy_current 当前版本后加载规则，避免发布并发越过本次授权；调用 prepareFileBindingTx，消息 INSERT 指明 type 并以 caption 作受清理正文，绑定加入同一事务；成功审计后的 recheck 验证原选任职、当前身份／目标及规则期限。事务异常全部回滚；有界处理 40P01／55P03，最多 3 次；不调用独立 fileTransaction。
+- [x] **4. GREEN**：上述命令与 `go test ./internal/policystore -run 'Test.*(SendText|MessageSend|FileMessageDirect|DigestRetirementSend)' -count=1 -v` 全部 PASS；证据断言通过 SELECT 实际数据库计数和原 ACK 字段完成。
+- [x] **5. 提交**：仅本任务文件；`git commit -m "feat(messages): send direct file messages atomically"`。
 
 ## Task 4：群聊附件与历史参与／当前成员边界
 
@@ -134,7 +134,7 @@ if messageCount != 1 || bindingCount != 1 || keyCount != 1 || outboxCount != 1 {
 
 **Interfaces:** `Service.SendGroupMessage(ctx context.Context,id access.TrustedIdentity,groupID string,req MessageSendRequest) (MessageACK,error)`；旧 SendGroupTextMessage 签名保持。内部单次函数 `sendGroupMessageOnce(ctx context.Context,id access.TrustedIdentity,groupID string,req MessageSendRequest) (MessageACK,error)` 使用 Task 2、3 契约；群 policy_blocked 与历史参与证据检查顺序保持。
 
-- [ ] **1. 写 RED 测试**：TestFileMessageGroupAtomic、TestFileMessageGroupReplay、TestFileMessageGroupMembership、TestFileMessageGroupFullPairPolicy、TestFileMessageGroupFinalTime。从当前有效群成员发送 ready 文件；完整 ordered pair 判定、来源任职不匹配、未曾加入／已离开／被移除、群停用／policy_blocked 和审计故障分开断言。RF2 同键 text／file 冲突。附件重放要求当前原任职参与；现有离群人员重放自己文本的已批准语义继续通过，不扩展为附件新发送。
+- [x] **1. 写 RED 测试**：TestFileMessageGroupAtomic、TestFileMessageGroupReplay、TestFileMessageGroupMembership、TestFileMessageGroupFullPairPolicy、TestFileMessageGroupFinalTime。从当前有效群成员发送 ready 文件；完整 ordered pair 判定、来源任职不匹配、未曾加入／已离开／被移除、群停用／policy_blocked 和审计故障分开断言。RF2 同键 text／file 冲突。附件重放要求当前原任职参与；现有离群人员重放自己文本的已批准语义继续通过，不扩展为附件新发送。
 代表断言（TestFileMessageGroupMembership，退出后发起新附件发送）：
 ```go
 _, err := service.SendGroupMessage(ctx, identity, groupID, req)
@@ -142,10 +142,10 @@ if !errors.Is(err, policystore.ErrMessageNotAvailable) { t.Fatalf("former group 
 if lastSeqAfter != lastSeqBefore { t.Fatal("denied send consumed a sequence") }
 ```
 
-- [ ] **2. 运行 RED**：`go test ./internal/policystore -run '^TestFileMessageGroup' -count=1 -v`，确认新增群入口／类型绑定缺失。
-- [ ] **3. 实现群分支**：保持群锁、历史区间、当前 active intervals 和全群策略；新附件在读取规则前锁定 policy_current，并使用 Task 3 配置与文件锁。原 savepoint 同时覆盖绑定；成功审计后调用 finishFileMessageSend 并复核 actor／members／规则期限。暂停群的否决证据可提交，临时写入必须回滚；最多 3 次重新授权重试。text 分支保留原重放边界。
-- [ ] **4. GREEN**：上述命令及 `go test ./internal/policystore -run 'Test.*(GroupText|GroupMessage|FileMessageGroup)' -count=1 -v` 全部 PASS，包括历史资格先于 policy_blocked 的回归。
-- [ ] **5. 提交**：仅本任务改动；`git commit -m "feat(messages): bind group file messages in reliable send"`。
+- [x] **2. 运行 RED**：`go test ./internal/policystore -run '^TestFileMessageGroup' -count=1 -v`，确认新增群入口／类型绑定缺失。
+- [x] **3. 实现群分支**：保持群锁、历史区间、当前 active intervals 和全群策略；新附件在读取规则前锁定 policy_current，并使用 Task 3 配置与文件锁。原 savepoint 同时覆盖绑定；成功审计后调用 finishFileMessageSend 并复核 actor／members／规则期限。暂停群的否决证据可提交，临时写入必须回滚；最多 3 次重新授权重试。text 分支保留原重放边界。
+- [x] **4. GREEN**：上述命令及 `go test ./internal/policystore -run 'Test.*(GroupText|GroupMessage|FileMessageGroup)' -count=1 -v` 全部 PASS，包括历史资格先于 policy_blocked 的回归。
+- [x] **5. 提交**：仅本任务改动；`git commit -m "feat(messages): bind group file messages in reliable send"`。
 
 ## Task 5：HTTP 类型请求与生产默认关闭
 
@@ -156,17 +156,17 @@ if lastSeqAfter != lastSeqBefore { t.Fatal("denied send consumed a sequence") }
 - `HandlerWithFileMessages(base http.Handler,auth Authenticator,conversations ConversationService,files FileMessageService) (http.Handler,error)` 为显式依赖装配；参数不可 nil。现有 HandlerWithConversations 共用内部路由，附件服务为 nil，file 始终 503；不能通过 conversations 的类型断言自动启用。
 - `decodeMessageSendRequest(raw []byte) (policystore.MessageSendRequest,error)`：解析有无字段及类型，file 重复键与孤立代理码点拒绝；旧文本调用既有文本入口；typed file 调用显式文件服务。
 
-- [ ] **1. 写 RED 测试**：TestFileMessageHTTPParsing、TestFileMessageHTTPClosed、TestFileMessageHTTPRouting、TestFileMessageHTTPACK。覆盖旧／显式 text、缺省／空 caption、NULL、未知／重复键、多 JSON、非字符串、128 KiB 请求上限及 16 KiB caption 边界；RF1 合法代理对保留、孤立代理码点拒绝。关闭装配请求任意 UUID file 均 503 且 stub 调用次数为 0；认证失败仍按既有 401／403。ACK 无 URL／SHA；错误按规格 4.2 映射。
+- [x] **1. 写 RED 测试**：TestFileMessageHTTPParsing、TestFileMessageHTTPClosed、TestFileMessageHTTPRouting、TestFileMessageHTTPACK。覆盖旧／显式 text、缺省／空 caption、NULL、未知／重复键、多 JSON、非字符串、128 KiB 请求上限及 16 KiB caption 边界；RF1 合法代理对保留、孤立代理码点拒绝。关闭装配请求任意 UUID file 均 503 且 stub 调用次数为 0；认证失败仍按既有 401／403。ACK 无 URL／SHA；错误按规格 4.2 映射。
 代表断言（TestFileMessageHTTPClosed）：
 ```go
 if response.Code != http.StatusServiceUnavailable || errorCode != "file_message_unavailable" { t.Fatal(response.Code, errorCode) }
 if fileServiceCalls != 0 { t.Fatal("closed production route inspected a file") }
 ```
 
-- [ ] **2. 运行 RED**：`go test ./internal/httpserver -run '^TestFileMessageHTTP' -count=1 -v`，期望新解析／装配不存在或行为失败。
-- [ ] **3. 实现严格分支**：保持 Content-Type、无 query 和现有体上限；检测字段有无／NULL 和 file 重复键，不将 NULL 与缺省混为一谈。解析后依 Task 2 校验，显式 file 走测试装配；默认 nil 文件服务直接统一拒绝，不访问 file_id。错误新增映射到 409 file_not_bindable／503 file_message_unavailable，ErrRetryExpired 继续 410 retry_window_expired。
-- [ ] **4. GREEN**：上述命令与 `go test ./internal/httpserver ./cmd/im-api -count=1` 全部适用用例 PASS，旧发送及群路由无回归；进程真实证据在 Task 9 执行。
-- [ ] **5. 提交**：仅本任务文件；`git commit -m "feat(api): parse typed messages with file sends closed by default"`。
+- [x] **2. 运行 RED**：`go test ./internal/httpserver -run '^TestFileMessageHTTP' -count=1 -v`，期望新解析／装配不存在或行为失败。
+- [x] **3. 实现严格分支**：保持 Content-Type、无 query 和现有体上限；检测字段有无／NULL 和 file 重复键，不将 NULL 与缺省混为一谈。解析后依 Task 2 校验，显式 file 走测试装配；默认 nil 文件服务直接统一拒绝，不访问 file_id。错误新增映射到 409 file_not_bindable／503 file_message_unavailable，ErrRetryExpired 继续 410 retry_window_expired。
+- [x] **4. GREEN**：上述命令与 `go test ./internal/httpserver ./cmd/im-api -count=1` 全部适用用例 PASS，旧发送及群路由无回归；进程真实证据在 Task 9 执行。
+- [x] **5. 提交**：仅本任务文件；`git commit -m "feat(api): parse typed messages with file sends closed by default"`。
 
 ## Task 6：类型化补拉、旧占位与文本搜索隔离
 
@@ -178,7 +178,7 @@ if fileServiceCalls != 0 { t.Fatal("closed production route inspected a file") }
 - `historyReadMode`：historyReadAll／historyReadTextOnly。新增 readDirectHistoryBatchTxMode／readGroupHistoryBatchTxMode，签名为 `(ctx context.Context,tx pgx.Tx,scope historyReadContext,conversationID string,afterSeq int64,limit int,mode historyReadMode) (historyReadBatch,error)`；原 read*HistoryBatchTx 保留同签名，委托 all；新 readDirectTextSearchBatchTx／readGroupTextSearchBatchTx 保留原签名，委托 textOnly。
 - 现有 PullTextMessages／PullGroupTextMessages 保留；查询返回类型化内部事实。HTTP projector `messagePageDTO(page policystore.MessagePage,typed bool) any` 在最终授权过滤后投影，typed 由唯一有效 message_format=typed_v1 决定。
 
-- [ ] **1. 写 RED 测试**：TestFileMessageHistoryDirect、TestFileMessageHistoryGroup、TestFileMessageHistoryRedaction、TestFileMessageHistoryUnavailable、TestFileMessagePullFormat、TestFileMessageSearchExcludesAttachments。RF4 混合 text/file 页仍按 seq 正常推进；空 caption 附件不得当空文本；file deleted／delete_pending 隐藏名称等内容字段；损坏／缺失关联失败封闭。精确 JSON 断言 redacted 只有 seq／redacted，旧格式只固定占位、typed file 有 caption 和最小卡片。搜索中相同关键词出现在 caption／文件名时不匹配，真正文本仍匹配；游标不遗漏后续文本，最终时间及 hard_deny 遮蔽整个卡片。
+- [x] **1. 写 RED 测试**：TestFileMessageHistoryDirect、TestFileMessageHistoryGroup、TestFileMessageHistoryRedaction、TestFileMessageHistoryUnavailable、TestFileMessagePullFormat、TestFileMessageSearchExcludesAttachments。RF4 混合 text/file 页仍按 seq 正常推进；空 caption 附件不得当空文本；file deleted／delete_pending 隐藏名称等内容字段；损坏／缺失关联失败封闭。精确 JSON 断言 redacted 只有 seq／redacted，旧格式只固定占位、typed file 有 caption 和最小卡片。搜索中相同关键词出现在 caption／文件名时不匹配，真正文本仍匹配；游标不遗漏后续文本，最终时间及 hard_deny 遮蔽整个卡片。
 代表断言（TestFileMessagePullFormat，检查页中单条遮蔽消息的精确字段）：
 ```go
 if len(item) != 2 || item["seq"] != float64(7) || item["redacted"] != true { t.Fatal("redacted item leaked metadata", item) }
@@ -186,10 +186,10 @@ if legacyItem["text"] != "附件消息（当前客户端不支持查看）" { t.
 if _, exists := legacyItem["attachment"]; exists { t.Fatal("legacy item leaked attachment") }
 ```
 
-- [ ] **2. 运行 RED**：`go test ./internal/policystore ./internal/httpserver -run '^TestFileMessage(History|PullFormat|Search)' -count=1 -v`，确认类型、投影或文本候选不满足预期。
-- [ ] **3. 实现同事务查询与投影**：历史 SQL 在既有事务左连接唯一附件和文件事实，无独立文件事务或下载授权。保留历史 sender／recipient 及群区间证明，最终过滤整体重建遮蔽项。search action 和跨会话读取选 textOnly SQL，匹配及最终过滤也显式判断类型，防御 SQL／内部结构误用；all 模式分页不跳过附件。旧 DTO 不含 type／caption／附件字段；typed text 仍返回 text。查询参数未知值／重复拒绝，现有 strict keys 加入 message_format。
-- [ ] **4. GREEN**：上述命令及 `go test ./internal/policystore ./internal/httpserver -run 'Test.*(Pull|History|MessageSearch|CrossSearch|FileMessageSearch)' -count=1 -v` 全部 PASS；既有搜索预算与游标测试也必须通过，不因新 SQL 过滤丢失时间线。
-- [ ] **5. 提交**：仅本任务文件；`git commit -m "feat(history): project file messages without leaking legacy payloads"`。
+- [x] **2. 运行 RED**：`go test ./internal/policystore ./internal/httpserver -run '^TestFileMessage(History|PullFormat|Search)' -count=1 -v`，确认类型、投影或文本候选不满足预期。
+- [x] **3. 实现同事务查询与投影**：历史 SQL 在既有事务左连接唯一附件和文件事实，无独立文件事务或下载授权。保留历史 sender／recipient 及群区间证明，最终过滤整体重建遮蔽项。search action 和跨会话读取选 textOnly SQL，匹配及最终过滤也显式判断类型，防御 SQL／内部结构误用；all 模式分页不跳过附件。旧 DTO 不含 type／caption／附件字段；typed text 仍返回 text。查询参数未知值／重复拒绝，现有 strict keys 加入 message_format。
+- [x] **4. GREEN**：上述命令及 `go test ./internal/policystore ./internal/httpserver -run 'Test.*(Pull|History|MessageSearch|CrossSearch|FileMessageSearch)' -count=1 -v` 全部 PASS；既有搜索预算与游标测试也必须通过，不因新 SQL 过滤丢失时间线。
+- [x] **5. 提交**：仅本任务文件；`git commit -m "feat(history): project file messages without leaking legacy payloads"`。
 
 ## Task 7：保全感知三份证据原子退役
 
@@ -197,17 +197,17 @@ if _, exists := legacyItem["attachment"]; exists { t.Fatal("legacy item leaked a
 
 **Interfaces:** `retireAttachmentFingerprints(ctx context.Context,tx pgx.Tx,tenantID string,messageIDs []string,at time.Time) ([]string,error)`，返回实际退役 file 消息 ID；processDigestBatch 在同一事务查出预期 file 子集，验证返回集合精确相等。沿用批次最多 1000 与既有候选条件／会话保全锁。
 
-- [ ] **1. 写 RED 测试**：TestFileMessageDigestRetirementAtomic、TestFileMessageDigestRetirementHold、TestFileMessageDigestRetirementRollback、TestFileMessageDigestRetirementIrreversible。断言空 caption 也被正文 Worker 正常清理；未清理／幂等未到期／有效保全不退役；三份证据同时间戳清空；注入附件 UPDATE 或批次审计失败时三份都保持；退役后回填和删除重用拒绝；保全并发以会话锁后的实际状态为准。
+- [x] **1. 写 RED 测试**：TestFileMessageDigestRetirementAtomic、TestFileMessageDigestRetirementHold、TestFileMessageDigestRetirementRollback、TestFileMessageDigestRetirementIrreversible。断言空 caption 也被正文 Worker 正常清理；未清理／幂等未到期／有效保全不退役；三份证据同时间戳清空；注入附件 UPDATE 或批次审计失败时三份都保持；退役后回填和删除重用拒绝；保全并发以会话锁后的实际状态为准。
 代表断言（TestFileMessageDigestRetirementAtomic，查询三份状态）：
 ```go
 if messageDigest != nil || keyDigest != nil || bindingSHA != nil { t.Fatal("partial retirement") }
 if messageRetired == nil || keyRetired == nil || fingerprintRetired == nil || !messageRetired.Equal(*keyRetired) || !messageRetired.Equal(*fingerprintRetired) { t.Fatal("retirement stamps diverged") }
 ```
 
-- [ ] **2. 运行 RED**：`go test ./internal/retention -run '^TestFileMessageDigestRetirement' -count=1 -v`，应因旧 Worker 未清空新指纹而失败，不能通过删去迁移约束规避。
-- [ ] **3. 实现批次接入**：复用同一 tx／候选 ID 和退役时间，messages→message_idempotency→message_attachments 更新，依 Task 1 延迟约束提交；返回集合必须是候选 file 子集且无遗漏，任一不匹配整批回滚。仍使用既有批次证据，不新增 caption／hash 副本或把文件扫描证据清理当消息退役。
-- [ ] **4. GREEN**：上述命令和 `go test ./internal/retention ./internal/policystore -run 'Test.*(DigestRetirement|BodyClear|LegalHold)' -count=1 -v` 全部 PASS；Task 2／3／4 的退役重试同时验证 HTTP 410／内部错误。
-- [ ] **5. 提交**：仅本任务文件；`git commit -m "feat(retention): retire attachment replay fingerprints atomically"`。
+- [x] **2. 运行 RED**：`go test ./internal/retention -run '^TestFileMessageDigestRetirement' -count=1 -v`，应因旧 Worker 未清空新指纹而失败，不能通过删去迁移约束规避。
+- [x] **3. 实现批次接入**：复用同一 tx／候选 ID 和退役时间，messages→message_idempotency→message_attachments 更新，依 Task 1 延迟约束提交；返回集合必须是候选 file 子集且无遗漏，任一不匹配整批回滚。仍使用既有批次证据，不新增 caption／hash 副本或把文件扫描证据清理当消息退役。
+- [x] **4. GREEN**：上述命令和 `go test ./internal/retention ./internal/policystore -run 'Test.*(DigestRetirement|BodyClear|LegalHold)' -count=1 -v` 全部 PASS；Task 2／3／4 的退役重试同时验证 HTTP 410／内部错误。
+- [x] **5. 提交**：仅本任务文件；`git commit -m "feat(retention): retire attachment replay fingerprints atomically"`。
 
 ## Task 8：并发提交、撤销和故障注入
 
@@ -215,17 +215,17 @@ if messageRetired == nil || keyRetired == nil || fingerprintRetired == nil || !m
 
 **Interfaces:** 使用已确定 SendMessage／SendGroupMessage、filePeer(t,c) 第二连接和 PostgreSQL 锁／测试事务代理；无产品测试开关、无生产故障注入入口。
 
-- [ ] **1. 写 RED／风险测试**：TestFileMessageConcurrentSameKey、TestFileMessageConcurrentSameFile、TestFileMessageDeleteRace、TestFileMessageConfigWait、TestFileMessageMembershipWait、TestFileMessageAuditWait、TestFileMessageFaultRollback、TestFileMessageReplayRetirementRace。两个实际连接确定先后而非靠 sleep 猜时序；相同键同请求 8 次仅一 message／attachment／idempotency／Outbox／seq 增量，different key 同文件只一成功；RF3 配置降限／关停、用户冻结／任职期限、群移除、规则期限跨等待拒绝；审计与 Outbox 任意写入失败无配额残留。重放／退役读到完整旧三份或完整退役三份，不能因中间状态新建。
+- [x] **1. 写 RED／风险测试**：TestFileMessageConcurrentSameKey、TestFileMessageConcurrentSameFile、TestFileMessageDeleteRace、TestFileMessageConfigWait、TestFileMessageMembershipWait、TestFileMessageAuditWait、TestFileMessageFaultRollback、TestFileMessageReplayRetirementRace。两个实际连接确定先后而非靠 sleep 猜时序；相同键同请求 8 次仅一 message／attachment／idempotency／Outbox／seq 增量，different key 同文件只一成功；RF3 配置降限／关停、用户冻结／任职期限、群移除、规则期限跨等待拒绝；审计与 Outbox 任意写入失败无配额残留。重放／退役读到完整旧三份或完整退役三份，不能因中间状态新建。
 代表断言（TestFileMessageConcurrentSameKey，8 个实际并发调用结束后）：
 ```go
 if newACKs != 1 || duplicateACKs != 7 { t.Fatal(newACKs, duplicateACKs) }
 if messageCount != 1 || bindingCount != 1 || keyCount != 1 || outboxCount != 1 || seqAfter-seqBefore != 1 { t.Fatal("concurrent send violated one-record invariants") }
 ```
 
-- [ ] **2. 运行风险测试**：`go test ./internal/policystore -run '^TestFileMessage(Concurrent|DeleteRace|ConfigWait|MembershipWait|AuditWait|FaultRollback|ReplayRetirementRace)' -count=1 -v`；如发现缺陷，保存失败断言为 RED；若全部通过记录首次 PASS，不虚构 RED。
-- [ ] **3. 修正真实失败**：定位具体锁／快照／savepoint／时间或约束问题；最小修改到所属文件，不能放宽“只绑定一次”、资格判定或最终复核来换 PASS；对拒绝类验证群暂停／拒绝审计可保留、成功审计不保留。
-- [ ] **4. GREEN／race**：`go test -race ./internal/policystore ./internal/retention -run 'TestFileMessage|Test.*DigestRetirement' -count=1 -v`；所有数据库用例真实执行，无死锁泄露、数据竞争或 SKIP。
-- [ ] **5. 提交**：只列实际新增／修正文件；`git commit -m "test(messages): cover file send races and rollback invariants"`。
+- [x] **2. 运行风险测试**：`go test ./internal/policystore -run '^TestFileMessage(Concurrent|DeleteRace|ConfigWait|MembershipWait|AuditWait|FaultRollback|ReplayRetirementRace)' -count=1 -v`；如发现缺陷，保存失败断言为 RED；若全部通过记录首次 PASS，不虚构 RED。
+- [x] **3. 修正真实失败**：定位具体锁／快照／savepoint／时间或约束问题；最小修改到所属文件，不能放宽“只绑定一次”、资格判定或最终复核来换 PASS；对拒绝类验证群暂停／拒绝审计可保留、成功审计不保留。
+- [x] **4. GREEN／race**：`go test -race ./internal/policystore ./internal/retention -run 'TestFileMessage|Test.*DigestRetirement' -count=1 -v`；所有数据库用例真实执行，无死锁泄露、数据竞争或 SKIP。
+- [x] **5. 提交**：只列实际新增／修正文件；`git commit -m "test(messages): cover file send races and rollback invariants"`。
 
 ## Task 9：真实扫描→发送→通知→补拉及生产关闭
 
@@ -272,8 +272,8 @@ if responseACK["message_id"] != persistedMessageID { t.Fatal("ACK differs from c
 | 第 10 节生产关闭 | Task 5、9 |
 | 第 11 节真实链路、固定提交、评审和交付 | Task 8～10 |
 
-自检完成：所有跨任务类型／签名与字段来源已定义；五个 Review Focus 均有具名测试及归属；步骤为先失败证据、最小实现、真实验证、限定提交。计划不把新测试首次通过伪记为 RED，不把环境缺失当测试通过；当前仍未实施。
+自检完成：所有跨任务类型／签名与字段来源已定义；五个 Review Focus 均有具名测试及归属；步骤为先失败证据、最小实现、真实验证、限定提交。计划不把新测试首次通过伪记为 RED，不把环境缺失当测试通过；实际完成状态以本页复选框、隔离工作树执行台账及阶段验收记录为准。
 
 ## 审阅与执行衔接
 
-请用户审阅本计划，确认是否准确覆盖已确认规格。按 writing-plans 的计划审阅要求，获得确认后才开始 Task 1；保持此前已选的当前助手逐项实现方式，使用 executing-plans，不再询问执行方式。
+用户已确认本计划，按既定逐项实施方式推进。当前在 Task 9 的可信扫描门禁：官方 daily.cvd 28142 发布时间为 2026-10-03 06:24:16 UTC，本轮最终刷新时已超过 24 小时且更新器仍报告该版本最新。未降低门限。更新官方病毒库、重启本轮依赖并重新生成实际运行 manifest 后，从 Task 9 继续；不重做 Task 1～8。Task 10 的固定提交完整／race／一次整体评审及草稿 PR 尚未执行。
