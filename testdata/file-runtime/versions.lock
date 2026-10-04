@@ -1,0 +1,18 @@
+# Verified local fixture pins, 2026-10-04; not production release approval.
+aws-sdk-go-v2 = v1.47.1
+aws-sdk-go-v2-service-s3 = v1.114.0
+aws-sdk-go-v2-credentials = v1.20.6
+smithy-go = v1.28.1
+minio-source = https://github.com/minio/minio/tree/RELEASE.2024-11-07T00-52-20Z
+minio-image = minio/minio@sha256:ac591851803a79aee64bc37f66d77c56b0a4b6e12d9e5356380f4105510f2332
+postgres-image = postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+qpdf = 12.4.2
+qpdf-source = https://github.com/qpdf/qpdf/releases/tag/v12.4.2
+clamav = 1.5.4
+clamav-source = https://github.com/Cisco-Talos/clamav/releases/tag/clamav-1.5.4
+clamd-config-sha256 = requires-deployment-generated-readonly-manifest
+scanner-limit-contract = stream25MiB-child0-global250MiB-recursion16-files10000
+scanner-runtime-acceptance = requires-bound-process-and-live-probes
+alpine-resource-image = alpine@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
+mc-test-client-source = https://github.com/minio/mc/releases/tag/RELEASE.2024-11-05T11-29-45Z
+mc-test-client-sha256-darwin-arm64 = e745d9866fc40ff7cf876abeb28e05e153a8cfeba601bcc8daa6e124b81384c5

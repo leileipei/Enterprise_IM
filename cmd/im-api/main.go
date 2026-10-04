@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -17,7 +20,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/access"
+	"github.com/leileipei/Enterprise_IM/internal/filetransfer"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
+	"github.com/leileipei/Enterprise_IM/internal/objectstore"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
@@ -49,6 +54,11 @@ func main() {
 	enabled, authConfig, err := adminConfigFromEnv(os.Getenv)
 	if err != nil {
 		logger.Error("invalid OIDC configuration", "error", err)
+		os.Exit(1)
+	}
+	fileEnabled, fileConfig, fileSpool, err := fileUploadConfigFromEnv(os.Getenv, enabled)
+	if err != nil {
+		logger.Error("invalid file upload configuration")
 		os.Exit(1)
 	}
 	webEnabled, webConfig, err := webConfigFromEnv(os.Getenv, enabled, authConfig)
@@ -131,6 +141,53 @@ func main() {
 		if err != nil {
 			logger.Error("cross conversation search API unavailable", "error", err)
 			os.Exit(1)
+		}
+		if fileEnabled {
+			objects, startErr := objectstore.NewS3(fileConfig)
+			checkCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			if startErr == nil {
+				startErr = pool.Ping(checkCtx)
+			}
+			if startErr == nil {
+				var installed bool
+				startErr = pool.QueryRow(checkCtx, "SELECT to_regclass('file_objects') IS NOT NULL AND to_regclass('tenant_file_upload_policy') IS NOT NULL AND to_regclass('file_upload_attempts') IS NOT NULL").Scan(&installed)
+				if startErr == nil && !installed {
+					startErr = errors.New("file runtime migration unavailable")
+				}
+			}
+			if startErr == nil {
+				startErr = objects.ValidateCapabilities(checkCtx)
+			}
+			cancel()
+			if startErr != nil {
+				logger.Error("private versioned file storage unavailable")
+				os.Exit(1)
+			}
+			var owner [16]byte
+			if _, err = rand.Read(owner[:]); err != nil {
+				logger.Error("file node identity unavailable")
+				os.Exit(1)
+			}
+			owner[6] = (owner[6] & 15) | 64
+			owner[8] = (owner[8] & 63) | 128
+			ownerID := fmt.Sprintf("%x-%x-%x-%x-%x", owner[:4], owner[4:6], owner[6:8], owner[8:10], owner[10:])
+			transfer, startErr := filetransfer.NewService(policystore.Service{DB: pool}, objects, fileSpool, ownerID)
+			if startErr != nil {
+				logger.Error("file upload spool unavailable")
+				os.Exit(1)
+			}
+			defer transfer.Close()
+			handler, err = httpserver.HandlerWithFileUploadPolicy(handler, authenticator, access.Service{DB: pool})
+			if err == nil {
+				handler, err = httpserver.HandlerWithFileMetadata(handler, authenticator, policystore.Service{DB: pool})
+			}
+			if err == nil {
+				handler, err = httpserver.HandlerWithFileContent(handler, authenticator, transfer)
+			}
+			if err != nil {
+				logger.Error("file upload API unavailable")
+				os.Exit(1)
+			}
 		}
 		if realtimeOptions != nil {
 			redisClient := redis.NewClient(realtimeOptions)
@@ -296,4 +353,31 @@ func webConfigFromEnv(getenv func(string) string, oidcEnabled bool, auth oidcaut
 	default:
 		return false, webclient.Config{}, errors.New("IM_WEB_ENABLED must be true or false")
 	}
+}
+
+func fileUploadConfigFromEnv(getenv func(string) string, oidcEnabled bool) (bool, objectstore.Config, string, error) {
+	var c objectstore.Config
+	switch getenv("IM_FILE_UPLOAD_ENABLED") {
+	case "", "false":
+		return false, c, "", nil
+	case "true":
+	default:
+		return false, c, "", errors.New("invalid file upload enable flag")
+	}
+	c = objectstore.Config{Endpoint: getenv("IM_FILE_S3_ENDPOINT"), Region: getenv("IM_FILE_S3_REGION"), Bucket: getenv("IM_FILE_S3_BUCKET"), CredentialSource: getenv("IM_FILE_S3_CREDENTIAL_SOURCE")}
+	if c.CredentialSource == "" {
+		c.CredentialSource = "environment"
+	}
+	switch getenv("IM_FILE_S3_PATH_STYLE") {
+	case "", "false":
+	case "true":
+		c.PathStyle = true
+	default:
+		return false, c, "", errors.New("invalid S3 path style")
+	}
+	dir := getenv("IM_FILE_SPOOL_DIR")
+	if !oidcEnabled || getenv("IM_DATABASE_URL") == "" || c.Endpoint == "" || c.Region == "" || c.Bucket == "" || c.CredentialSource != "environment" || getenv("IM_FILE_S3_ACCESS_KEY") == "" || getenv("IM_FILE_S3_SECRET_KEY") == "" || !filepath.IsAbs(dir) {
+		return false, c, "", errors.New("incomplete file upload dependencies")
+	}
+	return true, c, dir, nil
 }

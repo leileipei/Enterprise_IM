@@ -126,3 +126,35 @@ func TestRealtimeStreamConfiguration(t *testing.T) {
 		}
 	}
 }
+
+func TestFileAPIAssemblyDisabled(t *testing.T) {
+	enabled, _, dir, e := fileUploadConfigFromEnv(env(nil), false)
+	if e != nil || enabled || dir != "" {
+		t.Fatal(enabled, dir, e)
+	}
+	if _, _, _, e = fileUploadConfigFromEnv(env(map[string]string{"IM_FILE_UPLOAD_ENABLED": "yes"}), true); e == nil {
+		t.Fatal("invalid bool accepted")
+	}
+}
+func TestFileAPIAssemblyEnabledPreflight(t *testing.T) {
+	settings := map[string]string{"IM_FILE_UPLOAD_ENABLED": "true", "IM_DATABASE_URL": "postgres://localhost/test", "IM_FILE_S3_ENDPOINT": "http://127.0.0.1:9000", "IM_FILE_S3_REGION": "us-east-1", "IM_FILE_S3_BUCKET": "private-files", "IM_FILE_S3_CREDENTIAL_SOURCE": "environment", "IM_FILE_S3_ACCESS_KEY": "fixture", "IM_FILE_S3_SECRET_KEY": "fixture", "IM_FILE_S3_PATH_STYLE": "true", "IM_FILE_SPOOL_DIR": t.TempDir() + "/private"}
+	if _, _, _, e := fileUploadConfigFromEnv(env(settings), false); e == nil {
+		t.Fatal("enabled without oidc")
+	}
+	enabled, c, dir, e := fileUploadConfigFromEnv(env(settings), true)
+	if e != nil || !enabled || !c.PathStyle || dir != settings["IM_FILE_SPOOL_DIR"] {
+		t.Fatal(enabled, c, dir, e)
+	}
+	for _, k := range []string{"IM_DATABASE_URL", "IM_FILE_S3_ENDPOINT", "IM_FILE_S3_BUCKET", "IM_FILE_S3_ACCESS_KEY", "IM_FILE_S3_SECRET_KEY", "IM_FILE_SPOOL_DIR"} {
+		v := settings[k]
+		delete(settings, k)
+		if _, _, _, e := fileUploadConfigFromEnv(env(settings), true); e == nil {
+			t.Fatal("missing config", k)
+		}
+		settings[k] = v
+	}
+	settings["IM_FILE_S3_PATH_STYLE"] = "invalid"
+	if _, _, _, e := fileUploadConfigFromEnv(env(settings), true); e == nil {
+		t.Fatal("invalid path style")
+	}
+}

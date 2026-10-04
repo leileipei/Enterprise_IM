@@ -57,6 +57,9 @@ func TestFileFoundationSchemaIsolationAndInput(t *testing.T) {
 func TestFileFoundationMigrationEmptyDownUp(t *testing.T) {
 	c := fileFoundationDB(t)
 	seedBodyMessage(t, c)
+	if e := fileRuntimeMigration(t, c, "down"); e != nil {
+		t.Fatal(e)
+	}
 	if e := fileMigration(t, c, "down"); e != nil {
 		t.Fatal(e)
 	}
@@ -65,6 +68,9 @@ func TestFileFoundationMigrationEmptyDownUp(t *testing.T) {
 		t.Fatal(missing, e)
 	}
 	if e := fileMigration(t, c, "up"); e != nil {
+		t.Fatal(e)
+	}
+	if e := fileRuntimeMigration(t, c, "up"); e != nil {
 		t.Fatal(e)
 	}
 	var n int
