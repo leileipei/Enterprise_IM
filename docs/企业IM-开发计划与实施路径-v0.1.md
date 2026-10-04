@@ -207,4 +207,4 @@ P4-24已创建并关联[草稿PR #72](https://github.com/leileipei/Enterprise_IM
 
 正常500附件单会话与20会话完整proof已经在原5秒预算内实测有界前进；无名称副本、全文索引或新迁移。实际扫描／固定版本上传、Outbox／Redis通知、typed补拉和完整Blob显式保存分别核验。生产附件发送／下载／名称搜索保持关闭，typed_v1.download_available仍false；完整F01、M4退出、客户联调、HA／容量／备份DR及生产启用仍须另外验收。
 
-本轮专属scanner和PG／S3／Redis已停止，停止容器及匿名卷保留。证据私有归档，主工作区未操作；草稿交付信息在创建后补录，不合并／部署。
+本轮专属scanner和PG／S3／Redis已停止，停止容器及匿名卷保留。证据私有归档，主工作区未操作；草稿PR：[P4-25](https://github.com/leileipei/Enterprise_IM/pull/73)，base=P4-24，已关联当前任务；不合并／部署。

@@ -512,7 +512,7 @@ scripts/test-file-runtime.sh run-all
 
 - [x] **Step 3：最后一次整体独立评审。** 按执行技能用一名新 reviewer 检查书面规格、全部代码diff、门禁证据及RF1～5，列出Critical／Important／Minor。逐项验证并一轮RED→GREEN修正必要项；需要改产品即重新固定新SHA并重跑受影响及规定门禁。不再派新的实施agent或第二轮reviewer。意见不成立须用代码／证据解释；影响设计范围则停止并回到规格审阅。
 - [x] **Step 4：汇总并退出本轮资源。** 中文记录逐项必选和回归计数／具体SKIP、默认关闭、浏览器实际保存及撤权测量、未验收能力；证据去敏后0700归档。按PID／label／源目录／版本确认归属，只停本轮进程与容器、清理本轮scratch；数据保留和对象删除分别描述，不操作其他计划或客户资源。随后重检working tree、diff及日志。
-- [ ] **Step 5：提交并交付。** 仅提交中文记录／本计划／总路径，`git diff --cached --check` 后 `git commit -m "docs(files): record P4-25 immutable acceptance and delivery"`；推送P4-25分支，创建草稿PR，base=`codex/p4-24-file-download-retention-design`，正文从文件传入。成功创建必须调用 attach_artifact。不合并／部署。核对最终HEAD、PR head及base；若只补文档，明确最终HEAD相对测试SHA无产品差异。
+- [x] **Step 5：提交并交付。** 仅提交中文记录／本计划／总路径，`git diff --cached --check` 后 `git commit -m "docs(files): record P4-25 immutable acceptance and delivery"`；推送P4-25分支，创建草稿PR，base=`codex/p4-24-file-download-retention-design`，正文从文件传入。成功创建必须调用 attach_artifact。不合并／部署。核对最终HEAD、PR head及base；若只补文档，明确最终HEAD相对测试SHA无产品差异。
 
 ## 规格覆盖与计划自检
 
@@ -530,4 +530,4 @@ scripts/test-file-runtime.sh run-all
 
 自检：各Task都有固定Files／Interfaces、具名失败断言、RED／GREEN命令和提交；跨模块签名一致，Task2输出无副作用纯判定，Task3输出的Match／Page被Task4／5消费；四个能力名称与JS上下文一致；Review Focus五项均有归属。file-download.js是§3的file-messages下载职责的内部拆分，不扩大功能。无名称数据副本／新增生产开关，浏览器真实夹具不进入产品装配。没有把14项复选框或拟运行门禁写为已完成。
 
-**交接：** 用户已确认书面规格、本实施计划和当前助手执行方式；当前助手使用 executing-plans 自 Task 1 逐项实现。任务状态以复选框和本计划专用台账为准，产品固定提交及一次评审修正后的完整门禁已通过；Task14草稿交付核验仍待完成。
+**交接：** 用户已确认书面规格、本实施计划和当前助手执行方式；当前助手使用 executing-plans 自 Task 1 逐项实现。任务状态以复选框和本计划专用台账为准，产品固定提交及一次评审修正后的完整门禁已通过；Task14草稿已交付：[P4-25](https://github.com/leileipei/Enterprise_IM/pull/73)；最终一致性与清理另以交付核验记录确认。
