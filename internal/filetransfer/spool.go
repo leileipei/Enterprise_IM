@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"syscall"
 )
 
 func privateSpoolDir(dir string) error {
@@ -20,6 +21,10 @@ func privateSpoolDir(dir string) error {
 	}
 	st, e := os.Lstat(dir)
 	if e != nil || !st.IsDir() || st.Mode().Perm() != 0700 || st.Mode()&os.ModeSymlink != 0 {
+		return files.ErrDependencyUnavailable
+	}
+	stat, ok := st.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != uint32(os.Geteuid()) {
 		return files.ErrDependencyUnavailable
 	}
 	return nil

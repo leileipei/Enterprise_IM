@@ -176,6 +176,7 @@ func main() {
 				logger.Error("file upload spool unavailable")
 				os.Exit(1)
 			}
+			defer transfer.Close()
 			handler, err = httpserver.HandlerWithFileUploadPolicy(handler, authenticator, access.Service{DB: pool})
 			if err == nil {
 				handler, err = httpserver.HandlerWithFileMetadata(handler, authenticator, policystore.Service{DB: pool})

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
 )
 
@@ -36,6 +37,12 @@ type Service struct {
 	Objects           objectstore.Store
 	SpoolDir, OwnerID string
 	slots             chan struct{}
+	spoolLock         *os.File
+	lifecycle         sync.Mutex
+	closed            bool
+	active            sync.WaitGroup
+	closeOnce         sync.Once
+	closeErr          error
 }
 
 func NewService(repo UploadRepository, objects objectstore.Store, dir, owner string) (*Service, error) {
@@ -46,10 +53,11 @@ func NewService(repo UploadRepository, objects objectstore.Store, dir, owner str
 	if e != nil || dir == "" {
 		return nil, files.ErrDependencyUnavailable
 	}
-	if e = privateSpoolDir(abs); e != nil {
+	lock, e := claimSpoolDir(abs)
+	if e != nil {
 		return nil, e
 	}
-	return &Service{Repo: repo, Objects: objects, SpoolDir: abs, OwnerID: owner, slots: make(chan struct{}, 4)}, nil
+	return &Service{Repo: repo, Objects: objects, SpoolDir: abs, OwnerID: owner, slots: make(chan struct{}, 4), spoolLock: lock}, nil
 }
 func readMeasurement(ctx context.Context, store objectstore.Store, ref objectstore.VersionRef, m files.Measurement) (err error) {
 	if ref.VersionID == "" || ref.VersionID == "null" {
@@ -77,6 +85,10 @@ func readMeasurement(ctx context.Context, store objectstore.Store, ref objectsto
 	return nil
 }
 func (s *Service) Upload(parent context.Context, id access.TrustedIdentity, fileID string, body io.Reader) (result files.Metadata, err error) {
+	if !s.beginUpload() {
+		return result, files.ErrDependencyUnavailable
+	}
+	defer s.active.Done()
 	select {
 	case s.slots <- struct{}{}:
 		defer func() { <-s.slots }()

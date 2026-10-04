@@ -96,6 +96,7 @@ func run(ctx context.Context, c Config) error {
 	if e != nil {
 		return errors.New("file worker spool unavailable")
 	}
+	defer transfer.Close()
 	worker := filetransfer.ScanWorker{Repo: repo, Objects: objects, Scanner: scanner, SpoolDir: c.SpoolDir, OwnerID: c.WorkerID}
 	slog.Info("file worker started", "scan_concurrency", 1)
 	failures := 0

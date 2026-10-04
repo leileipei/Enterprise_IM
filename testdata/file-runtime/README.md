@@ -25,3 +25,5 @@ manifest为只读0400、同运行用户拥有的JSON，kind=local-process，包�
 资源门禁按当前Docker实际架构交叉编译当前源，使用versions.lock固定Alpine镜像。`samples/generate_structure.py <私有目录>`流式生成40M像素16位RGBA及40M+1超限PNG；512MiB／1CPU容器验证完整解析和超限拒绝。上传磁盘满使用独立1MiB tmpfs，显式IM_TEST_SPOOL_FULL_DIR=/limited；原主机磁盘不会被填满。大型样本、构建产物和凭据不提交。
 
 真实OIDC发行者仅是专用TLS测试夹具；被测试的是实际cmd/im-api及cmd/im-file-worker可执行进程。实际只读账号写入被拒绝、Worker强制终止后新job接管、正常SIGINT清理均在组件JSON门禁中。命令及结论见[中文验收记录](../../docs/开发增量-P4-22-验收记录.md)。
+
+每个API／Worker须使用不同的本地私有0700目录，且目录归运行UID所有。NewService生命周期持有目录flock；启动取得独占锁后仅回收可证明为本组件创建的孤儿文件。第二个实例不能共享活跃目录。不明链接、权限或尺寸使启动拒绝，正常Close停止新上传并等待已有上传清理。Linux门禁增加真实SIGKILL上传／扫描回收及活跃实例保护场景。
