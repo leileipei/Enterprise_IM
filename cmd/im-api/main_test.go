@@ -158,3 +158,11 @@ func TestFileAPIAssemblyEnabledPreflight(t *testing.T) {
 		t.Fatal("invalid path style")
 	}
 }
+
+func TestFileMessageProductionClosedConfiguration(t *testing.T) {
+	// The unknown flag must not activate even the upload dependency path.
+	enabled, _, _, err := fileUploadConfigFromEnv(env(map[string]string{"IM_FILE_MESSAGE_ENABLED": "true"}), true)
+	if err != nil || enabled {
+		t.Fatal("unknown message flag activated upload", enabled, err)
+	}
+}
