@@ -65,7 +65,7 @@
       if (!v || !window.FileTransport.validUUID(v.file_id) || v.conversation_id !== this.#origin.conversation ||
           (this.#reservation && v.file_id !== this.#reservation.file_id) || v.original_filename !== this.#body.original_filename || v.declared_media_type !== this.#body.declared_media_type ||
           v.declared_size_bytes !== this.#body.declared_size_bytes || typeof v.state !== "string" || !Object.hasOwn(labels, v.state) ||
-          typeof v.state_version !== "string" || !/^(0|[1-9][0-9]*)$/.test(v.state_version) || BigInt(v.state_version) > 9223372036854775807n ||
+          typeof v.state_version !== "string" || !/^(0|[1-9][0-9]*)$/.test(v.state_version) || (v.state === "allocated" ? v.state_version !== "0" : v.state_version === "0") || BigInt(v.state_version) > 9223372036854775807n ||
           !Number.isFinite(Date.parse(v.created_at)) || !Number.isFinite(Date.parse(v.upload_expires_at)) || Date.parse(v.upload_expires_at) <= Date.parse(v.created_at)) throw new Error("文件状态响应无效");
       return Object.freeze({...v});
     }
@@ -104,7 +104,7 @@
       if (this.#busy || !this.#reservation || !this.#current() || (automatic && (document.hidden || Date.now() >= this.#windowEnd))) return;
       const generation = this.#generation; this.#busy = true; this.#stopPoll(); this.#render();
       try { const v = await this.#json(`/api/v1/files/${this.#reservation.file_id}`, {method: "GET"}, generation); this.#accept(v); }
-      catch (e) { if (generation === this.#generation) { this.#stopPoll(); this.#render("状态查询未完成，请手动核对；不会自动重新上传。"); } throw e; }
+      catch (e) { if (generation === this.#generation) { this.#stopPoll(); this.#windowEnd=0; this.#onClear?.(); if(e.status===404 || e.status===410)this.#phase="unavailable"; this.#render(e.status===404 || e.status===410 ? "附件已不可用或预约已过期，不能发送，请核对消息。" : "状态查询未完成，请手动核对；不会自动重新上传。"); } throw e; }
       finally { if (generation === this.#generation) { this.#busy = false; this.#render(); this.#schedule(); } }
     }
     #schedule() {
