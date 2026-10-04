@@ -100,6 +100,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		filename, contentType = "assets/index.html", "text/html; charset=utf-8"
 	case "/web/file-transport.js":
 		filename, contentType = "assets/file-transport.js", "text/javascript; charset=utf-8"
+	case "/web/file-transfer.js":
+		filename, contentType = "assets/file-transfer.js", "text/javascript; charset=utf-8"
 	case "/web/app.js":
 		filename, contentType = "assets/app.js", "text/javascript; charset=utf-8"
 	case "/web/legal-holds.js":

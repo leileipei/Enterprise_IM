@@ -264,7 +264,7 @@ assert.equal(saveURLCount, 0);
 - `select(file:File):Promise<void>`；`upload():Promise<void>`；`queryStatus():Promise<void>`；`retryOriginal():Promise<void>`；`contextChanged():void`。
 - onReady({fileID:string,context:FileContext}) 只在当前 ready 响应；onClear() 撤回待发送可用状态，不删除服务器对象。
 
-- [ ] **Step 1：新增失败测试。** TestWebFileTransfer；fileTransferReserveReplay／fileTransferUnknownPut／fileTransferPollWindow／fileTransferRejectScan／fileTransferHiddenPage。
+- [x] **Step 1：新增失败测试。** TestWebFileTransfer；fileTransferReserveReplay／fileTransferUnknownPut／fileTransferPollWindow／fileTransferRejectScan／fileTransferHiddenPage。
 
 ```text
 UTF8 filename 256 bytes or size=26214401 -> reject before POST
@@ -284,10 +284,10 @@ assert.equal(activePollsMaximum, 1);
 assert.equal(readyEvents.length, 0); // A late ready response from old context.
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileTransfer -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 冻结单 File 来源。类型声明与规格映射完全一致，2秒轮询仅串行且有界；PUT 只用原 file ID／File，手动重试接受服务器 busy／recovery／expired 结论。file upload controls 要求三项能力及租户策略／当前可发送共同满足。取消与刷新释放内存，明确提示服务器结果可能已完成。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add file upload and scan recovery flow"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileTransfer -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 冻结单 File 来源。类型声明与规格映射完全一致，2秒轮询仅串行且有界；PUT 只用原 file ID／File，手动重试接受服务器 busy／recovery／expired 结论。file upload controls 要求三项能力及租户策略／当前可发送共同满足。取消与刷新释放内存，明确提示服务器结果可能已完成。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add file upload and scan recovery flow"`。
 
 ## Task 8：附件发送幂等与类型化补拉卡片
 

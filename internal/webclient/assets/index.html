@@ -14,6 +14,7 @@
   <script src="/web/message-search.js" defer></script>
   <script src="/web/cross-message-search.js" defer></script>
   <script src="/web/file-transport.js" defer></script>
+  <script src="/web/file-transfer.js" defer></script>
   <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -60,6 +61,7 @@
       <div class="chat-column">
         <header class="chat-header"><div><p class="eyebrow" id="chat-mode">DIRECT MESSAGE</p><h2 id="chat-title">选择一位同事，开始沟通</h2><p id="chat-subtitle">选择任职后搜索可见人员</p><p id="group-policy-recheck-hint" class="hidden" role="status"></p></div><div class="chat-header-actions"><button id="message-search-open" class="secondary-button hidden" type="button">搜索消息</button><button id="retention-access-retry" class="secondary-button hidden" type="button">重试清理记录权限检查</button><button id="legal-holds-access-retry" class="secondary-button hidden" type="button">重试保全权限检查</button><button id="legal-holds-open" class="secondary-button hidden" type="button">法务保全</button><button id="retention-records-open" class="secondary-button hidden" type="button">清理记录</button><button id="group-policy-recheck" class="secondary-button hidden" type="button">复核群策略</button><button id="group-roster-open" class="secondary-button hidden" type="button">查看成员</button><button id="group-invite-open" class="secondary-button hidden" type="button">邀请成员</button><button id="group-leave-open" class="secondary-button hidden" type="button">退出群聊</button><span id="connection-state" class="connection-state">未连接</span></div></header>
         <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text"><div class="empty-state"><div class="empty-glyph">✦</div><strong>沟通从这里开始</strong><span>选择任职，查找同事，再发起单聊。</span></div></div>
+        <fieldset id="file-controls" class="file-controls" hidden><legend>发送附件</legend><label for="file-select">选择一个文件</label><input id="file-select" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt"><div class="file-actions"><button id="file-upload" type="button" class="secondary-button">上传并扫描</button><button id="file-status-query" type="button" class="secondary-button">查询状态</button><button id="file-original-retry" type="button" class="secondary-button" hidden>按原文件重试</button><button id="file-cancel" type="button" class="secondary-button" hidden>取消本页操作</button></div><p id="file-status" role="status">支持 PDF、PNG、JPEG、UTF-8 TXT，最多 25 MiB；取消不会删除服务器对象。</p></fieldset>
         <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
       </div>
     </section>

@@ -150,7 +150,44 @@ function fileContext() {
 }
 const fileTransport = new window.FileTransport({snapshot:() => ({...fileContext(),token:accessToken,tokenExpiresAt}),
  onHTTPError:(status,code) => {if(status===401)logout("登录已过期，请重新登录。");else if(status===403 && code==="invalid_identity")selectMembership("");}});
-function filesContextChanged() { fileTransport.contextChanged(); }
+let fileCapabilities = Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
+let fileEffectivePolicy = null, fileReady = null, fileAccessController = null, fileAccessGeneration = 0;
+const fileTransfer = new window.FileTransfer({request,transport:fileTransport,context:fileContext,
+ onReady:ready => {fileReady=ready;},onClear:() => {fileReady=null;}});
+function canSendFileInContext() {
+ if (!actingMembership || !activeConversation || pendingMessage) return false;
+ if (activeConversationKind === "direct") return conversations.has(activeConversation);
+ const g=groups.get(activeConversation);
+ return activeConversationKind === "group" && !!g && g.status === "active" && g.source_membership_id === actingMembership && !groupLeaveDialog.open && groupListNeedsRefreshID !== activeConversation;
+}
+function renderFileAccess() {
+ const allowed=fileCapabilities.upload_enabled && fileCapabilities.message_send_enabled && fileCapabilities.download_enabled && fileEffectivePolicy?.enabled === true && canSendFileInContext();
+ element("file-controls").hidden=!allowed;
+}
+async function refreshFileAccess(generation) {
+ if (generation !== fileAccessGeneration || !fileContext().identityKey) return;
+ const origin=fileContext(), controller=new AbortController(); fileAccessController=controller;
+ const timer=setTimeout(() => controller.abort(),10000);
+ try {
+  const caps=await request("/api/v1/file-capabilities",{signal:controller.signal,credentials:"omit",redirect:"error"});
+  if (controller.signal.aborted || generation !== fileAccessGeneration || !window.FileTransport.sameContext(origin,fileContext())) return;
+  const keys=["upload_enabled","message_send_enabled","download_enabled","filename_search_enabled"];
+  if (!caps || Object.keys(caps).length !== keys.length || !keys.every(k => typeof caps[k] === "boolean")) throw new Error("文件能力响应无效");
+  fileCapabilities=Object.freeze({...caps});
+  if (caps.upload_enabled && caps.message_send_enabled && caps.download_enabled && activeConversation) {
+   const policy=await request("/api/v1/file-upload-policy",{signal:controller.signal,credentials:"omit",redirect:"error"});
+   if (controller.signal.aborted || generation !== fileAccessGeneration || !window.FileTransport.sameContext(origin,fileContext())) return;
+   fileEffectivePolicy=policy;
+  }
+ } catch (_) { if (generation === fileAccessGeneration) {fileEffectivePolicy=null;fileCapabilities=Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});} }
+ finally {clearTimeout(timer);if(generation === fileAccessGeneration){fileAccessController=null;renderFileAccess();}}
+}
+function filesContextChanged() {
+ fileTransport.contextChanged(); fileTransfer.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
+ fileEffectivePolicy=null;fileCapabilities=Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
+ element("file-controls").hidden=true;
+ const generation=++fileAccessGeneration;queueMicrotask(() => refreshFileAccess(generation));
+}
 
 function groupCreateStoragePrefix(actor = actingMembership) {
   return `enterprise-im-group-create:${self.tenant_id}:${self.user_id}:${actor}:`;
@@ -2205,6 +2242,7 @@ function activateGroupHistory(id) {
 }
 
 function updateGroupComposer() {
+  renderFileAccess();
   if (activeConversationKind !== "group") return;
   const group = groups.get(activeConversation);
   const canSendNew = !!group && group.status === "active" &&
