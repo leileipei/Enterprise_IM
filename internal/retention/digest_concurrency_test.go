@@ -343,3 +343,67 @@ func TestDigestProcessTenantWaitsAndRollback(t *testing.T) {
 		})
 	}
 }
+
+func TestFileMessageDigestRetirementHoldConcurrency(t *testing.T) {
+	t.Run("hold committed before conversation lock", func(t *testing.T) {
+		pool := database(t)
+		mid := seedFileDigestCandidate(t, pool, 1, fixedTime.Add(-time.Hour), true)
+		placed := false
+		w := testDigestWorker(pool, 0)
+		w.DB = wrappedDB{Beginner: pool, wrap: func(tx pgx.Tx) pgx.Tx {
+			return hookedTx{Tx: tx, before: func(ctx context.Context, sql string) error {
+				if strings.Contains(sql, "SELECT clock_timestamp()") && !placed {
+					_, _, err := holdService(pool).PlaceLegalHold(ctx, identity(), conversationA, "00000000-0000-4000-8000-000000008091", "FILE-BEFORE")
+					placed = err == nil
+					return err
+				}
+				return nil
+			}}
+		}}
+		b, err := w.ProcessTenant(context.Background(), tenantA)
+		if err != nil || b.RetiredCount != 0 || !placed {
+			t.Fatal(b, err, placed)
+		}
+		assertFileDigestProof(t, pool, mid, false)
+	})
+	t.Run("hold waits for locked retirement", func(t *testing.T) {
+		pool := database(t)
+		mid := seedFileDigestCandidate(t, pool, 1, fixedTime.Add(-time.Hour), true)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		reached, proceed := make(chan struct{}, 1), make(chan struct{})
+		var once sync.Once
+		release := func() { once.Do(func() { close(proceed) }) }
+		defer release()
+		w := testDigestWorker(pool, 0)
+		w.DB = pausedDB(pool, "INSERT INTO message_digest_retirement_batches", reached, proceed)
+		done := make(chan error, 1)
+		go func() { _, err := w.ProcessTenant(ctx, tenantA); done <- err }()
+		select {
+		case <-reached:
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+		conn, err := pool.Acquire(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Release()
+		svc := holdService(pool)
+		svc.DB = conn.Conn()
+		holdDone := make(chan error, 1)
+		go func() {
+			_, _, err := svc.PlaceLegalHold(ctx, identity(), conversationA, "00000000-0000-4000-8000-000000008092", "FILE-AFTER")
+			holdDone <- err
+		}()
+		waitForLock(t, pool, conn.Conn().PgConn().PID())
+		release()
+		if err = <-done; err != nil {
+			t.Fatal(err)
+		}
+		if err = <-holdDone; err != nil {
+			t.Fatal(err)
+		}
+		assertFileDigestProof(t, pool, mid, true)
+	})
+}
