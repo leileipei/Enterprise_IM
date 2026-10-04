@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -226,15 +225,17 @@ func recheckGroupSendTime(ctx context.Context, tx pgx.Tx, id access.TrustedIdent
 // SendGroupTextMessage serializes with group membership changes on the group
 // row. ACK is returned only after message, idempotency key, outbox and audit
 // commit together.
-func (s Service) SendGroupTextMessage(ctx context.Context, id access.TrustedIdentity,
-	groupID, clientMessageID, body string) (MessageACK, error) {
+func (s Service) SendGroupTextMessage(ctx context.Context, id access.TrustedIdentity, groupID, clientMessageID, body string) (MessageACK, error) {
+	return s.SendGroupMessage(ctx, id, groupID, MessageSendRequest{ClientMessageID: clientMessageID, MessageType: MessageTypeText, Text: body})
+}
+func (s Service) SendGroupMessage(ctx context.Context, id access.TrustedIdentity, groupID string, content MessageSendRequest) (MessageACK, error) {
 	// Other group operations and administrators acquire actor, group and peer
 	// locks in different orders. PostgreSQL aborts one participant of a detected
 	// lock cycle; retry the entire atomic send with a fresh authorization check.
 	for attempt := 0; attempt < 3; attempt++ {
-		ack, err := s.sendGroupTextMessageOnce(ctx, id, groupID, clientMessageID, body)
+		ack, err := s.sendGroupMessageOnce(ctx, id, groupID, content)
 		var databaseError *pgconn.PgError
-		if !errors.As(err, &databaseError) || databaseError.Code != "40P01" ||
+		if !errors.As(err, &databaseError) || (databaseError.Code != "40P01" && (content.MessageType != MessageTypeFile || databaseError.Code != "55P03")) ||
 			attempt == 2 || ctx.Err() != nil {
 			return ack, err
 		}
@@ -242,8 +243,9 @@ func (s Service) SendGroupTextMessage(ctx context.Context, id access.TrustedIden
 	return MessageACK{}, ErrPolicyUnavailable
 }
 
-func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.TrustedIdentity,
-	groupID, clientMessageID, body string) (MessageACK, error) {
+func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIdentity, groupID string, content MessageSendRequest) (MessageACK, error) {
+	clientMessageID, body := content.ClientMessageID, content.Text
+	isFile := content.MessageType == MessageTypeFile
 	if !directoryUUIDPattern.MatchString(groupID) {
 		return MessageACK{}, ErrInvalidMessageRequest
 	}
@@ -283,11 +285,16 @@ func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.Trusted
 	if err := validateClientMessageID(clientMessageID, at); err != nil {
 		return MessageACK{}, err
 	}
-	if !utf8.ValidString(body) || strings.TrimSpace(body) == "" ||
-		strings.ContainsRune(body, 0) || len(body) > 16*1024 {
-		return MessageACK{}, ErrInvalidTextMessage
+	content, err = validateMessageSendRequest(content)
+	if err != nil {
+		return MessageACK{}, err
+	}
+	clientMessageID = content.ClientMessageID
+	if isFile {
+		body = content.Caption
 	}
 	digest := sha256.Sum256([]byte(body))
+	var binding preparedFileBinding
 	var groupStatus string
 	var lastSeq int64
 	err = tx.QueryRow(ctx, `SELECT status,last_seq FROM conversations
@@ -349,11 +356,41 @@ func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.Trusted
 		}
 		return MessageACK{}, ErrMessageNotAvailable
 	}
-	if ack, exists, same, err := existingMessageACK(ctx, tx, id.TenantID, groupID,
-		id.UserID, clientMessageID, digest); err != nil {
-		return MessageACK{}, err
-	} else if exists {
-		return finishExistingMessage(ctx, tx, id, ack, same, at)
+	var refs []inviteMemberRef
+	if isFile {
+		refs, err = loadInviteMembers(ctx, tx, id.TenantID, groupID)
+		if err != nil {
+			return MessageACK{}, err
+		}
+		if err := requireFileGroupParticipant(id, refs); err != nil {
+			return MessageACK{}, err
+		}
+		if !memberActiveAt(actor, s.now()) {
+			return MessageACK{}, ErrForbidden
+		}
+		ack, exists, same, err := existingTypedMessageACK(ctx, tx, id, groupID, content)
+		if err != nil {
+			return MessageACK{}, err
+		}
+		if exists {
+			return s.finishExistingFileMessage(ctx, tx, id, ack, same, s.now(), func(fresh time.Time) error {
+				if !memberActiveAt(actor, fresh) {
+					return ErrForbidden
+				}
+				current, err := loadInviteMembers(ctx, tx, id.TenantID, groupID)
+				if err != nil {
+					return err
+				}
+				return requireFileGroupParticipant(id, current)
+			})
+		}
+	} else {
+		if ack, exists, same, err := existingMessageACK(ctx, tx, id.TenantID, groupID,
+			id.UserID, clientMessageID, digest); err != nil {
+			return MessageACK{}, err
+		} else if exists {
+			return finishExistingMessage(ctx, tx, id, ack, same, at)
+		}
 	}
 	if groupStatus == "policy_blocked" {
 		if err := finishMessageSend(ctx, tx, id, groupID, "deny", "group_policy_blocked", at); err != nil {
@@ -364,7 +401,7 @@ func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.Trusted
 	if groupStatus != "active" {
 		return MessageACK{}, ErrMessageNotAvailable
 	}
-	refs, err := loadInviteMembers(ctx, tx, id.TenantID, groupID)
+	refs, err = loadInviteMembers(ctx, tx, id.TenantID, groupID)
 	if err != nil {
 		return MessageACK{}, err
 	}
@@ -390,6 +427,11 @@ func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.Trusted
 			return MessageACK{}, err
 		}
 		return MessageACK{}, ErrMessageNotAvailable
+	}
+	if isFile {
+		if err := lockFileMessagePolicy(ctx, tx, id.TenantID); err != nil {
+			return MessageACK{}, err
+		}
 	}
 	version, err := currentVersion(ctx, tx, id.TenantID)
 	if err != nil {
@@ -469,6 +511,16 @@ func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.Trusted
 			return MessageACK{}, ErrGroupPolicyBlocked
 		}
 	}
+	if isFile {
+		binding, err = prepareFileBindingTx(ctx, tx, id, groupID, content.FileID)
+		if err != nil {
+			return MessageACK{}, err
+		}
+		digest, err = fileMessageDigest(id, groupID, content, binding.SealedSHA)
+		if err != nil {
+			return MessageACK{}, err
+		}
+	}
 	// Rate reservation and message writes are provisional: a lock wait can cross
 	// a policy or membership boundary after the earlier decision.
 	if _, err := tx.Exec(ctx, "SAVEPOINT group_send_provisional"); err != nil {
@@ -500,11 +552,16 @@ func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.Trusted
 	}
 	err = tx.QueryRow(ctx, `INSERT INTO messages
  (tenant_id,conversation_id,seq,sender_user_id,sender_membership_id,
-  client_msg_id,text_body,content_digest,accepted_at)
- VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id::text`, id.TenantID, groupID,
-		ack.Seq, id.UserID, id.ActingMembershipID, clientMessageID, body, digest[:], at).Scan(&ack.MessageID)
+  client_msg_id,text_body,content_digest,accepted_at,message_type)
+ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text`, id.TenantID, groupID,
+		ack.Seq, id.UserID, id.ActingMembershipID, clientMessageID, body, digest[:], at, content.MessageType).Scan(&ack.MessageID)
 	if err != nil {
 		return MessageACK{}, err
+	}
+	if isFile {
+		if err := insertFileBindingTx(ctx, tx, id, ack, binding); err != nil {
+			return MessageACK{}, err
+		}
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO message_idempotency
  (tenant_id,conversation_id,sender_user_id,client_msg_id,message_id,content_digest,accepted_at,expires_at)
@@ -523,8 +580,55 @@ func (s Service) sendGroupTextMessageOnce(ctx context.Context, id access.Trusted
 	if err := recheckGroupSendTime(ctx, tx, id, groupID, actor, members, rules, version, at, s.now()); err != nil {
 		return MessageACK{}, err
 	}
-	if err := finishMessageSend(ctx, tx, id, groupID, "allow", "group_send", at); err != nil {
+	if isFile {
+		var checkedAt time.Time
+		err = s.finishFileMessageSend(ctx, tx, id, groupID, "group_send", at, func(fresh time.Time) error {
+			checkedAt = fresh
+			if !memberActiveAt(actor, fresh) {
+				return ErrForbidden
+			}
+			for _, m := range members {
+				if !memberActiveAt(m.membership, fresh) {
+					return ErrGroupPolicyBlocked
+				}
+			}
+			if evaluateGroupSendPairs(members, fresh, version, rules) != nil {
+				return ErrGroupPolicyBlocked
+			}
+			current, err := loadInviteMembers(ctx, tx, id.TenantID, groupID)
+			if err != nil {
+				return err
+			}
+			return requireFileGroupParticipant(id, current)
+		})
+		if errors.Is(err, ErrForbidden) || errors.Is(err, ErrGroupPolicyBlocked) {
+			// This existing helper rolls back the whole savepoint and commits only
+			// denial or pause evidence. It runs outside the final-check callback.
+			if denial := recheckGroupSendTime(ctx, tx, id, groupID, actor, members, rules, version, at, checkedAt); denial != nil {
+				return MessageACK{}, denial
+			}
+		}
+		if err != nil {
+			return MessageACK{}, err
+		}
+	} else if err := finishMessageSend(ctx, tx, id, groupID, "allow", "group_send", at); err != nil {
 		return MessageACK{}, err
 	}
 	return ack, nil
+}
+
+func requireFileGroupParticipant(id access.TrustedIdentity, refs []inviteMemberRef) error {
+	other := false
+	for _, ref := range refs {
+		if ref.userID == id.UserID {
+			if ref.membershipID == id.ActingMembershipID {
+				return nil
+			}
+			other = true
+		}
+	}
+	if other {
+		return ErrConversationContextChanged
+	}
+	return ErrMessageNotAvailable
 }
