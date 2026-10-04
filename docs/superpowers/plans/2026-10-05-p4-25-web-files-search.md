@@ -138,7 +138,7 @@ if sqlCallsAfterFinalClock != 0 || objectCalls != 0 { t.Fatal("visibility check 
 - 私有 `fileSearchBinding{Tenant,User,Membership,Conversation,Kind,Query string}`、`fileSearchPosition{Conversation,Phase string;After int64}`。
 - `encodeFileSearchCursor(binding fileSearchBinding,pos fileSearchPosition)(string,error)`／`decodeFileSearchCursor(raw string,binding fileSearchBinding)(fileSearchPosition,error)`；版本 file_name_v1，复合 envelope 严格规范编码。
 
-- [ ] **Step 1：新增失败测试。** TestFileSearchLiteral／TestFileSearchDirectAndGroup／TestFileSearchCursorBinding／TestFileSearchBoundedProgress／TestFileSearchAuditFailure。
+- [x] **Step 1：新增失败测试。** TestFileSearchLiteral／TestFileSearchDirectAndGroup／TestFileSearchCursorBinding／TestFileSearchBoundedProgress／TestFileSearchAuditFailure。
 
 ```text
 q="%_" -> literal name match only; caption/body match -> 0 matches
@@ -156,10 +156,10 @@ if !errors.Is(err, ErrInvalidFileSearch) { t.Fatal("accepted text cursor") }
 if len(page.Matches) != 0 || !page.HasMore || page.NextCursor == "" { t.Fatal("empty page lost progress") }
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/policystore -run '^TestFileSearch' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 复用 NormalizeMessageSearchQuery；按 seq 读取 file 消息候选，不以文件名 SQL LIKE 提前过滤。Task 2 事实按稳定身份／会话／文件锁序加载，最终 DB 时间后纯判断／名称匹配，最小审计成功提交才返回；保留消息扫描进度，无隐藏数。定义 ErrInvalidFileSearch／ErrFileSearchUnavailable。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(search): add authorized conversation filename search"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/policystore -run '^TestFileSearch' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 复用 NormalizeMessageSearchQuery；按 seq 读取 file 消息候选，不以文件名 SQL LIKE 提前过滤。Task 2 事实按稳定身份／会话／文件锁序加载，最终 DB 时间后纯判断／名称匹配，最小审计成功提交才返回；保留消息扫描进度，无隐藏数。定义 ErrInvalidFileSearch／ErrFileSearchUnavailable。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(search): add authorized conversation filename search"`。
 
 ## Task 4：个人跨会话有界名称搜索
 
