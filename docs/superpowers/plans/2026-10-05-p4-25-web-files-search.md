@@ -169,7 +169,7 @@ if len(page.Matches) != 0 || !page.HasMore || page.NextCursor == "" { t.Fatal("e
 - `Service.SearchAllFileMessages(ctx context.Context,id access.TrustedIdentity,query,kind,cursor string,limit int)(FileSearchPage,error)`；kind=all／direct／group。
 - 消费 Task 2／3 proof、match／page 与独立 cursor；跨会话 binding.Conversation 为空，用 position within／after 前进。
 
-- [ ] **Step 1：新增失败测试。** TestCrossFileSearchPersonalScope／TestCrossFileSearchBudget／TestCrossFileSearchFinalBoundary／TestCrossFileSearchCursorProgress；两连接锁阻塞后跨过未来 deny／TTL，最终无名称。
+- [x] **Step 1：新增失败测试。** TestCrossFileSearchPersonalScope／TestCrossFileSearchBudget／TestCrossFileSearchFinalBoundary／TestCrossFileSearchCursorProgress；两连接锁阻塞后跨过未来 deny／TTL，最终无名称。
 
 ```text
 21 conversations -> visited<=20; total file candidates<=500
@@ -186,10 +186,10 @@ if visitedConversations > 20 || scannedFileMessages > 500 { t.Fatal("search budg
 if len(page.Matches) != 0 { t.Fatal("name released after final deny/expiry") }
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/policystore -run 'Test(CrossFileSearch|FileSearchConcurrency)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 使用个人候选集合，单事务有界加载全部待返回资格；不得 per-file 起独立已提交事务拼结果。身份／来源父表按 UUID 排序取得锁，再多会话按 UUID 锁，沿用后续策略／file／attachment 锁序，无法遵守时 NOWAIT 重试。完成所有授权 I/O 后统一最后 DB clock、纯过滤、file_name_search_all 审计并提交。预先按上述顺序取得整批来源父表／会话／文件保护锁，后续逐文件事实加载只能重取已持有的锁；不能在第二会话反向取得新父表锁。复用 5／4／1 秒与总计最多三次尝试。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(search): add bounded personal cross-conversation filenames"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/policystore -run 'Test(CrossFileSearch|FileSearchConcurrency)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 使用个人候选集合，单事务有界加载全部待返回资格；不得 per-file 起独立已提交事务拼结果。身份／来源父表按 UUID 排序取得锁，再多会话按 UUID 锁，沿用后续策略／file／attachment 锁序，无法遵守时 NOWAIT 重试。完成所有授权 I/O 后统一最后 DB clock、纯过滤、file_name_search_all 审计并提交。预先按上述顺序取得整批来源父表／会话／文件保护锁，后续逐文件事实加载只能重取已持有的锁；不能在第二会话反向取得新父表锁。复用 5／4／1 秒与总计最多三次尝试。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(search): add bounded personal cross-conversation filenames"`。
 
 ## Task 5：名称搜索 HTTP 与准确闭合装配
 

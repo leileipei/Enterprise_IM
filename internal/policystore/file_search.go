@@ -58,6 +58,10 @@ func (s Service) beginFileSearch(ctx context.Context) (pgx.Tx, error) {
 	if e != nil {
 		return nil, e
 	}
+	if _, e = tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); e != nil {
+		rollbackFileSearch(tx)
+		return nil, e
+	}
 	if _, e = tx.Exec(ctx, `SELECT set_config('statement_timeout','4s',true),set_config('lock_timeout','1s',true)`); e != nil {
 		rollbackFileSearch(tx)
 		return nil, e
@@ -172,7 +176,8 @@ func loadFileSearchProofs(ctx context.Context, tx pgx.Tx, id access.TrustedIdent
 				continue
 			}
 			if errors.Is(e, filedownload.ErrInvalidIdentity) {
-				return nil, ErrForbidden
+				// The protected common actor is checked at the final time and denied with audit.
+				continue
 			}
 			if e != nil {
 				return nil, e
