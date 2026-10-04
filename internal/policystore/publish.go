@@ -49,7 +49,7 @@ func nullableTime(at time.Time) any {
 func validAction(action policy.Action) bool {
 	switch action {
 	case policy.ActionDirectoryView, policy.ActionStartChat, policy.ActionSendMessage,
-		policy.ActionCreateGroup, policy.ActionInviteGroup:
+		policy.ActionCreateGroup, policy.ActionInviteGroup, policy.ActionFileDownload:
 		return true
 	default:
 		return false
