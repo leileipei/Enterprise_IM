@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/filecleanup"
+	"github.com/leileipei/Enterprise_IM/internal/filedownload"
 	"github.com/leileipei/Enterprise_IM/internal/files"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
@@ -173,5 +174,38 @@ func TestFileDeleteCandidatesCounterSaturates(t *testing.T) {
 	next, found, e := s.ClaimFileDelete(context.Background(), uploadOwner)
 	if e != nil || !found || next.JobID != ticket.JobID || next.LeaseToken == ticket.LeaseToken {
 		t.Fatal("observation counter stopped reconciliation", next, found, e)
+	}
+}
+
+func TestFileDeleteCandidatesResumeAfterDownloadRepair(t *testing.T) {
+	c, s, _, m := fileHistoryFixture(t, "direct")
+	ctx := context.Background()
+	download := beginDownload(t, c, m, publisher())
+	if e := s.AuthorizeFileDownload(ctx, publisher(), download); e != nil {
+		t.Fatal(e)
+	}
+	cleanupPolicy(t, c, 1, true)
+	ticket := claimDelete(t, s)
+	_, _, _, reason := deleteJobFacts(t, c, ticket)
+	if reason != "in_flight" {
+		t.Fatal(reason)
+	}
+	if e := s.FinishFileDownload(ctx, download, filedownload.Result{Outcome: "interrupted", Reason: "cleanup_pending"}); e != nil {
+		t.Fatal(e)
+	}
+	if n, e := s.RepairFileDownloadAudit(ctx, clientB, 20); e != nil || n != 1 {
+		t.Fatal(n, e)
+	}
+	run(t, c, `SELECT pg_sleep(GREATEST(0,EXTRACT(EPOCH FROM ((SELECT next_retry_at FROM file_delete_jobs WHERE id=$1)-clock_timestamp())))+0.01)`, ticket.JobID)
+	next := claimDelete(t, s)
+	inventory, e := s.GetFileDeleteInventory(ctx, next)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if inventory.Reason != "" && inventory.Reason != "inventory_incomplete" {
+		t.Fatal("resolved download obligation left stale barrier", inventory.Reason)
+	}
+	if inventory.Exhausted {
+		t.Fatal("retry reused stale inventory")
 	}
 }

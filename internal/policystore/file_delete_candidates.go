@@ -211,6 +211,15 @@ func (s Service) ClaimFileDelete(ctx context.Context, ownerID string) (fileclean
 			if e != nil {
 				return zero, e
 			}
+
+			// Resolved database obligations require a new inventory; storage
+			// ambiguity and delete markers remain quarantined.
+			if reason == "" && exists && j.Phase == "blocked" && (j.Reason == "in_flight" || j.Reason == "unknown_upload") {
+				_, e = tx.Exec(ctx, `UPDATE file_delete_jobs SET phase='pending',reason_code=NULL,source_safe=false,inventory_exhausted=false,next_key='',next_version='' WHERE id=$1`, job)
+				if e != nil {
+					return zero, e
+				}
+			}
 			if reason != "" {
 				_, e = tx.Exec(ctx, `UPDATE file_delete_jobs SET phase='blocked',reason_code=$2,source_safe=false,inventory_exhausted=false,next_retry_at=$3 WHERE id=$1`, job, reason, deleteRetryAt(at, retryCount))
 				if e != nil {
