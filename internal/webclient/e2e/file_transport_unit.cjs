@@ -9,6 +9,9 @@ let snap={identityKey:'identity',membershipId:'22222222-2222-4222-8222-222222222
 let errors=[];const transport=new window.FileTransport({snapshot:()=>({...snap}),onHTTPError:(status,code)=>errors.push([status,code])});
 function response(chunks,[length='3',extra={}]=[]){let i=0;return {status:200,ok:true,redirected:false,headers:new Headers({'Content-Type':'application/octet-stream','Content-Length':length,'Content-Disposition':"attachment; filename*=UTF-8''%E6%8A%A5%E5%91%8A.txt",'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...extra}),body:{getReader(){return {read:async()=>i<chunks.length?{value:new Uint8Array(chunks[i++]),done:false}:{done:true},cancel:async()=>{},releaseLock(){}}}}}}
 (async()=>{
+ assert.equal(window.FileTransport.validFilename('\uFEFF报告.txt'),true,'Go preserves non-space FEFF');
+ for(const name of ['\u0085报告.txt','报告.txt\u2000','../报告.txt','报告\n.txt','x'.repeat(256)])assert.equal(window.FileTransport.validFilename(name),false);
+ assert.equal(window.FileTransport.dispositionFilename("attachment; filename*=UTF-8''%EF%BB%BF%E6%8A%A5%E5%91%8A.txt"),'\uFEFF报告.txt');
  fetchImpl=async(path,o)=>{assert.equal(path,`/api/v1/files/${fid}/content`);options=o;return response([[1,2],[3]])};
  let got=await transport.readDownload(fid,new AbortController().signal);assert.equal(got.filename,'报告.txt');assert.deepEqual([...new Uint8Array(await got.blob.arrayBuffer())],[1,2,3]);
  assert.equal(options.credentials,'omit');assert.equal(options.cache,'no-store');assert.equal(options.redirect,'error');assert.equal(options.headers.get('Authorization'),'Bearer private-test-token');assert.equal(options.headers.get('X-Acting-Membership-ID'),snap.membershipId);assert.equal(pendingTimers.size,0);

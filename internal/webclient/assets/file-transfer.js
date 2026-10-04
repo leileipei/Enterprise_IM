@@ -29,11 +29,12 @@
       if (this.#retry) { this.#retry.hidden = !["reserve_unknown", "put_unknown", "allocated"].includes(this.#phase); this.#retry.disabled = this.#busy; }
       if (this.#cancel) this.#cancel.hidden = this.#phase === "empty";
     }
+    #clearReady() { this.#delivered = false; this.#onClear?.(); }
     #stopPoll() { if (this.#pollTimer !== null) clearTimeout(this.#pollTimer); this.#pollTimer = null; }
     contextChanged() {
       this.#generation++; this.#stopPoll(); for (const c of this.#controllers) c.abort(); this.#controllers.clear();
       this.#file = null; this.#origin = null; this.#body = null; this.#reservation = null; this.#phase = "empty"; this.#busy = false; this.#windowEnd = 0; this.#delivered = false;
-      if (this.#select) this.#select.value = ""; this.#onClear?.();
+      if (this.#select) this.#select.value = ""; this.#clearReady();
       this.#render("已取消本页操作；服务器可能已完成上传，对象不会因取消而删除。刷新后请补拉消息核对。");
     }
     async #json(path, options, generation) {
@@ -57,7 +58,7 @@
             !Array.isArray(p.allowed_media_types) || !p.allowed_media_types.includes(mime) || !p.allowed_media_types.every(v => types.includes(v))) throw new Error("租户上传策略不允许此文件");
         this.#check(generation); this.#file = file;
         this.#body = Object.freeze({upload_request_id: crypto.randomUUID(), original_filename: file.name, declared_media_type: mime, declared_size_bytes: String(file.size)});
-        this.#phase = "selected"; this.#onClear?.(); this.#render("已选择文件；声明类型须经服务端检测和安全扫描。");
+        this.#phase = "selected"; this.#clearReady(); this.#render("已选择文件；声明类型须经服务端检测和安全扫描。");
       } catch (e) { if (generation === this.#generation) this.#render("无法选择此文件，请核对上传策略。" ); throw e; }
       finally { if (generation === this.#generation) { this.#busy = false; this.#render(); } }
     }
@@ -72,7 +73,7 @@
     #accept(v) {
       this.#reservation = this.#validateStatus(v); this.#phase = v.state; this.#render(labels[v.state]);
       if (v.state === "ready") { this.#stopPoll(); this.#file = null; if (!this.#delivered) { this.#delivered = true; this.#onReady?.({fileID: v.file_id, context: this.#origin}); } }
-      else if (["rejected", "scan_failed", "delete_pending", "deleted"].includes(v.state)) { this.#stopPoll(); this.#onClear?.(); }
+      else if (["rejected", "scan_failed", "delete_pending", "deleted"].includes(v.state)) { this.#stopPoll(); this.#clearReady(); }
       else if (["uploaded", "scanning"].includes(v.state)) this.#schedule();
     }
     async upload() { if (this.#phase !== "selected") throw new Error("请按原请求核对或重试"); return this.#uploadOriginal(); }
@@ -94,7 +95,7 @@
       } catch (e) {
         if (generation === this.#generation && this.#current()) {
           this.#phase = e.status === 410 || this.#phase === "expired" ? "expired" : operation === "reserve" ? "reserve_unknown" : "put_unknown";
-          this.#onClear?.(); this.#render(this.#phase === "expired" ? "预约已过期；请先核对消息，再重新选择文件。" : "结果待确认：不会自动重新上传。请查询状态，或使用同一文件与原请求手动重试。");
+          this.#clearReady(); this.#render(this.#phase === "expired" ? "预约已过期；请先核对消息，再重新选择文件。" : "结果待确认：不会自动重新上传。请查询状态，或使用同一文件与原请求手动重试。");
         }
         throw e;
       } finally { if (generation === this.#generation) { this.#busy = false; this.#render(); this.#schedule(); } }
@@ -104,7 +105,7 @@
       if (this.#busy || !this.#reservation || !this.#current() || (automatic && (document.hidden || Date.now() >= this.#windowEnd))) return;
       const generation = this.#generation; this.#busy = true; this.#stopPoll(); this.#render();
       try { const v = await this.#json(`/api/v1/files/${this.#reservation.file_id}`, {method: "GET"}, generation); this.#accept(v); }
-      catch (e) { if (generation === this.#generation) { this.#stopPoll(); this.#windowEnd=0; this.#onClear?.(); if(e.status===404 || e.status===410)this.#phase="unavailable"; this.#render(e.status===404 || e.status===410 ? "附件已不可用或预约已过期，不能发送，请核对消息。" : "状态查询未完成，请手动核对；不会自动重新上传。"); } throw e; }
+      catch (e) { if (generation === this.#generation) { this.#stopPoll(); this.#windowEnd=0; this.#clearReady(); if(e.status===404 || e.status===410)this.#phase="unavailable"; this.#render(e.status===404 || e.status===410 ? "附件已不可用或预约已过期，不能发送，请核对消息。" : "状态查询未完成，请手动核对；不会自动重新上传。"); } throw e; }
       finally { if (generation === this.#generation) { this.#busy = false; this.#render(); this.#schedule(); } }
     }
     #schedule() {

@@ -18,5 +18,10 @@ const file={name:'报告.txt',type:'text/plain',size:3};
  state='ready';await flow.queryStatus();assert.equal(ready.length,1);assert.equal(ready[0].fileID,fid);assert.equal(timers.size,0);await assert.rejects(flow.select(file), /请先取消/);
  for(const rejected of ['rejected','scan_failed','delete_pending','deleted']){state=rejected;await flow.queryStatus();assert.equal(ready.length,1)}
  state='scanning';holdQuery=true;let late=flow.queryStatus();await flush();ctx.conversationEpoch++;flow.contextChanged();holdQuery({...status(),state:'ready'});holdQuery=null;try{await late}catch(_){}assert.equal(ready.length,1);assert.equal(timers.size,0);
- assert(clears>0);console.log('fileTransferReserveReplay, fileTransferUnknownPut, fileTransferPollWindow, fileTransferRejectScan, fileTransferHiddenPage: PASS');
+ assert(clears>0);
+ let attached=false,deliveries=0;state='ready';
+ const recovery=new window.FileTransfer({request,transport,context:()=>({...ctx}),onReady:()=>{attached=true;deliveries++},onClear:()=>{attached=false}});
+ await recovery.select(file);await recovery.upload();assert.equal(attached,true);queryFails=true;await assert.rejects(recovery.queryStatus());assert.equal(attached,false);
+ await recovery.queryStatus();assert.equal(attached,true,'ready recheck must restore original attachment slot');assert.equal(deliveries,2);await recovery.queryStatus();assert.equal(deliveries,2,'repeated ready does not duplicate attach');
+ console.log('fileTransferReserveReplay, fileTransferUnknownPut, fileTransferPollWindow, fileTransferRejectScan, fileTransferHiddenPage: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});

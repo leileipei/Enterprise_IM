@@ -12,6 +12,7 @@ const ready=()=>({fileID:fid,context:{...ctx}});
  fail=false;await flow.retry();assert.equal(acks.length,1);assert.equal(pending.at(-1),false);
  const privateName='<img src=x onerror=alert(1)>报告.txt';const file={seq:2,message_type:'file',caption:'caption',attachment:{file_id:fid,available:true,download_available:false,original_filename:privateName,actual_size_bytes:'3',detected_media_type:'text/plain'}};
  const card=flow.render(file);assert(card.textContent.includes(privateName));assert(!card.textContent.includes('SHA'));assert.equal(card.querySelectorAll('img').length,0);
+ const feff={...file,attachment:{...file.attachment,original_filename:'\uFEFF报告.txt'}};assert(flow.render(feff).textContent.includes('\uFEFF报告.txt'),'legal FEFF typed card is available');
  for(const redacted of [{...file,redacted:true},{...file,attachment:{...file.attachment,available:false}}]){const c=flow.render(redacted);assert(!c.textContent.includes(privateName));if(redacted.redacted)assert(!c.textContent.includes('caption'))}
  assert.equal(flow.render({seq:3,text:'附件消息（当前客户端不支持查看）'}).textContent,'附件消息（当前客户端不支持查看）');
  ctx.kind='group';flow.attach(ready());late=true;const waiting=flow.send('late');await env.flush();ctx.identityEpoch++;flow.contextChanged();late(ack());try{await waiting}catch(_){}assert.equal(acks.length,1);assert.equal(pending.at(-1),false);assert(requests.at(-1).path.includes('/groups/'));

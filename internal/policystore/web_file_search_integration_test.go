@@ -13,7 +13,7 @@ import (
 func TestWebFileRealSearch(t *testing.T) {
 	f := newWebFileFixture(t)
 	group := f.group(t)
-	dm := f.uploadReady(t, directA, "集团_ABC%_.txt", []byte("P425_PRIVATE_BODY"))
+	dm := f.uploadReady(t, directA, "\uFEFF集团_ABC%_.txt", []byte("P425_PRIVATE_BODY"))
 	f.sendFile(t, directA, "direct", dm.ID, "P425_PRIVATE_CAPTION")
 	gm := f.uploadReady(t, group, "集团_ABC%_群.txt", []byte("P425_PRIVATE_BODY"))
 	f.sendFile(t, group, "group", gm.ID, "P425_PRIVATE_CAPTION")
@@ -74,6 +74,8 @@ func TestWebFileRealSearch(t *testing.T) {
 	}
 	expect(0)
 	f.assertPrivate(t)
+	t.Run("500 normal ready candidates", TestFileSearchReadyCandidateBudget)
+	t.Run("20 normal populated conversations", TestCrossFileSearchReadyCandidateBudget)
 	t.Run("500 candidates", TestFileSearchBoundedProgress)
 	t.Run("20 conversations", TestCrossFileSearchBudget)
 	t.Run("no duplicate cursors", TestCrossFileSearchCursorProgress)

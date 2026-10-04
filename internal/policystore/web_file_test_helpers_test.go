@@ -228,10 +228,11 @@ func (f *webFileFixture) group(t *testing.T) string {
 }
 
 type webFileSample struct {
-	Path    string `json:"path"`
-	Name    string `json:"name"`
-	MIME    string `json:"mime"`
-	Outcome string `json:"outcome,omitempty"`
+	Path      string `json:"path"`
+	Name      string `json:"name"`
+	MIME      string `json:"mime"`
+	Outcome   string `json:"outcome,omitempty"`
+	SavedName string `json:"savedName,omitempty"`
 }
 
 func webPDF() []byte {
@@ -295,7 +296,7 @@ func (f *webFileFixture) samples(t *testing.T, rejected bool) []webFileSample {
 		if e := os.WriteFile(p, s.body, 0600); e != nil {
 			t.Fatal(e)
 		}
-		samples = append(samples, webFileSample{p, s.name, s.mime, s.outcome})
+		samples = append(samples, webFileSample{Path: p, Name: s.name, MIME: s.mime, Outcome: s.outcome})
 		f.private = append(f.private, s.name)
 	}
 	return samples

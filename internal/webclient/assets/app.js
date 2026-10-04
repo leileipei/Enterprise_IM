@@ -157,8 +157,8 @@ const filePolicy=new window.FilePolicy({request,context:fileContext,canOpen:()=>
 filePolicy.setAccess(false);
 const fileDownload=new window.FileDownload({transport:fileTransport,context:fileContext,capabilities:()=>fileCapabilities,saveContainer:element("file-save")});
 const fileTransfer = new window.FileTransfer({request,transport:fileTransport,context:fileContext,
- onReady:ready => {fileSavedContext=null;try{fileMessages.attach(ready);fileReady=ready;}catch(_){fileReady=null;element("file-status").textContent="发送槽已被占用，请取消后核对。";}},
- onClear:() => {fileSavedContext=null;fileReady=null;fileMessages.contextChanged();}});
+ onReady:ready => {if(fileMessagePending)return;fileSavedContext=null;try{fileMessages.attach(ready);fileReady=ready;}catch(_){fileReady=null;element("file-status").textContent="发送槽已被占用，请取消后核对。";}},
+ onClear:() => {if(fileMessagePending)return;fileSavedContext=null;fileReady=null;fileMessages.contextChanged();}});
 const fileMessages=new window.FileMessages({request,context:fileContext,uuidV7,canSend:canSendFileInContext,
  download:fileDownload,capabilities:()=>fileCapabilities,
  onPending:pending => {fileMessagePending=pending;renderFileAccess();},

@@ -4,9 +4,9 @@
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const contextFields = ["identityKey", "membershipId", "identityEpoch", "conversation", "conversationEpoch", "kind"];
   const sameContext = (a, b) => !!a && !!b && contextFields.every(key => a[key] === b[key]);
-  const validFilename = name => typeof name === "string" && name === name.trim() && name !== "." && name !== ".." &&
+  const validFilename = name => typeof name === "string" && name === name.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, "") && name !== "." && name !== ".." &&
     new TextEncoder().encode(name).length >= 1 && new TextEncoder().encode(name).length <= 255 &&
-    !/[\/\\:\p{Cc}]/u.test(name) && new TextDecoder("utf-8", {fatal: true}).decode(new TextEncoder().encode(name)) === name;
+    !/[\/\\:\p{Cc}]/u.test(name) && new TextDecoder("utf-8", {fatal: true, ignoreBOM: true}).decode(new TextEncoder().encode(name)) === name;
   function dispositionFilename(raw) {
     if (typeof raw !== "string" || /[\r\n\0]/.test(raw)) throw new Error("文件名响应无效");
     const match = /^attachment\s*;\s*(filename\*|filename)\s*=\s*(.+)$/i.exec(raw);

@@ -11,6 +11,7 @@ const match=()=>({conversation_id:conv,conversation_kind:'direct',message_id:id,
  page={matches:Array(21).fill(match()),has_more:false,next_cursor:''};await text.load(true);assert.equal(el('list').textContent,'');
  for(const q of ['x','x'.repeat(101)]){const n=calls.length;el('query').value=q;await text.load(true);assert.equal(calls.length,n)}
  el('query').value='\u0085报告\u0085';page={matches:[{...match(),original_filename:'报告.txt'}],has_more:false,next_cursor:''};await text.load(true);assert.equal(new URL(calls.at(-1).path,'https://example.test').searchParams.get('q'),'报告');
+ el('query').value='报告';page={matches:[{...match(),original_filename:'\uFEFF报告.txt'}],has_more:false,next_cursor:''};await text.load(true);assert(el('list').textContent.includes('\uFEFF报告.txt'),'legal FEFF result must not invalidate page');
  el('query').value='报告';hold=true;const late=text.load(true);await env.flush();const signal=calls.at(-1).options.signal;text.setMode('text');assert.equal(signal.aborted,true);hold(page);hold=null;await late;assert.equal(el('list').textContent,'');
  page={conversation_id:conv,messages:[],has_more:false,next_cursor:''};await text.load(true);assert(calls.at(-1).path.includes('/messages/search?'));assert(!calls.at(-1).path.includes('/files/'));
  text.setMode('file');page={matches:[],has_more:true,next_cursor:'same'};await text.load(true);await text.load(false);assert.equal(el('list').textContent,'');assert(el('hint').textContent.includes('失败'));
