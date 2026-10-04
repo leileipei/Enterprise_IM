@@ -28,14 +28,22 @@ type s3Store struct {
 }
 
 func NewS3(c Config) (Store, error) {
+	client, e := newS3Client(c, "environment", "IM_FILE_S3_ACCESS_KEY", "IM_FILE_S3_SECRET_KEY")
+	if e != nil {
+		return nil, e
+	}
+	return &s3Store{client, c}, nil
+}
+
+func newS3Client(c Config, source, keyName, secretName string) (*s3.Client, error) {
 	u, e := url.Parse(c.Endpoint)
 	if e != nil || u.User != nil || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || u.Path != "" && u.Path != "/" || u.Scheme != "https" && (u.Scheme != "http" || u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" && u.Hostname() != "::1") {
 		return nil, files.ErrDependencyUnavailable
 	}
-	if !regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`).MatchString(c.Bucket) || !regexp.MustCompile(`^[a-z0-9-]{1,64}$`).MatchString(c.Region) || c.CredentialSource != "environment" {
+	if !regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`).MatchString(c.Bucket) || !regexp.MustCompile(`^[a-z0-9-]{1,64}$`).MatchString(c.Region) || c.CredentialSource != source {
 		return nil, files.ErrDependencyUnavailable
 	}
-	key, secret := os.Getenv("IM_FILE_S3_ACCESS_KEY"), os.Getenv("IM_FILE_S3_SECRET_KEY")
+	key, secret := os.Getenv(keyName), os.Getenv(secretName)
 	if key == "" || secret == "" {
 		return nil, files.ErrDependencyUnavailable
 	}
@@ -44,7 +52,7 @@ func NewS3(c Config) (Store, error) {
 	httpClient := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("object redirect refused") }}
 	cfg := aws.Config{Region: c.Region, Credentials: credentials.NewStaticCredentialsProvider(key, secret, ""), HTTPClient: httpClient, Retryer: func() aws.Retryer { return aws.NopRetryer{} }, RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired, ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired}
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) { o.BaseEndpoint = aws.String(c.Endpoint); o.UsePathStyle = c.PathStyle })
-	return &s3Store{client, c}, nil
+	return client, nil
 }
 func (s *s3Store) ValidateCapabilities(ctx context.Context) error {
 	v, e := s.client.GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{Bucket: aws.String(s.config.Bucket)})
