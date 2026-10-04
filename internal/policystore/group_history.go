@@ -33,6 +33,8 @@ func (i groupHistoryInterval) policyMembership(tenantID string) policy.Membershi
 }
 
 type groupHistoryMessage struct {
+	messageType        string
+	attachment         *MessageAttachment
 	id                 string
 	seq                int64
 	senderID           string
@@ -129,7 +131,11 @@ func (s Service) readGroupTextMessages(ctx context.Context, id access.TrustedIde
 		return MessagePage{}, err
 	}
 	scope := historyReadContext{Identity: id, Actor: actor, Rules: rules, Retention: retention}
-	batch, err := readGroupHistoryBatchTx(ctx, tx, scope, groupID, afterSeq, limit)
+	read := readGroupHistoryBatchTx
+	if action == "message_search" {
+		read = readGroupTextSearchBatchTx
+	}
+	batch, err := read(ctx, tx, scope, groupID, afterSeq, limit)
 	if err != nil {
 		return MessagePage{}, err
 	}

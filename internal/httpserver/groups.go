@@ -105,7 +105,7 @@ func writeGroupCreateError(w http.ResponseWriter, err error) {
 	}
 }
 
-func groupMembershipRoute(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, service ConversationService) {
+func groupMembershipRoute(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity, service ConversationService, files FileMessageService) {
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/groups/"), "/")
 	if len(parts) != 2 || !validUUID(parts[0]) {
 		rejectAdmin(w, r, http.StatusNotFound, "not_found")
@@ -166,7 +166,7 @@ func groupMembershipRoute(w http.ResponseWriter, r *http.Request, identity acces
 		case http.MethodGet:
 			pullGroupTextMessages(w, r, identity, parts[0], service)
 		case http.MethodPost:
-			sendGroupTextMessage(w, r, identity, parts[0], service)
+			sendGroupTextMessage(w, r, identity, parts[0], service, files)
 		default:
 			w.Header().Set("Allow", "GET, POST")
 			rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")

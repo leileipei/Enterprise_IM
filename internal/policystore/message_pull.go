@@ -11,6 +11,8 @@ import (
 )
 
 type PulledMessage struct {
+	MessageType  string
+	Attachment   *MessageAttachment
 	MessageID    string
 	Seq          int64
 	SenderUserID string
@@ -123,7 +125,11 @@ FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
 		return MessagePage{}, err
 	}
 	scope := historyReadContext{Identity: id, Actor: actor, Rules: rules, Retention: retention}
-	batch, err := readDirectHistoryBatchTx(ctx, tx, scope, conversationID, afterSeq, limit)
+	read := readDirectHistoryBatchTx
+	if action == "message_search" {
+		read = readDirectTextSearchBatchTx
+	}
+	batch, err := read(ctx, tx, scope, conversationID, afterSeq, limit)
 	if err != nil {
 		return MessagePage{}, err
 	}

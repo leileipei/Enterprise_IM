@@ -27,3 +27,11 @@ manifest为只读0400、同运行用户拥有的JSON，kind=local-process，包�
 真实OIDC发行者仅是专用TLS测试夹具；被测试的是实际cmd/im-api及cmd/im-file-worker可执行进程。实际只读账号写入被拒绝、Worker强制终止后新job接管、正常SIGINT清理均在组件JSON门禁中。命令及结论见[中文验收记录](../../docs/开发增量-P4-22-验收记录.md)。
 
 每个API／Worker须使用不同的本地私有0700目录，且目录归运行UID所有。NewService生命周期持有目录flock；启动取得独占锁后仅回收可证明为本组件创建的孤儿文件。第二个实例不能共享活跃目录。不明链接、权限或尺寸使启动拒绝，正常Close停止新上传并等待已有上传清理。Linux门禁增加真实SIGKILL上传／扫描回收及活跃实例保护场景。
+
+## P4-23 文件消息集成门禁
+
+执行 `scripts/test-file-messages.sh run-all`。除 P4-22 的真实 PG、Redis、versioned 私有 S3、qpdf、正常与限额反例 clamd、浏览器变量外，可设置 `IM_TEST_FILE_MESSAGE_OUTPUT_DIR` 为独立私有绝对目录。脚本记录 Go JSON，要求具名测试实际通过且无 SKIP；依赖缺失、陈旧病毒库或绑定失效均退出非零。
+
+集成夹具使用生产 API 子进程的 TLS OIDC/JWKS 验证和数据库身份映射；显式文件消息 Handler 的测试认证桥仅转发该进程 `/api/v1/me` 返回的已验证身份。上传与扫描使用真实 S3、qpdf、ClamAV；不得手写 ready 代替扫描。旧 Web 使用实际生产 API 和 PKCE 登录，验证固定附件占位、文本发送及重新加载补拉。生产子进程在上传开启或未识别 `IM_FILE_MESSAGE_ENABLED=true` 时仍拒绝文件发送。
+
+测试自建进程、数据库 schema、Redis stream 和浏览器均由夹具清理。外部专用容器/扫描器由本轮操作者清理；S3 对象只写入该轮专用 bucket，销毁该轮无持久卷容器时一起清理。不得删除正式绑定证据或修改正式生命周期。P4-23 不提供下载授权和文件收发 UI，ACK 仅证明入库。

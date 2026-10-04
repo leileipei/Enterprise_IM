@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
@@ -104,6 +103,12 @@ RETURNING sent_count`, tenantID, senderUserID, at, maxPerSecond).Scan(&count)
 // sequence together. The returned ACK is valid only after transaction commit.
 func (s Service) SendTextMessage(ctx context.Context, id access.TrustedIdentity, conversationID,
 	clientMessageID, body string) (MessageACK, error) {
+	return s.SendMessage(ctx, id, conversationID, MessageSendRequest{ClientMessageID: clientMessageID, MessageType: MessageTypeText, Text: body})
+}
+
+func (s Service) sendDirectMessageOnce(ctx context.Context, id access.TrustedIdentity, conversationID string, content MessageSendRequest) (MessageACK, error) {
+	clientMessageID, body := content.ClientMessageID, content.Text
+	isFile := content.MessageType == MessageTypeFile
 	if !directoryUUIDPattern.MatchString(conversationID) {
 		return MessageACK{}, ErrInvalidMessageRequest
 	}
@@ -178,14 +183,22 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 	if err := validateClientMessageID(clientMessageID, at); err != nil {
 		return MessageACK{}, err
 	}
-	if !utf8.ValidString(body) || strings.TrimSpace(body) == "" || strings.ContainsRune(body, 0) || len(body) > 16*1024 {
-		return MessageACK{}, ErrInvalidTextMessage
+	content, err = validateMessageSendRequest(content)
+	if err != nil {
+		return MessageACK{}, err
+	}
+	clientMessageID = content.ClientMessageID
+	if isFile {
+		body = content.Caption
 	}
 	digest := sha256.Sum256([]byte(body))
-	if ack, exists, same, err := existingMessageACK(ctx, tx, id.TenantID, conversationID, id.UserID, clientMessageID, digest); err != nil {
-		return MessageACK{}, err
-	} else if exists {
-		return finishExistingMessage(ctx, tx, id, ack, same, at)
+	var binding preparedFileBinding
+	if !isFile {
+		if ack, exists, same, err := existingMessageACK(ctx, tx, id.TenantID, conversationID, id.UserID, clientMessageID, digest); err != nil {
+			return MessageACK{}, err
+		} else if exists {
+			return finishExistingMessage(ctx, tx, id, ack, same, at)
+		}
 	}
 	if snapshot.status != "active" {
 		if err := finishMessageSend(ctx, tx, id, "", "deny", "conversation_unavailable", at); err != nil {
@@ -205,14 +218,48 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 		}
 		return MessageACK{}, ErrConversationContextChanged
 	}
-	if ack, exists, same, err := existingMessageACK(ctx, tx, id.TenantID, conversationID, id.UserID, clientMessageID, digest); err != nil {
+	if isFile && !memberActiveAt(actor, s.now()) {
+		if err := finishMessageSend(ctx, tx, id, "", "deny", "invalid_identity", s.now()); err != nil {
+			return MessageACK{}, err
+		}
+		return MessageACK{}, ErrForbidden
+	}
+	var replayACK MessageACK
+	var replayExists, replaySame bool
+	if isFile {
+		replayACK, replayExists, replaySame, err = existingTypedMessageACK(ctx, tx, id, conversationID, content)
+	} else {
+		replayACK, replayExists, replaySame, err = existingMessageACK(ctx, tx, id.TenantID, conversationID, id.UserID, clientMessageID, digest)
+	}
+	if err != nil {
 		return MessageACK{}, err
-	} else if exists {
-		return finishExistingMessage(ctx, tx, id, ack, same, at)
+	}
+	if replayExists {
+		if isFile {
+			return s.finishExistingFileMessage(ctx, tx, id, replayACK, replaySame, s.now(), func(fresh time.Time) error {
+				if !memberActiveAt(actor, fresh) {
+					return ErrForbidden
+				}
+				final, err := loadDirectMessageContext(ctx, tx, id.TenantID, conversationID, false)
+				if err != nil {
+					return err
+				}
+				if !current.sameSelection(final) || final.status != "active" {
+					return ErrConversationContextChanged
+				}
+				return nil
+			})
+		}
+		return finishExistingMessage(ctx, tx, id, replayACK, replaySame, at)
 	}
 	target, targetFound, err := loadMembership(ctx, tx, id.TenantID, targetMembershipID, "")
 	if err != nil {
 		return MessageACK{}, err
+	}
+	if isFile {
+		if err := lockFileMessagePolicy(ctx, tx, id.TenantID); err != nil {
+			return MessageACK{}, err
+		}
 	}
 	version, err := currentVersion(ctx, tx, id.TenantID)
 	if err != nil {
@@ -246,6 +293,19 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 	if strings.EqualFold(targetUserID, id.UserID) {
 		targetUserID = current.highUserID
 	}
+	if isFile {
+		binding, err = prepareFileBindingTx(ctx, tx, id, conversationID, content.FileID)
+		if err != nil {
+			return MessageACK{}, err
+		}
+		digest, err = fileMessageDigest(id, conversationID, content, binding.SealedSHA)
+		if err != nil {
+			return MessageACK{}, err
+		}
+		if _, err = tx.Exec(ctx, "SAVEPOINT file_send_provisional"); err != nil {
+			return MessageACK{}, err
+		}
+	}
 	allowed, err := reserveMessageRate(ctx, tx, id.TenantID, id.UserID, at, maxRate)
 	if err != nil {
 		return MessageACK{}, err
@@ -265,12 +325,17 @@ WHERE tenant_id=$1 AND id=$2 RETURNING last_seq`, id.TenantID, conversationID, a
 	err = tx.QueryRow(ctx, `INSERT INTO messages
  (tenant_id,conversation_id,seq,sender_user_id,sender_membership_id,
   recipient_user_id,recipient_membership_id,sender_organization_id,recipient_organization_id,
-  client_msg_id,text_body,content_digest,accepted_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id::text`, id.TenantID, conversationID,
+  client_msg_id,text_body,content_digest,accepted_at,message_type)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id::text`, id.TenantID, conversationID,
 		ack.Seq, id.UserID, id.ActingMembershipID, targetUserID, targetMembershipID,
-		actor.OrganizationID, target.OrganizationID, clientMessageID, body, digest[:], at).Scan(&ack.MessageID)
+		actor.OrganizationID, target.OrganizationID, clientMessageID, body, digest[:], at, content.MessageType).Scan(&ack.MessageID)
 	if err != nil {
 		return MessageACK{}, err
+	}
+	if isFile {
+		if err := insertFileBindingTx(ctx, tx, id, ack, binding); err != nil {
+			return MessageACK{}, err
+		}
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO message_idempotency
  (tenant_id,conversation_id,sender_user_id,client_msg_id,message_id,content_digest,accepted_at,expires_at)
@@ -286,7 +351,39 @@ VALUES ($1,$2,$3,$4,'message_created',$5,$5)`, id.TenantID, conversationID,
 	if err != nil {
 		return MessageACK{}, err
 	}
-	if err := finishMessageSend(ctx, tx, id, conversationID, "allow", string(decision.Reason), at); err != nil {
+	if isFile {
+		err = s.finishFileMessageSend(ctx, tx, id, conversationID, string(decision.Reason), at, func(fresh time.Time) error {
+			if !memberActiveAt(actor, fresh) {
+				return ErrForbidden
+			}
+			if !memberActiveAt(target, fresh) {
+				return ErrMessageNotAvailable
+			}
+			final, err := loadDirectMessageContext(ctx, tx, id.TenantID, conversationID, false)
+			if err != nil {
+				return err
+			}
+			if !current.sameSelection(final) || final.status != "active" {
+				return ErrConversationContextChanged
+			}
+			d := policy.Evaluate(policy.Input{Action: policy.ActionSendMessage, Actor: actor, Target: target, At: fresh, ScopeAllowed: true, ResourceActive: true, PolicyVersion: version, Rules: rules})
+			if !d.Allowed {
+				return ErrMessageNotAvailable
+			}
+			return nil
+		})
+		if err != nil {
+			if errors.Is(err, ErrForbidden) || errors.Is(err, ErrMessageNotAvailable) || errors.Is(err, ErrConversationContextChanged) {
+				if _, rollbackErr := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT file_send_provisional"); rollbackErr != nil {
+					return MessageACK{}, rollbackErr
+				}
+				if auditErr := finishMessageSend(ctx, tx, id, conversationID, "deny", "authorization_changed", s.now()); auditErr != nil {
+					return MessageACK{}, auditErr
+				}
+			}
+			return MessageACK{}, err
+		}
+	} else if err := finishMessageSend(ctx, tx, id, conversationID, "allow", string(decision.Reason), at); err != nil {
 		return MessageACK{}, err
 	}
 	return ack, nil

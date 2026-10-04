@@ -12,11 +12,19 @@ import (
 
 func fileRuntimeMigration(t *testing.T, c *pgx.Conn, direction string) error {
 	t.Helper()
+	if direction == "down" && fileMessageMigrationPresent(t, c) {
+		if e := fileMessageMigration(t, c, "down"); e != nil {
+			return e
+		}
+	}
 	b, e := os.ReadFile("../../db/migrations/000019_file_upload_scan." + direction + ".sql")
 	if e != nil {
 		t.Fatal(e)
 	}
 	_, e = c.PgConn().Exec(context.Background(), string(b)).ReadAll()
+	if e == nil && direction == "up" && !fileMessageMigrationPresent(t, c) {
+		return fileMessageMigration(t, c, "up")
+	}
 	return e
 }
 func runtimeAttempt(t *testing.T, c *pgx.Conn, m files.Metadata) string {

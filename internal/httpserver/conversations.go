@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,7 +11,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
@@ -39,6 +37,9 @@ type ConversationService interface {
 // HandlerWithConversations exposes direct conversation and message routes after
 // a configured authenticator has verified the caller's access token.
 func HandlerWithConversations(base http.Handler, authenticator Authenticator, conversations ConversationService) (http.Handler, error) {
+	return handlerWithMessageServices(base, authenticator, conversations, nil)
+}
+func handlerWithMessageServices(base http.Handler, authenticator Authenticator, conversations ConversationService, files FileMessageService) (http.Handler, error) {
 	if base == nil || authenticator == nil || conversations == nil {
 		return nil, errors.New("base handler, authentication and conversation service are required")
 	}
@@ -65,7 +66,7 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/api/v1/groups/") {
-			groupMembershipRoute(w, r, identity, conversations)
+			groupMembershipRoute(w, r, identity, conversations, files)
 			return
 		}
 		if r.URL.Path != "/api/v1/conversations" {
@@ -78,7 +79,7 @@ func HandlerWithConversations(base http.Handler, authenticator Authenticator, co
 			case http.MethodGet:
 				pullTextMessages(w, r, identity, conversationID, conversations)
 			case http.MethodPost:
-				sendTextMessage(w, r, identity, conversationID, conversations)
+				sendTextMessage(w, r, identity, conversationID, conversations, files)
 			default:
 				w.Header().Set("Allow", "GET, POST")
 				rejectAdmin(w, r, http.StatusMethodNotAllowed, "method_not_allowed")
@@ -263,16 +264,24 @@ func pullGroupTextMessages(w http.ResponseWriter, r *http.Request, identity acce
 func serveMessagePage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
 	conversationID string, pull func(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)) {
 	query, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil || len(query) < 1 || len(query) > 2 || len(query["after_seq"]) != 1 ||
-		!decimalDigits(query.Get("after_seq")) || len(query["limit"]) > 1 {
+	if err != nil || len(query) < 1 || len(query) > 3 || len(query["after_seq"]) != 1 ||
+		!decimalDigits(query.Get("after_seq")) || len(query["limit"]) > 1 || len(query["message_format"]) > 1 {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
 	for key := range query {
-		if key != "after_seq" && key != "limit" {
+		if key != "after_seq" && key != "limit" && key != "message_format" {
 			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 			return
 		}
+	}
+	typed := false
+	if values, present := query["message_format"]; present {
+		if len(values) != 1 || values[0] != "typed_v1" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		typed = true
 	}
 	afterSeq, err := strconv.ParseInt(query.Get("after_seq"), 10, 64)
 	if err != nil {
@@ -303,45 +312,29 @@ func serveMessagePage(w http.ResponseWriter, r *http.Request, identity access.Tr
 		writeMessageError(w, err)
 		return
 	}
-	type itemDTO struct {
-		MessageID    string `json:"message_id,omitempty"`
-		Seq          int64  `json:"seq"`
-		SenderUserID string `json:"sender_user_id,omitempty"`
-		Text         string `json:"text,omitempty"`
-		ServerTime   string `json:"server_time,omitempty"`
-		Redacted     bool   `json:"redacted,omitempty"`
-	}
-	items := make([]itemDTO, 0, len(page.Messages))
-	for _, message := range page.Messages {
-		item := itemDTO{Seq: message.Seq, Redacted: message.Redacted}
-		if !message.Redacted {
-			item.MessageID = message.MessageID
-			item.SenderUserID = message.SenderUserID
-			item.Text = message.Text
-			item.ServerTime = message.ServerTime.UTC().Format("2006-01-02T15:04:05.999999999Z07:00")
-		}
-		items = append(items, item)
-	}
-	writeAdminJSON(w, http.StatusOK, struct {
-		ConversationID string    `json:"conversation_id"`
-		Messages       []itemDTO `json:"messages"`
-		NextAfterSeq   int64     `json:"next_after_seq"`
-		HasMore        bool      `json:"has_more"`
-	}{page.ConversationID, items, page.NextAfterSeq, page.HasMore})
+	writeAdminJSON(w, http.StatusOK, messagePageDTO(page, typed))
 }
 
 func sendTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
-	conversationID string, conversations ConversationService) {
-	serveTextMessage(w, r, identity, conversationID, conversations.SendTextMessage)
+	conversationID string, conversations ConversationService, files FileMessageService) {
+	var sendFile func(context.Context, access.TrustedIdentity, string, policystore.MessageSendRequest) (policystore.MessageACK, error)
+	if files != nil {
+		sendFile = files.SendMessage
+	}
+	serveTextMessage(w, r, identity, conversationID, conversations.SendTextMessage, sendFile)
 }
 
 func sendGroupTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
-	groupID string, conversations ConversationService) {
-	serveTextMessage(w, r, identity, groupID, conversations.SendGroupTextMessage)
+	groupID string, conversations ConversationService, files FileMessageService) {
+	var sendFile func(context.Context, access.TrustedIdentity, string, policystore.MessageSendRequest) (policystore.MessageACK, error)
+	if files != nil {
+		sendFile = files.SendGroupMessage
+	}
+	serveTextMessage(w, r, identity, groupID, conversations.SendGroupTextMessage, sendFile)
 }
 
 func serveTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
-	conversationID string, send func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error)) {
+	conversationID string, send func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error), sendFile func(context.Context, access.TrustedIdentity, string, policystore.MessageSendRequest) (policystore.MessageACK, error)) {
 	if r.URL.RawQuery != "" || r.URL.ForceQuery || r.Body == nil {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
@@ -352,29 +345,28 @@ func serveTextMessage(w http.ResponseWriter, r *http.Request, identity access.Tr
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	var body struct {
-		ClientMessageID string `json:"client_msg_id"`
-		Text            string `json:"text"`
-	}
+
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 128*1024))
-	if err != nil || !utf8.Valid(raw) {
+	if err != nil {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&body); err != nil || !validUUID(body.ClientMessageID) ||
-		!utf8.ValidString(body.Text) || strings.TrimSpace(body.Text) == "" ||
-		strings.ContainsRune(body.Text, 0) || len(body.Text) > 16*1024 {
+	content, err := decodeMessageSendRequest(raw)
+	if err != nil {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
-		return
+	var ack policystore.MessageACK
+	if content.MessageType == policystore.MessageTypeFile {
+		if sendFile == nil {
+			writeMessageError(w, policystore.ErrFileMessageUnavailable)
+			return
+		}
+		ack, err = sendFile(r.Context(), identity, conversationID, content)
+	} else {
+		ack, err = send(r.Context(), identity, conversationID, content.ClientMessageID, content.Text)
 	}
-	ack, err := send(r.Context(), identity, conversationID, body.ClientMessageID, body.Text)
+
 	if err != nil {
 		writeMessageError(w, err)
 		return
@@ -394,6 +386,10 @@ func writeMessageError(w http.ResponseWriter, err error) {
 		errors.Is(err, policystore.ErrInvalidTextMessage),
 		errors.Is(err, policystore.ErrInvalidClientMessageID):
 		writeAdminError(w, http.StatusBadRequest, "invalid_request")
+	case errors.Is(err, policystore.ErrFileNotBindable):
+		writeAdminError(w, http.StatusConflict, "file_not_bindable")
+	case errors.Is(err, policystore.ErrFileMessageUnavailable):
+		writeAdminError(w, http.StatusServiceUnavailable, "file_message_unavailable")
 	case errors.Is(err, policystore.ErrRetryExpired):
 		writeAdminError(w, http.StatusGone, "retry_window_expired")
 	case errors.Is(err, policystore.ErrForbidden):

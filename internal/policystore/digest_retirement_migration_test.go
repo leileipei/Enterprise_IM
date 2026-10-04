@@ -20,11 +20,19 @@ func seedDigestMessage(t *testing.T, conn *pgx.Conn) {
 
 func digestMigration(t *testing.T, conn *pgx.Conn, direction string) error {
 	t.Helper()
+	if direction == "down" && fileMessageMigrationPresent(t, conn) {
+		if e := fileMessageMigration(t, conn, "down"); e != nil {
+			return e
+		}
+	}
 	data, err := os.ReadFile("../../db/migrations/000016_message_digest_retirement." + direction + ".sql")
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = conn.PgConn().Exec(context.Background(), string(data)).ReadAll()
+	if err == nil && direction == "up" && !fileMessageMigrationPresent(t, conn) {
+		return fileMessageMigration(t, conn, "up")
+	}
 	return err
 }
 
@@ -142,6 +150,11 @@ func TestDigestRetirementMigrationRollbackAndEvidence(t *testing.T) {
 		run(t, first, `UPDATE messages SET content_digest=NULL,digest_retired_at=$1`, when)
 		run(t, first, `UPDATE message_idempotency SET content_digest=NULL,digest_retired_at=$1`, when)
 		data, err := os.ReadFile("../../db/migrations/000016_message_digest_retirement.down.sql")
+		prefix, pe := os.ReadFile("../../db/migrations/000020_file_message.down.sql")
+		if pe != nil {
+			t.Fatal(pe)
+		}
+		data = append(prefix, data...)
 		if err != nil {
 			t.Fatal(err)
 		}

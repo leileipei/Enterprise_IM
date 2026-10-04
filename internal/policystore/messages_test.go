@@ -70,6 +70,9 @@ func TestMessageSchemaEnforcesTenantSequenceAndOutboxAssociation(t *testing.T) {
 
 func TestMessageMigrationRollsBackAndReapplies(t *testing.T) {
 	conn := db(t)
+	if err := fileMessageMigration(t, conn, "down"); err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	down, err := os.ReadFile("../../db/migrations/000006_message_write.down.sql")
 	if err != nil {

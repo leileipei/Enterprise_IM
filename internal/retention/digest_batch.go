@@ -110,6 +110,14 @@ func (w DigestWorker) processDigestBatch(ctx context.Context, tenantID string, s
 	if len(ids) == 0 {
 		return DigestBatchResult{}, nil
 	}
+	rows, err = tx.Query(ctx, `SELECT id::text FROM messages WHERE tenant_id=$1 AND id=ANY($2::uuid[]) AND message_type='file'`, tenantID, ids)
+	if err != nil {
+		return DigestBatchResult{}, err
+	}
+	fileIDs, err := digestIDs(rows)
+	if err != nil {
+		return DigestBatchResult{}, err
+	}
 	rows, err = tx.Query(ctx, `UPDATE messages SET content_digest=NULL,digest_retired_at=$3 WHERE tenant_id=$1 AND id=ANY($2::uuid[])
  AND digest_retired_at IS NULL AND text_body IS NULL AND body_cleared_at<=$3 RETURNING id::text`, tenantID, ids, at)
 	if err != nil {
@@ -132,6 +140,13 @@ func (w DigestWorker) processDigestBatch(ctx context.Context, tenantID string, s
 		return DigestBatchResult{}, err
 	}
 	if !sameDigestIDs(ids, updated) {
+		return DigestBatchResult{}, errDigestUpdateMismatch
+	}
+	updated, err = retireAttachmentFingerprints(ctx, tx, tenantID, ids, at)
+	if err != nil {
+		return DigestBatchResult{}, err
+	}
+	if !sameDigestIDs(fileIDs, updated) {
 		return DigestBatchResult{}, errDigestUpdateMismatch
 	}
 	err = tx.QueryRow(ctx, `INSERT INTO message_digest_retirement_batches(tenant_id,conversation_id,retired_at,retired_count,first_seq,last_seq,min_expires_at,max_expires_at)
