@@ -1,6 +1,6 @@
 # P4-24 授权下载、文件保留与保全感知清理 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 交付每次及在途重新授权的完整文件下载、租户文件保留配置，以及不越过会话法务保全的精确版本清理和未知结果恢复。
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27.1、pgx/v5、PostgreSQL、现有 AWS S3 SDK、OIDC、私有版本化对象存储；实际验证沿用 Redis、Chrome、ClamAV／qpdf 工具。无新增产品依赖。
 
-**Spec:** [已确认规格](../specs/2026-10-04-p4-24-file-download-retention-design.md)，用户于2026-10-04以“继续”确认；确认前文档提交 `f51e53393f0f8c412511f8457ca5b95c8e695cb0`。产品基线 `57a7812dfaae11b2c62e8c2df2782f94fbbcad43`。用户已确认本实施计划；Task 1～13及一次整体评审必要修正已提交，Task 14规定门禁、资源退出已完成，草稿PR发布按实际进度记录。
+**Spec:** [已确认规格](../specs/2026-10-04-p4-24-file-download-retention-design.md)，用户于2026-10-04以“继续”确认；确认前文档提交 `f51e53393f0f8c412511f8457ca5b95c8e695cb0`。产品基线 `57a7812dfaae11b2c62e8c2df2782f94fbbcad43`。用户已确认本实施计划；Task 1～13及一次整体评审必要修正已提交，Task 14规定门禁、资源退出及草稿PR #72交付完成，详见中文验收记录。
 
 ## Global Constraints
 
@@ -293,7 +293,7 @@ if deleteRoleCanPut || scanRoleCanDelete || terminalAuditMissing { t.Fatal("real
 - [x] **2. race**：归档内`go test -json -race ./internal/policystore ./internal/access ./internal/httpserver ./internal/filedownload ./internal/filecleanup ./internal/objectstore ./internal/retention ./internal/realtime ./internal/outbox ./cmd/im-api ./cmd/im-file-cleaner -count=1`。测试计数／时限／实际依赖证据单列，不加无关容量演练。
 - [x] **3. 一次最终独立评审及必要修正**：使用requesting-code-review派发一个新鲜reviewer，固定基线／候选及规格／计划，Critical／Important／Minor逐项附证据。核验有效发现，针对性RED→GREEN修正；新最终产品SHA重新归档跑受影响和规定门禁，不再派发第二整体review。评审无发现也只报告检查范围。
 - [x] **4. 中文记录和资源退出**：填实测SHA／命令／计数／权限与慢网络／未知结果／保全／quota／浏览器证据、review修正和局限；更新已完成复选框。只停止／清理本轮自建资源，确认运行器退出、临时内容回收，私有证据归档、凭据不提交；有未决副作用先按承诺对账，不强删日志／来源来伪造clean。F01、M4退出、HA／客户／生产启用与P4-25仍另验。
-- [ ] **5. 堆叠草稿PR**：核对本轮提交并推送当前分支，base=`codex/p4-23-file-message-design`、head=`codex/p4-24-file-download-retention-design`；正文写UTF-8文件并gh --body-file，创建draft后attach_artifact。确认远端head及clean；仅交付已测范围，不合并／部署。规划阶段不执行本步骤。
+- [x] **5. 堆叠草稿PR**：核对本轮提交并推送当前分支，base=`codex/p4-23-file-message-design`、head=`codex/p4-24-file-download-retention-design`；正文写UTF-8文件并gh --body-file，创建draft后attach_artifact。确认远端head及clean；仅交付已测范围，不合并／部署。规划阶段不执行本步骤。
 
 ## 规格覆盖及自检
 
@@ -315,3 +315,7 @@ if deleteRoleCanPut || scanRoleCanDelete || terminalAuditMissing { t.Fatal("real
 ## 审阅与执行衔接
 
 本计划已经用户确认，沿用当前助手executing-plans逐项实现。每项记录实际RED／GREEN与本项提交；进度、故障修正和验收证据随实施更新。无需再次选择执行方式。
+
+## 最终执行自检
+
+14项全部完成；产品SHA `50665181eb73b0895d0cd290a4f743114eda41cc` 的五项完整门禁均实际退出0，一次独立review的5项Important经具名RED→GREEN修正，1项Minor延后列明。最终仅文档差异、专属资源退出及私有证据归档均核验；[草稿PR #72](https://github.com/leileipei/Enterprise_IM/pull/72)堆叠于P4-23，工作树保留，不合并／部署。
