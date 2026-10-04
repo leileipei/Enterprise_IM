@@ -298,7 +298,7 @@ assert.equal(readyEvents.length, 0); // A late ready response from old context.
 - `attach(ready:{fileID:string,context:FileContext}):void`；`send(caption:string):Promise<void>`；`retry():Promise<void>`；`contextChanged():void`；`render(message:object):HTMLElement`。
 - onPending(boolean) 占用统一文字／附件发送槽；onACK(ack) 只消费有效服务端 ACK，随后补拉，不自行伪造 file message。
 
-- [ ] **Step 1：新增失败测试。** TestWebFileMessages；fileMessageUnknownRetry／fileMessageSharedPendingSlot／fileMessageTypedRedaction／fileMessageLegacyFallback。
+- [x] **Step 1：新增失败测试。** TestWebFileMessages；fileMessageUnknownRetry／fileMessageSharedPendingSlot／fileMessageTypedRedaction／fileMessageLegacyFallback。
 
 ```text
 unknown send followed retry -> deepEqual(payload1,payload2), same client_msg_id
@@ -317,10 +317,10 @@ assert.equal(savedLabels.length, 0); // Both replies were unknown, no ACK.
 assert.equal(redactedCard.textContent.includes(privateFilename), false);
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileMessages -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 发送路径按 context.kind 选择 conversations／groups；冻结 caption（沿用 P4-23 16,384 字节及 UTF-8规则）和一次 UUIDv7，未知不能用新 ID 编辑重发。typed_v1 可用时参与既有消息 schema校验／seq合并；旧默认能力显示 legacy 占位。file card 仅用 textContent，available 缺失或异常按不可用。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): send idempotent attachment messages and render typed cards"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileMessages -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 发送路径按 context.kind 选择 conversations／groups；冻结 caption（沿用 P4-23 16,384 字节及 UTF-8规则）和一次 UUIDv7，未知不能用新 ID 编辑重发。typed_v1 可用时参与既有消息 schema校验／seq合并；旧默认能力显示 legacy 占位。file card 仅用 textContent，available 缺失或异常按不可用。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): send idempotent attachment messages and render typed cards"`。
 
 ## Task 9：完整下载与短时 Blob 保存
 

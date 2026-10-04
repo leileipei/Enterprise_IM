@@ -187,3 +187,6 @@ main{position:relative;z-index:1;min-height:100vh}
 .file-controls legend { font-weight: 600; }
 .file-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .file-controls p { font-size: 12px; color: var(--muted, #637083); }
+
+.file-message-card strong { overflow-wrap: anywhere; }
+.file-message-card p { margin: 6px 0; font-size: 12px; }
