@@ -151,18 +151,18 @@ function fileContext() {
 }
 const fileTransport = new window.FileTransport({snapshot:() => ({...fileContext(),token:accessToken,tokenExpiresAt}),
  onHTTPError:(status,code) => {if(status===401)logout("登录已过期，请重新登录。");else if(status===403 && code==="invalid_identity")selectMembership("");}});
-let fileMessagePending = false;
+let fileMessagePending = false, fileSavedContext = null;
 let fileEffectivePolicy = null, fileReady = null, fileAccessController = null, fileAccessGeneration = 0;
 const filePolicy=new window.FilePolicy({request,context:fileContext,canOpen:()=>retentionPolicyEditor.allowed && retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext()});
 filePolicy.setAccess(false);
 const fileDownload=new window.FileDownload({transport:fileTransport,context:fileContext,capabilities:()=>fileCapabilities,saveContainer:element("file-save")});
 const fileTransfer = new window.FileTransfer({request,transport:fileTransport,context:fileContext,
- onReady:ready => {try{fileMessages.attach(ready);fileReady=ready;}catch(_){fileReady=null;element("file-status").textContent="发送槽已被占用，请取消后核对。";}},
- onClear:() => {fileReady=null;fileMessages.contextChanged();}});
+ onReady:ready => {fileSavedContext=null;try{fileMessages.attach(ready);fileReady=ready;}catch(_){fileReady=null;element("file-status").textContent="发送槽已被占用，请取消后核对。";}},
+ onClear:() => {fileSavedContext=null;fileReady=null;fileMessages.contextChanged();}});
 const fileMessages=new window.FileMessages({request,context:fileContext,uuidV7,canSend:canSendFileInContext,
  download:fileDownload,capabilities:()=>fileCapabilities,
  onPending:pending => {fileMessagePending=pending;renderFileAccess();},
- onACK:async () => {fileTransfer.contextChanged();messageText.value="";messageText.readOnly=false;discardPendingButton.classList.add("hidden");element("send-hint").textContent="已保存";await syncMessages().catch(report);}});
+ onACK:async () => {fileTransfer.contextChanged();fileSavedContext=fileContext();messageText.value="";messageText.readOnly=false;discardPendingButton.classList.add("hidden");element("send-hint").textContent="已保存";await syncMessages().catch(report);}});
 const filenameSearchContext=()=>({...fileContext(),filenameSearchEnabled:fileCapabilities.filename_search_enabled});
 const fileSearchConversation=new window.FileSearch({request,context:filenameSearchContext,scope:"conversation",download:fileDownload,openConversation:openFileSearchConversation});
 const fileSearchAll=new window.FileSearch({request,context:filenameSearchContext,scope:"all",download:fileDownload,openConversation:openFileSearchConversation});
@@ -213,6 +213,7 @@ async function refreshFileAccess(generation) {
  finally {clearTimeout(timer);if(generation === fileAccessGeneration){fileAccessController=null;renderFileAccess();}}
 }
 function filesContextChanged() {
+ fileSavedContext=null;
  fileTransport.contextChanged(); fileTransfer.contextChanged(); fileMessages.contextChanged(); fileDownload.contextChanged(); filePolicy.contextChanged(); fileSearchConversation.contextChanged(); fileSearchAll.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
  fileEffectivePolicy=null;fileCapabilities=Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
  element("file-controls").hidden=true;
@@ -2280,6 +2281,7 @@ function updateGroupComposer() {
     group.source_membership_id === actingMembership && !groupLeaveDialog.open &&
     groupListNeedsRefreshID !== activeConversation;
   element("chat-mode").textContent = canSendNew ? "GROUP CHAT" : "GROUP HISTORY";
+  if (fileMessagePending) {messageText.readOnly=true;return;}
   if (pendingMessage && pendingMessage.chatKind === "group" &&
       pendingMessage.chatID === activeConversation) {
     messageText.disabled = !!pendingMessage.sending;
@@ -2291,7 +2293,7 @@ function updateGroupComposer() {
   messageText.readOnly = false;
   sendButton.disabled = !canSendNew;
   discardPendingButton.classList.add("hidden");
-  element("send-hint").textContent = !group ? "群已不在当前列表，无法发送新消息。" :
+  element("send-hint").textContent = canSendNew && window.FileTransport.sameContext(fileSavedContext,fileContext()) ? "已保存" : !group ? "群已不在当前列表，无法发送新消息。" :
     group.status !== "active" ? "群通信已暂停，仅可查看历史消息。" :
       !canSendNew ? "请先切换到此群的来源任职，再发送群消息。" :
         "服务端保存成功后显示“已保存”，不代表群成员已收到。";
@@ -2405,6 +2407,7 @@ async function sendMessage(event) {
     finally {if(window.FileTransport.sameContext(fileSendContext,fileContext())){messageText.disabled=false;messageText.readOnly=fileMessagePending;sendButton.disabled=false;renderFileAccess();}}
     return;
   }
+  fileSavedContext=null;
   if (pendingMessage && pendingMessage.sending) return;
   if (!pendingMessage || pendingMessage.chatID !== chatID || pendingMessage.chatKind !== chatKind) {
     if (chatKind === "group") {

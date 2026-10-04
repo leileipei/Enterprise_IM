@@ -26,6 +26,8 @@ func TestWebFileRealUnknownUploadSend(t *testing.T) {
 	}
 	f.assertPrivate(t)
 	t.Run("ACK stays saved after failed pull", webFileACKPullFailure)
+	t.Run("group pending survives refresh", webFileGroupComposer)
+	t.Run("group saved survives refresh", webFileGroupSavedRefresh)
 }
 func TestWebFileRealDownloadFaults(t *testing.T) {
 	f := newWebFileFixture(t)
@@ -59,5 +61,19 @@ func webFileACKPullFailure(t *testing.T) {
 	f := newWebFileFixture(t)
 	samples := f.samples(t, false)
 	f.browser(t, "file_lifecycle", map[string]any{"conversation": directA, "kind": "direct", "ackPullFault": true, "samples": samples[:1]})
+	f.assertPrivate(t)
+}
+
+func webFileGroupComposer(t *testing.T) {
+	f := newWebFileFixture(t)
+	samples := f.samples(t, false)
+	f.browser(t, "file_lifecycle", map[string]any{"conversation": f.group(t), "kind": "group", "unknown": true, "groupComposer": true, "samples": samples[:1]})
+	f.assertPrivate(t)
+}
+
+func webFileGroupSavedRefresh(t *testing.T) {
+	f := newWebFileFixture(t)
+	samples := f.samples(t, false)
+	f.browser(t, "file_lifecycle", map[string]any{"conversation": f.group(t), "kind": "group", "groupSavedRefresh": true, "samples": samples[:1]})
 	f.assertPrivate(t)
 }

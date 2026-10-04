@@ -22,6 +22,9 @@ func TestFileDownloadSpoolPathIsolation(t *testing.T) {
 				os.Symlink(target, root)
 			case "open_permissions":
 				os.Mkdir(root, 0755)
+				if e := os.Chmod(root, 0755); e != nil {
+					t.Fatal(e)
+				}
 			case "unknown_content":
 				os.Mkdir(root, 0700)
 				os.WriteFile(filepath.Join(root, "customer.txt"), []byte("preserve"), 0600)

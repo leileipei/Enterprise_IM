@@ -135,6 +135,17 @@ func newWebFileFixture(t *testing.T) *webFileFixture {
 	if e != nil {
 		t.Fatal(e)
 	}
+	fileRoutes := h
+	h = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/__p425/download-idle" {
+			var pending int
+			e := real.pool.QueryRow(r.Context(), "SELECT count(*) FROM file_download_sessions WHERE NOT audit_acked").Scan(&pending)
+			w.Header().Set("Cache-Control", "no-store")
+			json.NewEncoder(w).Encode(map[string]bool{"idle": e == nil && pending == 0})
+			return
+		}
+		fileRoutes.ServeHTTP(w, r)
+	})
 	f.handler = h
 	f.server = httptest.NewUnstartedServer(h)
 	f.server.Config.WriteTimeout = 160 * time.Second
