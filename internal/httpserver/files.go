@@ -39,6 +39,8 @@ func writeFileError(w http.ResponseWriter, e error) {
 		writeAdminError(w, 403, "invalid_identity")
 	case errors.Is(e, files.ErrFileNotFound):
 		writeAdminError(w, 404, "file_not_available")
+	case errors.Is(e, files.ErrInvalidFileSize):
+		writeAdminError(w, 400, "invalid_file_size")
 	case errors.Is(e, files.ErrInvalidMetadata):
 		writeAdminError(w, 400, "invalid_file_request")
 	case errors.Is(e, files.ErrUploadConflict):
