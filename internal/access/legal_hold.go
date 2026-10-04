@@ -13,6 +13,7 @@ import (
 )
 
 var ErrInvalidLegalHold = errors.New("invalid legal hold request")
+var ErrFileCleanupInProgress = errors.New("file cleanup in progress")
 
 var legalHoldUUIDPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 

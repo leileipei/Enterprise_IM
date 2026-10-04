@@ -95,7 +95,9 @@ func decodeLegalHoldInput(w http.ResponseWriter, r *http.Request, referenceKey s
 }
 
 func writeLegalHoldError(w http.ResponseWriter, err error) {
-	if errors.Is(err, access.ErrInvalidLegalHold) {
+	if errors.Is(err, access.ErrFileCleanupInProgress) {
+		writeAdminError(w, http.StatusConflict, "file_cleanup_in_progress")
+	} else if errors.Is(err, access.ErrInvalidLegalHold) {
 		writeAdminError(w, http.StatusBadRequest, "invalid_legal_hold")
 	} else {
 		writeServiceError(w, err)

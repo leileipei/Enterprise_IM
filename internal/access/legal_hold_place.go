@@ -76,6 +76,14 @@ func (s Service) PlaceLegalHold(ctx context.Context, id TrustedIdentity,
 		}
 		return hold, false, nil
 	}
+	var cleanupInProgress bool
+	err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM file_delete_versions WHERE tenant_id=$1 AND conversation_id=$2 AND phase IN ('committed','uncertain'))`, id.TenantID, conversationID).Scan(&cleanupInProgress)
+	if err != nil {
+		return LegalHold{}, false, err
+	}
+	if cleanupInProgress {
+		return LegalHold{}, false, deny(ctx, tx, id, "legal_hold_place", "conversation", conversationID, "file_cleanup_in_progress", at, ErrFileCleanupInProgress)
+	}
 	var activeHold string
 	err = tx.QueryRow(ctx, `SELECT id::text FROM conversation_legal_holds
  WHERE tenant_id=$1 AND conversation_id=$2 AND case_reference=$3 AND released_at IS NULL`,

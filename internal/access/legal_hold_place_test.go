@@ -3,6 +3,7 @@ package access_test
 import (
 	"context"
 	"errors"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -20,6 +21,16 @@ const (
 
 func seedLegalHoldService(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
+	for _, n := range []string{"000003_policy_store", "000018_file_foundation", "000019_file_upload_scan", "000020_file_message", "000021_file_download_retention"} {
+		b, e := os.ReadFile("../../db/migrations/" + n + ".up.sql")
+		if e != nil {
+			t.Fatal(e)
+		}
+		if _, e = conn.PgConn().Exec(context.Background(), string(b)).ReadAll(); e != nil {
+			t.Fatal(e)
+		}
+	}
+
 	seedAccess(t, conn)
 	run(t, conn, `INSERT INTO users (id,tenant_id,global_employee_no,display_name)
  VALUES ($1,$2,'A003','用户三')`, legalHoldOtherUser, tenantA)
@@ -378,4 +389,59 @@ func TestPlaceLegalHoldSerializesWithActorMembershipEnd(t *testing.T) {
  WHERE tenant_id=$1 AND conversation_id=$2`, tenantA, legalHoldConversation).Scan(&holds); err != nil || holds != 1 {
 		t.Fatalf("actor end changed committed holds: %d %v", holds, err)
 	}
+}
+
+// This SQL fixture proves the database boundary; real object side effects are
+// covered by the separate fixed-version integration gate.
+func legalHoldCleanupFixture(t *testing.T) (*pgx.Conn, string, string) {
+	t.Helper()
+	c := fileRetentionPolicyDB(t)
+	convo, file, job := "", "", ""
+	if e := c.QueryRow(context.Background(), "SELECT gen_random_uuid()::text,gen_random_uuid()::text,gen_random_uuid()::text").Scan(&convo, &file, &job); e != nil {
+		t.Fatal(e)
+	}
+	run(t, c, `INSERT INTO conversations(id,tenant_id,direct_user_low_id,direct_user_high_id,direct_low_membership_id,direct_high_membership_id,created_by_user_id) VALUES($1,$2,$3,$4,$5,$6,$3)`, convo, tenantA, adminA, personA, adminM, personM)
+	run(t, c, `INSERT INTO file_objects(id,tenant_id,conversation_id,uploader_user_id,uploader_membership_id,upload_request_id,request_digest,original_filename,declared_media_type,declared_size_bytes,state,state_version,created_at,updated_at,upload_expires_at) VALUES($1,$2,$3,$4,$5,$1,decode(repeat('ab',32),'hex'),'fixture.pdf','application/pdf',1,'allocated',0,clock_timestamp()-interval '2 hours',clock_timestamp()-interval '2 hours',clock_timestamp()-interval '1 hour')`, file, tenantA, convo, adminA, adminM)
+	run(t, c, `UPDATE file_objects SET state='uploaded',state_version=1,object_key='tenants/'||tenant_id||'/files/'||id,object_version_id='v1',detected_media_type='application/pdf',actual_size_bytes=1,sha256=decode(repeat('ab',32),'hex'),uploaded_at=created_at+interval '1 minute',updated_at=created_at+interval '1 minute' WHERE id=$1`, file)
+	run(t, c, `UPDATE file_objects SET state='delete_pending',state_version=2,deletion_requested_at=clock_timestamp(),updated_at=clock_timestamp() WHERE id=$1`, file)
+	run(t, c, `UPDATE tenant_file_retention_policy SET cleanup_enabled=true,version=1,approval_reference='CAB-CLEANUP',actor_user_id=$2,acting_membership_id=$3 WHERE tenant_id=$1`, tenantA, adminA, adminM)
+	run(t, c, `INSERT INTO file_delete_jobs(id,tenant_id,conversation_id,file_id,policy_version,expected_state_version,owner_id,lease_token,lease_expires_at,created_at,updated_at) VALUES($1,$2,$3,$4,1,2,$1,$1,clock_timestamp()+interval '120 seconds',clock_timestamp(),clock_timestamp())`, job, tenantA, convo, file)
+	run(t, c, `UPDATE file_delete_jobs SET phase='inventory',inventory_exhausted=true,source_safe=true WHERE id=$1`, job)
+	run(t, c, `INSERT INTO file_delete_versions(tenant_id,conversation_id,file_id,job_id,object_version_id,created_at,updated_at) VALUES($1,$2,$3,$4,'v1',clock_timestamp(),clock_timestamp())`, tenantA, convo, file, job)
+	return c, convo, job
+}
+func TestLegalHoldFileCleanupConflict(t *testing.T) {
+	t.Run("new request rejected without hold", func(t *testing.T) {
+		c, convo, job := legalHoldCleanupFixture(t)
+		run(t, c, `UPDATE file_delete_versions SET phase='committed',commitment_id=gen_random_uuid(),committed_at=clock_timestamp(),updated_at=clock_timestamp() WHERE job_id=$1`, job)
+		svc := access.Service{DB: c}
+		hold, created, e := svc.PlaceLegalHold(context.Background(), identity(), convo, legalHoldRequestOne, "CASE-CLEANUP")
+		if !errors.Is(e, access.ErrFileCleanupInProgress) || created || hold.ID != "" {
+			t.Fatal(hold, created, e)
+		}
+		var n int
+		if e = c.QueryRow(context.Background(), "SELECT count(*) FROM conversation_legal_holds").Scan(&n); e != nil || n != 0 {
+			t.Fatal("conflicting hold created", n, e)
+		}
+	})
+	t.Run("original replay remains valid", func(t *testing.T) {
+		c, convo, job := legalHoldCleanupFixture(t)
+		svc := access.Service{DB: c}
+		ctx := context.Background()
+		original, created, e := svc.PlaceLegalHold(ctx, identity(), convo, legalHoldRequestOne, "CASE-ORIGINAL")
+		if e != nil || !created {
+			t.Fatal(original, created, e)
+		}
+		if _, e = svc.ReleaseLegalHold(ctx, identity(), convo, original.ID, legalHoldPlaceRequestTwo, "CAB-RELEASE"); e != nil {
+			t.Fatal(e)
+		}
+		run(t, c, `UPDATE file_delete_versions SET phase='committed',commitment_id=gen_random_uuid(),committed_at=clock_timestamp(),updated_at=clock_timestamp() WHERE job_id=$1`, job)
+		replay, created, e := svc.PlaceLegalHold(ctx, identity(), convo, legalHoldRequestOne, "CASE-ORIGINAL")
+		if e != nil || created || replay.ID != original.ID || replay.ReleasedAt == nil {
+			t.Fatal("released original replay was replaced by new conflict", replay, created, e)
+		}
+		if _, _, e = svc.PlaceLegalHold(ctx, identity(), convo, legalHoldPlaceRequestThree, "CASE-NEW"); !errors.Is(e, access.ErrFileCleanupInProgress) {
+			t.Fatal(e)
+		}
+	})
 }
