@@ -39,10 +39,10 @@ process.on('SIGINT',()=>{browser?.close().finally(()=>process.exit(130));});
    if(input.groupSavedRefresh){stage='saved group refresh';const refresh=await page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/groups'&&r.request().method()==='GET',{timeout:45000});await refresh.finished();await page.evaluate(()=>new Promise(requestAnimationFrame));assert.equal(await page.locator('#send-hint').textContent(),'已保存');}
    stage='download';for(let attempt=0;attempt<3;attempt++){
     await page.waitForLoadState('networkidle',{timeout:15000});await waitPageFlag(page,"/__p425/download-idle","idle",65000);
-    await page.getByRole('button',{name:'请求下载',exact:true}).last().click();
+    const card=page.locator('.file-message-card').filter({has:page.getByText(sample.name,{exact:true})});const fileID=await card.getAttribute('data-file-id');const actualDownload=page.waitForResponse(r=>new URL(r.url()).pathname===`/api/v1/files/${fileID}/content` && r.request().method()==='GET');await card.getByRole('button',{name:'请求下载',exact:true}).click();const actualResponse=await actualDownload;
     await page.waitForFunction(()=>!!document.querySelector('[data-file-save]') || document.getElementById('file-save').textContent.includes('下载未完成'),{},{timeout:15000});
     if(await page.locator('[data-file-save]').count())break;
-    const last=responseCodes.at(-1);assert([409,503].includes(last?.status));
+    assert([409,503].includes(actualResponse.status()));
     await page.waitForFunction(()=>![...document.querySelectorAll('#messages button')].at(-1)?.disabled);
    }
    await page.locator('[data-file-save]').waitFor({timeout:15000});
