@@ -6,6 +6,7 @@ import (
 )
 
 func TestWebFileRealContextIsolation(t *testing.T) {
+	t.Run("actual false then true is awaited", webFileAwaitCondition)
 	f := newWebFileFixture(t)
 	samples := f.samples(t, false)
 	m := f.uploadReady(t, directA, "上下文私有报告.txt", []byte("context bytes"))

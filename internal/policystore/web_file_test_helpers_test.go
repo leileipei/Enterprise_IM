@@ -653,3 +653,21 @@ func (f *webFileFixture) installPolicyConflict(t *testing.T) {
 		}
 	})
 }
+
+func webFileAwaitCondition(t *testing.T) {
+	f := newWebFileFixture(t)
+	var calls atomic.Int64
+	routes := f.handler
+	f.replaceHandler(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/__p425/poll-proof" {
+			w.Header().Set("Cache-Control", "no-store")
+			json.NewEncoder(w).Encode(map[string]bool{"ready": calls.Add(1) >= 2})
+			return
+		}
+		routes.ServeHTTP(w, r)
+	}))
+	f.browser(t, "file_poll", map[string]any{})
+	if calls.Load() < 2 {
+		t.Fatal("false predicate was not retried")
+	}
+}

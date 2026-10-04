@@ -1,4 +1,5 @@
 'use strict';
+const {waitPageFlag}=require("./file_browser_poll.cjs");
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs/promises');
 let browser,page,stage='start',safeHint='',responseCodes=[];
 process.on('SIGINT',()=>{browser?.close().finally(()=>process.exit(130));});
@@ -37,7 +38,7 @@ process.on('SIGINT',()=>{browser?.close().finally(()=>process.exit(130));});
    await page.waitForFunction(()=>document.getElementById('send-hint').textContent==='已保存',{},{timeout:10000});assert.equal(await page.getByText('已保存',{exact:true}).count(),1);
    if(input.groupSavedRefresh){stage='saved group refresh';const refresh=await page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/groups'&&r.request().method()==='GET',{timeout:45000});await refresh.finished();await page.evaluate(()=>new Promise(requestAnimationFrame));assert.equal(await page.locator('#send-hint').textContent(),'已保存');}
    stage='download';for(let attempt=0;attempt<3;attempt++){
-    await page.waitForLoadState('networkidle',{timeout:15000});await page.waitForFunction(async()=>{const r=await fetch('/__p425/download-idle',{cache:'no-store'});return (await r.json()).idle;},{},{timeout:65000});
+    await page.waitForLoadState('networkidle',{timeout:15000});await waitPageFlag(page,"/__p425/download-idle","idle",65000);
     await page.getByRole('button',{name:'请求下载',exact:true}).last().click();
     await page.waitForFunction(()=>!!document.querySelector('[data-file-save]') || document.getElementById('file-save').textContent.includes('下载未完成'),{},{timeout:15000});
     if(await page.locator('[data-file-save]').count())break;
