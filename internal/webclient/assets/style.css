@@ -190,3 +190,6 @@ main{position:relative;z-index:1;min-height:100vh}
 
 .file-message-card strong { overflow-wrap: anywhere; }
 .file-message-card p { margin: 6px 0; font-size: 12px; }
+
+.file-policy-summary { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; padding: 12px; background: #f5f7fa; border-radius: 8px; }
+#file-policy-history li { white-space: pre-wrap; overflow-wrap: anywhere; }

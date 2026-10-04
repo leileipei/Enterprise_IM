@@ -364,7 +364,7 @@ assert.deepEqual(revokedObjectURLs, createdObjectURLsAfterCompleteRead);
 - `window.FilePolicy` constructor({request,context,canOpen})；`open(kind:"upload"|"retention"):Promise<void>`、`save():Promise<void>`、`loadHistory(reset:boolean):Promise<void>`、`contextChanged():void`。
 - 消费现有管理 upload／retention API，版本／额度按 BigInt／规范字符串处理，不转 Number。
 
-- [ ] **Step 1：新增失败测试。** TestWebFilePolicy；filePolicyExactDecimal／filePolicyCASConflict／filePolicyUnknownResult／filePolicyIdentitySwitch／filePolicyHistoryProgress。
+- [x] **Step 1：新增失败测试。** TestWebFilePolicy；filePolicyExactDecimal／filePolicyCASConflict／filePolicyUnknownResult／filePolicyIdentitySwitch／filePolicyHistoryProgress。
 
 ```text
 expected_version="9007199254740993" -> request exact same string
@@ -383,10 +383,10 @@ assert.equal(writeRequestsAfter409, 0);
 assert.equal(writeRequestsAfterUnknownUntilReadback, 0);
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFilePolicy -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 两类设置与历史共用只读 context，不复制员工读取策略权限。提交前展示完整新旧值、版本及批准引用；CAS冲突／未知状态禁止直接覆盖。历史手动20条分页和重复游标保护；明确已有文件期限适用、pending不可恢复和清理命令独立关闭。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add tenant file policy settings and history"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFilePolicy -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 两类设置与历史共用只读 context，不复制员工读取策略权限。提交前展示完整新旧值、版本及批准引用；CAS冲突／未知状态禁止直接覆盖。历史手动20条分页和重复游标保护；明确已有文件期限适用、pending不可恢复和清理命令独立关闭。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add tenant file policy settings and history"`。
 
 ## Task 11：名称搜索模式与结果卡片
 

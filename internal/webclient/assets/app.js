@@ -136,7 +136,7 @@ const retentionContext = () => ({
 const retentionPolicyEditor = new window.RetentionPolicyEditor(request, retentionContext, () => legalHoldRecords.canSwitchContext());
 const auditRecords = new window.AuditRecords(request, retentionContext, value => retentionPolicyEditor.validTime(value),
   () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
-const retentionRecords = new window.RetentionRecords(request, retentionContext, allowed => { retentionPolicyEditor.setAccess(allowed); auditRecords.setAccess(allowed); });
+const retentionRecords = new window.RetentionRecords(request, retentionContext, allowed => { retentionPolicyEditor.setAccess(allowed); auditRecords.setAccess(allowed); filePolicy.setAccess(allowed); });
 const legalHoldRecords = new window.LegalHoldRecords(request, retentionContext, () => retentionPolicyEditor.canSwitchContext());
 const messageSearch = new window.MessageSearch(request, () => ({ ...retentionContext(), kind: activeConversationKind }),
   value => retentionPolicyEditor.validTime(value), () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
@@ -153,6 +153,8 @@ const fileTransport = new window.FileTransport({snapshot:() => ({...fileContext(
 let fileCapabilities = Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
 let fileMessagePending = false;
 let fileEffectivePolicy = null, fileReady = null, fileAccessController = null, fileAccessGeneration = 0;
+const filePolicy=new window.FilePolicy({request,context:fileContext,canOpen:()=>retentionPolicyEditor.allowed && retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext()});
+filePolicy.setAccess(false);
 const fileDownload=new window.FileDownload({transport:fileTransport,context:fileContext,capabilities:()=>fileCapabilities,saveContainer:element("file-save")});
 const fileTransfer = new window.FileTransfer({request,transport:fileTransport,context:fileContext,
  onReady:ready => {try{fileMessages.attach(ready);fileReady=ready;}catch(_){fileReady=null;element("file-status").textContent="发送槽已被占用，请取消后核对。";}},
@@ -196,7 +198,7 @@ async function refreshFileAccess(generation) {
  finally {clearTimeout(timer);if(generation === fileAccessGeneration){fileAccessController=null;renderFileAccess();}}
 }
 function filesContextChanged() {
- fileTransport.contextChanged(); fileTransfer.contextChanged(); fileMessages.contextChanged(); fileDownload.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
+ fileTransport.contextChanged(); fileTransfer.contextChanged(); fileMessages.contextChanged(); fileDownload.contextChanged(); filePolicy.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
  fileEffectivePolicy=null;fileCapabilities=Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
  element("file-controls").hidden=true;
  const generation=++fileAccessGeneration;queueMicrotask(() => refreshFileAccess(generation));
