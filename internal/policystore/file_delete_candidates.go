@@ -198,17 +198,21 @@ func (s Service) ClaimFileDelete(ctx context.Context, ownerID string) (fileclean
 				if m.State != files.StateDeletePending || m.StateVersion != j.Ticket.StateVersion {
 					return zero, filecleanup.ErrLeaseLost
 				}
-				_, e = tx.Exec(ctx, `UPDATE file_delete_jobs SET owner_id=$2,lease_token=$3,lease_expires_at=$4,updated_at=$5,policy_version=$6,attempts=attempts+1,next_retry_at=NULL WHERE id=$1`, job, ownerID, token, expiry, at, p.Version)
+				_, e = tx.Exec(ctx, `UPDATE file_delete_jobs SET owner_id=$2,lease_token=$3,lease_expires_at=$4,updated_at=$5,policy_version=$6,attempts=CASE WHEN attempts<9223372036854775807 THEN attempts+1 ELSE attempts END,next_retry_at=NULL WHERE id=$1`, job, ownerID, token, expiry, at, p.Version)
 			}
 			if e != nil {
 				return zero, e
+			}
+			retryCount := j.Attempts
+			if retryCount < 9223372036854775807 {
+				retryCount++
 			}
 			reason, e := deleteObligation(ctx, tx, m)
 			if e != nil {
 				return zero, e
 			}
 			if reason != "" {
-				_, e = tx.Exec(ctx, `UPDATE file_delete_jobs SET phase='blocked',reason_code=$2,source_safe=false,inventory_exhausted=false,next_retry_at=$3 WHERE id=$1`, job, reason, deleteRetryAt(at, j.Attempts+1))
+				_, e = tx.Exec(ctx, `UPDATE file_delete_jobs SET phase='blocked',reason_code=$2,source_safe=false,inventory_exhausted=false,next_retry_at=$3 WHERE id=$1`, job, reason, deleteRetryAt(at, retryCount))
 				if e != nil {
 					return zero, e
 				}

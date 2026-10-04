@@ -165,3 +165,13 @@ func TestFileDeleteCandidatesAuditAtomic(t *testing.T) {
 		t.Fatal(state, count, e)
 	}
 }
+
+func TestFileDeleteCandidatesCounterSaturates(t *testing.T) {
+	c, s, _ := deleteCandidateFixture(t, "ready")
+	ticket := claimDelete(t, s)
+	run(t, c, `UPDATE file_delete_jobs SET attempts=9223372036854775807 WHERE id=$1`, ticket.JobID)
+	next, found, e := s.ClaimFileDelete(context.Background(), uploadOwner)
+	if e != nil || !found || next.JobID != ticket.JobID || next.LeaseToken == ticket.LeaseToken {
+		t.Fatal("observation counter stopped reconciliation", next, found, e)
+	}
+}
