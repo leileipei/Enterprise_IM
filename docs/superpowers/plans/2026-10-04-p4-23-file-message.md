@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27.1（沿用 go.mod）、pgx/v5、PostgreSQL、现有 Redis／WebSocket／OIDC／Chrome 测试工具、P4-22 私有版本化 S3 与真实 ClamAV／qpdf。无新产品依赖。
 
-**Spec:** [已确认规格](../specs/2026-10-04-p4-23-file-message-design.md)，确认版本 `885f62fd1ace1bf40bc896bf76298f1175254e65`；产品基线 `b03a1977cf39f2f19db9d45cd4bce9a7338a2372`。用户已确认实施计划。Task 1～8 已提交并通过逐项门禁；Task 9 等待满足病毒库新鲜度要求，Task 10 尚未执行。详见阶段验收记录。
+**Spec:** [已确认规格](../specs/2026-10-04-p4-23-file-message-design.md)，确认版本 `885f62fd1ace1bf40bc896bf76298f1175254e65`；产品基线 `b03a1977cf39f2f19db9d45cd4bce9a7338a2372`。用户已确认实施计划。Task 1～9 已提交并通过逐项门禁；Task10固定归档完整门禁通过，一次整体评审及资源清理完成，草稿交付正在执行。详见阶段验收记录。
 
 ## Global Constraints
 
@@ -233,7 +233,7 @@ if messageCount != 1 || bindingCount != 1 || keyCount != 1 || outboxCount != 1 |
 
 **Interfaces:** 测试通过真实 S3＋filescanner＋filetransfer 生成 ready，使用 HandlerWithFileMessages 显式装配，连接现有 Outbox publisher／Redis fanout／WebSocket；生产 cmd/im-api 仍默认关闭。脚本只有一个命令 `scripts/test-file-messages.sh run-all`，依赖环境缺失／不可用、扫描证明失效或选定组件 SKIP 均非零退出。
 
-- [ ] **1. 写 RED／集成测试**：TestFileMessageRealScanSendPull、TestFileMessageRealRealtime、TestFileMessageRealBrowserLegacy、TestFileMessageProductionClosed。普通 TLS OIDC 夹具映射真实 TrustedIdentity；真实上传扫描后单聊／群聊提交、通知及 typed／旧 HTTP 补拉；真实旧 Web 显示固定占位且文本发送继续有效。实际 cmd/im-api 子进程即使上传已启用或设置未识别 IM_FILE_MESSAGE_ENABLED=true，file 请求仍 503，文本仍成功。选用独特名称／caption 检查其未出现在 Redis、通知、默认补拉、搜索、审计及产品日志。
+- [x] **1. 写 RED／集成测试**：TestFileMessageRealScanSendPull、TestFileMessageRealRealtime、TestFileMessageRealBrowserLegacy、TestFileMessageProductionClosed。普通 TLS OIDC 夹具映射真实 TrustedIdentity；真实上传扫描后单聊／群聊提交、通知及 typed／旧 HTTP 补拉；真实旧 Web 显示固定占位且文本发送继续有效。实际 cmd/im-api 子进程即使上传已启用或设置未识别 IM_FILE_MESSAGE_ENABLED=true，file 请求仍 503，文本仍成功。选用独特名称／caption 检查其未出现在 Redis、通知、默认补拉、搜索、审计及产品日志。
 代表断言（TestFileMessageRealScanSendPull，真实扫描完成后才允许发送）：
 ```go
 if state != "ready" || !bytes.Equal(scanSHA, sealedSHA) { t.Fatal("no trusted clean scan proof") }
@@ -241,10 +241,10 @@ if typedItem["message_type"] != "file" || attachment["download_available"] != fa
 if responseACK["message_id"] != persistedMessageID { t.Fatal("ACK differs from committed message") }
 ```
 
-- [ ] **2. 配置本轮受控依赖并运行**：准备专用 PG／Redis／versioned 私有 S3、qpdf、可信正向及旧配置负向 clamd。沿用固定镜像与已批准扫描限额；重新核验病毒库≤24h、实际 PID／二进制／配置／socket，并生成新的绑定 manifest。设置现有 IM_TEST_DATABASE_URL／IM_TEST_REDIS_URL／IM_TEST_S3_*／扫描及浏览器变量，私有文件中保管凭据，不能沿用已停止进程的旧就绪结论。运行 `go test ./internal/policystore ./cmd/im-api -run '^TestFileMessage(Real|Production)' -count=1 -v`，记录实际初次失败／通过，不将缺依赖 SKIP 当 RED 或通过。
-- [ ] **3. 实现集成夹具与脚本门禁**：脚本执行具名测试并保存 `go test -json`，检查选定测试真的出现且无 SKIP／FAIL；支持独立私有 IM_TEST_FILE_MESSAGE_OUTPUT_DIR 绝对目录。声明自建资源归属、清理与证据路径；真实扫描失败不得手写 ready 绕过。
-- [ ] **4. GREEN**：`scripts/test-file-messages.sh run-all` 的单聊／群聊、实时、浏览器及生产关闭全部 PASS，无 SKIP。证明检测事实只报告在授权 typed DTO，ACK 不代表送达／已读；文件下载本轮仍未实现。对受控测试对象只清理本轮归属，不放宽正式文件生命周期或删除正式绑定证据。
-- [ ] **5. 提交**：仅本任务代码／脚本／说明；`git commit -m "test(files): verify scanned attachments through reliable message delivery"`。
+- [x] **2. 配置本轮受控依赖并运行**：准备专用 PG／Redis／versioned 私有 S3、qpdf、可信正向及旧配置负向 clamd。沿用固定镜像与已批准扫描限额；重新核验病毒库≤24h、实际 PID／二进制／配置／socket，并生成新的绑定 manifest。设置现有 IM_TEST_DATABASE_URL／IM_TEST_REDIS_URL／IM_TEST_S3_*／扫描及浏览器变量，私有文件中保管凭据，不能沿用已停止进程的旧就绪结论。运行 `go test ./internal/policystore ./cmd/im-api -run '^TestFileMessage(Real|Production)' -count=1 -v`，记录实际初次失败／通过，不将缺依赖 SKIP 当 RED 或通过。
+- [x] **3. 实现集成夹具与脚本门禁**：脚本执行具名测试并保存 `go test -json`，检查选定测试真的出现且无 SKIP／FAIL；支持独立私有 IM_TEST_FILE_MESSAGE_OUTPUT_DIR 绝对目录。声明自建资源归属、清理与证据路径；真实扫描失败不得手写 ready 绕过。
+- [x] **4. GREEN**：`scripts/test-file-messages.sh run-all` 的单聊／群聊、实时、浏览器及生产关闭全部 PASS，无 SKIP。证明检测事实只报告在授权 typed DTO，ACK 不代表送达／已读；文件下载本轮仍未实现。对受控测试对象只清理本轮归属，不放宽正式文件生命周期或删除正式绑定证据。
+- [x] **5. 提交**：仅本任务代码／脚本／说明；`git commit -m "test(files): verify scanned attachments through reliable message delivery"`。
 
 ## Task 10：固定版本门禁、一次最终评审及交付
 
@@ -252,10 +252,10 @@ if responseACK["message_id"] != persistedMessageID { t.Fatal("ACK differs from c
 
 **Interfaces:** 使用 git archive 的固定产品提交、既有全量与受影响包 race；草稿 PR base 为 codex/p4-22-upload-scan-design，head 为 codex/p4-23-file-message-design。最终新鲜独立 reviewer 只评审本轮增量及对应规格／计划，无逐任务实现代理。
 
-- [ ] **1. 固定候选与完整门禁**：先提交 Task 1～9，再记录不可变 candidate SHA，以 `git archive <candidate SHA>` 解包到本轮私有验证目录；所有命令在归档目录运行且日志写独立证据目录。运行 `go test -json ./... -count=1` 和 `scripts/test-file-messages.sh run-all`；命令完整记录在验收文档，凭据不进入命令日志。正文／扫描旧资源夹具按实际测试要求准备；不重新开展无关容量／生产演练。
-- [ ] **2. 受影响包 race**：归档目录运行 `go test -json -race ./internal/policystore ./internal/httpserver ./internal/retention ./internal/realtime ./internal/outbox ./cmd/im-api -count=1`。分别统计顶层／子测试 PASS、FAIL、SKIP；组件必须 0 FAIL／0 SKIP，全量允许明确单列既有辅助 TestRealtimeAPIChild，实际调用方必须执行；新用例或缺依赖跳过均不接受。
-- [ ] **3. 一次整体独立评审与修正**：门禁通过后按 executing-plans／requesting-code-review 要求派发一次新鲜 reviewer，对比产品基线 b03a197..候选固定 SHA，要求逐条证据／Critical、Important、Minor 分类。核验报告中的发现；必要修正一次完成，以失败回归先 RED 再 GREEN，重新归档最终产品提交并执行受影响及规定最终门禁；不重复派发整体评审。无有效发现也如实记录，不能把没有检查的风险宣称排除。
-- [ ] **4. 文档和清理**：验收记录写最终产品 SHA、测试计数、真实依赖／浏览器证据、评审及修正、实际局限、资源清理；更新实际完成的复选框与总路径。停止本轮自建进程／容器，验证已退出，私有凭据／样本不提交；不得把准备完成或本地联调说成生产验收。纯文档提交后用 git diff 验证产品源码与被测提交一致。
+- [x] **1. 固定候选与完整门禁**：先提交 Task 1～9，再记录不可变 candidate SHA，以 `git archive <candidate SHA>` 解包到本轮私有验证目录；所有命令在归档目录运行且日志写独立证据目录。运行 `go test -json ./... -count=1` 和 `scripts/test-file-messages.sh run-all`；命令完整记录在验收文档，凭据不进入命令日志。正文／扫描旧资源夹具按实际测试要求准备；不重新开展无关容量／生产演练。
+- [x] **2. 受影响包 race**：归档目录运行 `go test -json -race ./internal/policystore ./internal/httpserver ./internal/retention ./internal/realtime ./internal/outbox ./cmd/im-api -count=1`。分别统计顶层／子测试 PASS、FAIL、SKIP；组件必须 0 FAIL／0 SKIP，全量允许明确单列既有辅助 TestRealtimeAPIChild，实际调用方必须执行；新用例或缺依赖跳过均不接受。
+- [x] **3. 一次整体独立评审与修正**：门禁通过后按 executing-plans／requesting-code-review 要求派发一次新鲜 reviewer，对比产品基线 b03a197..候选固定 SHA，要求逐条证据／Critical、Important、Minor 分类。核验报告中的发现；必要修正一次完成，以失败回归先 RED 再 GREEN，重新归档最终产品提交并执行受影响及规定最终门禁；不重复派发整体评审。无有效发现也如实记录，不能把没有检查的风险宣称排除。
+- [x] **4. 文档和清理**：验收记录写最终产品 SHA、测试计数、真实依赖／浏览器证据、评审及修正、实际局限、资源清理；更新实际完成的复选框与总路径。停止本轮自建进程／容器，验证已退出，私有凭据／样本不提交；不得把准备完成或本地联调说成生产验收。纯文档提交后用 git diff 验证产品源码与被测提交一致。
 - [ ] **5. 推送与草稿 PR**：核对只包含本轮可交付提交后推送当前分支，以指定 base 创建草稿 PR；正文用临时 UTF-8 文件及 gh --body-file，随后 attach_artifact 关联 PR。确认远端 head 与本地一致、工作树 clean；中文最终回复链接 PR／验收文档、核心证据和 P4-24／25 未完成范围，不合并／部署。
 
 ## 规格覆盖与自检
@@ -276,4 +276,4 @@ if responseACK["message_id"] != persistedMessageID { t.Fatal("ACK differs from c
 
 ## 审阅与执行衔接
 
-用户已确认本计划，按既定逐项实施方式推进。当前在 Task 9 的可信扫描门禁：官方 daily.cvd 28142 发布时间为 2026-10-03 06:24:16 UTC，本轮最终刷新时已超过 24 小时且更新器仍报告该版本最新。未降低门限。更新官方病毒库、重启本轮依赖并重新生成实际运行 manifest 后，从 Task 9 继续；不重做 Task 1～8。Task 10 的固定提交完整／race／一次整体评审及草稿 PR 尚未执行。
+用户已确认本计划，按既定逐项实施方式推进。此前官方daily.cvd28142超过24小时，已如实记录失败并停止；继续后官方下载／验证28143并重新绑定实际运行进程，Task9完整门禁通过。Task10固定提交20c073e全量660顶层／617子例和六包race464顶层／430子例通过，各单列一个既有辅助启动器；新附件与旧文件组件均零跳过，Linux资源门禁通过。一次最终整体评审无有效Critical／Important／Minor，资源已停止；正在交付草稿PR。精确race辅助入口规则及task-done交付验证器裁决见验收记录。
