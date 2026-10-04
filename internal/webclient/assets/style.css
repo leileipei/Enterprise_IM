@@ -193,3 +193,8 @@ main{position:relative;z-index:1;min-height:100vh}
 
 .file-policy-summary { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; padding: 12px; background: #f5f7fa; border-radius: 8px; }
 #file-policy-history li { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.file-search-card strong { overflow-wrap: anywhere; }
+.file-search-card button { margin-right: 8px; }
+.file-save { padding: 0 24px; font-size: 13px; }
+.file-save:empty { display: none; }

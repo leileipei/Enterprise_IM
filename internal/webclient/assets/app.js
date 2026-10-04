@@ -133,14 +133,15 @@ const retentionContext = () => ({
   conversationEpoch,
   title: activeConversation ? element("chat-title").textContent : "",
 });
+let fileCapabilities = Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
 const retentionPolicyEditor = new window.RetentionPolicyEditor(request, retentionContext, () => legalHoldRecords.canSwitchContext());
 const auditRecords = new window.AuditRecords(request, retentionContext, value => retentionPolicyEditor.validTime(value),
   () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
 const retentionRecords = new window.RetentionRecords(request, retentionContext, allowed => { retentionPolicyEditor.setAccess(allowed); auditRecords.setAccess(allowed); filePolicy.setAccess(allowed); });
 const legalHoldRecords = new window.LegalHoldRecords(request, retentionContext, () => retentionPolicyEditor.canSwitchContext());
-const messageSearch = new window.MessageSearch(request, () => ({ ...retentionContext(), kind: activeConversationKind }),
+const messageSearch = new window.MessageSearch(request, () => ({ ...fileContext(),...retentionContext(), kind: activeConversationKind,filenameSearchEnabled:fileCapabilities.filename_search_enabled }),
   value => retentionPolicyEditor.validTime(value), () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
-const crossMessageSearch = new window.CrossMessageSearch(request, retentionContext,
+const crossMessageSearch = new window.CrossMessageSearch(request, () => ({...fileContext(),...retentionContext(),filenameSearchEnabled:fileCapabilities.filename_search_enabled}),
   value => retentionPolicyEditor.validTime(value), () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -150,7 +151,6 @@ function fileContext() {
 }
 const fileTransport = new window.FileTransport({snapshot:() => ({...fileContext(),token:accessToken,tokenExpiresAt}),
  onHTTPError:(status,code) => {if(status===401)logout("登录已过期，请重新登录。");else if(status===403 && code==="invalid_identity")selectMembership("");}});
-let fileCapabilities = Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
 let fileMessagePending = false;
 let fileEffectivePolicy = null, fileReady = null, fileAccessController = null, fileAccessGeneration = 0;
 const filePolicy=new window.FilePolicy({request,context:fileContext,canOpen:()=>retentionPolicyEditor.allowed && retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext()});
@@ -163,6 +163,19 @@ const fileMessages=new window.FileMessages({request,context:fileContext,uuidV7,c
  download:fileDownload,capabilities:()=>fileCapabilities,
  onPending:pending => {fileMessagePending=pending;renderFileAccess();},
  onACK:async () => {fileTransfer.contextChanged();messageText.value="";messageText.readOnly=false;discardPendingButton.classList.add("hidden");element("send-hint").textContent="已保存";await syncMessages();}});
+const filenameSearchContext=()=>({...fileContext(),filenameSearchEnabled:fileCapabilities.filename_search_enabled});
+const fileSearchConversation=new window.FileSearch({request,context:filenameSearchContext,scope:"conversation",download:fileDownload,openConversation:openFileSearchConversation});
+const fileSearchAll=new window.FileSearch({request,context:filenameSearchContext,scope:"all",download:fileDownload,openConversation:openFileSearchConversation});
+messageSearch.fileSearch=fileSearchConversation;crossMessageSearch.fileSearch=fileSearchAll;
+async function openFileSearchConversation(id,kind){
+ if(!canSwitchChat())throw new Error("请先核对待确认消息");
+ if(kind==="direct" && !conversations.has(id))await refreshInbox();
+ if(kind==="group" && !groups.has(id))await refreshGroups();
+ if((kind==="direct" && !conversations.has(id)) || (kind==="group" && !groups.has(id)))throw new Error("此会话不在当前授权列表，请先加载相应会话");
+ messageSearch.close();crossMessageSearch.close();
+ if(kind==="direct")activateConversation(id);else activateGroupHistory(id);
+ await syncMessages();
+}
 function canSendFileInContext() {
  if (!actingMembership || !activeConversation || pendingMessage || fileMessagePending) return false;
  if (activeConversationKind === "direct") return conversations.has(activeConversation);
@@ -172,6 +185,8 @@ function canSendFileInContext() {
 function renderFileAccess() {
  const allowed=fileCapabilities.upload_enabled && fileCapabilities.message_send_enabled && fileCapabilities.download_enabled && fileEffectivePolicy?.enabled === true && canSendFileInContext();
  element("file-controls").hidden=!allowed;
+ if(!fileCapabilities.filename_search_enabled){if(messageSearch.mode==="file")messageSearch.setMode("text");if(crossMessageSearch.mode==="file")crossMessageSearch.setMode("text");}
+ messageSearch.update();crossMessageSearch.update();
 }
 async function refreshFileAccess(generation) {
  if (generation !== fileAccessGeneration || !fileContext().identityKey) return;
@@ -198,7 +213,7 @@ async function refreshFileAccess(generation) {
  finally {clearTimeout(timer);if(generation === fileAccessGeneration){fileAccessController=null;renderFileAccess();}}
 }
 function filesContextChanged() {
- fileTransport.contextChanged(); fileTransfer.contextChanged(); fileMessages.contextChanged(); fileDownload.contextChanged(); filePolicy.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
+ fileTransport.contextChanged(); fileTransfer.contextChanged(); fileMessages.contextChanged(); fileDownload.contextChanged(); filePolicy.contextChanged(); fileSearchConversation.contextChanged(); fileSearchAll.contextChanged(); fileAccessController?.abort(); fileAccessController=null;
  fileEffectivePolicy=null;fileCapabilities=Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});
  element("file-controls").hidden=true;
  const generation=++fileAccessGeneration;queueMicrotask(() => refreshFileAccess(generation));

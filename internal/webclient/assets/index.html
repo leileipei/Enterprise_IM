@@ -18,6 +18,7 @@
   <script src="/web/file-messages.js" defer></script>
   <script src="/web/file-download.js" defer></script>
   <script src="/web/file-policy.js" defer></script>
+  <script src="/web/file-search.js" defer></script>
   <script src="/web/app.js" defer></script>
 </head>
 <body>
@@ -96,6 +97,7 @@
     <dialog id="cross-message-search-dialog" class="retention-records-dialog" aria-labelledby="cross-message-search-title" aria-describedby="cross-message-search-boundary">
       <div class="retention-records-heading"><div><h2 id="cross-message-search-title">搜索历史消息</h2><p id="cross-message-search-context" class="microcopy"></p></div><button id="cross-message-search-close" class="secondary-button" type="button">关闭</button></div>
       <form id="cross-message-search-form" class="legal-hold-action-form" novalidate>
+        <label for="cross-message-search-mode" class="sr-only">搜索内容</label><select id="cross-message-search-mode" class="hidden"><option value="text">正文</option><option value="file">文件名称</option></select>
         <label for="cross-message-search-query">关键词（2～100 字）</label><input id="cross-message-search-query" type="search" autocomplete="off" spellcheck="false" placeholder="输入正文片段，例如工单编号" aria-describedby="cross-message-search-boundary">
         <label for="cross-message-search-kind">搜索范围</label><select id="cross-message-search-kind"><option value="all">全部</option><option value="direct">单聊</option><option value="group">群聊</option></select>
         <button id="cross-message-search-apply" class="primary-button" type="submit">搜索</button>
@@ -109,6 +111,7 @@
     <dialog id="message-search-dialog" class="retention-records-dialog" aria-labelledby="message-search-title" aria-describedby="message-search-boundary">
       <div class="retention-records-heading"><div><h2 id="message-search-title">搜索会话消息</h2><p id="message-search-context" class="microcopy"></p></div><button id="message-search-close" class="secondary-button" type="button">关闭</button></div>
       <form id="message-search-form" class="legal-hold-action-form" novalidate>
+        <label for="message-search-mode" class="sr-only">搜索内容</label><select id="message-search-mode" class="hidden"><option value="text">正文</option><option value="file">文件名称</option></select>
         <label for="message-search-query">关键词（2～100 字）</label><input id="message-search-query" type="search" autocomplete="off" spellcheck="false" placeholder="输入正文片段，例如工单编号" aria-describedby="message-search-boundary">
         <button id="message-search-apply" class="primary-button" type="submit">搜索</button>
       </form>

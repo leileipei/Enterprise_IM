@@ -397,7 +397,7 @@ assert.equal(writeRequestsAfterUnknownUntilReadback, 0);
 - openConversation(conversationID:string,kind:"direct"|"group"):Promise<void> 复用现有授权列表与补拉。
 - 单／跨文本类增加 setMode(mode:"text"|"file"):void，文字分支原 request／validate 不变，文件分支转交独立实例。
 
-- [ ] **Step 1：新增失败测试。** TestWebFileSearch；fileSearchModeIsolation／fileSearchSchema／fileSearchEmptyPage／fileSearchContextLateResult／fileSearchUnicodeLiteral。
+- [x] **Step 1：新增失败测试。** TestWebFileSearch；fileSearchModeIsolation／fileSearchSchema／fileSearchEmptyPage／fileSearchContextLateResult／fileSearchUnicodeLiteral。
 
 ```text
 change mode -> previous request aborted, records/cursor cleared
@@ -417,10 +417,10 @@ assert.equal(recordsAfterContextChange.length, 0);
 assert.equal(textRequestPath, originalTextSearchPath);
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileSearch -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** fileName 查询规范化与 Go simple lowercase 对齐，复用当前文本模块 Unicode trim/lower 语义但使用独立游标。单次15秒请求，结果只驻内存，手动翻页、严格顺序／去重验证；打开会话不直接注入历史，名称卡片调用相同下载实例。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add conversation and personal filename search modes"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileSearch -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** fileName 查询规范化与 Go simple lowercase 对齐，复用当前文本模块 Unicode trim/lower 语义但使用独立游标。单次15秒请求，结果只驻内存，手动翻页、严格顺序／去重验证；打开会话不直接注入历史，名称卡片调用相同下载实例。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add conversation and personal filename search modes"`。
 
 ## Task 12：专用真实装配与附件完整浏览器链路
 
