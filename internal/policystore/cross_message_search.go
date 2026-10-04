@@ -132,9 +132,9 @@ func (s Service) searchAllTextMessagesOnce(ctx context.Context, id access.Truste
 		if position.Phase == "within" && position.Conversation == c.ID {
 			after = position.After
 		}
-		read := readDirectHistoryBatchTx
+		read := readDirectTextSearchBatchTx
 		if c.Kind == "group" {
-			read = readGroupHistoryBatchTx
+			read = readGroupTextSearchBatchTx
 		}
 		batch, err := read(ctx, tx, scope, c.ID, after, remaining)
 		if errors.Is(err, ErrMessageNotAvailable) {
@@ -163,7 +163,7 @@ func (s Service) searchAllTextMessagesOnce(ctx context.Context, id access.Truste
 		}
 		stopped := false
 		for j, m := range visible.Messages {
-			if !m.Redacted && strings.Contains(strings.ToLower(m.Text), binding.Query) {
+			if m.MessageType == MessageTypeText && !m.Redacted && strings.Contains(strings.ToLower(m.Text), binding.Query) {
 				provisional++
 			}
 			if provisional == limit {
@@ -200,7 +200,7 @@ func (s Service) searchAllTextMessagesOnce(ctx context.Context, id access.Truste
 			}
 		}
 		for _, m := range visible.Messages {
-			if m.Redacted || !strings.Contains(strings.ToLower(m.Text), binding.Query) {
+			if m.MessageType != MessageTypeText || m.Redacted || !strings.Contains(strings.ToLower(m.Text), binding.Query) {
 				continue
 			}
 			page.Messages = append(page.Messages, CrossConversationMatch{entry.candidate.ID, entry.candidate.Kind, m})

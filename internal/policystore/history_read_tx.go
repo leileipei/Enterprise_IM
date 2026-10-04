@@ -87,9 +87,9 @@ func filterGroupHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyRead
 	return page, nil
 }
 
-func readDirectHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyReadContext, conversationID string, afterSeq int64, limit int) (historyReadBatch, error) {
+func readDirectHistoryBatchTxMode(ctx context.Context, tx pgx.Tx, scope historyReadContext, conversationID string, afterSeq int64, limit int, mode historyReadMode) (historyReadBatch, error) {
 	id := scope.Identity
-	if limit < 1 || limit > 500 || afterSeq < 0 || !directoryUUIDPattern.MatchString(conversationID) {
+	if (mode != historyReadAll && mode != historyReadTextOnly) || limit < 1 || limit > 500 || afterSeq < 0 || !directoryUUIDPattern.MatchString(conversationID) {
 		return historyReadBatch{}, ErrInvalidMessageRequest
 	}
 	var lowUser, highUser string
@@ -107,9 +107,9 @@ func readDirectHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyReadC
 SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,
  COALESCE(m.recipient_user_id::text,''),COALESCE(m.recipient_membership_id::text,''),
  m.text_body,m.accepted_at,m.body_cleared_at,
- COALESCE(m.sender_organization_id::text,''),COALESCE(m.recipient_organization_id::text,'')
-FROM messages m
-WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3
+ COALESCE(m.sender_organization_id::text,''),COALESCE(m.recipient_organization_id::text,'')`+historyAttachmentSelect+`
+FROM messages m`+historyAttachmentJoin+`
+WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+`
 ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 	if err != nil {
 		return historyReadBatch{}, err
@@ -121,8 +121,10 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 		var clearedAt *time.Time
 		var seq int64
 		var acceptedAt time.Time
-		if err := rows.Scan(&messageID, &seq, &senderUser, &senderMember,
-			&recipientUser, &recipientMember, &body, &acceptedAt, &clearedAt, &senderOrg, &recipientOrg); err != nil {
+		var attachmentFacts historyAttachmentFacts
+		destinations := []any{&messageID, &seq, &senderUser, &senderMember, &recipientUser, &recipientMember, &body, &acceptedAt, &clearedAt, &senderOrg, &recipientOrg}
+		destinations = append(destinations, attachmentFacts.destinations()...)
+		if err := rows.Scan(destinations...); err != nil {
 			rows.Close()
 			return historyReadBatch{}, err
 		}
@@ -134,7 +136,8 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 		history := historicalPair{}
 		validPair := (senderUser == lowUser && recipientUser == highUser) ||
 			(senderUser == highUser && recipientUser == lowUser)
-		if body != nil && clearedAt == nil && validPair && senderMember != "" && recipientMember != "" && senderOrg != "" && recipientOrg != "" {
+		kind, attachment, validContent := attachmentFacts.content()
+		if validContent && body != nil && clearedAt == nil && validPair && senderMember != "" && recipientMember != "" && senderOrg != "" && recipientOrg != "" {
 			sender := policy.Membership{ID: senderMember, TenantID: id.TenantID, OrganizationID: senderOrg}
 			recipient := policy.Membership{ID: recipientMember, TenantID: id.TenantID, OrganizationID: recipientOrg}
 			historicalReader, peer := sender, recipient
@@ -142,7 +145,7 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 				historicalReader, peer = recipient, sender
 			}
 			item = PulledMessage{MessageID: messageID, Seq: seq, SenderUserID: senderUser,
-				Text: *body, ServerTime: acceptedAt, Redacted: false}
+				Text: *body, ServerTime: acceptedAt, Redacted: false, MessageType: kind, Attachment: attachment}
 			history = historicalPair{reader: historicalReader, peer: peer}
 		}
 		page.Messages = append(page.Messages, item)
@@ -157,9 +160,9 @@ ORDER BY m.seq LIMIT $4`, id.TenantID, conversationID, afterSeq, limit+1)
 	return historyReadBatch{Page: page, Direct: histories}, nil
 }
 
-func readGroupHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyReadContext, groupID string, afterSeq int64, limit int) (historyReadBatch, error) {
+func readGroupHistoryBatchTxMode(ctx context.Context, tx pgx.Tx, scope historyReadContext, groupID string, afterSeq int64, limit int, mode historyReadMode) (historyReadBatch, error) {
 	id := scope.Identity
-	if limit < 1 || limit > 500 || afterSeq < 0 || !directoryUUIDPattern.MatchString(groupID) {
+	if (mode != historyReadAll && mode != historyReadTextOnly) || limit < 1 || limit > 500 || afterSeq < 0 || !directoryUUIDPattern.MatchString(groupID) {
 		return historyReadBatch{}, ErrInvalidMessageRequest
 	}
 	var locked string
@@ -179,9 +182,9 @@ func readGroupHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyReadCo
 	}
 	page := MessagePage{ConversationID: groupID,
 		Messages: make([]PulledMessage, 0, min(limit, 100)), NextAfterSeq: afterSeq}
-	rows, err := tx.Query(ctx, `SELECT id::text,seq,sender_user_id::text,sender_membership_id::text,text_body,accepted_at,body_cleared_at
- FROM messages WHERE tenant_id=$1 AND conversation_id=$2 AND seq>$3
- ORDER BY seq LIMIT $4`, id.TenantID, groupID, afterSeq, limit+1)
+	rows, err := tx.Query(ctx, `SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,m.text_body,m.accepted_at,m.body_cleared_at`+historyAttachmentSelect+`
+ FROM messages m`+historyAttachmentJoin+` WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+`
+ ORDER BY m.seq LIMIT $4`, id.TenantID, groupID, afterSeq, limit+1)
 	if err != nil {
 		return historyReadBatch{}, err
 	}
@@ -189,14 +192,21 @@ func readGroupHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyReadCo
 	senderIDs := map[string]bool{id.UserID: true}
 	for rows.Next() {
 		var message groupHistoryMessage
-		if err := rows.Scan(&message.id, &message.seq, &message.senderID,
-			&message.senderMembershipID, &message.text, &message.at, &message.clearedAt); err != nil {
+		var attachmentFacts historyAttachmentFacts
+		destinations := []any{&message.id, &message.seq, &message.senderID, &message.senderMembershipID, &message.text, &message.at, &message.clearedAt}
+		destinations = append(destinations, attachmentFacts.destinations()...)
+		if err := rows.Scan(destinations...); err != nil {
 			rows.Close()
 			return historyReadBatch{}, err
 		}
 		if len(messages) == limit {
 			page.HasMore = true
 			break
+		}
+		var validContent bool
+		message.messageType, message.attachment, validContent = attachmentFacts.content()
+		if !validContent {
+			message.text = nil
 		}
 		messages = append(messages, message)
 		senderIDs[message.senderID] = true
@@ -270,7 +280,7 @@ func readGroupHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyReadCo
 		if message.text != nil && message.clearedAt == nil && readerFound && senderFound &&
 			sender.membershipID == message.senderMembershipID {
 			item = PulledMessage{MessageID: message.id, Seq: message.seq,
-				SenderUserID: message.senderID, Text: *message.text, ServerTime: message.at}
+				SenderUserID: message.senderID, Text: *message.text, ServerTime: message.at, MessageType: message.messageType, Attachment: message.attachment}
 		}
 		histories = append(histories, historicalPair{reader: reader.policyMembership(id.TenantID), peer: sender.policyMembership(id.TenantID)})
 		page.Messages = append(page.Messages, item)

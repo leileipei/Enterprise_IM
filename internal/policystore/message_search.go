@@ -103,7 +103,7 @@ func (s Service) searchMessages(ctx context.Context, id access.TrustedIdentity, 
 	page := MessageSearchPage{ConversationID: scanned.ConversationID, Messages: make([]PulledMessage, 0, limit), HasMore: scanned.HasMore}
 	next := scanned.NextAfterSeq
 	for _, m := range scanned.Messages {
-		if m.Redacted || !strings.Contains(strings.ToLower(m.Text), query) {
+		if m.MessageType != MessageTypeText || m.Redacted || !strings.Contains(strings.ToLower(m.Text), query) {
 			continue
 		}
 		if len(page.Messages) == limit {

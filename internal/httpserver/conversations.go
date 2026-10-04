@@ -264,16 +264,24 @@ func pullGroupTextMessages(w http.ResponseWriter, r *http.Request, identity acce
 func serveMessagePage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
 	conversationID string, pull func(context.Context, access.TrustedIdentity, string, int64, int) (policystore.MessagePage, error)) {
 	query, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil || len(query) < 1 || len(query) > 2 || len(query["after_seq"]) != 1 ||
-		!decimalDigits(query.Get("after_seq")) || len(query["limit"]) > 1 {
+	if err != nil || len(query) < 1 || len(query) > 3 || len(query["after_seq"]) != 1 ||
+		!decimalDigits(query.Get("after_seq")) || len(query["limit"]) > 1 || len(query["message_format"]) > 1 {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
 	}
 	for key := range query {
-		if key != "after_seq" && key != "limit" {
+		if key != "after_seq" && key != "limit" && key != "message_format" {
 			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 			return
 		}
+	}
+	typed := false
+	if values, present := query["message_format"]; present {
+		if len(values) != 1 || values[0] != "typed_v1" {
+			rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		typed = true
 	}
 	afterSeq, err := strconv.ParseInt(query.Get("after_seq"), 10, 64)
 	if err != nil {
@@ -304,31 +312,7 @@ func serveMessagePage(w http.ResponseWriter, r *http.Request, identity access.Tr
 		writeMessageError(w, err)
 		return
 	}
-	type itemDTO struct {
-		MessageID    string `json:"message_id,omitempty"`
-		Seq          int64  `json:"seq"`
-		SenderUserID string `json:"sender_user_id,omitempty"`
-		Text         string `json:"text,omitempty"`
-		ServerTime   string `json:"server_time,omitempty"`
-		Redacted     bool   `json:"redacted,omitempty"`
-	}
-	items := make([]itemDTO, 0, len(page.Messages))
-	for _, message := range page.Messages {
-		item := itemDTO{Seq: message.Seq, Redacted: message.Redacted}
-		if !message.Redacted {
-			item.MessageID = message.MessageID
-			item.SenderUserID = message.SenderUserID
-			item.Text = message.Text
-			item.ServerTime = message.ServerTime.UTC().Format("2006-01-02T15:04:05.999999999Z07:00")
-		}
-		items = append(items, item)
-	}
-	writeAdminJSON(w, http.StatusOK, struct {
-		ConversationID string    `json:"conversation_id"`
-		Messages       []itemDTO `json:"messages"`
-		NextAfterSeq   int64     `json:"next_after_seq"`
-		HasMore        bool      `json:"has_more"`
-	}{page.ConversationID, items, page.NextAfterSeq, page.HasMore})
+	writeAdminJSON(w, http.StatusOK, messagePageDTO(page, typed))
 }
 
 func sendTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
