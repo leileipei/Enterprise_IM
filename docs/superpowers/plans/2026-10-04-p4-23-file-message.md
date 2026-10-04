@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27.1（沿用 go.mod）、pgx/v5、PostgreSQL、现有 Redis／WebSocket／OIDC／Chrome 测试工具、P4-22 私有版本化 S3 与真实 ClamAV／qpdf。无新产品依赖。
 
-**Spec:** [已确认规格](../specs/2026-10-04-p4-23-file-message-design.md)，确认版本 `885f62fd1ace1bf40bc896bf76298f1175254e65`；产品基线 `b03a1977cf39f2f19db9d45cd4bce9a7338a2372`。用户已确认实施计划。Task 1～9 已提交并通过逐项门禁；Task10固定归档完整门禁通过，一次整体评审及资源清理完成，草稿交付正在执行。详见阶段验收记录。
+**Spec:** [已确认规格](../specs/2026-10-04-p4-23-file-message-design.md)，确认版本 `885f62fd1ace1bf40bc896bf76298f1175254e65`；产品基线 `b03a1977cf39f2f19db9d45cd4bce9a7338a2372`。用户已确认实施计划。全部10项实施任务完成：固定归档门禁、一次整体评审、资源清理和草稿PR #71完成。详见阶段验收记录。
 
 ## Global Constraints
 
@@ -256,7 +256,7 @@ if responseACK["message_id"] != persistedMessageID { t.Fatal("ACK differs from c
 - [x] **2. 受影响包 race**：归档目录运行 `go test -json -race ./internal/policystore ./internal/httpserver ./internal/retention ./internal/realtime ./internal/outbox ./cmd/im-api -count=1`。分别统计顶层／子测试 PASS、FAIL、SKIP；组件必须 0 FAIL／0 SKIP，全量允许明确单列既有辅助 TestRealtimeAPIChild，实际调用方必须执行；新用例或缺依赖跳过均不接受。
 - [x] **3. 一次整体独立评审与修正**：门禁通过后按 executing-plans／requesting-code-review 要求派发一次新鲜 reviewer，对比产品基线 b03a197..候选固定 SHA，要求逐条证据／Critical、Important、Minor 分类。核验报告中的发现；必要修正一次完成，以失败回归先 RED 再 GREEN，重新归档最终产品提交并执行受影响及规定最终门禁；不重复派发整体评审。无有效发现也如实记录，不能把没有检查的风险宣称排除。
 - [x] **4. 文档和清理**：验收记录写最终产品 SHA、测试计数、真实依赖／浏览器证据、评审及修正、实际局限、资源清理；更新实际完成的复选框与总路径。停止本轮自建进程／容器，验证已退出，私有凭据／样本不提交；不得把准备完成或本地联调说成生产验收。纯文档提交后用 git diff 验证产品源码与被测提交一致。
-- [ ] **5. 推送与草稿 PR**：核对只包含本轮可交付提交后推送当前分支，以指定 base 创建草稿 PR；正文用临时 UTF-8 文件及 gh --body-file，随后 attach_artifact 关联 PR。确认远端 head 与本地一致、工作树 clean；中文最终回复链接 PR／验收文档、核心证据和 P4-24／25 未完成范围，不合并／部署。
+- [x] **5. 推送与草稿 PR**：核对只包含本轮可交付提交后推送当前分支，以指定 base 创建草稿 PR；正文用临时 UTF-8 文件及 gh --body-file，随后 attach_artifact 关联 PR。确认远端 head 与本地一致、工作树 clean；中文最终回复链接 PR／验收文档、核心证据和 P4-24／25 未完成范围，不合并／部署。
 
 ## 规格覆盖与自检
 
@@ -276,4 +276,4 @@ if responseACK["message_id"] != persistedMessageID { t.Fatal("ACK differs from c
 
 ## 审阅与执行衔接
 
-用户已确认本计划，按既定逐项实施方式推进。此前官方daily.cvd28142超过24小时，已如实记录失败并停止；继续后官方下载／验证28143并重新绑定实际运行进程，Task9完整门禁通过。Task10固定提交20c073e全量660顶层／617子例和六包race464顶层／430子例通过，各单列一个既有辅助启动器；新附件与旧文件组件均零跳过，Linux资源门禁通过。一次最终整体评审无有效Critical／Important／Minor，资源已停止；正在交付草稿PR。精确race辅助入口规则及task-done交付验证器裁决见验收记录。
+用户已确认本计划，按既定逐项实施方式推进。此前官方daily.cvd28142超过24小时，已如实记录失败并停止；继续后官方下载／验证28143并重新绑定实际运行进程，Task9完整门禁通过。Task10固定提交20c073e全量660顶层／617子例和六包race464顶层／430子例通过，各单列一个既有辅助启动器；新附件与旧文件组件均零跳过，Linux资源门禁通过。一次最终整体评审无有效Critical／Important／Minor，资源已停止；[草稿PR #71](https://github.com/leileipei/Enterprise_IM/pull/71)已创建并关联，未合并／部署。精确race辅助入口规则及task-done交付验证器裁决见验收记录。
