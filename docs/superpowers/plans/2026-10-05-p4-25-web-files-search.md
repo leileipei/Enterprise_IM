@@ -200,7 +200,7 @@ if len(page.Matches) != 0 { t.Fatal("name released after final deny/expiry") }
 - `HandlerWithFileSearch(next http.Handler,auth Authenticator,svc FileSearchService)(http.Handler,error)`。
 - `HandlerWithClosedFileSearch(next http.Handler,auth Authenticator) http.Handler`，准确匹配三路由，对已认证合法 GET 返回 503 file_search_unavailable。
 
-- [ ] **Step 1：新增失败测试。** TestFileSearchHTTPStrict／TestFileSearchRoutePrecedence／TestFileSearchDTOPrivacy／TestFileSearchProductionClosed；真实服务对应状态与 API DTO。
+- [x] **Step 1：新增失败测试。** TestFileSearchHTTPStrict／TestFileSearchRoutePrecedence／TestFileSearchDTOPrivacy／TestFileSearchProductionClosed；真实服务对应状态与 API DTO。
 
 ```text
 /files/search -> search route, never GetOwnFile("search")
@@ -217,10 +217,10 @@ if ownFileCalls != 0 || searchCalls != 1 { t.Fatal("file route shadowed search")
 if res.Code != 503 || !strings.Contains(res.Body.String(), `"file_search_unavailable"`) { t.Fatal(res.Code, res.Body.String()) }
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/httpserver ./internal/policystore ./cmd/im-api -run 'TestFileSearch(HTTP|Route|DTO|Production|API)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** parseFileSearchQuery(r *http.Request,cross bool)(q,kind,cursor string,limit int,err error) 严格参数；路径 kind 从 conversations／groups 得出；专用 wrapper 在 files/{id} 之前。生产仅安装 closed wrapper，无 filename enable 环境变量；测试使用完整 handler。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(search): freeze filename HTTP contracts and production closure"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/httpserver ./internal/policystore ./cmd/im-api -run 'TestFileSearch(HTTP|Route|DTO|Production|API)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** parseFileSearchQuery(r *http.Request,cross bool)(q,kind,cursor string,limit int,err error) 严格参数；路径 kind 从 conversations／groups 得出；专用 wrapper 在 files/{id} 之前。生产仅安装 closed wrapper，无 filename enable 环境变量；测试使用完整 handler。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(search): freeze filename HTTP contracts and production closure"`。
 
 ## Task 6：Web 文件传输认证与上下文取消
 

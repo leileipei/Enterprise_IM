@@ -199,6 +199,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
+		handler = productionFileSearchHandler(handler, authenticator)
 		if realtimeOptions != nil {
 			redisClient := redis.NewClient(realtimeOptions)
 			defer redisClient.Close()
@@ -399,4 +400,8 @@ func productionFileDownloadHandler(next http.Handler, uploadEnabled bool) http.H
 
 func productionFileCapabilities(uploadEnabled bool) httpserver.FileCapabilities {
 	return httpserver.FileCapabilities{UploadEnabled: uploadEnabled}
+}
+
+func productionFileSearchHandler(next http.Handler, auth httpserver.Authenticator) http.Handler {
+	return httpserver.HandlerWithClosedFileSearch(next, auth)
 }
