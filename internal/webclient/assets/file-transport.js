@@ -66,6 +66,8 @@
         clearTimeout(totalTimer); clearTimeout(expiryTimer);
         signal?.removeEventListener("abort", abort);
         controller.signal.removeEventListener("abort", rejectAbort);
+        // Release any unread response body, including a rejected header/protocol.
+        controller.abort();
         this.#controllers.delete(controller);
       }
     }
