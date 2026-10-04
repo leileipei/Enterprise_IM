@@ -392,12 +392,11 @@ func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
 	}()
 	token := sign("admin", expiry)
 	address := strings.TrimPrefix(base, "http://")
-	conn, e := net.Dial("tcp", address)
+	conn, e := dialSmallReceiveWindow(address)
 	if e != nil {
 		t.Fatal(e)
 	}
 	defer conn.Close()
-	conn.(*net.TCPConn).SetReadBuffer(1024)
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	fmt.Fprintf(conn, "GET /api/v1/files/%s/content HTTP/1.1\r\nHost: %s\r\nAuthorization: Bearer %s\r\nX-Acting-Membership-ID: %s\r\n\r\n", m.ID, address, token, adminM)
 	reader := bufio.NewReaderSize(conn, 1024)
