@@ -31,7 +31,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store" });
     res.end(typeof value === "string" ? value : JSON.stringify(value));
   };
-  if (["/web/", "/web/app.js", "/web/retention.js", "/web/legal-holds.js", "/web/retention-policy.js", "/web/retention-history.js", "/web/audit.js", "/web/message-search.js", "/web/cross-message-search.js", "/web/style.css"].includes(url.pathname)) {
+  if (["/web/", "/web/app.js", "/web/file-transport.js", "/web/file-transfer.js", "/web/file-messages.js", "/web/file-download.js", "/web/file-policy.js", "/web/file-search.js", "/web/retention.js", "/web/legal-holds.js", "/web/retention-policy.js", "/web/retention-history.js", "/web/audit.js", "/web/message-search.js", "/web/cross-message-search.js", "/web/style.css"].includes(url.pathname)) {
     const name = url.pathname === "/web/" ? "index.html" : url.pathname.slice(5);
     if (!fs.existsSync(path.join(assets, name))) return send(404, {});
     return send(200, fs.readFileSync(path.join(assets, name), "utf8"),

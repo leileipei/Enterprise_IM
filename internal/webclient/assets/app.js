@@ -144,6 +144,14 @@ const crossMessageSearch = new window.CrossMessageSearch(request, retentionConte
   value => retentionPolicyEditor.validTime(value), () => retentionPolicyEditor.canSwitchContext() && legalHoldRecords.canSwitchContext());
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function fileContext() {
+ return Object.freeze({identityKey:accessToken && actingMembership ? `${self?.tenant_id || ""}:${self?.user_id || ""}:${identityEpoch}` : "", membershipId:actingMembership,
+ identityEpoch,conversation:activeConversation,conversationEpoch,kind:activeConversationKind});
+}
+const fileTransport = new window.FileTransport({snapshot:() => ({...fileContext(),token:accessToken,tokenExpiresAt}),
+ onHTTPError:(status,code) => {if(status===401)logout("登录已过期，请重新登录。");else if(status===403 && code==="invalid_identity")selectMembership("");}});
+function filesContextChanged() { fileTransport.contextChanged(); }
+
 function groupCreateStoragePrefix(actor = actingMembership) {
   return `enterprise-im-group-create:${self.tenant_id}:${self.user_id}:${actor}:`;
 }
@@ -372,6 +380,7 @@ function logout(message = "已退出当前页面。") {
   groupPolicyRecheckNotice = null;
   stopRealtime();
   clearSyncRetry();
+  filesContextChanged();
   identityEpoch++;
   if (pollingTimer) clearInterval(pollingTimer);
   pollingTimer = null;
@@ -384,6 +393,7 @@ function logout(message = "已退出当前页面。") {
   actingMembership = "";
   activeConversation = null;
   activeConversationKind = "";
+  filesContextChanged();
   conversationEpoch++;
   afterSeq = 0;
   syncPromise = null;
@@ -448,6 +458,7 @@ function selectMembership(id) {
   groupPolicyRecheckNotice = null;
   stopRealtime();
   clearSyncRetry();
+  filesContextChanged();
   identityEpoch++;
   actingMembership = id;
   nextSafetySyncAt = 0;
@@ -455,6 +466,7 @@ function selectMembership(id) {
   realtimeUnsupported = false;
   activeConversation = null;
   activeConversationKind = "";
+  filesContextChanged();
   conversationEpoch++;
   afterSeq = 0;
   syncPromise = null;
@@ -1794,7 +1806,8 @@ async function submitGroupLeave() {
         clearSyncRetry();
         activeConversation = null;
         activeConversationKind = "";
-        conversationEpoch++;
+        filesContextChanged();
+  conversationEpoch++;
         resetChat();
         renderGroups();
       }
@@ -2135,6 +2148,7 @@ function activateConversation(id) {
   clearSyncRetry();
   activeConversation = id;
   activeConversationKind = "direct";
+  filesContextChanged();
   conversationEpoch++;
   afterSeq = 0;
   syncPromise = null;
@@ -2166,6 +2180,7 @@ function activateGroupHistory(id) {
   clearSyncRetry();
   activeConversation = id;
   activeConversationKind = "group";
+  filesContextChanged();
   conversationEpoch++;
   afterSeq = 0;
   syncPromise = null;

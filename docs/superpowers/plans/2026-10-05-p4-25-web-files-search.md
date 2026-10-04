@@ -231,7 +231,7 @@ if res.Code != 503 || !strings.Contains(res.Body.String(), `"file_search_unavail
 - `putFile(fileID:string,file:File,signal:AbortSignal):Promise<object>`；`readDownload(fileID:string,signal:AbortSignal):Promise<{filename:string,blob:Blob}>`；`contextChanged():void`。
 - app.js 提供 fileContext():FileContext，与所有文件模块共享；onHTTPError 保留当前 401退出／403任职清除规则。
 
-- [ ] **Step 1：新增失败测试。** TestWebFileTransport；Node harness 中 fileTransportIdentityEpoch、fileTransportTruncatedBody、fileTransportHeaders。错误响应不在异常字符串输出文件内容。
+- [x] **Step 1：新增失败测试。** TestWebFileTransport；Node harness 中 fileTransportIdentityEpoch、fileTransportTruncatedBody、fileTransportHeaders。错误响应不在异常字符串输出文件内容。
 
 ```text
 fetch options: credentials="omit", cache="no-store", redirect="error"
@@ -250,10 +250,10 @@ await assert.rejects(transport.readDownload(fileID, controller.signal));
 assert.equal(saveURLCount, 0);
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileTransport -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** JSON API 继续现有 request；二进制函数捕获原身份／token／会话快照，登记 controller，逐块校验 Content-Length 和最大 25 MiB。认证有效期定时中断。所有 File／Blob 依赖只在模块内，不建立窗口缓存。静态路由 allowlist 加入新资产，defer 排在 app.js 前。新增 Go 测试用 IM_TEST_BROWSER_NODE 启动 Node 测试脚本，Task 14 环境必须配置，不能静默跳过。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add bounded authenticated file transport"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/webclient -run TestWebFileTransport -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** JSON API 继续现有 request；二进制函数捕获原身份／token／会话快照，登记 controller，逐块校验 Content-Length 和最大 25 MiB。认证有效期定时中断。所有 File／Blob 依赖只在模块内，不建立窗口缓存。静态路由 allowlist 加入新资产，defer 排在 app.js 前。新增 Go 测试用 IM_TEST_BROWSER_NODE 启动 Node 测试脚本，Task 14 环境必须配置，不能静默跳过。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "feat(web): add bounded authenticated file transport"`。
 
 ## Task 7：上传、扫描状态与未知结果核对
 
