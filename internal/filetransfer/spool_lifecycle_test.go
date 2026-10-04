@@ -233,6 +233,10 @@ func TestFileSpoolStartupSafety(t *testing.T) {
 				if e := os.WriteFile(name, []byte("preserve"), 0644); e != nil {
 					t.Fatal(e)
 				}
+				// The unsafe fixture must remain public under a restrictive test umask.
+				if e := os.Chmod(name, 0644); e != nil {
+					t.Fatal(e)
+				}
 			}
 			svc, e := NewService(&uploadRepoStub{ticket: transferTicket()}, &objectStub{}, dir, testID)
 			if e == nil {
