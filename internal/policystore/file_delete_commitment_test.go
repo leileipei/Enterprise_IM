@@ -169,11 +169,11 @@ func TestFileDeleteCommitmentFreshRetention(t *testing.T) {
 		t.Fatal(e)
 	}
 	cleanupPolicy(t, c, 365, true)
-	next := claimDelete(t, s)
-	if next.FileID != m.ID {
-		t.Fatal(next)
+	if _, found, e := s.ClaimFileDelete(context.Background(), uploadOwner); e != nil || found {
+		t.Fatal("extended retention still queued", found, e)
 	}
-	if _, e := s.CommitFileDeleteVersion(context.Background(), next, m.ObjectVersionID); !errors.Is(e, filecleanup.ErrBlocked) {
+	// A previously prepared ticket must also fail its fresh policy/due check.
+	if _, e := s.CommitFileDeleteVersion(context.Background(), ticket, m.ObjectVersionID); !errors.Is(e, filecleanup.ErrBlocked) {
 		t.Fatal("current extended retention ignored", e)
 	}
 }
