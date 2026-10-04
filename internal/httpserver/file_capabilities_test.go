@@ -105,3 +105,27 @@ func TestFileCapabilitiesCurrentIdentity(t *testing.T) {
 		t.Fatal(w.Code)
 	}
 }
+
+type forbiddenCapabilityBody struct{}
+
+func (forbiddenCapabilityBody) Read([]byte) (int, error) { panic("GET body was read") }
+func (forbiddenCapabilityBody) Close() error             { return nil }
+func TestFileCapabilitiesRejectFraming(t *testing.T) {
+	for _, chunked := range []bool{false, true} {
+		s := &fileIdentityStub{}
+		h, _ := HandlerWithFileCapabilities(Handler(nil), authFunc(verified), s, FileCapabilities{})
+		r := adminRequest("GET", "/api/v1/file-capabilities")
+		r.Body = forbiddenCapabilityBody{}
+		if chunked {
+			r.TransferEncoding = []string{"chunked"}
+			r.ContentLength = -1
+		} else {
+			r.ContentLength = 1
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != 400 || s.calls != 0 {
+			t.Fatal("framed body reached identity service", w.Code, s.calls)
+		}
+	}
+}

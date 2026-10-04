@@ -39,7 +39,7 @@ func HandlerWithFileCapabilities(next http.Handler, auth Authenticator, identity
 			rejectAdmin(w, r, 405, "method_not_allowed")
 			return
 		}
-		if r.URL.RawQuery != "" || r.URL.ForceQuery || r.Header.Get("Content-Encoding") != "" {
+		if r.URL.RawQuery != "" || r.URL.ForceQuery || r.Header.Get("Content-Encoding") != "" || r.ContentLength != 0 || len(r.TransferEncoding) != 0 {
 			rejectAdmin(w, r, 400, "invalid_request")
 			return
 		}
