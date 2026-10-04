@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/leileipei/Enterprise_IM/internal/files"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -18,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,6 +29,7 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/filetransfer"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
+	"github.com/leileipei/Enterprise_IM/internal/realtime"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -110,12 +114,6 @@ func newWebFileFixture(t *testing.T) *webFileFixture {
 	if e != nil {
 		t.Fatal(e)
 	}
-	f.handler = h
-	f.server = httptest.NewUnstartedServer(h)
-	f.server.Config.WriteTimeout = 160 * time.Second
-	f.server.Start()
-	target, _ := url.Parse(f.server.URL)
-	real.webBackend.Store(httputil.NewSingleHostReverseProxy(target))
 	opts, e := redis.ParseURL(os.Getenv("IM_TEST_REDIS_URL"))
 	if e != nil {
 		t.Fatal(e)
@@ -126,6 +124,23 @@ func newWebFileFixture(t *testing.T) *webFileFixture {
 	}
 	f.stream = fmt.Sprintf("enterprise-im:test:p425:%d", time.Now().UnixNano())
 	ctx, cancel := context.WithCancel(context.Background())
+	if e = outbox.RefreshPublisherPresence(ctx, f.redis, f.stream); e != nil {
+		t.Fatal("real publisher presence")
+	}
+	fanout, e := realtime.StartStreamFanout(ctx, f.redis, f.stream, real.repo)
+	if e != nil {
+		t.Fatal("real fanout unavailable")
+	}
+	h, e = httpserver.HandlerWithRealtimeNotifications(h, auth, real.repo, realtime.RedisTickets{Client: f.redis}, ctx, fanout)
+	if e != nil {
+		t.Fatal(e)
+	}
+	f.handler = h
+	f.server = httptest.NewUnstartedServer(h)
+	f.server.Config.WriteTimeout = 160 * time.Second
+	f.server.Start()
+	target, _ := url.Parse(f.server.URL)
+	real.webBackend.Store(httputil.NewSingleHostReverseProxy(target))
 	done := make(chan struct{})
 	workerErrors := make(chan error, 1)
 	worker := filetransfer.ScanWorker{Repo: real.repo, Objects: workerObjects, Scanner: scanner, SpoolDir: filepath.Join(t.TempDir(), "scan"), OwnerID: uploadOwner}
@@ -139,7 +154,22 @@ func newWebFileFixture(t *testing.T) *webFileFixture {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				if err := outbox.RefreshPublisherPresence(ctx, f.redis, f.stream); err != nil && ctx.Err() == nil {
+					select {
+					case workerErrors <- err:
+					default:
+					}
+					return
+				}
 				if _, err := worker.RunOnce(ctx); err != nil && ctx.Err() == nil {
+					select {
+					case workerErrors <- err:
+					default:
+					}
+					return
+				}
+				// Actual machine-audit repair makes repeated downloads admissible.
+				if _, err := real.repo.RepairFileDownloadAudit(ctx, uploadOwner, 20); err != nil && ctx.Err() == nil && !errors.Is(err, filedownload.ErrBusy) && !errors.Is(err, filedownload.ErrUnavailable) {
 					select {
 					case workerErrors <- err:
 					default:
@@ -159,6 +189,7 @@ func newWebFileFixture(t *testing.T) *webFileFixture {
 	t.Cleanup(func() {
 		cancel()
 		<-done
+		<-fanout.Done()
 		f.server.Close()
 		if e := upload.Close(); e != nil {
 			t.Error("upload cleanup", e)
@@ -166,7 +197,7 @@ func newWebFileFixture(t *testing.T) *webFileFixture {
 		if e := download.Close(); e != nil {
 			t.Error("download cleanup", e)
 		}
-		f.redis.Del(context.Background(), f.stream)
+		f.redis.Del(context.Background(), f.stream, outbox.PublisherPresenceKey(f.stream))
 		f.redis.Close()
 		select {
 		case <-workerErrors:
@@ -328,4 +359,286 @@ func (f *webFileFixture) request(t *testing.T, method, path string, body any, wa
 		t.Fatal("fixture HTTP unexpected status", method, strings.Split(path, "?")[0], res.StatusCode, want)
 	}
 	return b
+}
+
+// This issuer seam uses the same real JWKS and production verification process.
+func (f *webFileFixture) peerToken(t *testing.T) string {
+	t.Helper()
+	run(t, f.real.conn, `INSERT INTO external_identities(issuer,subject,tenant_id,user_id) VALUES($1,'p425-peer',$2,$3)`, f.real.issuer, tenantA, personA)
+	token := f.real.issueToken("p425-peer")
+	f.private = append(f.private, token)
+	return token
+}
+func (f *webFileFixture) requestAs(t *testing.T, token, member, method, path string, body any, want int) []byte {
+	t.Helper()
+	var data []byte
+	var e error
+	if body != nil {
+		data, e = json.Marshal(body)
+		if e != nil {
+			t.Fatal(e)
+		}
+	}
+	r, e := http.NewRequest(method, f.server.URL+path, bytes.NewReader(data))
+	if e != nil {
+		t.Fatal("request creation")
+	}
+	r.Header.Set("Authorization", "Bearer "+token)
+	r.Header.Set("X-Acting-Membership-ID", member)
+	if body != nil {
+		r.Header.Set("Content-Type", "application/json")
+	}
+	res, e := (&http.Client{Timeout: 10 * time.Second}).Do(r)
+	if e != nil {
+		t.Fatal("actual request failed")
+	}
+	defer res.Body.Close()
+	b, e := io.ReadAll(res.Body)
+	if e != nil || res.StatusCode != want {
+		t.Fatal("actual request status", method, strings.Split(path, "?")[0], res.StatusCode, want)
+	}
+	return b
+}
+func (f *webFileFixture) uploadReady(t *testing.T, cid, name string, body []byte) files.Metadata {
+	t.Helper()
+	var dto struct {
+		FileID string `json:"file_id"`
+	}
+	if e := json.Unmarshal(f.request(t, "POST", "/api/v1/conversations/"+cid+"/files", map[string]any{"upload_request_id": freshFile().ID, "original_filename": name, "declared_media_type": "text/plain", "declared_size_bytes": fmt.Sprint(len(body))}, 201), &dto); e != nil || dto.FileID == "" {
+		t.Fatal("reservation DTO")
+	}
+	r, e := http.NewRequest("PUT", f.server.URL+"/api/v1/files/"+dto.FileID+"/content", bytes.NewReader(body))
+	if e != nil {
+		t.Fatal(e)
+	}
+	r.Header.Set("Authorization", "Bearer "+f.real.token)
+	r.Header.Set("X-Acting-Membership-ID", adminM)
+	r.Header.Set("Content-Type", "application/octet-stream")
+	res, e := (&http.Client{Timeout: 15 * time.Second}).Do(r)
+	if e != nil {
+		t.Fatal("real PUT failed")
+	}
+	io.Copy(io.Discard, res.Body)
+	res.Body.Close()
+	if res.StatusCode != 200 {
+		t.Fatal("real PUT status", res.StatusCode)
+	}
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		m, e := f.real.repo.GetOwnFile(context.Background(), publisher(), dto.FileID)
+		if e == nil && m.State == files.StateReady {
+			f.private = append(f.private, name, string(body))
+			return m
+		}
+		if e == nil && (m.State == files.StateRejected || m.State == files.StateScanFailed) {
+			t.Fatal("actual scanner did not accept TXT", m.State)
+		}
+		time.Sleep(30 * time.Millisecond)
+	}
+	t.Fatal("real scanner readiness deadline")
+	return files.Metadata{}
+}
+func (f *webFileFixture) sendFile(t *testing.T, cid, kind, id, caption string) {
+	t.Helper()
+	prefix := "conversations"
+	if kind == "group" {
+		prefix = "groups"
+	}
+	f.request(t, "POST", "/api/v1/"+prefix+"/"+cid+"/messages", map[string]string{"client_msg_id": clientUUIDv7(time.Now(), 8700+int(time.Now().UnixNano()%100000)), "message_type": "file", "file_id": id, "caption": caption}, 200)
+	if caption != "" {
+		f.private = append(f.private, caption)
+	}
+}
+
+// Faults are applied only after the actual authenticated S3 download completes.
+// The temporary same-origin proxy never bypasses identity, scan or visibility.
+func (f *webFileFixture) replaceHandler(t *testing.T, h http.Handler) {
+	t.Helper()
+	server := httptest.NewServer(h)
+	t.Cleanup(server.Close)
+	u, _ := url.Parse(server.URL)
+	proxy := httputil.NewSingleHostReverseProxy(u)
+	proxy.FlushInterval = -1 // Expose the deliberately flushed real 200 before the injected cut.
+	f.real.webBackend.Store(proxy)
+}
+func (f *webFileFixture) content(t *testing.T, r *http.Request) (http.Header, []byte, int) {
+	req, e := http.NewRequestWithContext(r.Context(), "GET", f.server.URL+r.URL.RequestURI(), nil)
+	if e != nil {
+		return nil, nil, 503
+	}
+	req.Header = r.Header.Clone()
+	res, e := (&http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}).Do(req)
+	if e != nil {
+		return nil, nil, 503
+	}
+	defer res.Body.Close()
+	body, e := io.ReadAll(res.Body)
+	if e != nil {
+		return nil, nil, 503
+	}
+	if res.StatusCode == 200 {
+		// The source is fully read. Observe actual machine-audit completion
+		// before faulting the separate client leg; do not guess from EOF.
+		deadline := time.Now().Add(5 * time.Second)
+		for {
+			var pending int
+			err := f.real.pool.QueryRow(r.Context(), "SELECT count(*) FROM file_download_sessions WHERE NOT audit_acked").Scan(&pending)
+			if err != nil {
+				return nil, nil, 503
+			}
+			if pending == 0 {
+				break
+			}
+			if time.Now().After(deadline) {
+				return nil, nil, 503
+			}
+			select {
+			case <-r.Context().Done():
+				return nil, nil, 503
+			case <-time.After(20 * time.Millisecond):
+			}
+		}
+	}
+	return res.Header, body, res.StatusCode
+}
+func copyWebHeaders(w http.ResponseWriter, h http.Header) {
+	for k, vs := range h {
+		for _, v := range vs {
+			w.Header().Add(k, v)
+		}
+	}
+}
+func (f *webFileFixture) installDownloadFaults(t *testing.T) {
+	var n atomic.Int64
+	u, _ := url.Parse(f.server.URL)
+	fallback := httputil.NewSingleHostReverseProxy(u)
+	f.replaceHandler(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/__p425/download-fault-state" {
+			json.NewEncoder(w).Encode(map[string]int64{"count": n.Load()})
+			return
+		}
+		if r.URL.Path == "/__p425/download-idle" {
+			var pending int
+			err := f.real.pool.QueryRow(r.Context(), "SELECT count(*) FROM file_download_sessions WHERE NOT audit_acked").Scan(&pending)
+			json.NewEncoder(w).Encode(map[string]bool{"idle": err == nil && pending == 0})
+			return
+		}
+		if r.Method != "GET" || !strings.HasPrefix(r.URL.Path, "/api/v1/files/") || !strings.HasSuffix(r.URL.Path, "/content") {
+			fallback.ServeHTTP(w, r)
+			return
+		}
+		h, b, status := f.content(t, r)
+		if status != 200 {
+			var dto struct {
+				Code string `json:"error_code"`
+			}
+			if json.Unmarshal(b, &dto) == nil {
+				for _, code := range []string{"download_audit_pending", "download_in_progress", "file_download_unavailable", "not_found", "unauthorized"} {
+					if dto.Code == code {
+						t.Log("actual upstream fault admission", status, code)
+					}
+				}
+			}
+			copyWebHeaders(w, h)
+			w.WriteHeader(status)
+			w.Write(b)
+			return
+		}
+		i := n.Add(1)
+		copyWebHeaders(w, h)
+		switch i {
+		case 1:
+			w.WriteHeader(200)
+			w.Write(b[:len(b)/2])
+			w.(http.Flusher).Flush()
+			panic(http.ErrAbortHandler)
+		case 2:
+			w.Header().Set("Content-Length", fmt.Sprint(len(b)+3))
+			w.WriteHeader(200)
+			w.Write(b)
+			w.(http.Flusher).Flush()
+			panic(http.ErrAbortHandler)
+		case 3:
+			w.Header().Del("Content-Length")
+			w.Header().Set("Location", r.URL.Path)
+			w.WriteHeader(302)
+		case 4:
+			w.Header().Set("Content-Length", "26214401")
+			w.WriteHeader(200)
+			w.Write(b)
+			w.(http.Flusher).Flush()
+			panic(http.ErrAbortHandler)
+		default:
+			http.Error(w, "fault fixture exhausted", 500)
+		}
+	}))
+	t.Cleanup(func() {
+		if n.Load() != 4 {
+			t.Error("not all real download faults exercised", n.Load())
+		}
+	})
+}
+func (f *webFileFixture) installContextStream(t *testing.T) {
+	var armed, reached atomic.Bool
+	u, _ := url.Parse(f.server.URL)
+	fallback := httputil.NewSingleHostReverseProxy(u)
+	f.replaceHandler(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/__p425/read-arm" {
+			armed.Store(true)
+			w.WriteHeader(204)
+			return
+		}
+		if r.URL.Path == "/__p425/read-state" {
+			json.NewEncoder(w).Encode(map[string]bool{"reached": reached.Load()})
+			return
+		}
+		if armed.Load() && r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/v1/files/") && strings.HasSuffix(r.URL.Path, "/content") {
+			h, b, status := f.content(t, r)
+			copyWebHeaders(w, h)
+			w.WriteHeader(status)
+			if status != 200 {
+				w.Write(b)
+				return
+			}
+			armed.Store(false)
+			w.Write(b[:len(b)/2])
+			w.(http.Flusher).Flush()
+			reached.Store(true)
+			select {
+			case <-r.Context().Done():
+			case <-time.After(30 * time.Second):
+			}
+			panic(http.ErrAbortHandler)
+		}
+		fallback.ServeHTTP(w, r)
+	}))
+	t.Cleanup(func() {
+		if !reached.Load() {
+			t.Error("real partial stream never reached")
+		}
+	})
+}
+func (f *webFileFixture) installPolicyConflict(t *testing.T) {
+	var injected atomic.Bool
+	u, _ := url.Parse(f.server.URL)
+	fallback := httputil.NewSingleHostReverseProxy(u)
+	f.replaceHandler(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "PUT" && r.URL.Path == "/api/v1/admin/file-upload-policy" && injected.CompareAndSwap(false, true) {
+			s := access.Service{DB: f.real.pool}
+			current, e := s.GetFileUploadPolicy(r.Context(), publisher())
+			if e == nil {
+				_, e = s.SetFileUploadPolicy(r.Context(), publisher(), access.FileUploadPolicyChange{Policy: current.Policy, ExpectedVersion: current.Policy.Version, ApprovalReference: "P425-CONCURRENT-APPROVED"})
+			}
+			if e != nil {
+				http.Error(w, "concurrent approved update failed", 503)
+				return
+			}
+		}
+		fallback.ServeHTTP(w, r)
+	}))
+	t.Cleanup(func() {
+		if !injected.Load() {
+			t.Error("concurrent CAS was not exercised")
+		}
+	})
 }

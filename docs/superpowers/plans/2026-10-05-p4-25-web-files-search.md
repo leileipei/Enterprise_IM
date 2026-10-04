@@ -464,7 +464,7 @@ assert.equal(typedAttachment.original_filename, expectedFilename);
 - 消费 Task12 newWebFileFixture 和既有文件／租约／保全测试夹具。
 - 新 required 测试：TestWebFileRealSearch、TestWebFileRealSearchFinalBoundary、TestWebFileRealContextIsolation、TestWebFileRealUnknownUploadSend、TestWebFileRealDownloadFaults、TestWebFileRealRevocation、TestWebFileRealPolicyConflict。最终 required 共11个顶层测试。
 
-- [ ] **Step 1：新增失败测试。** 上述七测试覆盖 RF1～5；使用可控真实客户端／代理故障及 DB 双连接改变状态，不用任意 sleep 猜并发时点。
+- [x] **Step 1：新增失败测试。** 上述七测试覆盖 RF1～5；使用可控真实客户端／代理故障及 DB 双连接改变状态，不用任意 sleep 猜并发时点。
 
 ```text
 candidate paused -> scheduled hard deny/TTL becomes effective -> final 0 names
@@ -485,10 +485,10 @@ assert.equal(await page.getByText(privateOldContextName, {exact:true}).count(), 
 assert.equal(observedSecondFileReservations, 0);
 ```
 
-- [ ] **Step 2：运行 RED。** `scripts/test-web-files.sh run-all`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 将缺失测试纳入脚本required，11个必选均0FAIL／0SKIP。JS unit模拟负责恶意disposition／长度等异常协议，真实浏览器故障代理验证客户端不保存部分流；真实production旧浏览器门禁另原样运行。检查所有私有日志不含关键名称／caption／q／token，查询日志只写path不含query。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "integration(files): prove revocation search and context isolation"`。
+- [x] **Step 2：运行 RED。** `scripts/test-web-files.sh run-all`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 将缺失测试纳入脚本required，11个必选均0FAIL／0SKIP。JS unit模拟负责恶意disposition／长度等异常协议，真实浏览器故障代理验证客户端不保存部分流；真实production旧浏览器门禁另原样运行。检查所有私有日志不含关键名称／caption／q／token，查询日志只写path不含query。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "integration(files): prove revocation search and context isolation"`。
 
 ## Task 14：固定源码门禁、一次整体评审与草稿交付
 

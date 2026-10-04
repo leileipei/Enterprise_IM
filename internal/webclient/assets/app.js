@@ -162,7 +162,7 @@ const fileTransfer = new window.FileTransfer({request,transport:fileTransport,co
 const fileMessages=new window.FileMessages({request,context:fileContext,uuidV7,canSend:canSendFileInContext,
  download:fileDownload,capabilities:()=>fileCapabilities,
  onPending:pending => {fileMessagePending=pending;renderFileAccess();},
- onACK:async () => {fileTransfer.contextChanged();messageText.value="";messageText.readOnly=false;discardPendingButton.classList.add("hidden");element("send-hint").textContent="已保存";await syncMessages();}});
+ onACK:async () => {fileTransfer.contextChanged();messageText.value="";messageText.readOnly=false;discardPendingButton.classList.add("hidden");element("send-hint").textContent="已保存";await syncMessages().catch(report);}});
 const filenameSearchContext=()=>({...fileContext(),filenameSearchEnabled:fileCapabilities.filename_search_enabled});
 const fileSearchConversation=new window.FileSearch({request,context:filenameSearchContext,scope:"conversation",download:fileDownload,openConversation:openFileSearchConversation});
 const fileSearchAll=new window.FileSearch({request,context:filenameSearchContext,scope:"all",download:fileDownload,openConversation:openFileSearchConversation});

@@ -22,6 +22,10 @@ func TestWebFileRealLifecycle(t *testing.T) {
 					t.Fatal("four browser sends not persisted exactly once", table, count, e)
 				}
 			}
+			var published int
+			if e := f.real.conn.QueryRow(context.Background(), "SELECT count(*) FROM outbox_events WHERE published_at IS NOT NULL").Scan(&published); e != nil || published != 4 {
+				t.Fatal("real Outbox Redis publication incomplete", published, e)
+			}
 			if f.real.logins.Load() != 2 || f.real.exchanges.Load() != 2 {
 				t.Fatal("PKCE login and reload not verified")
 			}

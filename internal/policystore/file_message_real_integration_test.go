@@ -40,6 +40,8 @@ import (
 
 type fileMessageRealFixture struct {
 	webBackend        *atomic.Pointer[httputil.ReverseProxy]
+	issuer            string
+	issueToken        func(string) string
 	conn              *pgx.Conn
 	pool              *pgxpool.Pool
 	repo              policystore.Service
@@ -146,7 +148,9 @@ func realFileMessageFixture(t *testing.T) *fileMessageRealFixture {
 		}
 	}))
 	t.Cleanup(idp.Close)
-	f.token = productionJWT(t, key, idp.URL, "file-message-admin")
+	f.issuer = idp.URL
+	f.issueToken = func(subject string) string { return productionJWT(t, key, idp.URL, subject) }
+	f.token = f.issueToken("file-message-admin")
 	token.Store(f.token)
 	cert := filepath.Join(t.TempDir(), "idp-ca.pem")
 	if e = os.WriteFile(cert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: idp.Certificate().Raw}), 0600); e != nil {
