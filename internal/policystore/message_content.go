@@ -72,3 +72,9 @@ func fileMessageDigest(id access.TrustedIdentity, conversationID string, req Mes
 	}
 	return sha256.Sum256(canonical), nil
 }
+
+// ValidateMessageSendRequest shares content validation with HTTP adapters.
+// Presence and NULL checks remain the adapter's responsibility.
+func ValidateMessageSendRequest(req MessageSendRequest) (MessageSendRequest, error) {
+	return validateMessageSendRequest(req)
+}
