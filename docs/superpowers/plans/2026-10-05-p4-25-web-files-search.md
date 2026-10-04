@@ -431,7 +431,7 @@ assert.equal(textRequestPath, originalTextSearchPath);
 - 浏览器进程使用 IM_TEST_BROWSER_NODE、现有 playwright／Chrome，正常 PKCE登录；每脚本输出最小 JSON 布尔证据，不输出 token、名称或字节。
 - scripts/test-web-files.sh run-all：核对所需环境，按具名 required 集合读取 go test -json，缺测试／FAIL／SKIP任一则失败。
 
-- [ ] **Step 1：新增失败测试。** TestWebFileRealLifecycle／TestWebFileRealRejectedScan／TestWebFileRealSettings／TestWebFileRealProductionClosed。
+- [x] **Step 1：新增失败测试。** TestWebFileRealLifecycle／TestWebFileRealRejectedScan／TestWebFileRealSettings／TestWebFileRealProductionClosed。
 
 ```text
 real PDF/PNG/JPEG/TXT: browser reserve->PUT->actual scan->send->pull->save
@@ -451,10 +451,10 @@ assert.equal(await page.getByText("已保存", {exact:true}).count(), 1);
 assert.equal(typedAttachment.original_filename, expectedFilename);
 ```
 
-- [ ] **Step 2：运行 RED。** `scripts/test-web-files.sh run-all`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 测试装配仅在 _test.go 内，不在产品 CLI 加运行测试模式。执行本任务前只读检查 Docker／Chrome／Node／扫描工具与原门禁所需版本；为 P4-25 新建带 codex.plan=p4-25 标签的专用 PG／S3／Redis 资源与 scanner PID 记录，固定版本，复制角色最小权限配置到私有env，不直接借用或更改 P4-24 测试数据。缺必需运行能力明确报告，不能用模拟替代。Go helper 提供真实 ResponseController 可用 TLS监听和真实 OIDC tokenexpiry，不以 auth mock 或扫描mock代替验收。脚本第一版 required 包含本任务四测试；Task13扩展并精确限定新增测试 run regex。每个必选测试缺环境 t.Fatal；私有输出0700／0600及计划标记资源，子进程超时主动退出。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "integration(files): exercise complete real browser attachment lifecycle"`。
+- [x] **Step 2：运行 RED。** `scripts/test-web-files.sh run-all`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 测试装配仅在 _test.go 内，不在产品 CLI 加运行测试模式。执行本任务前只读检查 Docker／Chrome／Node／扫描工具与原门禁所需版本；为 P4-25 新建带 codex.plan=p4-25 标签的专用 PG／S3／Redis 资源与 scanner PID 记录，固定版本，复制角色最小权限配置到私有env，不直接借用或更改 P4-24 测试数据。缺必需运行能力明确报告，不能用模拟替代。Go helper 提供真实 ResponseController 可用 TLS监听和真实 OIDC tokenexpiry，不以 auth mock 或扫描mock代替验收。脚本第一版 required 包含本任务四测试；Task13扩展并精确限定新增测试 run regex。每个必选测试缺环境 t.Fatal；私有输出0700／0600及计划标记资源，子进程超时主动退出。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "integration(files): exercise complete real browser attachment lifecycle"`。
 
 ## Task 13：撤权、未知结果、分页和浏览器上下文真实门禁
 

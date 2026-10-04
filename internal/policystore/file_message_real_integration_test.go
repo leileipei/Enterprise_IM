@@ -39,6 +39,7 @@ import (
 )
 
 type fileMessageRealFixture struct {
+	webBackend        *atomic.Pointer[httputil.ReverseProxy]
 	conn              *pgx.Conn
 	pool              *pgxpool.Pool
 	repo              policystore.Service
@@ -83,6 +84,7 @@ func realFileMessageFixture(t *testing.T) *fileMessageRealFixture {
 		}
 	}
 	var backend atomic.Pointer[httputil.ReverseProxy]
+	f.webBackend = &backend
 	proxy := browserTestTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if p := backend.Load(); p != nil {
 			p.ServeHTTP(w, r)
