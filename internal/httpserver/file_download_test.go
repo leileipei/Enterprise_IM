@@ -25,6 +25,7 @@ type downloadHTTPRepo struct {
 	data             []byte
 	name             string
 	authErr          error
+	beginErr         error
 	results          []filedownload.Result
 	prepares, checks int
 	checkErrAt       int
@@ -32,6 +33,9 @@ type downloadHTTPRepo struct {
 
 func (r *downloadHTTPRepo) BeginFileDownload(_ context.Context, id access.TrustedIdentity, fid, owner string, deadline time.Time) (filedownload.Ticket, error) {
 	r.prepares++
+	if r.beginErr != nil {
+		return filedownload.Ticket{}, r.beginErr
+	}
 	at := time.Now().UTC().Add(-time.Minute)
 	up := at.Add(time.Second)
 	scan := at.Add(2 * time.Second)
@@ -298,6 +302,23 @@ func TestFileDownloadProductionClosed(t *testing.T) {
 		h.ServeHTTP(w, downloadHTTPReq("GET"))
 		if w.Code != 503 || !strings.Contains(w.Body.String(), "file_download_unavailable") {
 			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestFileDownloadAdmissionErrors(t *testing.T) {
+	for _, tc := range []struct {
+		err    error
+		status int
+	}{
+		{filedownload.ErrBusy, 409}, {filedownload.ErrAuditPending, 503}, {filedownload.ErrLimit, 429}, {filedownload.ErrNotFound, 404}, {filedownload.ErrInvalidIdentity, 403},
+	} {
+		r := &downloadHTTPRepo{data: []byte("private"), name: "a.txt", beginErr: tc.err}
+		h := downloadHTTPHandler(t, r, authFunc(downloadHTTPAuth))
+		w := &downloadHTTPWriter{ResponseRecorder: httptest.NewRecorder()}
+		h.ServeHTTP(w, downloadHTTPReq("GET"))
+		if w.Code != tc.status || w.Header().Get("Content-Disposition") != "" || strings.Contains(w.Body.String(), "private") {
+			t.Fatal(tc.err, w.Code, w.Body.String())
 		}
 	}
 }

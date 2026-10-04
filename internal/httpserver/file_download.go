@@ -291,7 +291,7 @@ func writeDownloadError(w http.ResponseWriter, e error) {
 	case errors.Is(e, filedownload.ErrBusy):
 		writeAdminError(w, 409, "download_in_progress")
 	case errors.Is(e, filedownload.ErrAuditPending):
-		writeAdminError(w, 409, "download_audit_pending")
+		writeAdminError(w, 503, "download_audit_pending")
 	case errors.Is(e, filedownload.ErrLimit):
 		w.Header().Set("Retry-After", "1")
 		writeAdminError(w, 429, "download_busy")
