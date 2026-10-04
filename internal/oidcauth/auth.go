@@ -201,5 +201,6 @@ func (a *Authenticator) Authenticate(ctx context.Context, raw string) (httpserve
 	if err != nil {
 		return httpserver.VerifiedIdentity{}, errors.Join(httpserver.ErrAuthUnavailable, err)
 	}
+	id.ExpiresAt = claims.ExpiresAt.Time.UTC()
 	return id, nil
 }

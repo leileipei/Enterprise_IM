@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -164,5 +166,17 @@ func TestFileMessageProductionClosedConfiguration(t *testing.T) {
 	enabled, _, _, err := fileUploadConfigFromEnv(env(map[string]string{"IM_FILE_MESSAGE_ENABLED": "true"}), true)
 	if err != nil || enabled {
 		t.Fatal("unknown message flag activated upload", enabled, err)
+	}
+}
+
+func TestFileDownloadProductionAssemblyClosed(t *testing.T) {
+	for _, upload := range []bool{false, true} {
+		h := productionFileDownloadHandler(http.NotFoundHandler(), upload)
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/api/v1/files/00000000-0000-4000-8000-000000000001/content", nil)
+		h.ServeHTTP(w, req)
+		if w.Code != 503 || !strings.Contains(w.Body.String(), "file_download_unavailable") {
+			t.Fatal(w.Code, w.Body.String())
+		}
 	}
 }
