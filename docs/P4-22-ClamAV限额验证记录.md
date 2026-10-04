@@ -13,7 +13,7 @@
 | 原 MaxFileSize=26,214,400 | stream: OK |
 | 候选 MaxFileSize=0、全局展开配额仍为250MiB，相关内部解析限额提高至全局配额 | stream: Eicar-Test-Signature FOUND |
 
-候选进程对展开超过250MiB的压缩样本返回超限报警。它仅用于对照试验，尚未作为产品配置采用。将 EICAR 追加到大文本末尾不是可靠的标准病毒检测对照，本结论仅使用独立标准条目的嵌套 ZIP 证据。
+修正进程对展开超过250MiB的压缩样本返回超限报警。用户已于2026-10-04确认采用此方案；原配置保留为负向测试夹具。将 EICAR 追加到大文本末尾不是可靠的标准病毒检测对照，本结论仅使用独立标准条目的嵌套 ZIP 证据。
 
 上游相关问题：[压缩子文件超限后未报警](https://github.com/Cisco-Talos/clamav/issues/633)、[PCRE 限额跳过](https://github.com/Cisco-Talos/clamav/issues/1785)。协议依据：[Clamd Protocol](https://docs.clamav.net/manual/Usage/ClamdProtocol.html)。
 
@@ -42,3 +42,7 @@ Runner 在真实计时下每15秒续约、单次外部检测90秒截止。续约
 真实上传、S3固定版本回读、PG作业与原ClamAV配置联动，结果为scan_failed；对象未重写。该负向证明不能替代完整 uploaded→ready／EICAR→rejected 的正向验收。
 
 任务8、任务9仍未完整验收；任务10运行装配、全量回归、独立整分支评审与最终Draft PR尚未完成。限额修正确认仍为前置条件。
+
+## 用户批准后的验证
+
+用户已明确回复“采用推荐修正”。修正进程的绑定、clean/EICAR、嵌套末尾测试条目、250MiB展开／递归／条目上限、加密／损坏报警已实测通过。实际25MiB正常TXT扫描通过，INSTREAM超限不产生clean；原配置仍被否定。最终运行装配与完整验收结果将在P4-22验收记录汇总，以上历史“待确认”段落用于保留决策轨迹。

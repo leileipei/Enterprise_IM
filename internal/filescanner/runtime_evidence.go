@@ -13,7 +13,7 @@ type RuntimeEvidence struct {
 }
 
 func validateRuntimeEvidence(e RuntimeEvidence, now time.Time) error {
-	if e.EngineVersion == "" || e.DefinitionVersion == "" || e.StreamMaxLengthBytes != 26214400 || e.MaxFileSizeBytes != 26214400 || e.MaxScanSizeBytes != 262144000 || !e.AlertExceedsMax || !e.AlertEncrypted || !e.AlertBroken {
+	if e.EngineVersion == "" || e.DefinitionVersion == "" || e.StreamMaxLengthBytes != 26214400 || e.MaxFileSizeBytes != 0 || e.MaxScanSizeBytes != 262144000 || !e.AlertExceedsMax || !e.AlertEncrypted || !e.AlertBroken {
 		return ErrRuntimeUnavailable
 	}
 	if e.DefinitionsUpdatedAt.IsZero() || e.DefinitionsUpdatedAt.After(now) || now.Sub(e.DefinitionsUpdatedAt) > 24*time.Hour {

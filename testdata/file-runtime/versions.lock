@@ -11,4 +11,5 @@ qpdf-source = https://github.com/qpdf/qpdf/releases/tag/v12.4.2
 clamav = 1.5.4
 clamav-source = https://github.com/Cisco-Talos/clamav/releases/tag/clamav-1.5.4
 clamd-config-sha256 = requires-deployment-generated-readonly-manifest
-scanner-runtime-acceptance = BLOCKED-original-per-child-limit-silently-skips-nested-tail
+scanner-limit-contract = stream25MiB-child0-global250MiB-recursion16-files10000
+scanner-runtime-acceptance = requires-bound-process-and-live-probes

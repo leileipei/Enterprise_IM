@@ -70,7 +70,7 @@ func TestClamdStrictFrames(t *testing.T) {
 	}
 }
 func TestClamdFreshRuntimeAndLimits(t *testing.T) {
-	e := RuntimeEvidence{EngineVersion: "1.5.4", DefinitionVersion: "28142", DefinitionsUpdatedAt: time.Now().Add(-23 * time.Hour), StreamMaxLengthBytes: 26214400, MaxFileSizeBytes: 26214400, MaxScanSizeBytes: 262144000, AlertExceedsMax: true, AlertEncrypted: true, AlertBroken: true}
+	e := RuntimeEvidence{EngineVersion: "1.5.4", DefinitionVersion: "28142", DefinitionsUpdatedAt: time.Now().Add(-23 * time.Hour), StreamMaxLengthBytes: 26214400, MaxFileSizeBytes: 0, MaxScanSizeBytes: 262144000, AlertExceedsMax: true, AlertEncrypted: true, AlertBroken: true}
 	if err := validateRuntimeEvidence(e, time.Now()); err != nil {
 		t.Fatal(err)
 	}
@@ -83,6 +83,11 @@ func TestClamdFreshRuntimeAndLimits(t *testing.T) {
 	old.AlertExceedsMax = false
 	if err := validateRuntimeEvidence(old, time.Now()); err == nil {
 		t.Fatal("missing limits accepted")
+	}
+	old = e
+	old.MaxFileSizeBytes = 26214400
+	if err := validateRuntimeEvidence(old, time.Now()); err == nil {
+		t.Fatal("silent partial child limit accepted")
 	}
 	old = e
 	old.MaxScanSizeBytes = 0

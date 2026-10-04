@@ -21,7 +21,11 @@ func TestScannerDependenciesAndManifestRequired(t *testing.T) {
 	}
 }
 func TestScannerRealStructurePDF(t *testing.T) {
-	path, e := exec.LookPath("qpdf")
+	path := os.Getenv("IM_TEST_QPDF_PATH")
+	var e error
+	if path == "" {
+		path, e = exec.LookPath("qpdf")
+	}
 	if e != nil {
 		t.Skip("real qpdf fixture required")
 	}
@@ -73,11 +77,11 @@ func TestScannerRealCleanEICARProtocol(t *testing.T) {
 	}
 }
 func TestScannerRealNoIncompleteReady(t *testing.T) {
-	manifest := os.Getenv("IM_TEST_SCANNER_MANIFEST")
+	manifest := os.Getenv("IM_TEST_UNPROVEN_SCANNER_MANIFEST")
 	if manifest == "" {
 		t.Skip("controlled scanner fixture required")
 	}
-	s, e := New(Config{QPDFPath: os.Getenv("IM_TEST_QPDF_PATH"), ClamdSocket: os.Getenv("IM_TEST_CLAMD_SOCKET"), RuntimeManifestPath: manifest})
+	s, e := New(Config{QPDFPath: os.Getenv("IM_TEST_QPDF_PATH"), ClamdSocket: os.Getenv("IM_TEST_UNPROVEN_CLAMD_SOCKET"), RuntimeManifestPath: manifest})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -101,9 +105,9 @@ func TestScannerRealAttestation(t *testing.T) {
 	if err != nil || e.DefinitionVersion == "" || stamp == [32]byte{} {
 		t.Fatal(e, err)
 	}
-	// Runtime binding alone is insufficient: the actual nested-tail probe fails.
-	if err = runtimeProbes(context.Background(), c); err == nil {
-		t.Fatal("partial scanning went undetected")
+	// Binding and actual behavior must both hold for the corrected deployment.
+	if err = runtimeProbes(context.Background(), c); err != nil {
+		t.Fatal("corrected runtime probes failed", err)
 	}
 }
 
@@ -143,5 +147,27 @@ func TestScannerRealTrustedRuntime(t *testing.T) {
 	d, e := s.Scan(context.Background(), f, m)
 	if e != nil || d.State != files.StateReady || d.Engine == "" || d.DefinitionVersion == "" {
 		t.Fatal(d, e)
+	}
+}
+
+func TestScannerRealNearStreamLimit(t *testing.T) {
+	manifest := os.Getenv("IM_TEST_SCANNER_MANIFEST")
+	if manifest == "" {
+		t.Skip("controlled scanner fixture required")
+	}
+	s, e := New(Config{QPDFPath: os.Getenv("IM_TEST_QPDF_PATH"), ClamdSocket: os.Getenv("IM_TEST_CLAMD_SOCKET"), RuntimeManifestPath: manifest})
+	if e != nil {
+		t.Fatal(e)
+	}
+	b := bytes.Repeat([]byte("x"), int(files.MaxFileSizeBytes))
+	f, m := scannerFile(t, b, "limit.txt", "text/plain")
+	d, e := s.Scan(context.Background(), f, m)
+	if e != nil || d.State != files.StateReady {
+		t.Fatal("exact upload/stream boundary failed", d, e)
+	}
+	b = append(b, 'x')
+	d, e = scanClamd(context.Background(), os.Getenv("IM_TEST_CLAMD_SOCKET"), bytes.NewReader(b), int64(len(b)))
+	if e == nil || d.State == files.StateReady {
+		t.Fatal("stream overflow produced clean", d, e)
 	}
 }

@@ -233,7 +233,7 @@ func runtimeConfig(path string) (map[string]string, error) {
 		return nil, ErrRuntimeUnavailable
 	}
 	allowed := map[string]bool{}
-	for _, k := range strings.Fields("LocalSocket FixStaleSocket Foreground DatabaseDirectory StreamMaxLength MaxFileSize MaxScanSize MaxRecursion MaxFiles AlertExceedsMax AlertEncrypted AlertBrokenExecutables LocalSocketMode PidFile LogFile MaxScanTime") {
+	for _, k := range strings.Fields("LocalSocket FixStaleSocket Foreground DatabaseDirectory StreamMaxLength MaxFileSize MaxScanSize MaxRecursion MaxFiles AlertExceedsMax AlertEncrypted AlertBrokenExecutables LocalSocketMode PidFile LogFile MaxScanTime MaxEmbeddedPE MaxHTMLNormalize MaxHTMLNoTags MaxScriptNormalize MaxZipTypeRcg PCREMaxFileSize") {
 		allowed[k] = true
 	}
 	out := map[string]string{}
@@ -266,7 +266,10 @@ func attestRuntime(ctx context.Context, c Config) (RuntimeEvidence, [32]byte, er
 	if err != nil {
 		return e, stamp, err
 	}
-	expected := map[string]string{"LocalSocket": m.Socket, "DatabaseDirectory": m.Definitions, "StreamMaxLength": "26214400", "MaxFileSize": "26214400", "MaxScanSize": "262144000", "MaxRecursion": "16", "MaxFiles": "10000", "AlertExceedsMax": "yes", "AlertEncrypted": "yes", "AlertBrokenExecutables": "yes", "Foreground": "yes", "MaxScanTime": "90000", "LocalSocketMode": "600"}
+	expected := map[string]string{"LocalSocket": m.Socket, "DatabaseDirectory": m.Definitions, "StreamMaxLength": "26214400", "MaxFileSize": "0", "MaxScanSize": "262144000", "MaxRecursion": "16", "MaxFiles": "10000", "AlertExceedsMax": "yes", "AlertEncrypted": "yes", "AlertBrokenExecutables": "yes", "Foreground": "yes", "MaxScanTime": "90000", "LocalSocketMode": "600"}
+	for _, k := range strings.Fields("MaxEmbeddedPE MaxHTMLNormalize MaxHTMLNoTags MaxScriptNormalize MaxZipTypeRcg PCREMaxFileSize") {
+		expected[k] = "262144000"
+	}
 	for k, v := range expected {
 		if cfg[k] != v {
 			return e, stamp, ErrRuntimeUnavailable
@@ -317,7 +320,7 @@ func attestRuntime(ctx context.Context, c Config) (RuntimeEvidence, [32]byte, er
 	e.DefinitionVersion = fields[2]
 	e.DefinitionsUpdatedAt = time.Unix(epoch, 0)
 	e.StreamMaxLengthBytes = 26214400
-	e.MaxFileSizeBytes = 26214400
+	e.MaxFileSizeBytes = 0
 	e.MaxScanSizeBytes = 262144000
 	e.AlertExceedsMax = true
 	e.AlertEncrypted = true
