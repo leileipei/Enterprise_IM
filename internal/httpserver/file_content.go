@@ -29,6 +29,10 @@ func fileContentHandler(next http.Handler, auth Authenticator, svc FileContentSe
 			next.ServeHTTP(w, r)
 			return
 		}
+		if r.Method == http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
 		start := time.Now()
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		id, ok := authenticateAdmin(w, r, auth)

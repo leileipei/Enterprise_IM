@@ -122,6 +122,11 @@ func main() {
 			logger.Error("self context API unavailable", "error", err)
 			os.Exit(1)
 		}
+		handler, err = httpserver.HandlerWithFileRetentionPolicy(handler, authenticator, access.Service{DB: pool})
+		if err != nil {
+			logger.Error("file retention policy unavailable")
+			os.Exit(1)
+		}
 		handler, err = httpserver.HandlerWithDirectory(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
 			logger.Error("directory API unavailable", "error", err)
@@ -223,6 +228,7 @@ func main() {
 		}
 	}
 
+	handler = productionFileDownloadHandler(handler, fileEnabled)
 	server := &http.Server{
 		Addr:              address,
 		Handler:           handler,
@@ -380,4 +386,8 @@ func fileUploadConfigFromEnv(getenv func(string) string, oidcEnabled bool) (bool
 		return false, c, "", errors.New("incomplete file upload dependencies")
 	}
 	return true, c, dir, nil
+}
+
+func productionFileDownloadHandler(next http.Handler, uploadEnabled bool) http.Handler {
+	return httpserver.HandlerWithClosedFileDownload(next, uploadEnabled)
 }

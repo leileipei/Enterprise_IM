@@ -144,3 +144,19 @@ func TestConcurrentPublishAcceptsOnlyOneExpectedVersion(t *testing.T) {
 		t.Fatalf("concurrent results: %v, %v", a, b)
 	}
 }
+
+func TestPublishFileDownloadAction(t *testing.T) {
+	c := db(t)
+	seed(t, c)
+	grantPublisher(t, c)
+	r := isolationRule()
+	r.Action = policy.ActionFileDownload
+	version, e := (policystore.Service{DB: c, Now: func() time.Time { return at }}).Publish(context.Background(), publisher(), 0, []policy.Rule{r}, "download boundary")
+	if e != nil || version != 1 {
+		t.Fatal("file_download action could not be published", version, e)
+	}
+	var action string
+	if e = c.QueryRow(context.Background(), `SELECT action FROM policy_rules WHERE tenant_id=$1 AND version=1`, tenantA).Scan(&action); e != nil || action != "file_download" {
+		t.Fatal(action, e)
+	}
+}

@@ -455,3 +455,25 @@ func TestOIDCStartupFailsWhenJWKSUnavailable(t *testing.T) {
 		t.Fatal("unavailable JWKS accepted at startup")
 	}
 }
+
+func TestOIDCDownloadExpiry(t *testing.T) {
+	key, e := rsa.GenerateKey(rand.Reader, 2048)
+	if e != nil {
+		t.Fatal(e)
+	}
+	claims := testClaims()
+	auth, e := newAuthenticator(config(), func(*jwt.Token) (any, error) { return &key.PublicKey, nil }, lookupFunc(func(context.Context, string, string) (httpserver.VerifiedIdentity, error) {
+		return httpserver.VerifiedIdentity{TenantID: testTenant, UserID: testUser, ExpiresAt: time.Now().Add(365 * 24 * time.Hour)}, nil
+	}))
+	if e != nil {
+		t.Fatal(e)
+	}
+	got, e := auth.Authenticate(context.Background(), signToken(t, key, claims, "at+jwt", jwt.SigningMethodRS256))
+	if e != nil || !got.ExpiresAt.Equal(claims.ExpiresAt.Time) {
+		t.Fatal("expiry not verified JWT exp", got.ExpiresAt, e)
+	}
+	claims.ExpiresAt = nil
+	if _, e = auth.Authenticate(context.Background(), signToken(t, key, claims, "at+jwt", jwt.SigningMethodRS256)); e == nil {
+		t.Fatal("missing exp accepted")
+	}
+}

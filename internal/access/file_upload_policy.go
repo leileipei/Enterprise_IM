@@ -110,7 +110,12 @@ func filePolicyTransactionOnce[T any](ctx context.Context, s Service, id Trusted
 	if e != nil {
 		return zero, e
 	}
-	if e = audit(ctx, tx, id, action, "tenant", id.TenantID, "allow", "file_upload_policy", at); e != nil {
+	reason := "file_upload_policy"
+	switch action {
+	case "file_retention_policy_read", "file_retention_policy_update", "file_retention_policy_history_list":
+		reason = "file_retention_policy"
+	}
+	if e = audit(ctx, tx, id, action, "tenant", id.TenantID, "allow", reason, at); e != nil {
 		return zero, errors.Join(ErrAuditUnavailable, e)
 	}
 	if _, e = s.filePolicyGrant(ctx, tx, id, group); e != nil {

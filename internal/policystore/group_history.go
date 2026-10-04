@@ -176,9 +176,9 @@ func groupHistoryRuleSideMatches(member policy.Membership, organizationID, membe
 		(membershipID == "" || membershipID == member.ID)
 }
 
-func groupHistoryHardDenied(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
+func groupHistoryMatchingDenials(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
 	groupID string, actor policy.Membership, readerIntervals []groupHistoryInterval,
-	rules []policy.Rule, at time.Time) (bool, error) {
+	rules []policy.Rule) ([]policy.Rule, error) {
 	readerMatches := func(organizationID, membershipID string) bool {
 		if groupHistoryRuleSideMatches(actor, organizationID, membershipID) {
 			return true
@@ -200,23 +200,51 @@ func groupHistoryHardDenied(ctx context.Context, tx pgx.Tx, id access.TrustedIde
 			id.TenantID, groupID, id.UserID, nullableID(organizationID), nullableID(membershipID)).Scan(&found)
 		return found, err
 	}
+	var matched []policy.Rule
 	for _, rule := range rules {
-		if rule.Effect != policy.EffectHardDeny || rule.Action != policy.ActionSendMessage ||
-			at.Before(rule.EffectiveFrom) || (!rule.EffectiveTo.IsZero() && !at.Before(rule.EffectiveTo)) {
+		if rule.Effect != policy.EffectHardDeny || rule.Action != policy.ActionSendMessage {
 			continue
 		}
 		if readerMatches(rule.SourceOrganizationID, rule.SourceMembershipID) {
 			found, err := peerExists(rule.TargetOrganizationID, rule.TargetMembershipID)
-			if err != nil || found {
-				return found, err
+			if err != nil {
+				return nil, err
+			}
+			if found {
+				matched = append(matched, rule)
+				continue
 			}
 		}
 		if readerMatches(rule.TargetOrganizationID, rule.TargetMembershipID) {
 			found, err := peerExists(rule.SourceOrganizationID, rule.SourceMembershipID)
-			if err != nil || found {
-				return found, err
+			if err != nil {
+				return nil, err
+			}
+			if found {
+				matched = append(matched, rule)
 			}
 		}
 	}
-	return false, nil
+	return matched, nil
+}
+
+// Matching facts are loaded before the final clock. Future rules must also be
+// included so activation during the last peer query cannot evade that check.
+func groupHistoryDenialsActive(rules []policy.Rule, at time.Time) bool {
+	for _, r := range rules {
+		if !at.Before(r.EffectiveFrom) && (r.EffectiveTo.IsZero() || at.Before(r.EffectiveTo)) {
+			return true
+		}
+	}
+	return false
+}
+func groupHistoryHardDenied(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, groupID string, actor policy.Membership, readerIntervals []groupHistoryInterval, rules []policy.Rule, at time.Time) (bool, error) {
+	var active []policy.Rule
+	for _, r := range rules {
+		if !at.Before(r.EffectiveFrom) && (r.EffectiveTo.IsZero() || at.Before(r.EffectiveTo)) {
+			active = append(active, r)
+		}
+	}
+	matched, e := groupHistoryMatchingDenials(ctx, tx, id, groupID, actor, readerIntervals, active)
+	return len(matched) > 0, e
 }

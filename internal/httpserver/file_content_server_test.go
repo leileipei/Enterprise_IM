@@ -255,3 +255,21 @@ func TestFileContentNodeConcurrency(t *testing.T) {
 		}
 	}
 }
+
+func TestFileContentGETDelegatesBeforeUploadAuthentication(t *testing.T) {
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true; w.WriteHeader(204) })
+	auth := authFunc(func(context.Context, string) (VerifiedIdentity, error) {
+		t.Fatal("GET reached PUT authenticator")
+		return VerifiedIdentity{}, nil
+	})
+	h, e := HandlerWithFileContent(next, auth, &contentStub{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/files/"+actorID+"/content", nil))
+	if !called || w.Code != 204 {
+		t.Fatal(called, w.Code)
+	}
+}

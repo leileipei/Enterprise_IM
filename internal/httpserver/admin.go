@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/leileipei/Enterprise_IM/internal/access"
@@ -26,8 +27,9 @@ var (
 // VerifiedIdentity is issued by an authentication adapter after token
 // verification and local user mapping. It must never be built from HTTP fields.
 type VerifiedIdentity struct {
-	TenantID string
-	UserID   string
+	TenantID  string
+	UserID    string
+	ExpiresAt time.Time
 }
 
 type Authenticator interface {

@@ -50,7 +50,7 @@ func TestFileAPIRealOIDC(t *testing.T) {
 		id := out["file_id"].(string)
 		filePublicRequest(t, "GET", api, "/api/v1/files/"+id, token("admin"), adminM, "", "", 404)
 		filePublicRequest(t, "GET", api, "/api/v1/files/"+id, token("ordinary"), targetM, "", "", 404)
-		filePublicRequest(t, "GET", api, "/api/v1/files/"+id+"/content", token("ordinary"), targetM2, "", "", 405)
+		filePublicRequest(t, "GET", api, "/api/v1/files/"+id+"/content", token("ordinary"), targetM2, "", "", 503)
 		filePublicRequest(t, "PUT", api, "/api/v1/files/"+id+"/content", token("ordinary"), targetM2, body, "application/octet-stream", 200)
 		filePublicRequest(t, "PUT", api, "/api/v1/files/"+id+"/content", token("ordinary"), targetM2, "replacement", "application/octet-stream", 409)
 		want := "ready"

@@ -155,6 +155,12 @@ func TestDigestRetirementMigrationRollbackAndEvidence(t *testing.T) {
 			t.Fatal(pe)
 		}
 		data = append(prefix, data...)
+		downloadPrefix, de := os.ReadFile("../../db/migrations/000021_file_download_retention.down.sql")
+		if de != nil {
+			t.Fatal(de)
+		}
+		data = append(downloadPrefix, data...)
+
 		if err != nil {
 			t.Fatal(err)
 		}

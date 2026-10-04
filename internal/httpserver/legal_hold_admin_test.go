@@ -153,3 +153,21 @@ func TestLegalHoldAdminRoutesAndStrictBodies(t *testing.T) {
 		}
 	}
 }
+
+func TestLegalHoldFileCleanupConflictHTTP(t *testing.T) {
+	svc := legalHoldStub{place: func(context.Context, access.TrustedIdentity, string, string, string) (access.LegalHold, bool, error) {
+		return access.LegalHold{}, false, access.ErrFileCleanupInProgress
+	}}
+	h, e := HandlerWithLegalHolds(Handler(nil), authFunc(verified), svc)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r := adminRequest("POST", "/api/v1/admin/conversations/"+holdConversationID+"/legal-holds")
+	r.Header.Set("Content-Type", "application/json")
+	r.Body = io.NopCloser(strings.NewReader(`{"request_id":"` + holdRequestID + `","case_reference":"CASE-NEW"}`))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 409 || !strings.Contains(w.Body.String(), "file_cleanup_in_progress") || strings.Contains(w.Body.String(), `"id"`) {
+		t.Fatal(w.Code, w.Body.String())
+	}
+}

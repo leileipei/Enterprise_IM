@@ -15,6 +15,7 @@ const (
 	ActionSendMessage   Action = "send_message"
 	ActionCreateGroup   Action = "create_group"
 	ActionInviteGroup   Action = "invite_group"
+	ActionFileDownload  Action = "file_download"
 )
 
 type Effect string
@@ -135,7 +136,7 @@ func HistoryHardDeny(currentReader, historicalReader, historicalPeer Membership,
 
 func supportedAction(action Action) bool {
 	switch action {
-	case ActionDirectoryView, ActionStartChat, ActionSendMessage, ActionCreateGroup, ActionInviteGroup:
+	case ActionDirectoryView, ActionStartChat, ActionSendMessage, ActionCreateGroup, ActionInviteGroup, ActionFileDownload:
 		return true
 	default:
 		return false

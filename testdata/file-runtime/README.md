@@ -35,3 +35,15 @@ manifest为只读0400、同运行用户拥有的JSON，kind=local-process，包�
 集成夹具使用生产 API 子进程的 TLS OIDC/JWKS 验证和数据库身份映射；显式文件消息 Handler 的测试认证桥仅转发该进程 `/api/v1/me` 返回的已验证身份。上传与扫描使用真实 S3、qpdf、ClamAV；不得手写 ready 代替扫描。旧 Web 使用实际生产 API 和 PKCE 登录，验证固定附件占位、文本发送及重新加载补拉。生产子进程在上传开启或未识别 `IM_FILE_MESSAGE_ENABLED=true` 时仍拒绝文件发送。
 
 测试自建进程、数据库 schema、Redis stream 和浏览器均由夹具清理。外部专用容器/扫描器由本轮操作者清理；S3 对象只写入该轮专用 bucket，销毁该轮无持久卷容器时一起清理。不得删除正式绑定证据或修改正式生命周期。P4-23 不提供下载授权和文件收发 UI，ACK 仅证明入库。
+
+## P4-24 下载与保留期清理门禁
+
+执行 `scripts/test-file-download-retention.sh run-all`，需要本轮私有 PostgreSQL、Redis、版本化 S3、新鲜 ClamAV/qpdf manifest 和真实浏览器运行时。独立角色变量：`IM_TEST_FILE_UPLOAD_ACCESS_KEY/SECRET_KEY`、`IM_TEST_FILE_WORKER_ACCESS_KEY/SECRET_KEY`、`IM_FILE_CLEANUP_S3_ACCESS_KEY/SECRET_KEY`。仅夹具管理使用 `IM_TEST_S3_ADMIN_ACCESS_KEY/SECRET_KEY` 创建自建对象的 delete marker。不得指向客户桶或业务库。
+
+脚本严格检查 16 项具名 PASS，所有所选用例 0 FAIL/0 SKIP；`IM_TEST_FILE_DOWNLOAD_OUTPUT_DIR` 必须绝对私有目录，日志不打印凭据。固定版本 GET、慢 TCP、短 JWT、撤权后零正文、55 秒对象读延迟加 7 秒真实数据库审计等待的 60 秒总截止、审计未知恢复、固定版本 DELETE 的丢响应和迟到发送，以及保全/暂停/额度/IAM 均有独立断言。
+
+下载身份桥只在真实生产 `/api/v1/me` 已校验完整 token 后，从同一已验证 token 提取 `exp`；身份始终来自验证器返回值。此桥只用于显式测试下载装配，生产 GET/content 与文件发送继续关闭，客户端没有下载入口。
+
+清理夹具的过期预约及上传历史由数据库边界构造，始终启用所有触发器；对象 PUT/版本、只读扫描以及 clean/ready 判断都是真实本轮运行。逻辑 TTL 用例仅构造旧消息接受时刻，不宣称经过真实 48 小时；故障用例临时隐藏自建 schema 的配置表，仅证明依赖查询失败时拒绝正文。真实网络字节、版本权限和新鲜扫描与这些历史前提分别核验。文件 ID 随机，避免同一专用桶多轮遗留版本污染来源清单。
+
+下载 writer 接收字节不代表客户端收妥，也不能撤回内核/客户端已有缓冲。终结持久化失败保留原 session 闸门；等待不可变 deadline 真正到期后，机器恢复登记 unknown，不能凭完整 HTTP 响应补成 completed。

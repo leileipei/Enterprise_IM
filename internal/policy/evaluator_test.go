@@ -266,3 +266,25 @@ func TestExceptionRequiresSpecificMembershipsAndExpiry(t *testing.T) {
 		t.Fatalf("unbounded exception was accepted: %+v", got)
 	}
 }
+
+func TestPolicyFileDownloadIndependent(t *testing.T) {
+	req := input(member("a", "org-a", "legal-a"), member("b", "org-b", "legal-b"))
+	req.Action = Action("file_download")
+	req.Rules = []Rule{{ID: "allow-send", TenantID: "tenant-a", Action: ActionSendMessage, Effect: EffectAllow, ApprovedBy: "admin", EffectiveFrom: at.Add(-time.Hour)}}
+	if got := Evaluate(req); got.Allowed || got.Reason != ReasonCrossOrganizationDenied {
+		t.Fatal("file action missing or send rule leaked", got)
+	}
+	req.Rules[0].Action = Action("file_download")
+	if got := Evaluate(req); !got.Allowed {
+		t.Fatal("explicit file rule denied", got)
+	}
+	req.Rules = append(req.Rules, Rule{ID: "deny-file", TenantID: "tenant-a", Action: Action("file_download"), Effect: EffectHardDeny, EffectiveFrom: at.Add(-time.Hour)})
+	if got := Evaluate(req); got.Allowed || got.Reason != ReasonHardDeny {
+		t.Fatal("file allow bypassed hard deny", got)
+	}
+	req.Rules = nil
+	req.Target = req.Actor
+	if got := Evaluate(req); !got.Allowed {
+		t.Fatal("same-org file denied", got)
+	}
+}
