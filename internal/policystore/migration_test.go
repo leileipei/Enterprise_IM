@@ -67,6 +67,7 @@ func db(t *testing.T) *pgx.Conn {
 		"../../db/migrations/000016_message_digest_retirement.up.sql",
 		"../../db/migrations/000017_cross_message_search_indexes.up.sql",
 		"../../db/migrations/000018_file_foundation.up.sql",
+		"../../db/migrations/000019_file_upload_scan.up.sql",
 	} {
 		sql, err := os.ReadFile(path)
 		if err != nil {
