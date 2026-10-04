@@ -106,7 +106,7 @@ if got.MessageSendEnabled || got.DownloadEnabled || got.FilenameSearchEnabled { 
 - `evaluateFileVisibility(f fileVisibilityFacts,at time.Time)(files.Metadata,string,int64,error)`。
 - `authorizeFileDownloadTx` 原签名保持不变，消费两函数并返回最后 DB 授权时间。
 
-- [ ] **Step 1：新增失败测试。** TestFileVisibilityFinalClock／TestFileVisibilitySourceMismatch／TestFileVisibilityNoSideEffects；复用原下载授权矩阵，覆盖未来 hard deny、上传者／身份失效、正文空说明与到期边界。
+- [x] **Step 1：新增失败测试。** TestFileVisibilityFinalClock／TestFileVisibilitySourceMismatch／TestFileVisibilityNoSideEffects；复用原下载授权矩阵，覆盖未来 hard deny、上传者／身份失效、正文空说明与到期边界。
 
 ```text
 now=expiresAt -> ErrNotFound; now=expiresAt-1ns -> valid
@@ -123,10 +123,10 @@ if !errors.Is(err, filedownload.ErrNotFound) { t.Fatal("expiry must close at bou
 if sqlCallsAfterFinalClock != 0 || objectCalls != 0 { t.Fatal("visibility check performed I/O") }
 ```
 
-- [ ] **Step 2：运行 RED。** `go test ./internal/policystore -run 'Test(FileVisibility|FileDownloadAuthorization|FileDownloadConcurrent|FileDownloadAuditWaitExpiry|FileRetentionConcurrentChange)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
-- [ ] **Step 3：最小实现。** 从现有下载授权提取事实，加载群所有匹配 hard deny 和当前参与信息后才读最终 clock_timestamp。沿用 P4-24 锁顺序及 NOWAIT／有限重试；不修改下载审计 Minor 分类或外部副作用。字段变化仍受保护锁控制，保持原拒绝语义。
-- [ ] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
-- [ ] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "refactor(files): share complete visibility proofs with search"`。
+- [x] **Step 2：运行 RED。** `go test ./internal/policystore -run 'Test(FileVisibility|FileDownloadAuthorization|FileDownloadConcurrent|FileDownloadAuditWaitExpiry|FileRetentionConcurrentChange)' -count=1`。必须因缺失的接口／行为失败；不能把缺环境、编译器或浏览器不可用当成有效 RED。
+- [x] **Step 3：最小实现。** 从现有下载授权提取事实，加载群所有匹配 hard deny 和当前参与信息后才读最终 clock_timestamp。沿用 P4-24 锁顺序及 NOWAIT／有限重试；不修改下载审计 Minor 分类或外部副作用。字段变化仍受保护锁控制，保持原拒绝语义。
+- [x] **Step 4：运行 GREEN。** 重跑 Step 2 命令；预期全部具名测试 PASS，0 FAIL。真实必选场景还必须 0 SKIP。
+- [x] **Step 5：提交。** 仅暂存 Files 所列的本任务变化与计划复选框，执行 `git diff --cached --check` 后提交：`git commit -m "refactor(files): share complete visibility proofs with search"`。
 
 ## Task 3：单会话名称搜索与独立游标
 
