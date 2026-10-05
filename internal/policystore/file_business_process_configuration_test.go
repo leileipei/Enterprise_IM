@@ -139,8 +139,12 @@ func TestFileBusinessProcessRP02(t *testing.T) {
 					t.Fatal("symlink fixture unavailable")
 				}
 			case "wide_mode":
-				if os.Mkdir(e["IM_FILE_DOWNLOAD_SPOOL_DIR"], 0755) != nil {
+				if os.Mkdir(e["IM_FILE_DOWNLOAD_SPOOL_DIR"], 0700) != nil || os.Chmod(e["IM_FILE_DOWNLOAD_SPOOL_DIR"], 0755) != nil {
 					t.Fatal("wide directory fixture unavailable")
+				}
+				info, err := os.Stat(e["IM_FILE_DOWNLOAD_SPOOL_DIR"])
+				if err != nil || info.Mode().Perm() != 0755 {
+					t.Fatal("wide directory fixture mode not applied")
 				}
 			case "wrong_probe_body":
 				client := f.s3Client("BOOTSTRAP", os.Getenv("IM_TEST_S3_ENDPOINT"))
