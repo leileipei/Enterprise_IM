@@ -307,8 +307,8 @@ RP14.context_cancel.stale_ui_updates == 0; RP14.bad_download.saveable_blob_count
 
 **Interfaces:** 交付记录绑定完整40位产品SHA及git archive；记录每门禁实际退出／顶层／子例／包计数、辅助SKIP、Linux非JSON资源结果、RP01～14证据位置和生产未验条件。PR正文中文，以P4-25为base。
 
-- [ ] **Step 1：运行冻结前差异检查。** 对照规格§1～14与下面覆盖表，无产品依赖／迁移新增，无秘密，diff --check通过。确认14RP真实PASS及本轮资源注册完整；缺证据先修对应任务，不把未验写成PASS。
-- [ ] **Step 2：固定产品SHA并运行七门禁。** commit之后git archive到私有独立目录；按下列顺序，同源码、专属schema／桶／目录，保存所有失败／取消尝试，不共享环境并发运行。计数从JSON及脚本实际输出统计，所有进程必须结束才认结果。
+- [x] **Step 1：运行冻结前差异检查。** 对照规格§1～14与下面覆盖表，无产品依赖／迁移新增，无秘密，diff --check通过。确认14RP真实PASS及本轮资源注册完整；缺证据先修对应任务，不把未验写成PASS。
+- [x] **Step 2：固定产品SHA并运行七门禁。** commit之后git archive到私有独立目录；按下列顺序，同源码、专属schema／桶／目录，保存所有失败／取消尝试，不共享环境并发运行。计数从JSON及脚本实际输出统计，所有进程必须结束才认结果。
 
 ~~~sh
 go test -json -timeout=30m ./... -count=1
@@ -320,8 +320,8 @@ scripts/test-file-runtime.sh run-all
 scripts/test-file-business-runtime.sh run-all
 ~~~
 
-- [ ] **Step 3：一次整体独立评审及必要修正。** 沿既定方法使用requesting-code-review，一个fresh reviewer审固定产品SHA和规格／计划／实测证据；Critical／Important一轮具名RED→GREEN，必要代码修正提交后重新archive并重跑七门禁，不能只报定向通过；不派第二reviewer。没有finding时直接记录原报告。Minor独立列，旧P4-24分类后续项不混入。
-- [ ] **Step 4：形成中文交付并自检。** 运维说明给出新旧环境矩阵、独立角色最小权限、探针引导／VersionID、稳定owner／目录部署预检、启动顺序、暂停上传与关闭业务／修复／物理删除独立命令、恢复及退出失败处理。验收分列原F01有效登录拒绝audit、生命周期、故障与未知边界；客户生产未验清单保持。证据目录0700／文件0600并生成hash；核对归属后停止本轮进程／容器，数据卷保留或删除分别记录，主工作区clean／前项ref不变。
+- [x] **Step 3：一次整体独立评审及必要修正。** 沿既定方法使用requesting-code-review，一个fresh reviewer审固定产品SHA和规格／计划／实测证据；Critical／Important一轮具名RED→GREEN，必要代码修正提交后重新archive并重跑七门禁，不能只报定向通过；不派第二reviewer。没有finding时直接记录原报告。Minor独立列，旧P4-24分类后续项不混入。
+- [x] **Step 4：形成中文交付并自检。** 运维说明给出新旧环境矩阵、独立角色最小权限、探针引导／VersionID、稳定owner／目录部署预检、启动顺序、暂停上传与关闭业务／修复／物理删除独立命令、恢复及退出失败处理。验收分列原F01有效登录拒绝audit、生命周期、故障与未知边界；客户生产未验清单保持。证据目录0700／文件0600并生成hash；核对归属后停止本轮进程／容器，数据卷保留或删除分别记录，主工作区clean／前项ref不变。
 - [ ] **Step 5：提交与草稿交付。** docs(files): record P4-26 official process acceptance；推本专属分支并创建base=codex/p4-25-web-files-search-design草稿PR，正文用结构化参数或body-file，关联当前任务，记录URL／最终提交；不合并部署。若外部推送受阻，保留所有本地结果并明确阻塞动作，不伪造PR。
 
 ## 规格与验收覆盖自检
