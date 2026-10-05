@@ -106,7 +106,7 @@ mutation_requests == 0; response_body_close_count == 1
 
 **Interfaces:** (Service).CheckFileBusinessRuntime(ctx context.Context) error；(Service).CheckFileDownloadAuditRuntime(ctx context.Context) error。两者无写入；后者检查修复必需子集，未要求删除权限。私有契约清单记录表列OID／类型、约束类别／关联列／引用表列、检查表达式和触发器函数关联／启用与延迟属性。
 
-- [ ] **Step 1：写失败测试。** TestFileBusinessRuntimeSchema、TestFileBusinessRuntimePrivileges、TestFileDownloadAuditRuntimeSchema；专属完整schema及真实API／repair角色通过。逐项移列／改类型、同名错误FK、NOT VALID CHECK／FK、禁或replica-only关键触发器、同名替换函数／绑定、终态成对非deferrable拒绝；撤销实际业务写入／audit序列权限拒绝。记录预检前后业务各表计数不变。
+- [x] **Step 1：写失败测试。** TestFileBusinessRuntimeSchema、TestFileBusinessRuntimePrivileges、TestFileDownloadAuditRuntimeSchema；专属完整schema及真实API／repair角色通过。逐项移列／改类型、同名错误FK、NOT VALID CHECK／FK、禁或replica-only关键触发器、同名替换函数／绑定、终态成对非deferrable拒绝；撤销实际业务写入／audit序列权限拒绝。记录预检前后业务各表计数不变。
 
 ~~~text
 valid_schema.check_error == nil; valid_repair_role.check_error == nil
@@ -115,10 +115,10 @@ nondeferrable_terminal_pair.check_error != nil; missing_audit_grant.check_error 
 business_counts_after == business_counts_before
 ~~~
 
-- [ ] **Step 2：验证RED。** 配置专属IM_TEST_DATABASE_URL，go test ./internal/policystore -run 'Test(FileBusinessRuntime|FileDownloadAuditRuntime)' -count=1；缺新检查FAIL，0SKIP。缺DB先准备隔离夹具，不计RED。
-- [ ] **Step 3：最小实现。** 从提交迁移列出实际SQL使用的file_objects／策略历史／来源／扫描／绑定／session／terminal／audit／保留／hold关系；用pg_catalog及has_table_privilege／has_sequence_privilege检查，约束实际定义规范化后与基线比较，触发器实际函数体及关联匹配；不只匹配名称。兼容默认search_path，通过当前角色命中的实际relation检查，不能查到其他schema冒充；无DDL及数据修复。
-- [ ] **Step 4：验证GREEN。** 重跑Step2，完整合法／逐项破坏场景PASS且0SKIP；恢复测试schema只操作本项专属数据库。
-- [ ] **Step 5：提交。** feat(files): validate runtime schema and database privileges。
+- [x] **Step 2：验证RED。** 配置专属IM_TEST_DATABASE_URL，go test ./internal/policystore -run 'Test(FileBusinessRuntime|FileDownloadAuditRuntime)' -count=1；缺新检查FAIL，0SKIP。缺DB先准备隔离夹具，不计RED。
+- [x] **Step 3：最小实现。** 从提交迁移列出实际SQL使用的file_objects／策略历史／来源／扫描／绑定／session／terminal／audit／保留／hold关系；用pg_catalog及has_table_privilege／has_sequence_privilege检查，约束实际定义规范化后与基线比较，触发器实际函数体及关联匹配；不只匹配名称。兼容默认search_path，通过当前角色命中的实际relation检查，不能查到其他schema冒充；无DDL及数据修复。
+- [x] **Step 4：验证GREEN。** 重跑Step2，完整合法／逐项破坏场景PASS且0SKIP；恢复测试schema只操作本项专属数据库。
+- [x] **Step 5：提交。** feat(files): validate runtime schema and database privileges。
 
 ## Task 4：下载目录运行健康与归属
 
