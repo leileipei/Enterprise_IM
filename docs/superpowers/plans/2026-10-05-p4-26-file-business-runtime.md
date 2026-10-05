@@ -206,7 +206,7 @@ cleanup_failure.exit_code != 0; cleanup_timeout.exit_code != 0
 
 **Interfaces:** cleanerArguments{Execute,Once,RepairOnly bool}；parseCleanerArguments(args []string)(cleanerArguments,error)；repairOperations interface{Repair(context.Context)(int,error); Close()}；newAuditRepair(ctx context.Context,getenv func(string)string)(repairOperations,error)；runAuditRepair(ctx context.Context,once bool,out io.Writer,ops repairOperations) error。cleanerFactories{cleanup func(context.Context,func(string)string)(cleanerOperations,error); repair func(context.Context,func(string)string)(repairOperations,error)}；runCleaner(ctx context.Context,args []string,getenv func(string)string,out io.Writer,factories cleanerFactories) error。原cleanerOperations／newCleaner保留删除路径，main及旧测试迁移工厂参数；repair不实现Step。
 
-- [ ] **Step 1：写失败测试。** TestCleanerArgumentsStrict、TestAuditRepairOnlyNoObjectFactory、TestAuditRepairBudgetBackoff、TestAuditRepairCancellation；缺execute输出关闭且两工厂零调用；未知／重复／布尔矛盾／positional拒绝，包括--execute与--execute=false重复、--repair-only与--repair-only=false冲突。--execute --repair-only --once只Repair，limit20／ctx5秒，零Step／S3factory；失败连续延迟1/2/4/8/16/30/30，成功回1秒、取消即停止、once错误非零。时钟用私有测试注入，非产品环境开关。
+- [x] **Step 1：写失败测试。** TestCleanerArgumentsStrict、TestAuditRepairOnlyNoObjectFactory、TestAuditRepairBudgetBackoff、TestAuditRepairCancellation；缺execute输出关闭且两工厂零调用；未知／重复／布尔矛盾／positional拒绝，包括--execute与--execute=false重复、--repair-only与--repair-only=false冲突。--execute --repair-only --once只Repair，limit20／ctx5秒，零Step／S3factory；失败连续延迟1/2/4/8/16/30/30，成功回1秒、取消即停止、once错误非零。时钟用私有测试注入，非产品环境开关。
 
 ~~~text
 disabled.cleanup_factory_calls == 0; disabled.repair_factory_calls == 0
@@ -215,10 +215,10 @@ repair.batch_limit == 20; repair.batch_budget == 5s
 failed_delays == [1s,2s,4s,8s,16s,30s,30s]; cancelled.pending_timers == 0
 ~~~
 
-- [ ] **Step 2：验证RED。** go test ./cmd/im-file-cleaner -run 'Test(CleanerArguments|AuditRepair)' -count=1；新模式及严格拒绝FAIL。
-- [ ] **Step 3：最小实现。** 参数先解析再工厂；newAuditRepair仅pgxpool+随机机器UUID+Task3.CheckFileDownloadAuditRuntime，封装原RepairFileDownloadAudit(ctx,owner,20)。每批5秒ctx，循环用可取消timer退避，结构化输出只固定status及计数；原delete模式语义及租户开关不改，不为repair构造worker/deleter。
-- [ ] **Step 4：验证GREEN。** 重跑Step2及go test ./cmd/im-file-cleaner -count=1；旧关闭／once删除门禁PASS；真实恰一次审计及零S3留Task11。
-- [ ] **Step 5：提交。** feat(files): add database-only download audit repair mode。
+- [x] **Step 2：验证RED。** go test ./cmd/im-file-cleaner -run 'Test(CleanerArguments|AuditRepair)' -count=1；新模式及严格拒绝FAIL。
+- [x] **Step 3：最小实现。** 参数先解析再工厂；newAuditRepair仅pgxpool+随机机器UUID+Task3.CheckFileDownloadAuditRuntime，封装原RepairFileDownloadAudit(ctx,owner,20)。每批5秒ctx，循环用可取消timer退避，结构化输出只固定status及计数；原delete模式语义及租户开关不改，不为repair构造worker/deleter。
+- [x] **Step 4：验证GREEN。** 重跑Step2及go test ./cmd/im-file-cleaner -count=1；旧关闭／once删除门禁PASS；真实恰一次审计及零S3留Task11。
+- [x] **Step 5：提交。** feat(files): add database-only download audit repair mode。
 
 ## Task 9：正式进程夹具、四组合与依赖门禁（RP01／02／12／13）
 
