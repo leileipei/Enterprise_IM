@@ -146,7 +146,7 @@ health.created_sessions == 0; health.removed_paths == 0
 
 **Interfaces:** HandlerWithFileContentModes(next http.Handler,uploadEnabled,businessEnabled bool) http.Handler；HandlerWithFileStatus(next http.Handler,auth Authenticator,svc FileMetadataService)(http.Handler,error)。原HandlerWithFileMetadata保持预约+状态行为；两个入口共用私有handlerWithFileMetadata(next http.Handler,auth Authenticator,svc FileMetadataService,reserveEnabled bool)(http.Handler,error)。不改原下载业务接口。
 
-- [ ] **Step 1：写失败测试。** TestFileContentModeMatrix、TestFileStatusWithoutReservation、TestFileContentModesResponseController；四组合GET／PUT及HEAD／OPTIONS／POST的状态和Allow精确等于规格§7；U=false/B=true PUT405 Allow=GET，不调用上传；GET开启原下载、关闭原503。本人状态合法／错身份、预约关闭、严格query/body；透传ResponseController.SetWriteDeadline及Flush。
+- [x] **Step 1：写失败测试。** TestFileContentModeMatrix、TestFileStatusWithoutReservation、TestFileContentModesResponseController；四组合GET／PUT及HEAD／OPTIONS／POST的状态和Allow精确等于规格§7；U=false/B=true PUT405 Allow=GET，不调用上传；GET开启原下载、关闭原503。本人状态合法／错身份、预约关闭、严格query/body；透传ResponseController.SetWriteDeadline及Flush。
 
 ~~~text
 content(U=false,B=true,method=PUT) == {status:405,Allow:"GET"}
@@ -155,10 +155,10 @@ content(U=false,B=false,method=GET).status == 503
 status_only.reserve_calls == 0; response_controller.Flush.error == nil
 ~~~
 
-- [ ] **Step 2：验证RED。** go test ./internal/httpserver -run 'Test(FileContentMode|FileStatusWithout)' -count=1；新行为FAIL。
-- [ ] **Step 3：最小实现。** 最外层模式wrapper只识别content路径，处理关闭GET及非法方法，再让合法GET／PUT进入原handler，不包裹ResponseWriter。HandlerWithFileStatus仅装状态，不放行ReserveFile；B开启/U关闭的预约返回503／file_dependency_unavailable，复用现有依赖错误DTO；两者关闭仍不注册元数据路由。保留原authenticated身份／错误DTO，不对HTTP流增加压缩或缓存。
-- [ ] **Step 4：验证GREEN。** 重跑Step2及go test ./internal/httpserver -run 'Test(FileDownload|FileMetadata|FileContent|FileSearch)' -count=1；新旧HTTP合约PASS。
-- [ ] **Step 5：提交。** feat(files): dispatch content methods by assembled capabilities。
+- [x] **Step 2：验证RED。** go test ./internal/httpserver -run 'Test(FileContentMode|FileStatusWithout)' -count=1；新行为FAIL。
+- [x] **Step 3：最小实现。** 最外层模式wrapper只识别content路径，处理关闭GET及非法方法，再让合法GET／PUT进入原handler，不包裹ResponseWriter。HandlerWithFileStatus仅装状态，不放行ReserveFile；B开启/U关闭的预约返回503／file_dependency_unavailable，复用现有依赖错误DTO；两者关闭仍不注册元数据路由。保留原authenticated身份／错误DTO，不对HTTP流增加压缩或缓存。
+- [x] **Step 4：验证GREEN。** 重跑Step2及go test ./internal/httpserver -run 'Test(FileDownload|FileMetadata|FileContent|FileSearch)' -count=1；新旧HTTP合约PASS。
+- [x] **Step 5：提交。** feat(files): dispatch content methods by assembled capabilities。
 
 ## Task 6：正式 API 启动、路由与共享就绪
 
