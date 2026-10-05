@@ -133,34 +133,46 @@ func TestFileBusinessProcessRP03(t *testing.T) {
 	f := newFileBusinessProcessFixture(t)
 	f.startWorkers(t)
 	f.startAPI(t, true, true, "api-a")
-	ws := f.notificationSocket(t)
-	count := 0
+	f.restartRepair(t, false)
+	var searchNames []string
 	for _, kind := range []string{"direct", "group"} {
 		cid := directA
 		if kind == "group" {
 			cid = f.group(t)
 		}
-		for _, s := range (&webFileFixture{}).samples(t, false) {
-			if strings.HasSuffix(s.Name, ".txt") {
-				s.Name = "\uFEFF" + s.Name
+		samples := (&webFileFixture{}).samples(t, false)
+		for i := range samples {
+			if strings.HasSuffix(samples[i].Name, ".txt") {
+				samples[i].Name = "\uFEFF" + samples[i].Name
+				samples[i].SavedName = "_" + strings.TrimPrefix(samples[i].Name, "\uFEFF")
 			}
-			m := f.uploadAndAwaitReady(t, cid, kind, fileBusinessSample{s.Name, s.MIME, s.Path})
-			client := businessClientID()
-			ack := f.sendFile(t, "api-a", cid, kind, m.ID, client)
-			if ack["duplicate"] != false {
-				t.Fatal("first ACK duplicate")
+			if kind == "direct" && i == 0 {
+				samples[i].Name = "\uFEFF集团_ABC%_.txt"
+				samples[i].SavedName = "_集团_ABC%_.txt"
+				searchNames = append(searchNames, samples[i].Name)
 			}
-			f.assertBinding(t, m.ID, client)
-			f.assertTypedSearch(t, cid, kind, m.ID, s.Name)
-			body, _ := os.ReadFile(s.Path)
-			f.assertDownloaded(t, m.ID, body, s.Name)
-			count++
+			if kind == "group" && i == 1 {
+				samples[i].Name = "集团_ABC%_.pdf"
+				searchNames = append(searchNames, samples[i].Name)
+			}
+		}
+		f.browser(t, "lifecycle", map[string]any{"conversation": cid, "kind": kind, "samples": samples})
+		var count int
+		if f.conn.QueryRow(context.Background(), `SELECT count(*) FROM messages WHERE conversation_id=$1 AND message_type='file'`, cid).Scan(&count) != nil || count != 4 {
+			t.Fatal("four browser messages not persisted exactly once")
+		}
+		for _, sample := range samples {
+			var id, client string
+			if f.conn.QueryRow(context.Background(), `SELECT f.id::text,m.client_msg_id::text FROM file_objects f JOIN message_attachments a ON a.file_id=f.id JOIN messages m ON m.id=a.message_id WHERE f.conversation_id=$1 AND f.original_filename=$2 AND f.state='ready' AND f.scanned_at IS NOT NULL AND f.scan_job_id IS NOT NULL AND f.sha256=f.scan_sha256`, cid, sample.Name).Scan(&id, &client) != nil {
+				t.Fatal("actual browser scanner provenance absent")
+			}
+			f.assertBinding(t, id, client)
+			f.assertTypedSearch(t, cid, kind, id, sample.Name)
 		}
 	}
-	f.waitPublished(t, count)
-	realtimeE2EFrame(t, ws, `{"type":"sync_required"}`)
+	f.waitPublished(t, 8)
+	f.browser(t, "search", map[string]any{"names": searchNames})
 	f.assertEvidence(t)
-	// Explicit Chrome save is added by Task12; HTTP proof alone is not that claim.
 }
 func TestFileBusinessProcessRP04(t *testing.T) {
 	f := newFileBusinessProcessFixture(t)
@@ -169,6 +181,12 @@ func TestFileBusinessProcessRP04(t *testing.T) {
 	secret := []byte("P426_PRIVATE_UNAUTHORIZED_BODY")
 	id := f.upload(t, "api-a", directA, "集团权限.txt", "text/plain", secret, true)
 	f.sendFile(t, "api-a", directA, "direct", id, businessClientID())
+	deniedStorageBefore := f.objectRequests.Load()
+	code, _, deniedBody := f.request(t, "GET", "api-a", "/api/v1/files/"+id+"/content", "outsider", groupMemberC, nil, "")
+	businessStatus(t, code, 404)
+	if bytes.Contains(deniedBody, secret) {
+		t.Fatal("ordinary nonparticipant exposed content")
+	}
 	// A group administrator with no participation also receives no content.
 	outsiderAdmin := freshFile().ID
 	run(t, f.conn, `INSERT INTO admin_grants(id,tenant_id,membership_id,membership_organization_id,role,effective_from) VALUES($1,$2,$3,$4,'group_admin','2020-01-01')`, outsiderAdmin, tenantA, groupMemberC, orgA)
@@ -179,8 +197,11 @@ func TestFileBusinessProcessRP04(t *testing.T) {
 			t.Fatal("unauthorized content exposed")
 		}
 	}
+	if f.objectRequests.Load() != deniedStorageBefore {
+		t.Fatal("unauthorized download performed storage read")
+	}
 	var audits int
-	if e := f.conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events WHERE action='file_download' AND outcome='deny'`).Scan(&audits); e != nil || audits < 2 {
+	if e := f.conn.QueryRow(context.Background(), `SELECT count(*) FROM audit_events WHERE action='file_download' AND outcome='deny'`).Scan(&audits); e != nil || audits < 3 {
 		t.Fatal("valid-login denial audits missing", audits)
 	}
 	run(t, f.conn, `CREATE FUNCTION deny_audit_fault() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='file_download' AND NEW.outcome='deny' THEN RAISE EXCEPTION 'owned denial audit fault'; END IF; RETURN NEW; END $$; CREATE TRIGGER deny_audit_fault BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION deny_audit_fault()`)

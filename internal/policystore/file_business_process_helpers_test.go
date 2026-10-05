@@ -59,6 +59,7 @@ type fileBusinessProcessFixture struct {
 	objectFault                                                                atomic.Int32
 	objectWrites                                                               atomic.Int64
 	objectRequests                                                             atomic.Int64
+	webFaultCounts                                                             [6]atomic.Int64
 	objectGate                                                                 atomic.Pointer[processObjectGate]
 	client                                                                     *http.Client
 	redis                                                                      *redis.Client
@@ -496,7 +497,10 @@ func (f *fileBusinessProcessFixture) startAPI(t *testing.T, upload, business boo
 	if node == "api-a" {
 		f.apiURL = f.nodes[node].URL
 		u, _ := url.Parse(f.apiURL)
-		f.backend.Store(httputil.NewSingleHostReverseProxy(u))
+		proxy := httputil.NewSingleHostReverseProxy(u)
+		proxy.ModifyResponse = f.webTransport
+		proxy.FlushInterval = -1
+		f.backend.Store(proxy)
 	}
 }
 func (f *fileBusinessProcessFixture) stopProcess(t *testing.T, name string, kill bool) {
