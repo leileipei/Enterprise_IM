@@ -243,11 +243,11 @@ RP13.second_process_shared_spool.exit_code != 0
 
 ## Task 10：正式四类型生命周期及双节点幂等（RP03～06／10）
 
-**Files:** 新建internal/policystore/file_business_process_lifecycle_test.go；修改Task9 helpers；复用旧样本生成及原中文／FEFF断言，不改变产品测试Handler。
+**Files:** 新建internal/policystore/file_business_process_lifecycle_test.go；修改Task9 helpers及internal/policystore/file_download_sessions.go（F01拒绝审计实测缺口）；复用旧样本生成及原中文／FEFF断言，不改变产品测试Handler。
 
 **Interfaces:** TestFileBusinessProcessRP03／TestFileBusinessProcessRP04／TestFileBusinessProcessRP05／TestFileBusinessProcessRP06／TestFileBusinessProcessRP10；fileBusinessSample{Filename,MediaType,Path string}；(*fileBusinessProcessFixture).uploadAndAwaitReady(t *testing.T,conversation,kind string,sample fileBusinessSample) files.Metadata 经真实HTTP及独立扫描Worker；(*fileBusinessProcessFixture).assertBinding(t *testing.T,fileID,clientID string)只读核对数据库与对象证据。
 
-- [ ] **Step 1：写失败场景。** RP03四类型×单群预约／PUT／scan／sendACK／Outbox Redis通知／typed补拉／名称搜索／下载字节与名称；RP04有效非参与人／跨tenant／管理员持链零正文且拒绝audit、401另计；RP05 EICAR／坏或加密PDF／MIME伪装／>25MiB及租户更小上限实际拒绝、非ready不可绑定；RP06先U/B开启形成文件，再重启Ufalse/Btrue，GET/search可用、预约/PUT关闭及tenant policy仍约束发送；RP10两API原UUID/body重试恰一attachment/message/outbox，duplicateACK一致，真实通知及离线typed恢复。
+- [x] **Step 1：写失败场景。** RP03四类型×单群预约／PUT／scan／sendACK／Outbox Redis通知／typed补拉／名称搜索／下载字节与名称；RP04有效非参与人／跨tenant／管理员持链零正文且拒绝audit、401另计；RP05 EICAR／坏或加密PDF／MIME伪装／>25MiB及租户更小上限实际拒绝、非ready不可绑定；RP06先U/B开启形成文件，再重启Ufalse/Btrue，GET/search可用、预约/PUT关闭及tenant policy仍约束发送；RP10两API原UUID/body重试恰一attachment/message/outbox，duplicateACK一致，真实通知及离线typed恢复。
 
 ~~~text
 RP03.clean_files_per_conversation == 4; RP03.download_sha256 == sample_sha256
@@ -256,10 +256,10 @@ RP05.not_ready_attachment_count == 0; RP06.PUT.status == 405
 RP10.same_client_uuid.message_count == 1; RP10.attachment_count == 1; RP10.outbox_count == 1
 ~~~
 
-- [ ] **Step 2：验证RED或新增回归。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(03|04|05|06|10)$' -count=1；不把环境失败当产品RED，已满足场景如实记录新增回归。
-- [ ] **Step 3：实现真实驱动和证据。** ready必须来自正式im-file-worker，不能直接SQL置ready或test ScanWorker.RunOnce；Outbox必须正式im-outbox-worker，通知到达与typed内容分开核对。故障使唯一真实请求失败，不补造成功响应。证据只记录ID／计数／hash／状态／期限，浏览器显式保存由Task12补齐RP03。
-- [ ] **Step 4：验证GREEN。** 重跑Step2，5顶层及子例0FAIL／0SKIP，逐项来源／audit／字节证明齐全；RP03的Chrome保存未完成时状态仍是部分证据。
-- [ ] **Step 5：提交。** test(files): verify official attachment lifecycle and node idempotency。
+- [x] **Step 2：验证RED或新增回归。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(03|04|05|06|10)$' -count=1；不把环境失败当产品RED，已满足场景如实记录新增回归。
+- [x] **Step 3：实现真实驱动和证据。** ready必须来自正式im-file-worker，不能直接SQL置ready或test ScanWorker.RunOnce；Outbox必须正式im-outbox-worker，通知到达与typed内容分开核对。故障使唯一真实请求失败，不补造成功响应。证据只记录ID／计数／hash／状态／期限，浏览器显式保存由Task12补齐RP03。
+- [x] **Step 4：验证GREEN。** 重跑Step2，5顶层及子例0FAIL／0SKIP，逐项来源／audit／字节证明齐全；RP03的Chrome保存未完成时状态仍是部分证据。
+- [x] **Step 5：提交。** test(files): verify official attachment lifecycle and node idempotency。
 
 ## Task 11：在途撤权、进程恢复与审计修复（RP07～09）
 
