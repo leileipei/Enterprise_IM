@@ -122,7 +122,7 @@ func main() {
 			logger.Error("self context API unavailable", "error", err)
 			os.Exit(1)
 		}
-		handler, err = httpserver.HandlerWithFileCapabilities(handler, authenticator, access.Service{DB: pool}, productionFileCapabilities(fileEnabled))
+		handler, err = httpserver.HandlerWithFileCapabilities(handler, authenticator, access.Service{DB: pool}, productionFileCapabilities(fileEnabled, false))
 		if err != nil {
 			logger.Error("file capabilities API unavailable")
 			os.Exit(1)
@@ -398,8 +398,8 @@ func productionFileDownloadHandler(next http.Handler, uploadEnabled bool) http.H
 	return httpserver.HandlerWithClosedFileDownload(next, uploadEnabled)
 }
 
-func productionFileCapabilities(uploadEnabled bool) httpserver.FileCapabilities {
-	return httpserver.FileCapabilities{UploadEnabled: uploadEnabled}
+func productionFileCapabilities(uploadEnabled, businessEnabled bool) httpserver.FileCapabilities {
+	return httpserver.FileCapabilities{UploadEnabled: uploadEnabled, MessageSendEnabled: businessEnabled, DownloadEnabled: businessEnabled, FilenameSearchEnabled: businessEnabled}
 }
 
 func productionFileSearchHandler(next http.Handler, auth httpserver.Authenticator) http.Handler {

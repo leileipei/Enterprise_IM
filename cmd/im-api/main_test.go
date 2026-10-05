@@ -185,7 +185,7 @@ func TestFileDownloadProductionAssemblyClosed(t *testing.T) {
 
 func TestProductionFileCapabilitiesClosed(t *testing.T) {
 	for _, enabled := range []bool{false, true} {
-		got := productionFileCapabilities(enabled)
+		got := productionFileCapabilities(enabled, false)
 		if got != (httpserver.FileCapabilities{UploadEnabled: enabled}) {
 			t.Fatal("production file sharing capability opened", got)
 		}

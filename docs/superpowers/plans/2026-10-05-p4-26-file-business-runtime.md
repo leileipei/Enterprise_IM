@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27.1、pgx/v5、PostgreSQL、既有 AWS S3 SDK、OIDC、Redis、ClamAV／qpdf、原生 JavaScript、既有 Playwright／Chrome；不新增产品依赖。
 
-**Spec:** [已确认 P4-26 书面设计](../specs/2026-10-05-p4-26-file-business-runtime-design.md)，用户于 2026-10-05 回复“确认”，确认时提交 d0d6d5157e225d03663fa3c2c654b4109f9e8d02。本计划待审阅；以下测试、接口与门禁均为待实施要求，没有本轮运行结果。
+**Spec:** [已确认 P4-26 书面设计](../specs/2026-10-05-p4-26-file-business-runtime-design.md)，用户于 2026-10-05 回复“确认”，确认时提交 d0d6d5157e225d03663fa3c2c654b4109f9e8d02。用户于2026-10-05回复“是”确认本计划，已开始逐项实施；以下未完成任务的测试、接口与门禁仍为待实施要求。
 
 ## Global Constraints
 
@@ -64,7 +64,7 @@
 
 **Interfaces:** fileBusinessConfig{Enabled bool; Objects objectstore.Config; SpoolDir,OwnerID,ProbeVersionID string}；fileBusinessConfigFromEnv(getenv func(string)string,oidcEnabled bool)(fileBusinessConfig,error)；productionFileCapabilities(uploadEnabled,businessEnabled bool) httpserver.FileCapabilities。沿用fileUploadConfigFromEnv原签名。
 
-- [ ] **Step 1：写失败测试。** TestFileBusinessConfigStrict、TestFileBusinessDisabledNoDependencies、TestFileBusinessCredentialSeparation、TestProductionFileCapabilityMatrix；四组合精确四布尔，B非法／缺OIDC或DB／null及>1024字节版本／零或大写UUID／相对目录／访问键共享拒绝。B关闭getenv追踪新增下载字段访问次数=0；U关闭/B开启合法配置不读scanner字段。
+- [x] **Step 1：写失败测试。** TestFileBusinessConfigStrict、TestFileBusinessDisabledNoDependencies、TestFileBusinessCredentialSeparation、TestProductionFileCapabilityMatrix；四组合精确四布尔，B非法／缺OIDC或DB／null及>1024字节版本／零或大写UUID／相对目录／访问键共享拒绝。B关闭getenv追踪新增下载字段访问次数=0；U关闭/B开启合法配置不读scanner字段。
 
 ~~~text
 caps(false,false) == {false,false,false,false}
@@ -74,10 +74,10 @@ caps(true,true) == {true,true,true,true}
 disabled.download_env_reads == 0; disabled.probe_requests == 0
 ~~~
 
-- [ ] **Step 2：验证RED。** go test ./cmd/im-api -run 'Test(FileBusiness|ProductionFileCapability)' -count=1；因新行为缺失FAIL。
-- [ ] **Step 3：最小实现。** 在配置文件定义上述接口；源固定download_environment，版本沿objectstore原非空／非null／UTF-8无控制／≤1024契约，错误固定invalid_file_business_configuration，不带字段值。这里只解析及产生能力，不启动服务。
-- [ ] **Step 4：验证GREEN。** 重跑Step2，具名测试PASS；旧TestFileAPIAssembly／默认关闭断言仍PASS。
-- [ ] **Step 5：提交。** feat(files): add strict file business runtime configuration。
+- [x] **Step 2：验证RED。** go test ./cmd/im-api -run 'Test(FileBusiness|ProductionFileCapability)' -count=1；因新行为缺失FAIL。
+- [x] **Step 3：最小实现。** 在配置文件定义上述接口；源固定download_environment，版本沿objectstore原非空／非null／UTF-8无控制／≤1024契约，错误固定invalid_file_business_configuration，不带字段值。这里只解析及产生能力，不启动服务。
+- [x] **Step 4：验证GREEN。** 重跑Step2，具名测试PASS；旧TestFileAPIAssembly／默认关闭断言仍PASS。
+- [x] **Step 5：提交。** feat(files): add strict file business runtime configuration。
 
 ## Task 2：下载只读适配器与固定版本探针
 
