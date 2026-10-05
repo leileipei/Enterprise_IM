@@ -156,7 +156,7 @@ status_only.reserve_calls == 0; response_controller.Flush.error == nil
 ~~~
 
 - [x] **Step 2：验证RED。** go test ./internal/httpserver -run 'Test(FileContentMode|FileStatusWithout)' -count=1；新行为FAIL。
-- [x] **Step 3：最小实现。** 最外层模式wrapper只识别content路径，处理关闭GET及非法方法，再让合法GET／PUT进入原handler，不包裹ResponseWriter。HandlerWithFileStatus仅装状态，不放行ReserveFile；B开启/U关闭的预约返回503／file_dependency_unavailable，复用现有依赖错误DTO；两者关闭仍不注册元数据路由。保留原authenticated身份／错误DTO，不对HTTP流增加压缩或缓存。
+- [x] **Step 3：最小实现。** 最外层模式wrapper只识别content路径，处理关闭GET及非法方法，再让合法GET／PUT进入原handler，不包裹ResponseWriter。HandlerWithFileStatus仅装状态，不放行ReserveFile；B开启/U关闭的预约返回503／file_service_unavailable，复用现有依赖错误DTO；两者关闭仍不注册元数据路由。保留原authenticated身份／错误DTO，不对HTTP流增加压缩或缓存。
 - [x] **Step 4：验证GREEN。** 重跑Step2及go test ./internal/httpserver -run 'Test(FileDownload|FileMetadata|FileContent|FileSearch)' -count=1；新旧HTTP合约PASS。
 - [x] **Step 5：提交。** feat(files): dispatch content methods by assembled capabilities。
 
@@ -222,11 +222,11 @@ failed_delays == [1s,2s,4s,8s,16s,30s,30s]; cancelled.pending_timers == 0
 
 ## Task 9：正式进程夹具、四组合与依赖门禁（RP01／02／12／13）
 
-**Files:** 新建internal/policystore/file_business_process_helpers_test.go、file_business_process_configuration_test.go；新建scripts/test-file-business-runtime.sh、testdata/file-runtime/business-runtime.md。
+**Files:** 新建internal/policystore/file_business_process_helpers_test.go、file_business_process_configuration_test.go、file_business_process_transport_test.go、file_business_process_uid_control_test.go；新建scripts/test-file-business-runtime.sh、testdata/file-runtime/business-runtime.md。
 
 **Interfaces:** fileBusinessProcessFixture{privateRoot,apiURL,webURL,buildSHA,schema string; binaries map[string]string; processes map[string]*exec.Cmd; pool *pgxpool.Pool; oidc,proxy *httptest.Server}；newFileBusinessProcessFixture(t *testing.T)*fileBusinessProcessFixture；(*fileBusinessProcessFixture).startAPI(t *testing.T,upload,business bool,node string)；startWorkers(t *testing.T)、restartAPI(t *testing.T,node string,upload,business bool)、stopOwned(t *testing.T)、assertEvidence(t *testing.T)。nodeRuntimeConfig{URL,OwnerID,SpoolDir string}及fixture.nodes map[string]nodeRuntimeConfig记录两个API配置，节点名固定api-a／api-b。接口无业务Handler／Repo替换字段。TestFileBusinessProcessRP01／TestFileBusinessProcessRP02／TestFileBusinessProcessRP12／TestFileBusinessProcessRP13为四个必选顶层名称。
 
-- [ ] **Step 1：写失败场景。** 从同一源码构建im-api／im-file-worker／im-outbox-worker／im-file-cleaner，独立TLS OIDC与同源代理、PG schema/API及repair角色、私有S3四主体、真实scanner/Redis。RP01实际四组合及方法；RP02缺依赖／探针／schema／目录错误无监听且非零；RP12真实DB／S3拒绝或不可达→ready503、live200→恢复200、scanner停止不伪ready；RP13直接SDK实际IAM允许与拒绝、匿名／跨桶拒绝、双进程同spool冲突。RF1／2／4在正式API再次验证。
+- [x] **Step 1：写失败场景。** 从同一源码构建im-api／im-file-worker／im-outbox-worker／im-file-cleaner，独立TLS OIDC与同源代理、PG schema/API及repair角色、私有S3四主体、真实scanner/Redis。RP01实际四组合及方法；RP02缺依赖／探针／schema／目录错误无监听且非零；RP12真实DB／S3拒绝或不可达→ready503、live200→恢复200、scanner停止不伪ready；RP13直接SDK实际IAM允许与拒绝、匿名／跨桶拒绝、双进程同spool冲突。RF1／2／4在正式API再次验证。
 
 ~~~text
 RP01.capabilities == actual_route_matrix
@@ -236,10 +236,10 @@ RP13.real_download_role.PUT == AccessDenied; RP13.real_download_role.DELETE == A
 RP13.second_process_shared_spool.exit_code != 0
 ~~~
 
-- [ ] **Step 2：验证RED。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(01|02|12|13)$' -count=1；故障行为尚未可复现或验收缺口FAIL，不能以未安装依赖制造RED；若Task1～8已满足，只记录新增回归通过，不伪造失败。
-- [ ] **Step 3：实现夹具与严格门禁。** 新脚本只接受run-all，必需环境缺失退出2、不SKIP；输出必须私有绝对无符号链接目录。配置仅子进程环境、不得打印。必需环境沿旧夹具：IM_TEST_DATABASE_URL、IM_TEST_REDIS_URL、IM_TEST_S3_ENDPOINT、IM_TEST_S3_BUCKET、IM_TEST_S3_POLICY_BUCKET、IM_TEST_FILE_UPLOAD_ACCESS_KEY／SECRET_KEY、IM_TEST_FILE_WORKER_ACCESS_KEY／SECRET_KEY、IM_FILE_CLEANUP_S3_ACCESS_KEY／SECRET_KEY、IM_TEST_QPDF_PATH、IM_TEST_CLAMD_SOCKET、IM_TEST_SCANNER_MANIFEST、IM_TEST_BROWSER_NODE、CHROMIUM_EXECUTABLE；新增IM_TEST_FILE_DOWNLOAD_ACCESS_KEY／SECRET_KEY及IM_TEST_FILE_BOOTSTRAP_ACCESS_KEY／SECRET_KEY。IM_TEST_FILE_BUSINESS_OUTPUT_DIR可指定私有输出，否则mktemp生成；输入schema／桶需专属归属校验。预检与Task13引导说明一致。准备固定探针、记录VersionID供两API复用，禁下载角色自建；编译四binary一次并校验SHA，测试帮助器复用旧OIDC／migration技术但不复用补挂Handler的newWebFileFixture。两节点分别owner／spool，严格资源注册／退出回收。脚本Go JSON解析必选14名称，任何缺失／FAIL／SKIP／非零退出均失败。
-- [ ] **Step 4：验证GREEN。** 重跑Step2，四顶层0FAIL／0SKIP；脚本全14白名单直到Task12完成才通过，不得缩小白名单临时宣布通过。
-- [ ] **Step 5：提交。** test(files): exercise official process configuration and dependency gates。
+- [x] **Step 2：验证RED。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(01|02|12|13)$' -count=1；故障行为尚未可复现或验收缺口FAIL，不能以未安装依赖制造RED；若Task1～8已满足，只记录新增回归通过，不伪造失败。
+- [x] **Step 3：实现夹具与严格门禁。** 新脚本只接受run-all，必需环境缺失退出2、不SKIP；输出必须私有绝对无符号链接目录。配置仅子进程环境、不得打印。必需环境沿旧夹具：IM_TEST_DATABASE_URL、IM_TEST_REDIS_URL、IM_TEST_S3_ENDPOINT、IM_TEST_S3_BUCKET、IM_TEST_S3_POLICY_BUCKET、IM_TEST_FILE_UPLOAD_ACCESS_KEY／SECRET_KEY、IM_TEST_FILE_WORKER_ACCESS_KEY／SECRET_KEY、IM_FILE_CLEANUP_S3_ACCESS_KEY／SECRET_KEY、IM_TEST_QPDF_PATH、IM_TEST_CLAMD_SOCKET、IM_TEST_SCANNER_MANIFEST、IM_TEST_BROWSER_NODE、CHROMIUM_EXECUTABLE；新增IM_TEST_FILE_DOWNLOAD_ACCESS_KEY／SECRET_KEY及IM_TEST_FILE_BOOTSTRAP_ACCESS_KEY／SECRET_KEY。IM_TEST_FILE_BUSINESS_OUTPUT_DIR可指定私有输出，否则mktemp生成；输入schema／桶需专属归属校验。预检与Task13引导说明一致。准备固定探针、记录VersionID供两API复用，禁下载角色自建；编译四binary一次并校验SHA，测试帮助器复用旧OIDC／migration技术但不复用补挂Handler的newWebFileFixture。两节点分别owner／spool，严格资源注册／退出回收。脚本Go JSON解析必选14名称，任何缺失／FAIL／SKIP／非零退出均失败。
+- [x] **Step 4：验证GREEN。** 重跑Step2，四顶层0FAIL／0SKIP；脚本全14白名单直到Task12完成才通过，不得缩小白名单临时宣布通过。
+- [x] **Step 5：提交。** test(files): exercise official process configuration and dependency gates。
 
 ## Task 10：正式四类型生命周期及双节点幂等（RP03～06／10）
 
