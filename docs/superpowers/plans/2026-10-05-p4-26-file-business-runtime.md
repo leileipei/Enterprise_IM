@@ -186,7 +186,7 @@ ready.business_write_calls == 0; live.status == 200
 
 **Interfaces:** runAPI(ctx context.Context,getenv func(string)string,logger *slog.Logger) error，main只建信号ctx、调用并最终退出；shutdownAPI(server *http.Server,closers []func()error) error。fileRuntime.Close消费现有transfer.Close／download.Close；可测试私有shutdownAPIWithBudgets(server *http.Server,closers []func()error,httpGrace,closeGrace time.Duration) error，产品固定10秒／10秒。
 
-- [ ] **Step 1：写失败测试。** TestAPIShutdownActiveDownload、TestAPIStartupFailureClosesResources、TestAPIShutdownCleanupTimeout；阻塞真实连接+受控closer：先停接收／Shutdown，超时server.Close取消请求，后close；正常返回0，任一清理失败或10秒收尾超时error。listener／OIDC后续装配错误也逆序释放服务、锁、pool；不在函数内部os.Exit。Close恰一次，错误不输出目录／秘密。
+- [x] **Step 1：写失败测试。** TestAPIShutdownActiveDownload、TestAPIStartupFailureClosesResources、TestAPIShutdownCleanupTimeout；阻塞真实连接+受控closer：先停接收／Shutdown，超时server.Close取消请求，后close；正常返回0，任一清理失败或10秒收尾超时error。listener／OIDC后续装配错误也逆序释放服务、锁、pool；不在函数内部os.Exit。Close恰一次，错误不输出目录／秘密。
 
 ~~~text
 shutdown.http_budget == 10s; shutdown.close_budget == 10s
@@ -195,10 +195,10 @@ startup_failure.listener_open == false; closer_calls_each == 1
 cleanup_failure.exit_code != 0; cleanup_timeout.exit_code != 0
 ~~~
 
-- [ ] **Step 2：验证RED。** go test ./cmd/im-api -run 'TestAPI(Shutdown|StartupFailure)' -count=1；旧直接exit／等待问题FAIL。
-- [ ] **Step 3：最小实现。** 所有初始化资源登记closers；HTTP优先停止并强制取消剩余请求，服务关闭在单个有界收尾窗口，超时仍保留证据、上报失败。HTTP Serve异常也走同一退出路径。pool最后关，业务ctx/deadline不延长；故障close错误聚合固定类别。禁止通过修改DownloadTimeout或后台无界等待解决退出。
-- [ ] **Step 4：验证GREEN。** 重跑Step2及Task6命令，顺序／失败／超时PASS。SIGTERM／kill跨进程恢复留Task11证明。
-- [ ] **Step 5：提交。** fix(files): coordinate HTTP shutdown and download cleanup。
+- [x] **Step 2：验证RED。** go test ./cmd/im-api -run 'TestAPI(Shutdown|StartupFailure)' -count=1；旧直接exit／等待问题FAIL。
+- [x] **Step 3：最小实现。** 所有初始化资源登记closers；HTTP优先停止并强制取消剩余请求，服务关闭在单个有界收尾窗口，超时仍保留证据、上报失败。HTTP Serve异常也走同一退出路径。pool最后关，业务ctx/deadline不延长；故障close错误聚合固定类别。禁止通过修改DownloadTimeout或后台无界等待解决退出。
+- [x] **Step 4：验证GREEN。** 重跑Step2及Task6命令，顺序／失败／超时PASS。SIGTERM／kill跨进程恢复留Task11证明。
+- [x] **Step 5：提交。** fix(files): coordinate HTTP shutdown and download cleanup。
 
 ## Task 8：严格 repair-only 参数与数据库循环
 

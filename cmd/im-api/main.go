@@ -30,142 +30,159 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	dsn := os.Getenv("IM_DATABASE_URL")
-	if dsn == "" {
-		logger.Error("IM_DATABASE_URL is required")
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	if err := runAPI(ctx, os.Getenv, logger); err != nil {
+		logger.Error("im api unavailable")
 		os.Exit(1)
 	}
-	address := os.Getenv("IM_HTTP_ADDR")
+}
+
+func runAPI(parent context.Context, getenv func(string) string, logger *slog.Logger) (err error) {
+	ctx, cancelRuntime := context.WithCancel(parent)
+	var closers []func() error
+	closing := false
+	defer func() {
+		cancelRuntime()
+		if !closing {
+			err = errors.Join(err, shutdownAPI(nil, closers))
+		}
+	}()
+
+	dsn := getenv("IM_DATABASE_URL")
+	if dsn == "" {
+		logger.Error("IM_DATABASE_URL is required")
+		return errors.New("api startup unavailable")
+	}
+	address := getenv("IM_HTTP_ADDR")
 	if address == "" {
 		address = ":8080"
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		logger.Error("invalid database configuration")
-		os.Exit(1)
+		return errors.New("api startup unavailable")
 	}
-	defer pool.Close()
+	closers = append(closers, func() error { pool.Close(); return nil })
 	handler := httpserver.Handler(pool)
 	enabled, authConfig, err := adminConfigFromEnv(os.Getenv)
 	if err != nil {
-		logger.Error("invalid OIDC configuration", "error", err)
-		os.Exit(1)
+		logger.Error("invalid OIDC configuration")
+		return errors.New("api startup unavailable")
 	}
-	fileEnabled, fileConfig, fileSpool, err := fileUploadConfigFromEnv(os.Getenv, enabled)
+	fileEnabled, fileConfig, fileSpool, err := fileUploadConfigFromEnv(getenv, enabled)
 	if err != nil {
 		logger.Error("invalid file upload configuration")
-		os.Exit(1)
+		return errors.New("api startup unavailable")
 	}
-	fileBusiness, err := fileBusinessConfigFromEnv(os.Getenv, enabled)
+	fileBusiness, err := fileBusinessConfigFromEnv(getenv, enabled)
 	if err != nil {
 		logger.Error("invalid file business configuration")
-		os.Exit(1)
+		return errors.New("api startup unavailable")
 	}
-	fileRuntime, err := startFileRuntime(ctx, pool, os.Getenv, fileEnabled, fileConfig, fileSpool, fileBusiness)
+	fileRuntime, err := startFileRuntime(ctx, pool, getenv, fileEnabled, fileConfig, fileSpool, fileBusiness)
 	if err != nil {
 		logger.Error("file runtime unavailable")
-		os.Exit(1)
+		return errors.New("api startup unavailable")
 	}
-	defer fileRuntime.Close()
+	closers = append(closers, fileRuntime.Close)
 	readyChecks := []httpserver.Pinger{pool, apiPinger(fileRuntime.CheckHealth)}
-	webEnabled, webConfig, err := webConfigFromEnv(os.Getenv, enabled, authConfig)
+	webEnabled, webConfig, err := webConfigFromEnv(getenv, enabled, authConfig)
 	if err != nil {
-		logger.Error("invalid Web login configuration", "error", err)
-		os.Exit(1)
+		logger.Error("invalid Web login configuration")
+		return errors.New("api startup unavailable")
 	}
-	realtimeOptions, err := realtimeRedisOptionsFromEnv(os.Getenv, enabled)
+	realtimeOptions, err := realtimeRedisOptionsFromEnv(getenv, enabled)
 	if err != nil {
-		logger.Error("invalid realtime configuration", "error", err)
-		os.Exit(1)
+		logger.Error("invalid realtime configuration")
+		return errors.New("api startup unavailable")
 	}
-	realtimeStream, err := realtimeStreamFromEnv(os.Getenv, realtimeOptions != nil)
+	realtimeStream, err := realtimeStreamFromEnv(getenv, realtimeOptions != nil)
 	if err != nil {
-		logger.Error("invalid realtime Stream configuration", "error", err)
-		os.Exit(1)
+		logger.Error("invalid realtime Stream configuration")
+		return errors.New("api startup unavailable")
 	}
 	if enabled {
 		messageRate, err := messageRateFromEnv(os.Getenv)
 		if err != nil {
-			logger.Error("invalid message rate configuration", "error", err)
-			os.Exit(1)
+			logger.Error("invalid message rate configuration")
+			return errors.New("api startup unavailable")
 		}
 		authenticator, err := oidcauth.New(ctx, authConfig, oidcauth.Store{DB: pool})
 		if err != nil {
-			logger.Error("OIDC authentication unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("OIDC authentication unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithAdmin(pool, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("admin API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("admin API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithRetentionPolicy(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("retention policy API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("retention policy API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithAuditQuery(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("audit query API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("audit query API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithRetentionHistory(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("retention history API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("retention history API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithLegalHolds(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("legal hold API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("legal hold API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithRetentionBatches(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("retention batch API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("retention batch API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithSelfContext(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("self context API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("self context API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithDirectory(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("directory API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("directory API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = assembleFileRoutes(handler, authenticator, policystore.Service{DB: pool, MessageRatePerSecond: messageRate}, access.Service{DB: pool}, fileRuntime)
 		if err != nil {
 			logger.Error("file API assembly unavailable")
-			os.Exit(1)
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithMessageSearch(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("message search API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("message search API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithCrossMessageSearch(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("cross conversation search API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("cross conversation search API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		if realtimeOptions != nil {
 			redisClient := redis.NewClient(realtimeOptions)
-			defer redisClient.Close()
+			closers = append(closers, redisClient.Close)
 			checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			pingErr := redisClient.Ping(checkCtx).Err()
 			cancel()
 			if pingErr != nil {
 				logger.Error("realtime Redis unavailable at startup")
-				os.Exit(1)
+				return errors.New("api startup unavailable")
 			}
 			fanout, startErr := realtime.StartStreamFanout(ctx, redisClient, realtimeStream,
 				policystore.Service{DB: pool})
 			if startErr != nil {
-				logger.Error("realtime Stream unavailable at startup", "error", startErr)
-				os.Exit(1)
+				logger.Error("realtime Stream unavailable at startup")
+				return errors.New("api startup unavailable")
 			}
 			readyChecks = append(readyChecks, apiPinger(func(checkCtx context.Context) error {
 				if redisClient.Ping(checkCtx).Err() != nil {
@@ -181,16 +198,16 @@ func main() {
 			handler, err = httpserver.HandlerWithRealtimeNotifications(handler, authenticator,
 				policystore.Service{DB: pool}, realtime.RedisTickets{Client: redisClient}, ctx, fanout)
 			if err != nil {
-				logger.Error("realtime API unavailable", "error", err)
-				os.Exit(1)
+				logger.Error("realtime API unavailable")
+				return errors.New("api startup unavailable")
 			}
 			logger.Info("realtime notifications enabled", "stream", realtimeStream)
 		}
 		if webEnabled {
 			handler, err = webclient.NewHandler(handler, authenticator, webConfig, nil)
 			if err != nil {
-				logger.Error("Web client unavailable", "error", err)
-				os.Exit(1)
+				logger.Error("Web client unavailable")
+				return errors.New("api startup unavailable")
 			}
 			logger.Info("Web client enabled", "path", "/web/")
 		}
@@ -202,7 +219,7 @@ func main() {
 	handler, err = httpserver.HandlerWithRuntimeReady(handler, readyChecks...)
 	if err != nil {
 		logger.Error("runtime readiness unavailable")
-		os.Exit(1)
+		return errors.New("api startup unavailable")
 	}
 	server := &http.Server{
 		Addr:              address,
@@ -213,27 +230,24 @@ func main() {
 	}
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		logger.Error("http listener unavailable", "error", err)
-		os.Exit(1)
+		logger.Error("http listener unavailable")
+		return errors.New("api startup unavailable")
 	}
 	defer listener.Close()
 	errorsCh := make(chan error, 1)
 	go func() { errorsCh <- server.Serve(listener) }()
 	logger.Info("im api listening", "address", listener.Addr().String())
+	var serveErr error
 	select {
-	case err := <-errorsCh:
-		if !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("http server stopped", "error", err)
-			os.Exit(1)
+	case e := <-errorsCh:
+		if !errors.Is(e, http.ErrServerClosed) {
+			serveErr = errors.New("http server unavailable")
 		}
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			logger.Error("http shutdown failed", "error", err)
-			os.Exit(1)
-		}
 	}
+	cancelRuntime()
+	closing = true
+	return errors.Join(serveErr, shutdownAPI(server, closers))
 }
 
 func realtimeStreamFromEnv(getenv func(string) string, enabled bool) (string, error) {
