@@ -322,7 +322,7 @@ scripts/test-file-business-runtime.sh run-all
 
 - [x] **Step 3：一次整体独立评审及必要修正。** 沿既定方法使用requesting-code-review，一个fresh reviewer审固定产品SHA和规格／计划／实测证据；Critical／Important一轮具名RED→GREEN，必要代码修正提交后重新archive并重跑七门禁，不能只报定向通过；不派第二reviewer。没有finding时直接记录原报告。Minor独立列，旧P4-24分类后续项不混入。
 - [x] **Step 4：形成中文交付并自检。** 运维说明给出新旧环境矩阵、独立角色最小权限、探针引导／VersionID、稳定owner／目录部署预检、启动顺序、暂停上传与关闭业务／修复／物理删除独立命令、恢复及退出失败处理。验收分列原F01有效登录拒绝audit、生命周期、故障与未知边界；客户生产未验清单保持。证据目录0700／文件0600并生成hash；核对归属后停止本轮进程／容器，数据卷保留或删除分别记录，主工作区clean／前项ref不变。
-- [ ] **Step 5：提交与草稿交付。** docs(files): record P4-26 official process acceptance；推本专属分支并创建base=codex/p4-25-web-files-search-design草稿PR，正文用结构化参数或body-file，关联当前任务，记录URL／最终提交；不合并部署。若外部推送受阻，保留所有本地结果并明确阻塞动作，不伪造PR。
+- [x] **Step 5：提交与草稿交付。** docs(files): record P4-26 official process acceptance；推本专属分支并创建base=codex/p4-25-web-files-search-design草稿PR，正文用结构化参数或body-file，关联当前任务，记录URL／最终提交；不合并部署。若外部推送受阻，保留所有本地结果并明确阻塞动作，不伪造PR。
 
 ## 规格与验收覆盖自检
 

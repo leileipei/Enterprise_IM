@@ -229,4 +229,4 @@ P4-24已创建并关联[草稿PR #72](https://github.com/leileipei/Enterprise_IM
 
 以上P4-26设计／计划章节为实施前历史记录。本次13项计划已完成实现及修正后的七项固定源码门禁，源码`cc5f49de0e58bf69491afd5441d15661dadefd5d`；一次独立整体评审0Critical／2Important／0Minor，两项Important已通过一次具名RED→GREEN及完整七门禁修正，无第二reviewer。正式API已装配附件发送、授权GET及文件名搜索；业务总开关仍默认关闭，上传独立，typed_v1.download_available仍false。
 
-新增[验收记录](开发增量-P4-26-验收记录.md)及[运行配置](企业IM-P4-26-附件运行配置.md)。真实扫描／浏览器／两节点／动态撤权／保全与数据库专用修复已验；包括上传权限启动拒绝及实际慢客户端首块后SIGTERM、终态、独立审计确认、资源释放与同owner重启。3个本轮容器、2个scanner已停止，容器和数据卷保留，主工作区与P4-25前项不变。草稿PR将在文档提交后建立，客户IdP、M4、生产安全、供应商IAM、HA／容量／备份DR仍另验；本轮不合并、不部署。
+新增[验收记录](开发增量-P4-26-验收记录.md)及[运行配置](企业IM-P4-26-附件运行配置.md)。真实扫描／浏览器／两节点／动态撤权／保全与数据库专用修复已验；包括上传权限启动拒绝及实际慢客户端首块后SIGTERM、终态、独立审计确认、资源释放与同owner重启。3个本轮容器、2个scanner已停止，容器和数据卷保留，主工作区与P4-25前项不变。草稿PR已创建并关联当前任务：[P4-26](https://github.com/leileipei/Enterprise_IM/pull/74)，base=P4-25，保持draft；客户IdP、M4、生产安全、供应商IAM、HA／容量／备份DR仍另验；本轮不合并、不部署。
