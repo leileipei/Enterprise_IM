@@ -45,6 +45,17 @@ var fileAuditWritePrivileges = map[string][]string{
 func (s Service) CheckFileBusinessRuntime(ctx context.Context) error {
 	return s.checkFileRuntime(ctx, fileBusinessRuntimeTables, fileBusinessWritePrivileges, []string{"audit_events_id_seq", "policy_decision_events_id_seq"})
 }
+
+// CheckFileBusinessUploadRuntime checks only the additional permissions needed
+// by API reservation and PUT. Scanner/recovery worker grants are independent.
+func (s Service) CheckFileBusinessUploadRuntime(ctx context.Context) error {
+	return s.checkFileRuntime(ctx,
+		[]string{"file_objects", "file_lifecycle_events", "file_upload_attempts", "tenant_file_upload_policy"},
+		map[string][]string{
+			"file_objects": {"INSERT", "UPDATE"}, "file_lifecycle_events": {"INSERT"},
+			"file_upload_attempts": {"INSERT", "UPDATE"}, "tenant_file_upload_policy": {"UPDATE"},
+		}, nil)
+}
 func (s Service) CheckFileDownloadAuditRuntime(ctx context.Context) error {
 	return s.checkFileRuntime(ctx, fileAuditRuntimeTables, fileAuditWritePrivileges, []string{"file_worker_audit_events_id_seq"})
 }

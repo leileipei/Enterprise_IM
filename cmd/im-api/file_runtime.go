@@ -84,6 +84,11 @@ func startFileRuntime(ctx context.Context, pool *pgxpool.Pool, getenv func(strin
 		if err != nil || !installed {
 			return rt, files.ErrDependencyUnavailable
 		}
+		if business.Enabled {
+			if err = repo.CheckFileBusinessUploadRuntime(checkCtx); err != nil {
+				return rt, err
+			}
+		}
 		var objects objectstore.Store
 		if objects, err = objectstore.NewS3(uploadObjects); err != nil {
 			return rt, err

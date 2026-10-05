@@ -104,6 +104,25 @@ func TestFileBusinessProcessRP01(t *testing.T) {
 	f.assertEvidence(t)
 }
 func TestFileBusinessProcessRP02(t *testing.T) {
+	for _, permission := range []struct{ name, privilege, table string }{
+		{"missing_upload_object_insert", "INSERT", "file_objects"},
+		{"missing_upload_lifecycle_insert", "INSERT", "file_lifecycle_events"},
+		{"missing_upload_attempt_insert", "INSERT", "file_upload_attempts"},
+		{"missing_upload_attempt_update", "UPDATE", "file_upload_attempts"},
+	} {
+		t.Run(permission.name, func(t *testing.T) {
+			f := newFileBusinessProcessFixture(t)
+			run(t, f.conn, "REVOKE "+permission.privilege+" ON "+permission.table+" FROM "+f.apiRole)
+			// Download/send/search alone must not require upload-only writes.
+			f.startAPI(t, false, true, "api-a")
+			code, _, _ := f.request(t, "GET", "api-a", "/health/ready", "", "", nil, "")
+			businessStatus(t, code, 200)
+			f.stopProcess(t, "api-a", false)
+			// The combined runtime must refuse to listen with unusable upload permissions.
+			f.expectStartupFailure(t, f.apiEnvironment(true, true, "api-a"))
+			f.assertEvidence(t)
+		})
+	}
 	for _, scenario := range []string{"bad_flag", "space_flag", "missing_oidc", "missing_reader", "shared_upload_key", "bad_owner", "bad_probe", "bad_spool", "missing_schema", "bad_constraint", "bad_bucket", "bad_privilege", "symlink", "wide_mode", "wrong_probe_body"} {
 		t.Run(scenario, func(t *testing.T) {
 			f := newFileBusinessProcessFixture(t)

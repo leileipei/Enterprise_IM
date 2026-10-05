@@ -44,20 +44,5 @@ log="$IM_TEST_FILE_BUSINESS_OUTPUT_DIR/business-runtime.jsonl"
 if [[ -e "$log" || -L "$log" ]]; then echo 'fresh evidence path required' >&2; exit 2; fi
 status=0
 go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(0[1-9]|1[0-4])$' -count=1 > "$log" 2>&1 || status=$?
-python3 - "$log" "$status" <<'PY'
-import json,sys
-required={f'TestFileBusinessProcessRP{i:02d}' for i in range(1,15)}
-passed=set();failed=[];skipped=[]
-for line in open(sys.argv[1]):
- try:e=json.loads(line)
- except json.JSONDecodeError:continue
- action=e.get('Action');name=e.get('Test','')
- if action=='pass' and name:passed.add(name)
- if action=='fail':failed.append(name or e.get('Package'))
- if action=='skip':skipped.append(name or e.get('Package'))
-missing=required-passed
-if int(sys.argv[2]) or missing or failed or skipped:
- print('business-process gate failed; missing:',sorted(missing),'failed:',failed,'skipped:',skipped,file=sys.stderr);sys.exit(1)
-print('business-process gate passed; mandatory=14 FAIL=0 SKIP=0')
-PY
+python3 scripts/check-file-business-runtime.py "$log" "$status"
 printf 'private evidence: %s\n' "$log"

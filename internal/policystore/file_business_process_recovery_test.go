@@ -266,6 +266,80 @@ func TestFileBusinessProcessRP07(t *testing.T) {
 	})
 }
 func TestFileBusinessProcessRP08(t *testing.T) {
+	t.Run("slow_client_SIGTERM", func(t *testing.T) {
+		f := newFileBusinessProcessFixture(t)
+		f.startWorkers(t)
+		f.startAPI(t, true, true, "api-a")
+		body := bytes.Repeat([]byte("x"), 8<<20)
+		id := f.upload(t, "api-a", directA, "集团退出.txt", "text/plain", body, true)
+		f.sendFile(t, "api-a", directA, "direct", id, businessClientID())
+		address := strings.TrimPrefix(f.apiURL, "http://")
+		c, err := net.Dial("tcp", address)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		if err = c.(*net.TCPConn).SetReadBuffer(1024); err != nil {
+			t.Fatal(err)
+		}
+		if err = c.SetDeadline(time.Now().Add(25 * time.Second)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = fmt.Fprintf(c, "GET /api/v1/files/%s/content HTTP/1.1\r\nHost: %s\r\nAuthorization: Bearer %s\r\nX-Acting-Membership-ID: %s\r\n\r\n", id, address, f.token(t, "peer"), targetM2); err != nil {
+			t.Fatal(err)
+		}
+		res, err := http.ReadResponse(bufio.NewReader(c), nil)
+		if err != nil || res.StatusCode != 200 {
+			t.Fatal("actual first output absent", err)
+		}
+		defer res.Body.Close()
+		first := make([]byte, 32768)
+		n, err := io.ReadFull(res.Body, first)
+		if err != nil || n != len(first) || !bytes.Equal(first, body[:len(first)]) {
+			t.Fatal("actual first chunk absent", n, err)
+		}
+		// Keep the TCP connection open, but consume no further body before SIGTERM.
+		var session, phase string
+		if err = f.conn.QueryRow(context.Background(), `SELECT id::text,phase FROM file_download_sessions WHERE file_id=$1`, id).Scan(&session, &phase); err != nil || phase != "authorized" {
+			t.Fatal("shutdown did not start during actual output", phase, err)
+		}
+		spool := f.nodes["api-a"].SpoolDir
+		if _, err = os.Stat(filepath.Join(spool, session, ".session.json")); err != nil {
+			t.Fatal("active prepared spool absent", err)
+		}
+		signaled := time.Now()
+		f.stopProcess(t, "api-a", false)
+		exited := time.Now()
+		if exited.Sub(signaled) > 20*time.Second {
+			t.Fatal("slow-client SIGTERM exceeded 10+10")
+		}
+		var written int64
+		var ack bool
+		var terminals, audits int
+		err = f.conn.QueryRow(context.Background(), `SELECT s.phase,s.bytes_written,s.audit_acked,(SELECT count(*) FROM file_download_terminal_events WHERE session_id=s.id),(SELECT count(*) FROM file_worker_audit_events WHERE download_session_id=s.id) FROM file_download_sessions s WHERE s.id=$1`, session).Scan(&phase, &written, &ack, &terminals, &audits)
+		if err != nil || phase != "interrupted" || ack || terminals != 1 || audits != 0 || written >= int64(len(body)) {
+			t.Fatal("slow-client terminal evidence differs before audit repair", phase, written, ack, terminals, audits, err)
+		}
+		// API settlement persists the terminal fact; the separate official
+		// repair-only process acknowledges its machine audit, including retries.
+		f.restartRepair(t, true)
+		f.restartRepair(t, true)
+		err = f.conn.QueryRow(context.Background(), `SELECT s.audit_acked,(SELECT count(*) FROM file_download_terminal_events WHERE session_id=s.id),(SELECT count(*) FROM file_worker_audit_events WHERE download_session_id=s.id) FROM file_download_sessions s WHERE s.id=$1`, session).Scan(&ack, &terminals, &audits)
+		if err != nil || !ack || terminals != 1 || audits != 1 {
+			t.Fatal("slow-client terminal audit not acknowledged exactly once", ack, terminals, audits, err)
+		}
+		if _, err = os.Stat(filepath.Join(spool, session)); !os.IsNotExist(err) {
+			t.Fatal("prepared session was not released", err)
+		}
+		// Same owner and spool must reacquire the released process lock.
+		f.startAPI(t, false, true, "api-a")
+		code, _, _ := f.request(t, "GET", "api-a", "/health/ready", "", "", nil, "")
+		businessStatus(t, code, 200)
+		f.stopProcess(t, "api-a", false)
+		record, _ := json.Marshal(map[string]any{"client_received_before_SIGTERM": n, "server_writer_accepted": written, "phase_at_SIGTERM": "authorized", "terminal_phase": phase, "terminal_events": terminals, "terminal_audits": audits, "signaled_at": signaled.UTC(), "exited_at": exited.UTC(), "same_owner_restart_ready": true, "connection_kept_open_without_further_reads": true})
+		processPrivateFile(t, filepath.Join(f.privateRoot, "shutdown-slow-client.json"), record)
+		f.assertEvidence(t)
+	})
 	f := newFileBusinessProcessFixture(t)
 	f.startWorkers(t)
 	f.startAPI(t, true, true, "api-a")
