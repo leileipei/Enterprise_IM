@@ -66,6 +66,14 @@ func writeFileError(w http.ResponseWriter, e error) {
 	}
 }
 func HandlerWithFileMetadata(next http.Handler, auth Authenticator, svc FileMetadataService) (http.Handler, error) {
+	return handlerWithFileMetadata(next, auth, svc, true)
+}
+
+func HandlerWithFileStatus(next http.Handler, auth Authenticator, svc FileMetadataService) (http.Handler, error) {
+	return handlerWithFileMetadata(next, auth, svc, false)
+}
+
+func handlerWithFileMetadata(next http.Handler, auth Authenticator, svc FileMetadataService, reserveEnabled bool) (http.Handler, error) {
 	if next == nil || auth == nil || svc == nil {
 		return nil, errors.New("file metadata requires handler, authenticator and service")
 	}
@@ -82,7 +90,7 @@ func HandlerWithFileMetadata(next http.Handler, auth Authenticator, svc FileMeta
 		if !ok {
 			return
 		}
-		if r.URL.RawQuery != "" || r.Header.Get("Content-Encoding") != "" {
+		if r.URL.RawQuery != "" || r.URL.ForceQuery || r.Header.Get("Content-Encoding") != "" {
 			rejectAdmin(w, r, 400, "invalid_request")
 			return
 		}
@@ -107,6 +115,10 @@ func HandlerWithFileMetadata(next http.Handler, auth Authenticator, svc FileMeta
 				return
 			}
 			writeAdminJSON(w, 200, fileStatus(m))
+			return
+		}
+		if !reserveEnabled {
+			writeFileError(w, files.ErrDependencyUnavailable)
 			return
 		}
 		if r.Header.Get("Content-Type") != "application/json" {

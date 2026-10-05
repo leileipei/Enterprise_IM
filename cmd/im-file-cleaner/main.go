@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/filecleanup"
@@ -70,18 +69,34 @@ func newCleaner(ctx context.Context, getenv func(string) string) (cleanerOperati
 	ok = true
 	return &cleanerOps{pool: pool, repo: repo, worker: worker, owner: owner}, nil
 }
-func runCleaner(ctx context.Context, args []string, getenv func(string) string, out io.Writer, factory func(context.Context, func(string) string) (cleanerOperations, error)) error {
-	flags := flag.NewFlagSet("im-file-cleaner", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
-	execute := flags.Bool("execute", false, "explicit test operator execution")
-	once := flags.Bool("once", false, "one bounded sweep")
-	if e := flags.Parse(args); e != nil || flags.NArg() != 0 {
-		return errors.New("invalid cleaner arguments")
+
+type cleanerFactories struct {
+	cleanup func(context.Context, func(string) string) (cleanerOperations, error)
+	repair  func(context.Context, func(string) string) (repairOperations, error)
+}
+
+func runCleaner(ctx context.Context, args []string, getenv func(string) string, out io.Writer, factories cleanerFactories) error {
+	argsConfig, e := parseCleanerArguments(args)
+	if e != nil {
+		return e
 	}
-	if !*execute {
+	if !argsConfig.Execute {
 		return json.NewEncoder(out).Encode(map[string]any{"status": "file_cleaner_disabled"})
 	}
-	ops, e := factory(ctx, getenv)
+	if argsConfig.RepairOnly {
+		if factories.repair == nil {
+			return errors.New("download audit repair unavailable")
+		}
+		ops, e := factories.repair(ctx, getenv)
+		if e != nil {
+			return e
+		}
+		return runAuditRepair(ctx, argsConfig.Once, out, ops)
+	}
+	if factories.cleanup == nil {
+		return errors.New("cleaner unavailable")
+	}
+	ops, e := factories.cleanup(ctx, getenv)
 	if e != nil {
 		return e
 	}
@@ -117,7 +132,7 @@ func runCleaner(ctx context.Context, args []string, getenv func(string) string, 
 		if e = json.NewEncoder(out).Encode(map[string]any{"status": status, "processed": processed, "blocked": blocked, "repaired": repaired}); e != nil {
 			return e
 		}
-		if *once {
+		if argsConfig.Once {
 			if repairErr != nil || stepErr != nil {
 				return errors.New("cleaner sweep unavailable")
 			}
@@ -135,7 +150,7 @@ func runCleaner(ctx context.Context, args []string, getenv func(string) string, 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	if e := runCleaner(ctx, os.Args[1:], os.Getenv, os.Stdout, newCleaner); e != nil && !errors.Is(e, context.Canceled) {
+	if e := runCleaner(ctx, os.Args[1:], os.Getenv, os.Stdout, cleanerFactories{cleanup: newCleaner, repair: newAuditRepair}); e != nil && !errors.Is(e, context.Canceled) {
 		fmt.Fprintln(os.Stderr, "file cleaner unavailable")
 		os.Exit(1)
 	}

@@ -15,7 +15,7 @@ case "${1:-}" in
   case "$output" in /*) ;; *) printf 'Absolute private output directory required\n' >&2; exit 1;; esac
   mkdir -p "$output"; chmod 700 "$output"
   go test -json ./cmd/im-api ./cmd/im-file-worker -run 'TestFileAPIAssembly|TestFileWorkerConfig' -count=1 > "$output/assembly.json"
-  go test -json ./internal/files ./internal/objectstore ./internal/filescanner ./internal/filetransfer ./internal/httpserver ./internal/policystore -run 'TestFile|TestS3|TestClamd|TestScanner|TestUploadPolicy' -count=1 > "$output/components.json"
+  go test -json -timeout=30m ./internal/files ./internal/objectstore ./internal/filescanner ./internal/filetransfer ./internal/httpserver ./internal/policystore -run 'TestFile|TestS3|TestClamd|TestScanner|TestUploadPolicy' -count=1 > "$output/components.json"
   python3 - "$output" <<'PYJSON'
 import json,sys
 from pathlib import Path

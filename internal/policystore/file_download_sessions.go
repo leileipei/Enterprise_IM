@@ -58,7 +58,7 @@ func downloadLive(d downloadSession, at time.Time) bool {
 func sameDownloadSeal(a, b files.Metadata) bool {
 	return a.ID == b.ID && a.ConversationID == b.ConversationID && a.StateVersion == b.StateVersion && a.ObjectVersionID == b.ObjectVersionID && bytes.Equal(a.SHA256, b.SHA256) && a.ActualSizeBytes != nil && b.ActualSizeBytes != nil && *a.ActualSizeBytes == *b.ActualSizeBytes
 }
-func (s Service) BeginFileDownload(ctx context.Context, id access.TrustedIdentity, fileID, ownerID string, deadline time.Time) (filedownload.Ticket, error) {
+func (s Service) BeginFileDownload(ctx context.Context, id access.TrustedIdentity, fileID, ownerID string, deadline time.Time) (ticket filedownload.Ticket, err error) {
 	var zero filedownload.Ticket
 	id, e := fileIdentity(id)
 	if e != nil {
@@ -68,6 +68,15 @@ func (s Service) BeginFileDownload(ctx context.Context, id access.TrustedIdentit
 		return zero, filedownload.ErrNotFound
 	}
 	ownerID = strings.ToLower(ownerID)
+	// Visibility denials roll back the admission transaction. Persist their
+	// audit separately, without exposing or requiring the requested file origin.
+	defer func() {
+		if errors.Is(err, filedownload.ErrNotFound) && directoryUUIDPattern.MatchString(fileID) {
+			if e := s.auditFileDownloadDenial(ctx, id, strings.ToLower(fileID)); e != nil {
+				err = errors.Join(filedownload.ErrUnavailable, e)
+			}
+		}
+	}()
 	return downloadTransaction(ctx, s, func(tx pgx.Tx) (filedownload.Ticket, error) {
 		// Serializes the cross-node per-user admission before any conversation lock.
 		var user string
@@ -265,5 +274,27 @@ func finishDownloadTx(ctx context.Context, tx pgx.Tx, d downloadSession, r filed
 		return e
 	}
 	_, e := tx.Exec(ctx, `INSERT INTO file_download_terminal_events(session_id,tenant_id,file_id,outcome,reason_code,bytes_written,occurred_at) VALUES($1,$2,$3,$4,$5,$6,$7)`, d.ID, d.Tenant, d.File, r.Outcome, r.Reason, r.BytesWritten, at)
+	return e
+}
+
+func (s Service) auditFileDownloadDenial(ctx context.Context, id access.TrustedIdentity, fileID string) error {
+	_, e := fileTransaction(ctx, s, func(tx pgx.Tx) (bool, error) {
+		actor, found, e := loadMembership(ctx, tx, id.TenantID, id.ActingMembershipID, id.UserID)
+		if e != nil {
+			return false, e
+		}
+		at, e := fileClock(ctx, tx)
+		if e != nil {
+			return false, e
+		}
+		if !found || !memberActiveAt(actor, at) {
+			return false, nil
+		}
+		_, e = tx.Exec(ctx, `INSERT INTO audit_events(tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at) VALUES($1,$2,$3,'file_download','file',$4,'deny','file_not_available',$5)`, id.TenantID, id.UserID, id.ActingMembershipID, fileID, at)
+		if e != nil {
+			return false, errors.Join(ErrAuditUnavailable, e)
+		}
+		return true, nil
+	})
 	return e
 }

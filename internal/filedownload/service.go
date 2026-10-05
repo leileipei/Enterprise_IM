@@ -24,6 +24,7 @@ type Service struct {
 	repo           Repository
 	objects        objectstore.Store
 	owner          string
+	rootPath       string
 	root           *os.Root
 	lock           *os.File
 	slots          chan struct{}
@@ -61,7 +62,7 @@ func NewService(repo Repository, objects objectstore.Store, spoolRoot, ownerID s
 	if e != nil {
 		return nil, ErrUnavailable
 	}
-	return &Service{repo: repo, objects: objects, owner: ownerID, root: root, lock: lock, slots: make(chan struct{}, 4)}, nil
+	return &Service{repo: repo, objects: objects, owner: ownerID, rootPath: dir, root: root, lock: lock, slots: make(chan struct{}, 4)}, nil
 }
 func (s *Service) admit() error {
 	s.lifecycle.Lock()

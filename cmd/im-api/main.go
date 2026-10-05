@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -20,7 +18,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/access"
-	"github.com/leileipei/Enterprise_IM/internal/filetransfer"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/objectstore"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
@@ -33,208 +30,197 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	dsn := os.Getenv("IM_DATABASE_URL")
-	if dsn == "" {
-		logger.Error("IM_DATABASE_URL is required")
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	if err := runAPI(ctx, os.Getenv, logger); err != nil {
+		logger.Error("im api unavailable")
 		os.Exit(1)
 	}
-	address := os.Getenv("IM_HTTP_ADDR")
+}
+
+func runAPI(parent context.Context, getenv func(string) string, logger *slog.Logger) (err error) {
+	ctx, cancelRuntime := context.WithCancel(parent)
+	var closers []func() error
+	closing := false
+	defer func() {
+		cancelRuntime()
+		if !closing {
+			err = errors.Join(err, shutdownAPI(nil, closers))
+		}
+	}()
+
+	dsn := getenv("IM_DATABASE_URL")
+	if dsn == "" {
+		logger.Error("IM_DATABASE_URL is required")
+		return errors.New("api startup unavailable")
+	}
+	address := getenv("IM_HTTP_ADDR")
 	if address == "" {
 		address = ":8080"
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		logger.Error("invalid database configuration")
-		os.Exit(1)
+		return errors.New("api startup unavailable")
 	}
-	defer pool.Close()
+	closers = append(closers, func() error { pool.Close(); return nil })
 	handler := httpserver.Handler(pool)
 	enabled, authConfig, err := adminConfigFromEnv(os.Getenv)
 	if err != nil {
-		logger.Error("invalid OIDC configuration", "error", err)
-		os.Exit(1)
+		logger.Error("invalid OIDC configuration")
+		return errors.New("api startup unavailable")
 	}
-	fileEnabled, fileConfig, fileSpool, err := fileUploadConfigFromEnv(os.Getenv, enabled)
+	fileEnabled, fileConfig, fileSpool, err := fileUploadConfigFromEnv(getenv, enabled)
 	if err != nil {
 		logger.Error("invalid file upload configuration")
-		os.Exit(1)
+		return errors.New("api startup unavailable")
 	}
-	webEnabled, webConfig, err := webConfigFromEnv(os.Getenv, enabled, authConfig)
+	fileBusiness, err := fileBusinessConfigFromEnv(getenv, enabled)
 	if err != nil {
-		logger.Error("invalid Web login configuration", "error", err)
-		os.Exit(1)
+		logger.Error("invalid file business configuration")
+		return errors.New("api startup unavailable")
 	}
-	realtimeOptions, err := realtimeRedisOptionsFromEnv(os.Getenv, enabled)
+	fileRuntime, err := startFileRuntime(ctx, pool, getenv, fileEnabled, fileConfig, fileSpool, fileBusiness)
 	if err != nil {
-		logger.Error("invalid realtime configuration", "error", err)
-		os.Exit(1)
+		logger.Error("file runtime unavailable")
+		return errors.New("api startup unavailable")
 	}
-	realtimeStream, err := realtimeStreamFromEnv(os.Getenv, realtimeOptions != nil)
+	closers = append(closers, fileRuntime.Close)
+	readyChecks := []httpserver.Pinger{pool, apiPinger(fileRuntime.CheckHealth)}
+	webEnabled, webConfig, err := webConfigFromEnv(getenv, enabled, authConfig)
 	if err != nil {
-		logger.Error("invalid realtime Stream configuration", "error", err)
-		os.Exit(1)
+		logger.Error("invalid Web login configuration")
+		return errors.New("api startup unavailable")
+	}
+	realtimeOptions, err := realtimeRedisOptionsFromEnv(getenv, enabled)
+	if err != nil {
+		logger.Error("invalid realtime configuration")
+		return errors.New("api startup unavailable")
+	}
+	realtimeStream, err := realtimeStreamFromEnv(getenv, realtimeOptions != nil)
+	if err != nil {
+		logger.Error("invalid realtime Stream configuration")
+		return errors.New("api startup unavailable")
 	}
 	if enabled {
 		messageRate, err := messageRateFromEnv(os.Getenv)
 		if err != nil {
-			logger.Error("invalid message rate configuration", "error", err)
-			os.Exit(1)
+			logger.Error("invalid message rate configuration")
+			return errors.New("api startup unavailable")
 		}
 		authenticator, err := oidcauth.New(ctx, authConfig, oidcauth.Store{DB: pool})
 		if err != nil {
-			logger.Error("OIDC authentication unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("OIDC authentication unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithAdmin(pool, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("admin API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("admin API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithRetentionPolicy(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("retention policy API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("retention policy API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithAuditQuery(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("audit query API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("audit query API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithRetentionHistory(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("retention history API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("retention history API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithLegalHolds(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("legal hold API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("legal hold API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithRetentionBatches(handler, authenticator, access.Service{DB: pool})
 		if err != nil {
-			logger.Error("retention batch API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("retention batch API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithSelfContext(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("self context API unavailable", "error", err)
-			os.Exit(1)
-		}
-		handler, err = httpserver.HandlerWithFileCapabilities(handler, authenticator, access.Service{DB: pool}, productionFileCapabilities(fileEnabled))
-		if err != nil {
-			logger.Error("file capabilities API unavailable")
-			os.Exit(1)
-		}
-		handler, err = httpserver.HandlerWithFileRetentionPolicy(handler, authenticator, access.Service{DB: pool})
-		if err != nil {
-			logger.Error("file retention policy unavailable")
-			os.Exit(1)
+			logger.Error("self context API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithDirectory(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("directory API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("directory API unavailable")
+			return errors.New("api startup unavailable")
 		}
-		handler, err = httpserver.HandlerWithConversations(handler, authenticator, policystore.Service{DB: pool, MessageRatePerSecond: messageRate})
+		handler, err = assembleFileRoutes(handler, authenticator, policystore.Service{DB: pool, MessageRatePerSecond: messageRate}, access.Service{DB: pool}, fileRuntime)
 		if err != nil {
-			logger.Error("conversation API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("file API assembly unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithMessageSearch(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("message search API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("message search API unavailable")
+			return errors.New("api startup unavailable")
 		}
 		handler, err = httpserver.HandlerWithCrossMessageSearch(handler, authenticator, policystore.Service{DB: pool})
 		if err != nil {
-			logger.Error("cross conversation search API unavailable", "error", err)
-			os.Exit(1)
+			logger.Error("cross conversation search API unavailable")
+			return errors.New("api startup unavailable")
 		}
-		if fileEnabled {
-			objects, startErr := objectstore.NewS3(fileConfig)
-			checkCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-			if startErr == nil {
-				startErr = pool.Ping(checkCtx)
-			}
-			if startErr == nil {
-				var installed bool
-				startErr = pool.QueryRow(checkCtx, "SELECT to_regclass('file_objects') IS NOT NULL AND to_regclass('tenant_file_upload_policy') IS NOT NULL AND to_regclass('file_upload_attempts') IS NOT NULL").Scan(&installed)
-				if startErr == nil && !installed {
-					startErr = errors.New("file runtime migration unavailable")
-				}
-			}
-			if startErr == nil {
-				startErr = objects.ValidateCapabilities(checkCtx)
-			}
-			cancel()
-			if startErr != nil {
-				logger.Error("private versioned file storage unavailable")
-				os.Exit(1)
-			}
-			var owner [16]byte
-			if _, err = rand.Read(owner[:]); err != nil {
-				logger.Error("file node identity unavailable")
-				os.Exit(1)
-			}
-			owner[6] = (owner[6] & 15) | 64
-			owner[8] = (owner[8] & 63) | 128
-			ownerID := fmt.Sprintf("%x-%x-%x-%x-%x", owner[:4], owner[4:6], owner[6:8], owner[8:10], owner[10:])
-			transfer, startErr := filetransfer.NewService(policystore.Service{DB: pool}, objects, fileSpool, ownerID)
-			if startErr != nil {
-				logger.Error("file upload spool unavailable")
-				os.Exit(1)
-			}
-			defer transfer.Close()
-			handler, err = httpserver.HandlerWithFileUploadPolicy(handler, authenticator, access.Service{DB: pool})
-			if err == nil {
-				handler, err = httpserver.HandlerWithFileMetadata(handler, authenticator, policystore.Service{DB: pool})
-			}
-			if err == nil {
-				handler, err = httpserver.HandlerWithFileContent(handler, authenticator, transfer)
-			}
-			if err != nil {
-				logger.Error("file upload API unavailable")
-				os.Exit(1)
-			}
-		}
-		handler = productionFileSearchHandler(handler, authenticator)
 		if realtimeOptions != nil {
 			redisClient := redis.NewClient(realtimeOptions)
-			defer redisClient.Close()
+			closers = append(closers, redisClient.Close)
 			checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			pingErr := redisClient.Ping(checkCtx).Err()
 			cancel()
 			if pingErr != nil {
 				logger.Error("realtime Redis unavailable at startup")
-				os.Exit(1)
+				return errors.New("api startup unavailable")
 			}
 			fanout, startErr := realtime.StartStreamFanout(ctx, redisClient, realtimeStream,
 				policystore.Service{DB: pool})
 			if startErr != nil {
-				logger.Error("realtime Stream unavailable at startup", "error", startErr)
-				os.Exit(1)
+				logger.Error("realtime Stream unavailable at startup")
+				return errors.New("api startup unavailable")
 			}
+			readyChecks = append(readyChecks, apiPinger(func(checkCtx context.Context) error {
+				if redisClient.Ping(checkCtx).Err() != nil {
+					return errors.New("realtime unavailable")
+				}
+				select {
+				case <-fanout.Done():
+					return errors.New("realtime unavailable")
+				default:
+					return checkCtx.Err()
+				}
+			}))
 			handler, err = httpserver.HandlerWithRealtimeNotifications(handler, authenticator,
 				policystore.Service{DB: pool}, realtime.RedisTickets{Client: redisClient}, ctx, fanout)
 			if err != nil {
-				logger.Error("realtime API unavailable", "error", err)
-				os.Exit(1)
+				logger.Error("realtime API unavailable")
+				return errors.New("api startup unavailable")
 			}
 			logger.Info("realtime notifications enabled", "stream", realtimeStream)
 		}
 		if webEnabled {
 			handler, err = webclient.NewHandler(handler, authenticator, webConfig, nil)
 			if err != nil {
-				logger.Error("Web client unavailable", "error", err)
-				os.Exit(1)
+				logger.Error("Web client unavailable")
+				return errors.New("api startup unavailable")
 			}
 			logger.Info("Web client enabled", "path", "/web/")
 		}
 	}
 
-	handler = productionFileDownloadHandler(handler, fileEnabled)
+	if !enabled {
+		handler = httpserver.HandlerWithFileContentModes(handler, false, false)
+	}
+	handler, err = httpserver.HandlerWithRuntimeReady(handler, readyChecks...)
+	if err != nil {
+		logger.Error("runtime readiness unavailable")
+		return errors.New("api startup unavailable")
+	}
 	server := &http.Server{
 		Addr:              address,
 		Handler:           handler,
@@ -244,27 +230,24 @@ func main() {
 	}
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		logger.Error("http listener unavailable", "error", err)
-		os.Exit(1)
+		logger.Error("http listener unavailable")
+		return errors.New("api startup unavailable")
 	}
 	defer listener.Close()
 	errorsCh := make(chan error, 1)
 	go func() { errorsCh <- server.Serve(listener) }()
 	logger.Info("im api listening", "address", listener.Addr().String())
+	var serveErr error
 	select {
-	case err := <-errorsCh:
-		if !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("http server stopped", "error", err)
-			os.Exit(1)
+	case e := <-errorsCh:
+		if !errors.Is(e, http.ErrServerClosed) {
+			serveErr = errors.New("http server unavailable")
 		}
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			logger.Error("http shutdown failed", "error", err)
-			os.Exit(1)
-		}
 	}
+	cancelRuntime()
+	closing = true
+	return errors.Join(serveErr, shutdownAPI(server, closers))
 }
 
 func realtimeStreamFromEnv(getenv func(string) string, enabled bool) (string, error) {
@@ -398,8 +381,8 @@ func productionFileDownloadHandler(next http.Handler, uploadEnabled bool) http.H
 	return httpserver.HandlerWithClosedFileDownload(next, uploadEnabled)
 }
 
-func productionFileCapabilities(uploadEnabled bool) httpserver.FileCapabilities {
-	return httpserver.FileCapabilities{UploadEnabled: uploadEnabled}
+func productionFileCapabilities(uploadEnabled, businessEnabled bool) httpserver.FileCapabilities {
+	return httpserver.FileCapabilities{UploadEnabled: uploadEnabled, MessageSendEnabled: businessEnabled, DownloadEnabled: businessEnabled, FilenameSearchEnabled: businessEnabled}
 }
 
 func productionFileSearchHandler(next http.Handler, auth httpserver.Authenticator) http.Handler {
