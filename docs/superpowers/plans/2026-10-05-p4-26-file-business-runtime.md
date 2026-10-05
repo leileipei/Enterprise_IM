@@ -85,7 +85,7 @@ disabled.download_env_reads == 0; disabled.probe_requests == 0
 
 **Interfaces:** ReadOnlyStore interface{Store; ValidateReadProbe(context.Context,string) error}；NewS3ReadOnly(Config)(ReadOnlyStore,error)。ValidateCapabilities、ReadVersion沿用Store签名。只读PutVersion／FindAttemptVersions返回files.ErrDependencyUnavailable、零网络请求。
 
-- [ ] **Step 1：写失败测试。** TestS3ReadOnlyCredentials、TestS3ReadOnlyMutationsDenied、TestS3ReadProbeStrict、TestS3ReadProbeBudget；核对下载签名主体、零上传回退、两拒绝方法零请求；固定key／VersionID／LF完整匹配；错版／null／截断／额外字节／>1KiB／重定向／超时拒绝，body恰关闭一次。正常业务ReadVersion仍校验返回版本与尺寸。
+- [x] **Step 1：写失败测试。** TestS3ReadOnlyCredentials、TestS3ReadOnlyMutationsDenied、TestS3ReadProbeStrict、TestS3ReadProbeBudget；核对下载签名主体、零上传回退、两拒绝方法零请求；固定key／VersionID／LF完整匹配；错版／null／截断／额外字节／>1KiB／重定向／超时拒绝，body恰关闭一次。正常业务ReadVersion仍校验返回版本与尺寸。
 
 ~~~text
 probe.key == "_im_runtime/read-probe/v1"
@@ -95,10 +95,10 @@ readonly.PutVersion.error != nil; readonly.FindAttemptVersions.error != nil
 mutation_requests == 0; response_body_close_count == 1
 ~~~
 
-- [ ] **Step 2：验证RED。** go test ./internal/objectstore -run 'TestS3(ReadOnly|ReadProbe)' -count=1；缺新入口或行为FAIL。
-- [ ] **Step 3：最小实现。** 独立下载客户端固定download_environment及两凭据名；不要embedding暴露底层写方法。探针直接固定GetObject，不构造业务Location；先ValidateCapabilities再ValidateReadProbe由Task6调用，共用传输层及无重试／禁止重定向。探针只读最多1024字节，以期望长度+1侦测多余字节。
-- [ ] **Step 4：验证GREEN。** 重跑Step2及go test ./internal/objectstore -count=1；单测PASS，真实IAM证明留Task9，不把本项模拟服务当部署证据。
-- [ ] **Step 5：提交。** feat(files): add isolated read-only storage and versioned probe。
+- [x] **Step 2：验证RED。** go test ./internal/objectstore -run 'TestS3(ReadOnly|ReadProbe)' -count=1；缺新入口或行为FAIL。
+- [x] **Step 3：最小实现。** 独立下载客户端固定download_environment及两凭据名；不要embedding暴露底层写方法。探针直接固定GetObject，不构造业务Location；先ValidateCapabilities再ValidateReadProbe由Task6调用，共用传输层及无重试／禁止重定向。探针只读最多1024字节，以期望长度+1侦测多余字节。
+- [x] **Step 4：验证GREEN。** 重跑Step2及go test ./internal/objectstore -count=1；单测PASS，真实IAM证明留Task9，不把本项模拟服务当部署证据。
+- [x] **Step 5：提交。** feat(files): add isolated read-only storage and versioned probe。
 
 ## Task 3：真实数据库契约与角色权限预检
 
