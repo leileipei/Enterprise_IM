@@ -1,0 +1,8 @@
+# Local tools and test output
+.DS_Store
+*.test
+coverage.out
+bin/
+.env
+.env.*
+!.env.example

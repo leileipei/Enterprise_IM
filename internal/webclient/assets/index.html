@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102638">
+  <title>企业 IM · 集团协作</title>
+  <link rel="stylesheet" href="/web/style.css">
+  <script src="/web/retention.js" defer></script>
+  <script src="/web/legal-holds.js" defer></script>
+  <script src="/web/retention-history.js" defer></script>
+  <script src="/web/retention-policy.js" defer></script>
+  <script src="/web/audit.js" defer></script>
+  <script src="/web/message-search.js" defer></script>
+  <script src="/web/cross-message-search.js" defer></script>
+  <script src="/web/file-transport.js" defer></script>
+  <script src="/web/file-transfer.js" defer></script>
+  <script src="/web/file-messages.js" defer></script>
+  <script src="/web/file-download.js" defer></script>
+  <script src="/web/file-policy.js" defer></script>
+  <script src="/web/file-search.js" defer></script>
+  <script src="/web/app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <main>
+    <section id="login-view" class="login-view">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p class="eyebrow">ENTERPRISE IM · GROUP EDITION</p>
+      <h1>让集团沟通<br><em>回到同一个地方。</em></h1>
+      <p class="login-copy">以集团身份进入，在自己的组织任职下，与被授权的同事安全交流。</p>
+      <button id="login-button" class="primary-button" type="button">使用企业账号登录 <span aria-hidden="true">↗</span></button>
+      <p id="login-hint" class="hint" role="status">正在准备登录…</p>
+      <div class="login-foot"><span>集团统一身份</span><span>组织边界可控</span><span>消息可靠保存</span></div>
+    </section>
+
+    <section id="workspace" class="workspace hidden" aria-label="企业 IM 工作台">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <div class="small-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div><strong>企业 IM</strong><small>集团协作空间</small></div>
+        </div>
+        <div class="account-card">
+          <div id="avatar" class="avatar">IM</div>
+          <div class="account-text"><strong id="account-name">—</strong><small id="account-number">—</small></div>
+          <button id="logout-button" class="text-button" type="button" title="退出当前页面">退出</button>
+        </div>
+        <div class="identity-panel">
+          <div class="section-heading"><span>当前任职</span><span class="tag">身份</span></div>
+          <div id="identity-options" class="identity-options"></div>
+        </div>
+        <button id="cross-message-search-open" class="secondary-button hidden" type="button">搜索历史消息</button>
+        <button id="retention-policy-open" class="secondary-button hidden" type="button">消息保留期配置</button>
+        <button id="file-policy-upload-open" class="secondary-button hidden" type="button">文件上传策略</button>
+        <button id="file-policy-retention-open" class="secondary-button hidden" type="button">文件保留策略</button>
+        <button id="audit-open" class="secondary-button hidden" type="button">管理审计查询</button>
+        <div class="search-panel">
+          <label for="person-query" class="section-heading">查找同事</label>
+          <div class="search-row"><input id="person-query" type="search" placeholder="输入姓名，至少 2 个字" autocomplete="off"><button id="search-button" type="button" aria-label="搜索">⌕</button></div>
+          <p id="search-hint" class="microcopy">选择任职后，可查找通讯录内可见的同事。</p>
+          <div id="people-results" class="people-results"></div>
+        </div>
+        <div class="recent-panel"><div class="section-heading"><span>单聊会话</span><span class="tag">当前任职</span></div><div id="conversation-list" class="conversation-list"></div><button id="load-more-conversations" class="secondary-button hidden" type="button">加载更多会话</button></div>
+        <div class="recent-panel group-panel"><div class="section-heading"><span>我的群聊</span><span class="tag">全部任职</span></div><button id="group-create-open" class="secondary-button" type="button">新建群聊</button><div id="pending-group-invites" class="pending-group-invites hidden" aria-label="待确认邀请"></div><div id="pending-group-leaves" class="pending-group-invites hidden" aria-label="待确认退群"></div><div id="pending-group-removals" class="pending-group-invites hidden" aria-label="待确认移除"></div><div id="pending-group-transfers" class="pending-group-invites hidden" aria-label="待确认群主转让"></div><div id="group-list" class="group-list"></div><button id="load-more-groups" class="secondary-button hidden" type="button">加载更多群聊</button></div>
+        <div class="sidebar-foot">本地页面不会保存你的访问令牌。刷新后需重新登录。</div>
+      </aside>
+      <div class="chat-column">
+        <header class="chat-header"><div><p class="eyebrow" id="chat-mode">DIRECT MESSAGE</p><h2 id="chat-title">选择一位同事，开始沟通</h2><p id="chat-subtitle">选择任职后搜索可见人员</p><p id="group-policy-recheck-hint" class="hidden" role="status"></p></div><div class="chat-header-actions"><button id="message-search-open" class="secondary-button hidden" type="button">搜索消息</button><button id="retention-access-retry" class="secondary-button hidden" type="button">重试清理记录权限检查</button><button id="legal-holds-access-retry" class="secondary-button hidden" type="button">重试保全权限检查</button><button id="legal-holds-open" class="secondary-button hidden" type="button">法务保全</button><button id="retention-records-open" class="secondary-button hidden" type="button">清理记录</button><button id="group-policy-recheck" class="secondary-button hidden" type="button">复核群策略</button><button id="group-roster-open" class="secondary-button hidden" type="button">查看成员</button><button id="group-invite-open" class="secondary-button hidden" type="button">邀请成员</button><button id="group-leave-open" class="secondary-button hidden" type="button">退出群聊</button><span id="connection-state" class="connection-state">未连接</span></div></header>
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text"><div class="empty-state"><div class="empty-glyph">✦</div><strong>沟通从这里开始</strong><span>选择任职，查找同事，再发起单聊。</span></div></div>
+        <div id="file-save" class="file-save" aria-live="polite"></div>
+        <fieldset id="file-controls" class="file-controls" hidden><legend>发送附件</legend><label for="file-select">选择一个文件</label><input id="file-select" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt"><div class="file-actions"><button id="file-upload" type="button" class="secondary-button">上传并扫描</button><button id="file-status-query" type="button" class="secondary-button">查询状态</button><button id="file-original-retry" type="button" class="secondary-button" hidden>按原文件重试</button><button id="file-cancel" type="button" class="secondary-button" hidden>取消本页操作</button></div><p id="file-status" role="status">支持 PDF、PNG、JPEG、UTF-8 TXT，最多 25 MiB；取消不会删除服务器对象。</p></fieldset>
+        <form id="composer" class="composer"><label for="message-text" class="sr-only">消息正文</label><textarea id="message-text" rows="2" maxlength="16384" placeholder="选择会话后输入消息…" disabled></textarea><div class="composer-bottom"><span id="send-hint">服务端保存成功后显示“已保存”，不代表对方已收到。</span><div class="composer-actions"><button id="discard-pending" class="secondary-button hidden" type="button">放弃待确认</button><button id="send-button" class="primary-button" type="submit" disabled>发送 <span aria-hidden="true">↗</span></button></div></div></form>
+      </div>
+    </section>
+
+    <dialog id="file-policy-dialog" class="retention-records-dialog" aria-labelledby="file-policy-title">
+      <div class="retention-records-heading"><h2 id="file-policy-title">文件策略</h2><button id="file-policy-close" type="button" class="secondary-button">关闭</button></div>
+      <p>集团管理员可调整当前策略。已有文件适用当前保留期；待清理文件不可恢复。允许清理不会启动清理命令，命令需独立开启。</p>
+      <pre id="file-policy-current" class="file-policy-summary" aria-label="当前配置"></pre>
+      <button id="file-policy-reload" type="button" class="secondary-button">重新读取配置与历史</button>
+      <form id="file-policy-form" class="legal-hold-action-form" novalidate>
+        <fieldset id="file-policy-upload-fields"><legend>上传策略</legend>
+          <label><input id="file-policy-enabled" type="checkbox">允许上传</label>
+          <label for="file-policy-size">单文件上限（MiB，最多25；必须精确到整数个字节）</label><input id="file-policy-size" inputmode="decimal">
+          <label for="file-policy-budget">集团存储额度（GiB，最多1024）</label><input id="file-policy-budget" inputmode="decimal">
+          <label for="file-policy-ttl">上传预约期限（60～3600秒）</label><input id="file-policy-ttl" inputmode="numeric">
+          <div class="file-actions"><label><input id="file-policy-pdf" type="checkbox">PDF</label><label><input id="file-policy-png" type="checkbox">PNG</label><label><input id="file-policy-jpeg" type="checkbox">JPEG</label><label><input id="file-policy-txt" type="checkbox">UTF-8 TXT</label></div>
+        </fieldset>
+        <fieldset id="file-policy-retention-fields" hidden><legend>保留策略</legend><label for="file-policy-days">文件保留天数（1～3650）</label><input id="file-policy-days" inputmode="numeric"><label><input id="file-policy-cleanup" type="checkbox">允许文件清理</label></fieldset>
+        <label for="file-policy-reference">批准引用（必填，最多128字节）</label><input id="file-policy-reference" autocomplete="off">
+        <button id="file-policy-review" type="button" class="secondary-button">审阅本次变更</button>
+        <pre id="file-policy-preview" class="file-policy-summary" aria-label="新旧配置对比"></pre>
+        <label><input id="file-policy-confirm" type="checkbox">已核对新旧值、版本和批准引用</label><button id="file-policy-save" type="submit" class="primary-button">保存配置</button>
+      </form>
+      <p id="file-policy-hint" role="status"></p><h3>变更历史</h3><button id="file-policy-history-refresh" type="button" class="secondary-button">刷新历史</button><ul id="file-policy-history" class="retention-records-list"></ul><button id="file-policy-more" type="button" class="secondary-button" hidden>继续加载历史</button>
+    </dialog>
+    <dialog id="cross-message-search-dialog" class="retention-records-dialog" aria-labelledby="cross-message-search-title" aria-describedby="cross-message-search-boundary">
+      <div class="retention-records-heading"><div><h2 id="cross-message-search-title">搜索历史消息</h2><p id="cross-message-search-context" class="microcopy"></p></div><button id="cross-message-search-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="cross-message-search-form" class="legal-hold-action-form" novalidate>
+        <label for="cross-message-search-mode" class="sr-only">搜索内容</label><select id="cross-message-search-mode" class="hidden"><option value="text">正文</option><option value="file">文件名称</option></select>
+        <label for="cross-message-search-query">关键词（2～100 字）</label><input id="cross-message-search-query" type="search" autocomplete="off" spellcheck="false" placeholder="输入正文片段，例如工单编号" aria-describedby="cross-message-search-boundary">
+        <label for="cross-message-search-kind">搜索范围</label><select id="cross-message-search-kind"><option value="all">全部</option><option value="direct">单聊</option><option value="group">群聊</option></select>
+        <button id="cross-message-search-apply" class="primary-button" type="submit">搜索</button>
+      </form>
+      <p id="cross-message-search-boundary" class="microcopy">搜索本人可读取的历史正文，每页重新检查权限。空页也可能需要继续查询；新消息可用“刷新，从头查询”重新查找。</p>
+      <button id="cross-message-search-refresh" class="secondary-button" type="button">刷新，从头查询</button>
+      <p id="cross-message-search-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="cross-message-search-list" class="retention-records-list" aria-label="匹配消息"></ul>
+      <button id="cross-message-search-more" class="secondary-button hidden" type="button">继续查询</button>
+    </dialog>
+    <dialog id="message-search-dialog" class="retention-records-dialog" aria-labelledby="message-search-title" aria-describedby="message-search-boundary">
+      <div class="retention-records-heading"><div><h2 id="message-search-title">搜索会话消息</h2><p id="message-search-context" class="microcopy"></p></div><button id="message-search-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="message-search-form" class="legal-hold-action-form" novalidate>
+        <label for="message-search-mode" class="sr-only">搜索内容</label><select id="message-search-mode" class="hidden"><option value="text">正文</option><option value="file">文件名称</option></select>
+        <label for="message-search-query">关键词（2～100 字）</label><input id="message-search-query" type="search" autocomplete="off" spellcheck="false" placeholder="输入正文片段，例如工单编号" aria-describedby="message-search-boundary">
+        <button id="message-search-apply" class="primary-button" type="submit">搜索</button>
+      </form>
+      <p id="message-search-boundary" class="microcopy">按正文片段匹配，仅展示当前可见的消息。未匹配的一页也可继续查询；每页都会重新检查权限。</p>
+      <button id="message-search-refresh" class="secondary-button" type="button">刷新，从头查询</button>
+      <p id="message-search-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="message-search-list" class="retention-records-list" aria-label="匹配消息"></ul>
+      <button id="message-search-more" class="secondary-button hidden" type="button">继续查询</button>
+    </dialog>
+    <dialog id="audit-dialog" class="retention-records-dialog" aria-labelledby="audit-title" aria-describedby="audit-boundary">
+      <div class="retention-records-heading"><div><h2 id="audit-title">管理审计查询</h2><p id="audit-context" class="microcopy"></p></div><button id="audit-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="audit-form" class="legal-hold-action-form" novalidate>
+        <label for="audit-actor">执行人用户 ID（留空查询全部）</label><input id="audit-actor" type="text" autocomplete="off" spellcheck="false" placeholder="填写完整 UUID，按用户 ID 精确查询">
+        <label for="audit-action">动作代码（留空查询全部）</label><input id="audit-action" type="text" autocomplete="off" placeholder="例如 retention_policy_update">
+        <label for="audit-outcome">操作结果</label><select id="audit-outcome"><option value="">全部结果</option><option value="allow">允许</option><option value="deny">拒绝</option></select>
+        <label for="audit-resource-type">资源类型（留空查询全部）</label><input id="audit-resource-type" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-resource-help" placeholder="例如 conversation 或 tenant">
+        <label for="audit-resource-id">资源 ID（留空查询该类型全部记录）</label><input id="audit-resource-id" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-resource-help" placeholder="填写完整 UUID">
+        <p id="audit-resource-help" class="microcopy">填写资源 ID 时须同时填写资源类型；按类型和 ID 精确查询已登记审计。</p>
+        <label for="audit-from">开始时间（包含）</label><input id="audit-from" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-time-help" placeholder="例如 2026-10-03T00:00:00+08:00">
+        <label for="audit-until">结束时间（不包含）</label><input id="audit-until" type="text" autocomplete="off" spellcheck="false" aria-describedby="audit-time-help" placeholder="例如 2026-10-04T00:00:00+08:00">
+        <p id="audit-time-help" class="microcopy">可只填写一端，留空不限时间。需带时区（Z 或 +08:00 等），小数秒最多 6 位；开始时间须早于结束时间。</p>
+        <div class="group-create-actions"><button id="audit-apply" class="primary-button" type="submit">查询</button><button id="audit-refresh" class="secondary-button" type="button">刷新首页</button></div>
+      </form>
+      <p id="audit-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="audit-list" class="retention-records-list" aria-label="集团管理审计记录"></ul>
+      <button id="audit-more" class="secondary-button hidden" type="button">加载更多记录</button>
+      <p id="audit-boundary" class="microcopy">按发生时间从新到旧排列，当前页不代表全部记录。新事件请刷新首页查看；查询操作本身也会留下审计，可在后续查询中看到。时间按本机时区显示，括号中保留原始时间精度。此处只读查询已登记操作，不包含规则命中明细，也不代表审批核验或清理任务已执行。</p>
+    </dialog>
+    <dialog id="retention-policy-dialog" class="retention-records-dialog" aria-labelledby="retention-policy-title" aria-describedby="retention-policy-boundary">
+      <div class="retention-records-heading"><div><h2 id="retention-policy-title">消息保留期配置</h2><p id="retention-policy-context" class="microcopy"></p></div><button id="retention-policy-close" class="secondary-button" type="button">关闭</button></div>
+      <div id="retention-policy-current" class="retention-record-card" aria-label="当前租户保留期配置"></div>
+      <form id="retention-policy-form" class="legal-hold-action-form" novalidate>
+        <label for="retention-policy-days">正文保留期限（1～3650 天）</label><input id="retention-policy-days" type="number" min="1" max="3650" step="1" inputmode="numeric" required>
+        <label for="retention-policy-reference">已取得的审批引用（1～128 个字符）</label><input id="retention-policy-reference" type="text" autocomplete="off" required>
+        <label><input id="retention-policy-confirm" type="checkbox">已取得审批，确认此更改作用于当前集团全部消息；缩短期限可能使既有消息立即到期，并在清理任务运行后清除正文。</label>
+        <div class="group-create-actions"><button id="retention-policy-submit" class="primary-button" type="submit">确认保存</button><button id="retention-policy-retry" class="secondary-button hidden" type="button">按原版本重试</button><button id="retention-policy-abandon" class="secondary-button hidden" type="button">放弃核对</button></div>
+      </form>
+      <button id="retention-policy-refresh" class="secondary-button" type="button">刷新当前配置</button>
+      <p id="retention-policy-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <button id="retention-history-toggle" class="secondary-button" type="button" aria-expanded="false" aria-controls="retention-history-section">查看审批历史</button>
+      <section id="retention-history-section" class="hidden" aria-labelledby="retention-history-title">
+        <h3 id="retention-history-title">保留期变更审批历史</h3>
+        <button id="retention-history-refresh" class="secondary-button" type="button">刷新审批历史</button>
+        <p id="retention-history-hint" class="microcopy" role="status" aria-live="polite"></p>
+        <ul id="retention-history-list" class="retention-records-list" aria-label="已提交保留期变更审批"></ul>
+        <button id="retention-history-more" class="secondary-button hidden" type="button">加载更多版本</button>
+        <p class="microcopy">按版本从新到旧排列；当前页不代表全部记录。翻页期间的新变更请刷新查看。历史只记录已提交的期限、审批引用及登记信息，不核验外部审批，也不代表清理任务已执行。</p>
+      </section>
+      <p id="retention-policy-boundary" class="microcopy">此配置属于当前集团（租户），不是单个会话。有消息历史时不能延长期限。保存配置不会启动清理任务，也不能恢复已清除的正文。有效法务保全仍暂停物理清理，但不改变到期正文的读取遮蔽。审批引用仅记录，不核验外部审批。结果待确认时先查询服务器状态；刷新或强制退出会丢失本页核对信息，需重新核查服务器配置和审计记录。时间按本机时区显示。</p>
+    </dialog>
+    <dialog id="retention-records-dialog" class="retention-records-dialog" aria-labelledby="retention-records-title" aria-describedby="retention-records-boundary">
+      <div class="retention-records-heading"><div><h2 id="retention-records-title">清理记录</h2><p id="retention-records-conversation"></p></div><button id="retention-records-close" class="secondary-button" type="button">关闭</button></div>
+      <div class="retention-records-toolbar"><label for="retention-records-kind">清理类型</label><select id="retention-records-kind"><option value="body">消息正文</option><option value="digest">内容摘要</option></select><button id="retention-records-refresh" class="secondary-button" type="button">刷新</button></div>
+      <p id="retention-records-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="retention-records-list" class="retention-records-list" aria-label="已提交清理批次"></ul>
+      <button id="retention-records-more" class="secondary-button hidden" type="button">加载更多批次</button>
+      <p id="retention-records-boundary" class="microcopy">序号边界可能有间隔，请以实际数量为准。这里只显示在线库已提交的清理记录，不代表备份或外部副本已擦除。新批次请刷新查看。</p>
+    </dialog>
+    <dialog id="legal-holds-dialog" class="retention-records-dialog" aria-labelledby="legal-holds-title" aria-describedby="legal-holds-boundary">
+      <div class="retention-records-heading"><div><h2 id="legal-holds-title">法务保全</h2><p id="legal-holds-conversation"></p></div><button id="legal-holds-close" class="secondary-button" type="button">关闭</button></div>
+      <form id="legal-hold-action-form" class="legal-hold-action-form">
+        <h3 id="legal-hold-action-title">登记保全</h3>
+        <p id="legal-hold-action-target" class="microcopy"></p>
+        <label id="legal-hold-reference-label" for="legal-hold-reference">案件引用（1～128 个字符）</label>
+        <input id="legal-hold-reference" type="text" autocomplete="off" required>
+        <label id="legal-hold-confirm-label" class="hidden"><input id="legal-hold-confirm" type="checkbox">已取得解除审批，并确认仅解除上述这一项保全。</label>
+        <div class="group-create-actions"><button id="legal-hold-submit" class="primary-button" type="submit">登记保全</button><button id="legal-hold-cancel" class="secondary-button" type="button">取消填写</button><button id="legal-hold-retry" class="secondary-button hidden" type="button">按原编号重试</button><button id="legal-hold-abandon" class="secondary-button hidden" type="button">放弃本次重试</button></div>
+        <p id="legal-hold-action-hint" class="microcopy" role="status" aria-live="polite"></p>
+        <p class="microcopy">提交前须取得相应授权。审批引用仅记录，不核验外部审批。结果待确认时请先重试或明确放弃；刷新或强制退出会丢失本页重试信息，需重新核查服务器记录。</p>
+      </form>
+      <button id="legal-holds-refresh" class="secondary-button" type="button">刷新</button>
+      <p id="legal-holds-hint" class="microcopy" role="status" aria-live="polite"></p>
+      <ul id="legal-holds-list" class="retention-records-list" aria-label="会话法务保全记录"></ul>
+      <button id="legal-holds-more" class="secondary-button hidden" type="button">加载更多保全</button>
+      <p id="legal-holds-boundary" class="microcopy">会话可有多项保全，仍有任一项有效时暂停正文与摘要清理。当前页不代表全部状态，请继续加载核查。保全不改变到期正文的读取遮蔽。案件与审批引用仅记录，不核验外部审批结果。时间按本机时区显示。</p>
+    </dialog>
+    <dialog id="group-create-dialog" class="group-create-dialog" aria-labelledby="group-create-title">
+      <form id="group-create-form">
+        <h2 id="group-create-title">新建群聊</h2>
+        <p class="microcopy">以当前任职创建群聊；可从通讯录搜索结果选择 1～20 位初始成员。</p>
+        <label for="group-create-name">群名</label>
+        <input id="group-create-name" name="name" autocomplete="off" required>
+        <label for="group-create-query">查找初始成员</label>
+        <div class="group-create-search-row"><input id="group-create-query" type="search" autocomplete="off" placeholder="输入姓名，至少 2 个字"><button id="group-create-search" class="secondary-button" type="button">搜索成员</button></div>
+        <p id="group-create-search-hint" class="microcopy" role="status">搜索当前任职下可见的同事。</p>
+        <div id="group-create-results" class="group-create-results"></div>
+        <p class="group-create-count">已选 <span id="group-create-count">0</span> / 20 人</p>
+        <div id="group-create-selected" class="group-create-selected"></div>
+        <p id="group-create-hint" class="microcopy" role="status"></p>
+        <div class="group-create-actions"><button id="group-create-cancel" class="secondary-button" type="button">取消</button><button id="group-create-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-create-submit" class="primary-button" type="submit">创建群聊</button></div>
+      </form>
+    </dialog>
+    <dialog id="group-invite-dialog" class="group-create-dialog" aria-labelledby="group-invite-title">
+      <form id="group-invite-form">
+        <h2 id="group-invite-title">邀请成员</h2>
+        <p id="group-invite-group" class="microcopy"></p>
+        <label for="group-invite-query">查找要邀请的同事</label>
+        <div class="group-create-search-row"><input id="group-invite-query" type="search" autocomplete="off" placeholder="输入姓名，至少 2 个字"><button id="group-invite-search" class="secondary-button" type="button">搜索成员</button></div>
+        <p id="group-invite-search-hint" class="microcopy" role="status">搜索当前任职下可见的同事。</p>
+        <div id="group-invite-results" class="group-create-results"></div>
+        <p class="group-create-count">已选成员</p>
+        <div id="group-invite-selected" class="group-create-selected"></div>
+        <p id="group-invite-hint" class="microcopy" role="status"></p>
+        <div class="group-create-actions"><button id="group-invite-cancel" class="secondary-button" type="button">取消</button><button id="group-invite-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-invite-submit" class="primary-button" type="submit">发送邀请</button></div>
+      </form>
+    </dialog>
+    <dialog id="group-leave-dialog" class="group-create-dialog group-leave-dialog" aria-labelledby="group-leave-title">
+      <h2 id="group-leave-title">退出群聊</h2>
+      <p id="group-leave-group" class="microcopy"></p>
+      <p id="group-leave-hint" class="microcopy" role="status"></p>
+      <div class="group-create-actions"><button id="group-leave-cancel" class="secondary-button" type="button">稍后处理</button><button id="group-leave-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-leave-confirm" class="primary-button" type="button">确认退出</button><button id="group-leave-retry" class="primary-button hidden" type="button">重试退群</button></div>
+    </dialog>
+    <dialog id="group-roster-dialog" class="group-create-dialog group-roster-dialog" aria-labelledby="group-roster-title">
+      <h2 id="group-roster-title">群成员</h2>
+      <p id="group-roster-group" class="microcopy"></p>
+      <p id="group-roster-hint" class="microcopy" role="status"></p>
+      <div id="group-roster-members" class="group-roster-members" role="list" aria-label="当前群成员"></div>
+      <div class="group-create-actions"><button id="group-roster-load-more" class="secondary-button hidden" type="button">加载更多成员</button><button id="group-roster-retry" class="secondary-button hidden" type="button">重试</button><button id="group-roster-close" class="secondary-button" type="button">关闭</button></div>
+    </dialog>
+    <dialog id="group-remove-dialog" class="group-create-dialog group-leave-dialog" aria-labelledby="group-remove-title">
+      <h2 id="group-remove-title">移除群成员</h2>
+      <p id="group-remove-target" class="microcopy"></p>
+      <p id="group-remove-hint" class="microcopy" role="status"></p>
+      <div class="group-create-actions"><button id="group-remove-cancel" class="secondary-button" type="button">稍后处理</button><button id="group-remove-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-remove-confirm" class="primary-button" type="button">确认移除</button><button id="group-remove-retry" class="primary-button hidden" type="button">重试移除</button></div>
+    </dialog>
+    <dialog id="group-transfer-dialog" class="group-create-dialog group-leave-dialog" aria-labelledby="group-transfer-title">
+      <h2 id="group-transfer-title">转让群主</h2>
+      <p id="group-transfer-target" class="microcopy"></p>
+      <p id="group-transfer-hint" class="microcopy" role="status"></p>
+      <div class="group-create-actions"><button id="group-transfer-cancel" class="secondary-button" type="button">稍后处理</button><button id="group-transfer-discard" class="secondary-button hidden" type="button">放弃待确认</button><button id="group-transfer-confirm" class="primary-button" type="button">确认转让</button><button id="group-transfer-retry" class="primary-button hidden" type="button">重试转让</button></div>
+    </dialog>
+  </main>
+  <div id="notice" class="notice hidden" role="status"></div>
+</body>
+</html>

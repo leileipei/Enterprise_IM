@@ -1,0 +1,154 @@
+package policystore
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/leileipei/Enterprise_IM/internal/access"
+)
+
+type PulledMessage struct {
+	MessageType  string
+	Attachment   *MessageAttachment
+	MessageID    string
+	Seq          int64
+	SenderUserID string
+	Text         string
+	ServerTime   time.Time
+	Redacted     bool
+}
+
+type MessagePage struct {
+	ConversationID string
+	Messages       []PulledMessage
+	NextAfterSeq   int64
+	HasMore        bool
+}
+
+func auditMessageRead(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
+	conversationID, outcome, reason string, at time.Time, action string) error {
+	_, err := tx.Exec(ctx, `
+INSERT INTO audit_events (tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at)
+VALUES ($1,$2,$3,$8,'conversation',$4,$5,$6,$7)`, id.TenantID, id.UserID,
+		id.ActingMembershipID, nullableID(conversationID), outcome, reason, at, action)
+	return err
+}
+
+func finishMessageRead(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity,
+	conversationID, outcome, reason string, at time.Time, action string) error {
+	if err := auditMessageRead(ctx, tx, id, conversationID, outcome, reason, at, action); err != nil {
+		return errors.Join(ErrAuditUnavailable, err)
+	}
+	return tx.Commit(ctx)
+}
+
+// PullTextMessages returns one bounded page of direct messages. Historical
+// recipient identity, not the conversation's current selection, establishes
+// who was authorized at the time of each send.
+func (s Service) PullTextMessages(ctx context.Context, id access.TrustedIdentity,
+	conversationID string, afterSeq int64, limit int) (MessagePage, error) {
+	return s.readTextMessages(ctx, id, conversationID, afterSeq, limit, "message_pull")
+}
+
+func (s Service) readTextMessages(ctx context.Context, id access.TrustedIdentity, conversationID string, afterSeq int64, limit int, action string) (MessagePage, error) {
+	if !directoryUUIDPattern.MatchString(conversationID) || afterSeq < 0 || limit < 1 || limit > 500 {
+		return MessagePage{}, ErrInvalidMessageRequest
+	}
+	conversationID = strings.ToLower(conversationID)
+	if s.DB == nil || id.TenantID == "" || id.UserID == "" || id.ActingMembershipID == "" {
+		return MessagePage{}, ErrForbidden
+	}
+	id.TenantID = strings.ToLower(id.TenantID)
+	id.UserID = strings.ToLower(id.UserID)
+	id.ActingMembershipID = strings.ToLower(id.ActingMembershipID)
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return MessagePage{}, err
+	}
+	defer tx.Rollback(ctx)
+	if action == "message_search" {
+		if _, err = tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); err != nil {
+			return MessagePage{}, err
+		}
+	}
+	finish := func(conversationID, outcome, reason string, at time.Time) error {
+		return finishMessageRead(ctx, tx, id, conversationID, outcome, reason, at, action)
+	}
+	at := s.now()
+	actor, found, err := loadMembership(ctx, tx, id.TenantID, id.ActingMembershipID, id.UserID)
+	if err != nil {
+		return MessagePage{}, err
+	}
+	if fresh := s.now(); fresh.After(at) {
+		at = fresh
+	}
+	if !found || !memberActiveAt(actor, at) {
+		if err := finish("", "deny", "invalid_identity", at); err != nil {
+			return MessagePage{}, err
+		}
+		return MessagePage{}, ErrForbidden
+	}
+	var lowUser, highUser string
+	err = tx.QueryRow(ctx, `SELECT direct_user_low_id::text,direct_user_high_id::text
+FROM conversations WHERE tenant_id=$1 AND id=$2 AND kind='direct' FOR SHARE`,
+		id.TenantID, conversationID).Scan(&lowUser, &highUser)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !strings.EqualFold(id.UserID, lowUser) && !strings.EqualFold(id.UserID, highUser)) {
+		if err := finish("", "deny", "conversation_unavailable", at); err != nil {
+			return MessagePage{}, err
+		}
+		return MessagePage{}, ErrMessageNotAvailable
+	}
+	if err != nil {
+		return MessagePage{}, err
+	}
+	retention, err := messageBodyRetentionForTenant(ctx, tx, id.TenantID)
+	if err != nil {
+		return MessagePage{}, err
+	}
+	// Hold the policy pointer during the read, so a new hard deny cannot be
+	// published between policy selection and message filtering.
+	var currentPolicyVersion int64
+	err = tx.QueryRow(ctx, `SELECT current_version FROM policy_current WHERE tenant_id=$1 FOR SHARE`,
+		id.TenantID).Scan(&currentPolicyVersion)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return MessagePage{}, err
+	}
+	version, err := currentVersion(ctx, tx, id.TenantID)
+	if err != nil {
+		return MessagePage{}, err
+	}
+	rules, err := loadRules(ctx, tx, id.TenantID, version)
+	if err != nil {
+		return MessagePage{}, err
+	}
+	scope := historyReadContext{Identity: id, Actor: actor, Rules: rules, Retention: retention}
+	read := readDirectHistoryBatchTx
+	if action == "message_search" {
+		read = readDirectTextSearchBatchTx
+	}
+	batch, err := read(ctx, tx, scope, conversationID, afterSeq, limit)
+	if err != nil {
+		return MessagePage{}, err
+	}
+	if fresh := s.now(); fresh.After(at) {
+		at = fresh
+	}
+	if !memberActiveAt(actor, at) {
+		if err := finish("", "deny", "invalid_identity", at); err != nil {
+			return MessagePage{}, err
+		}
+		return MessagePage{}, ErrForbidden
+	}
+	page := filterDirectHistoryBatch(scope, batch, at)
+	reason := "history_page"
+	if action == "message_search" {
+		reason = "direct_search_page"
+	}
+	if err := finish(conversationID, "allow", reason, at); err != nil {
+		return MessagePage{}, err
+	}
+	return page, nil
+}
