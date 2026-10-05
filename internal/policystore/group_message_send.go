@@ -373,7 +373,7 @@ func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIden
 			return MessageACK{}, err
 		}
 		if exists {
-			return s.finishExistingFileMessage(ctx, tx, id, ack, same, s.now(), func(fresh time.Time) error {
+			return s.finishExistingAuthorizedMessage(ctx, tx, id, ack, same, s.now(), func(fresh time.Time) error {
 				if !memberActiveAt(actor, fresh) {
 					return ErrForbidden
 				}
@@ -389,7 +389,12 @@ func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIden
 			id.UserID, clientMessageID, digest); err != nil {
 			return MessageACK{}, err
 		} else if exists {
-			return finishExistingMessage(ctx, tx, id, ack, same, at)
+			return s.finishExistingAuthorizedMessage(ctx, tx, id, ack, same, at, func(fresh time.Time) error {
+				if !memberActiveAt(actor, fresh) {
+					return ErrForbidden
+				}
+				return nil
+			})
 		}
 	}
 	if groupStatus == "policy_blocked" {
@@ -582,7 +587,7 @@ func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIden
 	}
 	if isFile {
 		var checkedAt time.Time
-		err = s.finishFileMessageSend(ctx, tx, id, groupID, "group_send", at, func(fresh time.Time) error {
+		err = s.finishAuthorizedMessageSend(ctx, tx, id, groupID, "group_send", at, func(fresh time.Time) error {
 			checkedAt = fresh
 			if !memberActiveAt(actor, fresh) {
 				return ErrForbidden
@@ -611,7 +616,9 @@ func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIden
 		if err != nil {
 			return MessageACK{}, err
 		}
-	} else if err := finishMessageSend(ctx, tx, id, groupID, "allow", "group_send", at); err != nil {
+	} else if err := s.finishAuthorizedMessageSend(ctx, tx, id, groupID, "group_send", at, func(fresh time.Time) error {
+		return recheckGroupSendTime(ctx, tx, id, groupID, actor, members, rules, version, at, fresh)
+	}); err != nil {
 		return MessageACK{}, err
 	}
 	return ack, nil

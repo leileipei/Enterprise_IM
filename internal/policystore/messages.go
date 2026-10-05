@@ -197,7 +197,12 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 		if ack, exists, same, err := existingMessageACK(ctx, tx, id.TenantID, conversationID, id.UserID, clientMessageID, digest); err != nil {
 			return MessageACK{}, err
 		} else if exists {
-			return finishExistingMessage(ctx, tx, id, ack, same, at)
+			return s.finishExistingAuthorizedMessage(ctx, tx, id, ack, same, at, func(fresh time.Time) error {
+				if !memberActiveAt(actor, fresh) {
+					return ErrForbidden
+				}
+				return nil
+			})
 		}
 	}
 	if snapshot.status != "active" {
@@ -236,7 +241,7 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 	}
 	if replayExists {
 		if isFile {
-			return s.finishExistingFileMessage(ctx, tx, id, replayACK, replaySame, s.now(), func(fresh time.Time) error {
+			return s.finishExistingAuthorizedMessage(ctx, tx, id, replayACK, replaySame, s.now(), func(fresh time.Time) error {
 				if !memberActiveAt(actor, fresh) {
 					return ErrForbidden
 				}
@@ -250,7 +255,12 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 				return nil
 			})
 		}
-		return finishExistingMessage(ctx, tx, id, replayACK, replaySame, at)
+		return s.finishExistingAuthorizedMessage(ctx, tx, id, replayACK, replaySame, at, func(fresh time.Time) error {
+			if !memberActiveAt(actor, fresh) {
+				return ErrForbidden
+			}
+			return nil
+		})
 	}
 	target, targetFound, err := loadMembership(ctx, tx, id.TenantID, targetMembershipID, "")
 	if err != nil {
@@ -305,6 +315,12 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 		if _, err = tx.Exec(ctx, "SAVEPOINT file_send_provisional"); err != nil {
 			return MessageACK{}, err
 		}
+	} else {
+		// A rate or audit lock wait can cross an authorization time boundary.
+		// Keep every business write provisional until the final fresh check.
+		if _, err = tx.Exec(ctx, "SAVEPOINT direct_text_send_provisional"); err != nil {
+			return MessageACK{}, err
+		}
 	}
 	allowed, err := reserveMessageRate(ctx, tx, id.TenantID, id.UserID, at, maxRate)
 	if err != nil {
@@ -352,7 +368,7 @@ VALUES ($1,$2,$3,$4,'message_created',$5,$5)`, id.TenantID, conversationID,
 		return MessageACK{}, err
 	}
 	if isFile {
-		err = s.finishFileMessageSend(ctx, tx, id, conversationID, string(decision.Reason), at, func(fresh time.Time) error {
+		err = s.finishAuthorizedMessageSend(ctx, tx, id, conversationID, string(decision.Reason), at, func(fresh time.Time) error {
 			if !memberActiveAt(actor, fresh) {
 				return ErrForbidden
 			}
@@ -383,8 +399,31 @@ VALUES ($1,$2,$3,$4,'message_created',$5,$5)`, id.TenantID, conversationID,
 			}
 			return MessageACK{}, err
 		}
-	} else if err := finishMessageSend(ctx, tx, id, conversationID, "allow", string(decision.Reason), at); err != nil {
-		return MessageACK{}, err
+	} else {
+		err = s.finishAuthorizedMessageSend(ctx, tx, id, conversationID, string(decision.Reason), at, func(fresh time.Time) error {
+			if !memberActiveAt(actor, fresh) {
+				return ErrForbidden
+			}
+			if !memberActiveAt(target, fresh) {
+				return ErrMessageNotAvailable
+			}
+			d := policy.Evaluate(policy.Input{Action: policy.ActionSendMessage, Actor: actor, Target: target, At: fresh, ScopeAllowed: true, ResourceActive: true, PolicyVersion: version, Rules: rules})
+			if !d.Allowed {
+				return ErrMessageNotAvailable
+			}
+			return nil
+		})
+		if err != nil {
+			if errors.Is(err, ErrForbidden) || errors.Is(err, ErrMessageNotAvailable) {
+				if _, rollbackErr := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT direct_text_send_provisional"); rollbackErr != nil {
+					return MessageACK{}, rollbackErr
+				}
+				if auditErr := finishMessageSend(ctx, tx, id, conversationID, "deny", "authorization_changed", s.now()); auditErr != nil {
+					return MessageACK{}, auditErr
+				}
+			}
+			return MessageACK{}, err
+		}
 	}
 	return ack, nil
 }

@@ -30,7 +30,10 @@ func (s Service) SendMessage(ctx context.Context, id access.TrustedIdentity, con
 	}
 	return MessageACK{}, ErrFileMessageUnavailable
 }
-func (s Service) finishFileMessageSend(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, conversationID, reason string, at time.Time, recheck func(time.Time) error) error {
+
+// finishAuthorizedMessageSend checks authorization after the last success-audit
+// I/O, immediately before committing either a text or file message.
+func (s Service) finishAuthorizedMessageSend(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, conversationID, reason string, at time.Time, recheck func(time.Time) error) error {
 	if err := auditMessageSend(ctx, tx, id, conversationID, "allow", reason, at); err != nil {
 		return errors.Join(ErrAuditUnavailable, err)
 	}
@@ -40,14 +43,14 @@ func (s Service) finishFileMessageSend(ctx context.Context, tx pgx.Tx, id access
 	return tx.Commit(ctx)
 }
 
-func (s Service) finishExistingFileMessage(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, ack MessageACK, same bool, at time.Time, recheck func(time.Time) error) (MessageACK, error) {
+func (s Service) finishExistingAuthorizedMessage(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, ack MessageACK, same bool, at time.Time, recheck func(time.Time) error) (MessageACK, error) {
 	if !same {
 		return finishExistingMessage(ctx, tx, id, ack, false, at)
 	}
 	if _, err := tx.Exec(ctx, "SAVEPOINT file_replay_provisional"); err != nil {
 		return MessageACK{}, err
 	}
-	err := s.finishFileMessageSend(ctx, tx, id, ack.ConversationID, "idempotent_replay", at, recheck)
+	err := s.finishAuthorizedMessageSend(ctx, tx, id, ack.ConversationID, "idempotent_replay", at, recheck)
 	if err != nil {
 		if errors.Is(err, ErrForbidden) || errors.Is(err, ErrMessageNotAvailable) || errors.Is(err, ErrConversationContextChanged) {
 			if _, rollbackErr := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT file_replay_provisional"); rollbackErr != nil {

@@ -6,7 +6,7 @@
 
 本分支实现 P1 集团模型、管理授权、身份认证、通讯录与通信策略基础，P2 单聊与浏览器基础能力，P3 群成员管理、群文本消息写入、区间补拉与群列表 API，并实现 P4 消息正文保留期、租户配置、会话级法务保全及默认关闭的正文／摘要清理。配置有效的身份提供方后，可显式启用受保护 API 与 Web 页面。**尚无消息正文直推、设备送达确认及客户环境的完整断线恢复验收；客户身份提供方尚未联调。**
 
-P4-21 已增加文件元数据、生命周期、不可变事件与保护性数据库迁移，详见 [文件基础验收记录](docs/开发增量-P4-21-验收记录.md)。当前没有文件上传、扫描、发送或下载接口；25 MiB 是模型上限，完整文件能力仍按 P4-22～P4-25 推进。
+P4-21～P4-26 已实现文件元数据与生命周期、上传与受控扫描、单聊／群聊附件消息、授权下载、文件名搜索及保全感知清理，并完成正式 API 装配和本地进程验收。附件业务总开关 `IM_FILE_BUSINESS_ENABLED` 默认关闭；上传和物理清理独立启用，25 MiB 是模型上限。配置与验收边界见 [附件运行配置](docs/企业IM-P4-26-附件运行配置.md) 和 [P4-26 验收记录](docs/开发增量-P4-26-验收记录.md)。客户联调、完整 M4 及生产放行仍未完成。
 
 受保护管理 API 合约：
 
@@ -66,9 +66,9 @@ Outbox Worker 从 PostgreSQL 领取到期事件并写入 Redis Stream，成功�
 
 单聊文本可通过 `GET /api/v1/conversations/{id}/messages?after_seq=0&limit=100` 按会话序号升序补拉。`after_seq` 必填，`limit` 可选（默认 100，最大 500）。响应中的 `next_after_seq` 用于下一页；`has_more` 表示是否还有后续序号。不可见或已满当前租户正文保留期的消息只返回 `seq` 和 `redacted:true`，不返回消息 ID、发送者、正文或时间；客户端仍须推进游标。过期消息在读取时遮蔽；启用独立正文清理 Worker 后，在线库的到期正文会被置空，已清理消息始终返回遮蔽占位。Web 客户端先检查一页内的序号连续性及页游标，发现缺口则保留原游标并重试，避免把尚未显示的消息跳过去。补拉依据消息发送时保存的双方任职及组织快照；迁移前无法证明接收任职的旧消息只能返回不可见占位，不能用当前会话任职自动回填。冻结账户或失效任职不能补拉，现行 `send_message` 强制拒绝会撤销匹配内容的读取，普通通信隔离不追溯删除已授权历史。该接口不提供实时推送或设备送达确认。
 
-单会话正文搜索使用 `GET /api/v1/conversations/{id}/messages/search?q=关键词&limit=20&cursor=...`；群聊使用 `/api/v1/groups/{id}/messages/search`。关键词去除首尾空白后须为 2～100 字符，按 Unicode 小写后的字面子串匹配；limit 为 1～50。先沿用历史权限、hard_deny、正文保留期及清理状态校验，再匹配可见正文，法务保全不扩大可见期。匹配的 `seq` 为十进制字符串。每次检查最多 500 条历史，`has_more` 代表还需续查，空数组也可能有下一页；客户端应继续使用绑定身份、任职、会话、类型和关键词的游标，直到末页。每页重新授权并同事务登记 `message_search` 审计，审计失败不返回结果；不提供总命中数。见 [P4-17 验收记录](docs/开发增量-P4-17-验收记录.md)。Web 会话标题栏提供“搜索消息”，关键词变化、关闭或切换会话／任职会清空结果；空页仍可继续查询，异常结果整页拒绝。结果独立于同步时间线，仅在页面内存保存。见 [P4-18 页面验收记录](docs/开发增量-P4-18-验收记录.md)。跨会话 API 使用 `GET /api/v1/messages/search?q=关键词&kind=all&limit=20&cursor=...`；kind 可选 all／direct／group，省略默认为 all。仅搜索当前用户历史参与的会话，每页最多处理 20 个会话和合计 500 条消息，结果按会话 UUID／seq 排序；空页也可能需要续查。游标绑定租户、用户、当前任职、规范关键词和 kind；不是授权凭证。已走过会话中的新消息须从首页刷新。每页同事务重新授权并登记 `message_search_all` 审计，错误不返回部分正文或游标。见 [P4-19 API 验收记录](docs/开发增量-P4-19-验收记录.md)。Web 侧栏“搜索历史消息”可在有效任职下跨历史会话查询，无需先选择聊天；支持全部／单聊／群聊筛选、空页续查和首页刷新。结果按会话 ID／序号展示，改词、改范围、切换任职、关闭或退出会清空；迟到响应不能回填。见 [P4-20 页面验收记录](docs/开发增量-P4-20-验收记录.md)。附件搜索仍待后续。
+单会话正文搜索使用 `GET /api/v1/conversations/{id}/messages/search?q=关键词&limit=20&cursor=...`；群聊使用 `/api/v1/groups/{id}/messages/search`。关键词去除首尾空白后须为 2～100 字符，按 Unicode 小写后的字面子串匹配；limit 为 1～50。先沿用历史权限、hard_deny、正文保留期及清理状态校验，再匹配可见正文，法务保全不扩大可见期。匹配的 `seq` 为十进制字符串。每次检查最多 500 条历史，`has_more` 代表还需续查，空数组也可能有下一页；客户端应继续使用绑定身份、任职、会话、类型和关键词的游标，直到末页。每页重新授权并同事务登记 `message_search` 审计，审计失败不返回结果；不提供总命中数。见 [P4-17 验收记录](docs/开发增量-P4-17-验收记录.md)。Web 会话标题栏提供“搜索消息”，关键词变化、关闭或切换会话／任职会清空结果；空页仍可继续查询，异常结果整页拒绝。结果独立于同步时间线，仅在页面内存保存。见 [P4-18 页面验收记录](docs/开发增量-P4-18-验收记录.md)。跨会话 API 使用 `GET /api/v1/messages/search?q=关键词&kind=all&limit=20&cursor=...`；kind 可选 all／direct／group，省略默认为 all。仅搜索当前用户历史参与的会话，每页最多处理 20 个会话和合计 500 条消息，结果按会话 UUID／seq 排序；空页也可能需要续查。游标绑定租户、用户、当前任职、规范关键词和 kind；不是授权凭证。已走过会话中的新消息须从首页刷新。每页同事务重新授权并登记 `message_search_all` 审计，错误不返回部分正文或游标。见 [P4-19 API 验收记录](docs/开发增量-P4-19-验收记录.md)。Web 侧栏“搜索历史消息”可在有效任职下跨历史会话查询，无需先选择聊天；支持全部／单聊／群聊筛选、空页续查和首页刷新。结果按会话 ID／序号展示，改词、改范围、切换任职、关闭或退出会清空；迟到响应不能回填。见 [P4-20 页面验收记录](docs/开发增量-P4-20-验收记录.md)。附件搜索现支持按文件名查询；授权与 Web 交互见 [P4-25 验收记录](docs/开发增量-P4-25-验收记录.md)，正式服务配置见 [P4-26 运行说明](docs/企业IM-P4-26-附件运行配置.md)。
 
-显式配置 `IM_REALTIME_REDIS_URL` 后，浏览器可用相同身份头向 `POST /api/v1/realtime/tickets` 申请 30 秒一次性票据，再以子协议 `enterprise-im.v1`、`ticket.<票据>` 连接同源 `GET /api/v1/realtime` WebSocket。票据不放在 URL；服务器只回显 `enterprise-im.v1`。连接成功首先收到 `{"type":"ready","resync_required":true}`，客户端应立即用上次连续确认的 `seq` 调用上述 HTTP 补拉。新消息发布到 Redis Stream 后，本机在线的单聊双方会收到 `{"type":"sync_required"}`，再次通过 HTTP 补拉；该信号不包含正文、会话 ID 或序号，也不是送达确认。票据不可重复使用，任职或账号失效时连接会关闭。Redis 或通知读者不可用时票据入口和就绪探针返回 503，现有连接关闭并等待重连补拉。
+显式配置 `IM_REALTIME_REDIS_URL` 后，浏览器可用相同身份头向 `POST /api/v1/realtime/tickets` 申请 30 秒一次性票据，再以子协议 `enterprise-im.v1`、`ticket.<票据>` 连接同源 `GET /api/v1/realtime` WebSocket。票据不放在 URL；服务器只回显 `enterprise-im.v1`。连接成功首先收到 `{"type":"ready","resync_required":true}`，客户端应立即用上次连续确认的 `seq` 调用上述 HTTP 补拉。新消息发布到 Redis Stream 后，本机在线的单聊双方及消息序号对应群成员区间内的用户会收到 `{"type":"sync_required"}`，再次通过 HTTP 补拉；该信号不包含正文、会话 ID 或序号，也不是送达确认。票据不可重复使用，任职或账号失效时连接会关闭。Redis 或通知读者不可用时票据入口和就绪探针返回 503，现有连接关闭并等待重连补拉。
 
 ## 本地运行
 
@@ -94,9 +94,14 @@ docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERRO
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000014_conversation_legal_hold.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000015_message_body_clear.up.sql
 docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000016_message_digest_retirement.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000017_cross_message_search_indexes.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000018_file_foundation.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000019_file_upload_scan.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000020_file_message.up.sql
+docker exec -i enterprise-im-dev-db psql -U postgres -d enterprise_im -v ON_ERROR_STOP=1 < db/migrations/000021_file_download_retention.up.sql
 ```
 
-迁移脚本包含显式事务；执行中途出错时，已创建的表会回滚。
+首次安装应按顺序执行上述全部 21 个迁移。每个迁移脚本包含显式事务；当前脚本失败时回滚该脚本，之前成功执行的脚本仍保留。现有数据库应先核对已经执行的迁移并备份，再只执行尚未应用的脚本；不能把首次安装清单直接重复运行。
 
 然后启动服务：
 
@@ -247,6 +252,6 @@ go vet ./...
 
 `multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复，同时从生产管理员 API 展示正文／摘要清理批次与已解除／有效法务保全，并通过浏览器实际登记／解除一项保全，断言查询、写入审计与事件记录；同时实际修改租户正文保留期，通过页面读取已提交审批历史、按允许／拒绝结果查询管理审计并核对查询审计、已有消息时拒绝延长和另一租户不受影响。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000016` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚，需先妥善迁移或清理对应数据。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000021` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000021` 在有下载会话、删除承诺、删除任务、文件策略历史或相关运行证据时，`000020` 在有文件消息或附件关联时，`000019` 在有上传、扫描、文件 Worker 审计或上传策略历史时，`000018` 在有文件对象或生命周期事件时会拒绝回滚；`000017` 仅删除本次新增的消息检索索引。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚。不应为绕过回滚保护而删除业务证据；应按数据保护和恢复方案处理。
 
 真实浏览器集成测试在 macOS/Linux 上运行，需额外设置 `IM_TEST_BROWSER_NODE`（Node 可执行文件）、`NODE_PATH`（包含 Playwright 的 `node_modules`）；使用外部安装的 Chrome/Chromium 时设置 `CHROMIUM_EXECUTABLE`，再运行 `go test ./internal/policystore -run '^TestRealBrowserLoginRealtimeAndOfflinePull$' -count=1`。未设置 `IM_TEST_BROWSER_NODE` 时该用例跳过；需同时设置上述 PostgreSQL 与 Redis 测试 URL。
