@@ -267,7 +267,7 @@ RP10.same_client_uuid.message_count == 1; RP10.attachment_count == 1; RP10.outbo
 
 **Interfaces:** TestFileBusinessProcessRP07／TestFileBusinessProcessRP08／TestFileBusinessProcessRP09；(*fileBusinessProcessFixture).signalAPI(t *testing.T,node string,signal os.Signal)；restartRepair(t *testing.T,once bool)；waitTerminal(t *testing.T,sessionID string)。证据查询沿既有下载终态／机器审计表，不修改业务事务。
 
-- [ ] **Step 1：写失败场景。** RP07实际JWT到期、hard_deny、任职／上传者停用、退群再入gap、TTL／计划策略，客户端已接字节与后续禁止输出分列；RP08活跃流SIGTERM≤10+10秒退出、kill后同owner回收合法来源、未知／错误owner保留拒绝、两节点独立锁；RP09停止修复并产生真实audit未结算→同file拒绝→repair-only restart/once恢复，terminal配对／机器audit恰一，无S3请求／清理作业变化。RF3及RF5包括目录替换、提交后杀repair、长期DB故障及取消。
+- [x] **Step 1：写失败场景。** RP07实际JWT到期、hard_deny、任职／上传者停用、退群再入gap、TTL／计划策略，客户端已接字节与后续禁止输出分列；RP08活跃流SIGTERM≤10+10秒退出、kill后同owner回收合法来源、未知／错误owner保留拒绝、两节点独立锁；RP09停止修复并产生真实audit未结算→同file拒绝→repair-only restart/once恢复，terminal配对／机器audit恰一，无S3请求／清理作业变化。RF3及RF5包括目录替换、提交后杀repair、长期DB故障及取消。
 
 ~~~text
 RP07.after_revocation.additional_content_is_authorized == false
@@ -276,10 +276,10 @@ RP09.machine_terminal_audit_count == 1; RP09.session.audit_acked == true
 RP09.repair_s3_requests == 0; RP09.cleanup_jobs_after == RP09.cleanup_jobs_before
 ~~~
 
-- [ ] **Step 2：验证RED或新增回归。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(07|08|09)$' -count=1；新产品差异须先具名失败，不能用测试自行伪造结算通过。
-- [ ] **Step 3：实现进程故障驱动。** 启动可观测限速代理但不模拟业务服务；修改真实DB权限／策略产生故障，恢复所有修改仅限本项schema。故障后按原60秒下载deadline／租约等待process_lost/unknown，修复实际调用official binary；S3审计和数据库只读计数同时证明零删除，HTTP shutdown错误不能被测试隐藏。引用原在途每chunk／一秒期限，不宽松放大窗口。
-- [ ] **Step 4：验证GREEN。** 重跑Step2，3顶层0FAIL／0SKIP；真实PID退出、锁重开、合法孤儿／未知保留、审计恰一次与机器原因字段证据齐全。
-- [ ] **Step 5：提交。** test(files): verify revocation shutdown and audit-only recovery。
+- [x] **Step 2：验证RED或新增回归。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(07|08|09)$' -count=1；新产品差异须先具名失败，不能用测试自行伪造结算通过。
+- [x] **Step 3：实现进程故障驱动。** 启动可观测限速代理但不模拟业务服务；修改真实DB权限／策略产生故障，恢复所有修改仅限本项schema。故障后按原60秒下载deadline／租约等待process_lost/unknown，修复实际调用official binary；S3审计和数据库只读计数同时证明零删除，HTTP shutdown错误不能被测试隐藏。引用原在途每chunk／一秒期限，不宽松放大窗口。
+- [x] **Step 4：验证GREEN。** 重跑Step2，3顶层0FAIL／0SKIP；真实PID退出、锁重开、合法孤儿／未知保留、审计恰一次与机器原因字段证据齐全。
+- [x] **Step 5：提交。** test(files): verify revocation shutdown and audit-only recovery。
 
 ## Task 12：Chrome正式链路、未知结果与正常预算（RP11／14，补RP03）
 

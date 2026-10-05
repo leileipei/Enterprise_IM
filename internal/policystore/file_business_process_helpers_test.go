@@ -58,6 +58,8 @@ type fileBusinessProcessFixture struct {
 	objectGateway                                                              *httptest.Server
 	objectFault                                                                atomic.Int32
 	objectWrites                                                               atomic.Int64
+	objectRequests                                                             atomic.Int64
+	objectGate                                                                 atomic.Pointer[processObjectGate]
 	client                                                                     *http.Client
 	redis                                                                      *redis.Client
 	browserSubject                                                             atomic.Value
@@ -244,10 +246,17 @@ func newFileBusinessProcessFixture(t *testing.T) *fileBusinessProcessFixture {
 		t.Fatal("invalid fixture endpoint")
 	}
 	objects := httputil.NewSingleHostReverseProxy(target)
+	objects.ModifyResponse = func(res *http.Response) error {
+		if g := f.objectGate.Load(); g != nil && res.StatusCode == 200 && res.Request.Method == "GET" && strings.Contains(res.Request.URL.Path, "/files/"+g.file) {
+			res.Body = &processGatedBody{res.Body, res.Request.Context(), g}
+		}
+		return nil
+	}
 	deadTarget, _ := url.Parse("http://127.0.0.1:1")
 	deadObjects := httputil.NewSingleHostReverseProxy(deadTarget)
 	deadObjects.ErrorHandler = func(w http.ResponseWriter, r *http.Request, e error) { http.Error(w, "storage unreachable", 503) }
 	f.objectGateway = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f.objectRequests.Add(1)
 		if r.Method == "PUT" || r.Method == "DELETE" {
 			f.objectWrites.Add(1)
 		}
@@ -546,7 +555,7 @@ func (f *fileBusinessProcessFixture) startWorkers(t *testing.T) {
 }
 func (f *fileBusinessProcessFixture) stopOwned(t *testing.T) {
 	t.Helper()
-	for _, name := range []string{"api-b", "api-a", "scanner", "outbox"} {
+	for _, name := range []string{"api-b", "api-a", "repair", "scanner", "outbox"} {
 		f.stopProcess(t, name, false)
 	}
 	for name := range f.processes {
