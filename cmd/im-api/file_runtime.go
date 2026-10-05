@@ -184,7 +184,7 @@ func checkDownloadSpoolIsolation(download, other string) error {
 	if e != nil {
 		return e
 	}
-	if a == b || strings.HasPrefix(a, b+string(os.PathSeparator)) || strings.HasPrefix(b, a+string(os.PathSeparator)) {
+	if a == b || strings.HasPrefix(a, strings.TrimSuffix(b, string(os.PathSeparator))+string(os.PathSeparator)) || strings.HasPrefix(b, strings.TrimSuffix(a, string(os.PathSeparator))+string(os.PathSeparator)) {
 		return files.ErrDependencyUnavailable
 	}
 	ai, ae := os.Stat(a)

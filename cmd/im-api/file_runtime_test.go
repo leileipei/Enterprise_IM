@@ -100,7 +100,7 @@ func TestFileBusinessSpoolIsolation(t *testing.T) {
 	if e := os.Symlink(d, alias); e != nil {
 		t.Fatal(e)
 	}
-	for _, other := range []string{d, root, filepath.Join(d, "child"), alias} {
+	for _, other := range []string{d, root, filepath.Join(d, "child"), alias, string(os.PathSeparator)} {
 		if e := checkDownloadSpoolIsolation(d, other); e == nil {
 			t.Fatal("overlap accepted")
 		}
