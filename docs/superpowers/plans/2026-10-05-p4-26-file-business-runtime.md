@@ -303,7 +303,7 @@ RP14.context_cancel.stale_ui_updates == 0; RP14.bad_download.saveable_blob_count
 
 ## Task 13：固定源码七门禁、一次整体评审与中文交付
 
-**Files:** 新建docs/开发增量-P4-26-验收记录.md、docs/企业IM-P4-26-附件运行配置.md；修改本计划、docs/企业IM-开发计划与实施路径-v0.1.md、testdata/file-runtime/business-runtime.md。
+**Files:** 新建docs/开发增量-P4-26-验收记录.md、docs/企业IM-P4-26-附件运行配置.md；修改本计划、docs/企业IM-开发计划与实施路径-v0.1.md、testdata/file-runtime/business-runtime.md、scripts/test-file-runtime.sh（仅组件门禁外层时限）。
 
 **Interfaces:** 交付记录绑定完整40位产品SHA及git archive；记录每门禁实际退出／顶层／子例／包计数、辅助SKIP、Linux非JSON资源结果、RP01～14证据位置和生产未验条件。PR正文中文，以P4-25为base。
 
