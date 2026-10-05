@@ -287,7 +287,7 @@ RP09.repair_s3_requests == 0; RP09.cleanup_jobs_after == RP09.cleanup_jobs_befor
 
 **Interfaces:** TestFileBusinessProcessRP11／TestFileBusinessProcessRP14；(*fileBusinessProcessFixture).browser(t *testing.T,scenario string,options map[string]any)；新CJS从标准输入接私有fixture配置，按既有BrowserNode调用风格输出脱敏断言结果。复用既有file_lifecycle／context／unknown／download fault／policy断言，不修改其P4-25语义。
 
-- [ ] **Step 1：写失败场景。** RP11完整正常proof的501绑定／第21会话，正式API在5秒预算内有界续查，旧损坏500／Unicode回归；RP14七阶段上下文取消、冻结原UUID／body核对、ACK与补拉分离、大整数CAS、真实通知+typed共同等待、四类下载传输故障。RP03改由真实Chrome做四类型单群上传至显式保存，中文／FEFF与文件hash核对；网络代理只能实际请求处理后制造未知或传输故障。
+- [x] **Step 1：写失败场景。** RP11完整正常proof的501绑定／第21会话，正式API在5秒预算内有界续查，旧损坏500／Unicode回归；RP14七阶段上下文取消、冻结原UUID／body核对、ACK与补拉分离、大整数CAS、真实通知+typed共同等待、四类下载传输故障。RP03改由真实Chrome做四类型单群上传至显式保存，中文／FEFF与文件hash核对；网络代理只能实际请求处理后制造未知或传输故障。
 
 ~~~text
 RP03.browser_saved_sha256 == sample_sha256
@@ -296,10 +296,10 @@ RP14.retry_client_uuid == original_client_uuid; RP14.retry_body == frozen_body
 RP14.context_cancel.stale_ui_updates == 0; RP14.bad_download.saveable_blob_count == 0
 ~~~
 
-- [ ] **Step 2：验证RED或新增回归。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(03|11|14)$' -count=1；具名缺口如实失败，旧Web6模块不为制造RED破坏。
-- [ ] **Step 3：实现浏览器／预算夹具。** HTTPS同源proxy仅转发正式API；PKCE及当前任职来自实际身份接口，browser令牌不落证据。501数据允许正常服务建立合法DB绑定／扫描事实，仅作为预算证明；不声称501真实对象扫描，实际Worker证明来自RP03/05。记录业务SQL量／候选量／耗时，不重设statement/lock总限。长下载／超长／截断／压缩／超时只在真实请求后注入，零可保存错误Blob，保留原未知槽。
-- [ ] **Step 4：验证GREEN。** 重跑Step2及scripts/test-file-business-runtime.sh run-all，14必选顶层及全部子例0FAIL／0SKIP；若任一旧浏览器场景无法通过正式进程，修正缺口，不改代理造成功。
-- [ ] **Step 5：提交。** test(files): gate official browser flows and bounded filename queries。
+- [x] **Step 2：验证RED或新增回归。** go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(03|11|14)$' -count=1；具名缺口如实失败，旧Web6模块不为制造RED破坏。
+- [x] **Step 3：实现浏览器／预算夹具。** HTTPS同源proxy仅转发正式API；PKCE及当前任职来自实际身份接口，browser令牌不落证据。501数据允许正常服务建立合法DB绑定／扫描事实，仅作为预算证明；不声称501真实对象扫描，实际Worker证明来自RP03/05。记录业务SQL量／候选量／耗时，不重设statement/lock总限。长下载／超长／截断／压缩／超时只在真实请求后注入，零可保存错误Blob，保留原未知槽。
+- [x] **Step 4：验证GREEN。** 重跑Step2及scripts/test-file-business-runtime.sh run-all，14必选顶层及全部子例0FAIL／0SKIP；若任一旧浏览器场景无法通过正式进程，修正缺口，不改代理造成功。
+- [x] **Step 5：提交。** test(files): gate official browser flows and bounded filename queries。
 
 ## Task 13：固定源码七门禁、一次整体评审与中文交付
 
