@@ -126,7 +126,7 @@ business_counts_after == business_counts_before
 
 **Interfaces:** (*filedownload.Service).CheckHealth(ctx context.Context) error；私有checkSpoolHealth(ctx context.Context) error使用Service持有root／lock／owner。保持NewService、Prepare及Close原签名；记录原root的路径／inode信息供健康复核。
 
-- [ ] **Step 1：写失败测试。** TestDownloadRuntimeHealth、TestDownloadRuntimeRootReplacement、TestDownloadRuntimeHealthNoSideEffects；closed／failed／替换inode／符号链接／wrongUID或权限非0700／manifest owner改变拒绝。健康检查前后session／spool内容一致，未知条目不枚举删除；正常同owner重启只回收原完整来源，未知文件保留且启动失败。
+- [x] **Step 1：写失败测试。** TestDownloadRuntimeHealth、TestDownloadRuntimeRootReplacement、TestDownloadRuntimeHealthNoSideEffects；closed／failed／替换inode／符号链接／wrongUID或权限非0700／manifest owner改变拒绝。健康检查前后session／spool内容一致，未知条目不枚举删除；正常同owner重启只回收原完整来源，未知文件保留且启动失败。
 
 ~~~text
 healthy.CheckHealth.error == nil
@@ -135,10 +135,10 @@ wrong_owner.CheckHealth.error != nil
 health.created_sessions == 0; health.removed_paths == 0
 ~~~
 
-- [ ] **Step 2：验证RED。** go test ./internal/filedownload -run 'TestDownloadRuntime' -count=1；缺健康或变化检测FAIL。
-- [ ] **Step 3：最小实现。** 状态在lifecycle锁下快照，root与持有FD及Lstat实际路径比较；只验证root和owner manifest，拒绝ctx取消，不重新claim、不创建目录或回收会话，不扫描客户文件。错误沿ErrUnavailable。
-- [ ] **Step 4：验证GREEN。** 重跑Step2及go test ./internal/filedownload -count=1；原Spool来源／锁／Prepared清理回归PASS。
-- [ ] **Step 5：提交。** feat(files): check download runtime ownership without side effects。
+- [x] **Step 2：验证RED。** go test ./internal/filedownload -run 'TestDownloadRuntime' -count=1；缺健康或变化检测FAIL。
+- [x] **Step 3：最小实现。** 状态在lifecycle锁下快照，root与持有FD及Lstat实际路径比较；只验证root和owner manifest，拒绝ctx取消，不重新claim、不创建目录或回收会话，不扫描客户文件。错误沿ErrUnavailable。
+- [x] **Step 4：验证GREEN。** 重跑Step2及go test ./internal/filedownload -count=1；原Spool来源／锁／Prepared清理回归PASS。
+- [x] **Step 5：提交。** feat(files): check download runtime ownership without side effects。
 
 ## Task 5：内容方法分派与只读本人状态
 
