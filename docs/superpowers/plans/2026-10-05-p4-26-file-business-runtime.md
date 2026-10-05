@@ -162,11 +162,11 @@ status_only.reserve_calls == 0; response_controller.Flush.error == nil
 
 ## Task 6：正式 API 启动、路由与共享就绪
 
-**Files:** 新建cmd/im-api/file_runtime.go、file_routes.go及同名测试；修改main.go／main_test.go；新建internal/httpserver/runtime_health.go、runtime_health_test.go，修改server.go／realtime.go／realtime_test.go。
+**Files:** 新建cmd/im-api/file_runtime.go、file_routes.go及同名测试、file_runtime_startup_test.go；修改main.go／main_test.go；新建internal/httpserver/runtime_health.go、runtime_health_test.go，修改server.go／realtime.go／realtime_test.go。
 
 **Interfaces:** fileRuntime{business fileBusinessConfig; uploadEnabled bool; transfer *filetransfer.Service; download *filedownload.Service; reader objectstore.ReadOnlyStore}；startFileRuntime(ctx context.Context,pool *pgxpool.Pool,getenv func(string)string,uploadEnabled bool,uploadObjects objectstore.Config,uploadSpool string,business fileBusinessConfig)(*fileRuntime,error)；(*fileRuntime).CheckHealth(context.Context) error；(*fileRuntime).Close() error。assembleFileRoutes(next http.Handler,auth httpserver.Authenticator,repo policystore.Service,admin access.Service,rt *fileRuntime)(http.Handler,error)。HandlerWithRuntimeReady(next http.Handler,checks ...Pinger)(http.Handler,error)为最终外层健康包装器，仅处理精确GET /health/ready。
 
-- [ ] **Step 1：写失败测试。** TestFileBusinessStartupOrder、TestFileBusinessStartupBudget、TestFileBusinessAssembly、TestRuntimeReadySharedBudget；fake依赖记录schema→私有桶／probe→spool→routes→listen，故障无listen、已有资源逆序close；30秒共享、不刷新旧15秒上限。四组合路由／能力一致，search三精确路径不被通用路由吞掉；只有一个通用会话handler。ready共用2秒、DB／启用Redis／fanout／reader／spool任一失败503恢复200、live不变且零业务写入。
+- [x] **Step 1：写失败测试。** TestFileBusinessStartupOrder、TestFileBusinessStartupBudget、TestFileBusinessAssembly、TestRuntimeReadySharedBudget；fake依赖记录schema→私有桶／probe→spool→routes→listen，故障无listen、已有资源逆序close；30秒共享、不刷新旧15秒上限。四组合路由／能力一致，search三精确路径不被通用路由吞掉；只有一个通用会话handler。ready共用2秒、DB／启用Redis／fanout／reader／spool任一失败503恢复200、live不变且零业务写入。
 
 ~~~text
 file_init.total_budget <= 30s; upload_check.budget <= 15s
@@ -175,10 +175,10 @@ ready.total_budget <= 2s; ready.failure.status == 503; ready.recovered.status ==
 ready.business_write_calls == 0; live.status == 200
 ~~~
 
-- [ ] **Step 2：验证RED。** go test ./cmd/im-api ./internal/httpserver -run 'Test(FileBusiness(Startup|Assembly)|RuntimeReady)' -count=1；装配／健康行为FAIL。
-- [ ] **Step 3：最小实现。** startFileRuntime使用Task1～4；B开启时检查路径同inode及祖先重叠（包括已配置上传／扫描目录），before-listen阶段一次共享ctx。Uonly保留原预检。U或B装policy／history／own-status、预约只U；B开启使用HandlerWithFileMessages、FileSearch、FileDownload，否则原关闭。ContentModes最外于内容服务，search优先metadata／groups，capability最后按已完成装配产生。最终RuntimeReady组合pool.Ping、已启用Redis.Ping、fanout.Done检查、rt.CheckHealth；仅一个2秒ctx，不转发ready给内部重复预算。保留realtime原WS资格与故障检查、Web及文字/群管理。固定错误分类，无原始异常输出。
-- [ ] **Step 4：验证GREEN。** 重跑Step2及go test ./cmd/im-api ./internal/httpserver -count=1；B关闭所有旧关闭合约PASS。真实网络ready故障及无listen在Task9再证。
-- [ ] **Step 5：提交。** feat(files): assemble production file services and readiness。
+- [x] **Step 2：验证RED。** go test ./cmd/im-api ./internal/httpserver -run 'Test(FileBusiness(Startup|Assembly)|RuntimeReady)' -count=1；装配／健康行为FAIL。
+- [x] **Step 3：最小实现。** startFileRuntime使用Task1～4；B开启时检查路径同inode及祖先重叠（包括已配置上传／扫描目录），before-listen阶段一次共享ctx。Uonly保留原预检。U或B装policy／history／own-status、预约只U；B开启使用HandlerWithFileMessages、FileSearch、FileDownload，否则原关闭。ContentModes最外于内容服务，search优先metadata／groups，capability最后按已完成装配产生。最终RuntimeReady组合pool.Ping、已启用Redis.Ping、fanout.Done检查、rt.CheckHealth；仅一个2秒ctx，不转发ready给内部重复预算。保留realtime原WS资格与故障检查、Web及文字/群管理。固定错误分类，无原始异常输出。
+- [x] **Step 4：验证GREEN。** 重跑Step2及go test ./cmd/im-api ./internal/httpserver -count=1；B关闭所有旧关闭合约PASS。真实网络ready故障及无listen在Task9再证。
+- [x] **Step 5：提交。** feat(files): assemble production file services and readiness。
 
 ## Task 7：退出协调与错误路径资源释放
 
