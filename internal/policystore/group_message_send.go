@@ -548,7 +548,8 @@ func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIden
 		}
 		return MessageACK{}, ErrMessageRateLimited
 	}
-	ack := MessageACK{ConversationID: groupID, ServerTime: at}
+	// Return the stored timestamp so the first ACK matches replay and history.
+	ack := MessageACK{ConversationID: groupID}
 	err = tx.QueryRow(ctx, `UPDATE conversations SET last_seq=last_seq+1,
  last_policy_version=$3,updated_at=$4 WHERE tenant_id=$1 AND id=$2 RETURNING last_seq`,
 		id.TenantID, groupID, version, at).Scan(&ack.Seq)
@@ -558,8 +559,8 @@ func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIden
 	err = tx.QueryRow(ctx, `INSERT INTO messages
  (tenant_id,conversation_id,seq,sender_user_id,sender_membership_id,
   client_msg_id,text_body,content_digest,accepted_at,message_type)
- VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text`, id.TenantID, groupID,
-		ack.Seq, id.UserID, id.ActingMembershipID, clientMessageID, body, digest[:], at, content.MessageType).Scan(&ack.MessageID)
+ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text,accepted_at`, id.TenantID, groupID,
+		ack.Seq, id.UserID, id.ActingMembershipID, clientMessageID, body, digest[:], at, content.MessageType).Scan(&ack.MessageID, &ack.ServerTime)
 	if err != nil {
 		return MessageACK{}, err
 	}
