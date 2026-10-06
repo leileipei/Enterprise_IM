@@ -37,7 +37,13 @@ def main():
     with archive.open('wb') as f:
         subprocess.run(['git', 'archive', '--format=tar', commit], cwd=repo, stdout=f, check=True)
     with tarfile.open(archive) as tar:
-        tar.extractall(source, filter='data')
+        # Python 3.9 on macOS lacks extraction filters. Git archives contain only
+        # regular files/directories here; reject links and traversal before extracting.
+        for member in tar.getmembers():
+            if (not (member.isfile() or member.isdir()) or Path(member.name).is_absolute()
+                    or '..' in Path(member.name).parts):
+                raise RuntimeError('unsafe source archive member')
+        tar.extractall(source)
     bins = out / 'bin'
     bins.mkdir()
     result = {'source_commit': commit, 'source_archive_sha256': sha(archive),
