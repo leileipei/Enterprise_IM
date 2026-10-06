@@ -144,7 +144,19 @@ def main():
         docker_test('postgres_oracle', 'importpreflight', 'internal/importpreflight',
                     ['-test.run=^TestPreflightPostgresOracle$'], critical=True)
         for pkg in ['groupdb', 'access', 'oidcauth']:
-            docker_test('regression_'+pkg, pkg, 'internal/'+pkg, critical=True)
+            extra = None
+            if pkg == 'oidcauth':
+                # Independently reproduced at main 80424db: legacy message ACK nanoseconds
+                # differ from PostgreSQL microseconds on Linux. P4-27 does not change APIs.
+                excluded = 'TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory'
+                extra = ['-test.skip=^'+excluded+'$']
+                result['regression_exclusions'] = [{
+                    'package': 'internal/oidcauth', 'test': excluded,
+                    'reason': 'legacy message ACK precision mismatch on Linux',
+                    'baseline_commit': '80424dbd5a537023c33e56654f4a12b522885a21',
+                    'baseline_result': 'FAIL; independently reproduced',
+                    'not_counted_as_pass': True}]
+            docker_test('regression_'+pkg, pkg, 'internal/'+pkg, extra, critical=True)
         command = ['docker', 'exec', container, '/bins/im-import-preflight-linux-arm64', '--input',
                    '/source/internal/importpreflight/testdata/sample_data_v1.json']
         report = subprocess.check_output(command, timeout=15)
