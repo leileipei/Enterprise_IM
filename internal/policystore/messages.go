@@ -332,7 +332,8 @@ WHERE tenant_id=$1 AND id IN ($2,$3) ORDER BY id FOR SHARE NOWAIT`,
 		}
 		return MessageACK{}, ErrMessageRateLimited
 	}
-	ack := MessageACK{ConversationID: conversationID, ServerTime: at}
+	// Return the stored timestamp so the first ACK matches replay and history.
+	ack := MessageACK{ConversationID: conversationID}
 	err = tx.QueryRow(ctx, `UPDATE conversations SET last_seq=last_seq+1,updated_at=$3
 WHERE tenant_id=$1 AND id=$2 RETURNING last_seq`, id.TenantID, conversationID, at).Scan(&ack.Seq)
 	if err != nil {
@@ -342,9 +343,9 @@ WHERE tenant_id=$1 AND id=$2 RETURNING last_seq`, id.TenantID, conversationID, a
  (tenant_id,conversation_id,seq,sender_user_id,sender_membership_id,
   recipient_user_id,recipient_membership_id,sender_organization_id,recipient_organization_id,
   client_msg_id,text_body,content_digest,accepted_at,message_type)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id::text`, id.TenantID, conversationID,
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id::text,accepted_at`, id.TenantID, conversationID,
 		ack.Seq, id.UserID, id.ActingMembershipID, targetUserID, targetMembershipID,
-		actor.OrganizationID, target.OrganizationID, clientMessageID, body, digest[:], at, content.MessageType).Scan(&ack.MessageID)
+		actor.OrganizationID, target.OrganizationID, clientMessageID, body, digest[:], at, content.MessageType).Scan(&ack.MessageID, &ack.ServerTime)
 	if err != nil {
 		return MessageACK{}, err
 	}
