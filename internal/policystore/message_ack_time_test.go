@@ -66,8 +66,8 @@ JOIN outbox_events o ON o.message_id=m.id WHERE m.id=$1`, first.MessageID).Scan(
 						"first ACK": first.ServerTime, "replay ACK": replay.ServerTime,
 						"history": page.Messages[0].ServerTime, "idempotency": keyTime, "outbox": outboxTime,
 					} {
-						if got.Format(time.RFC3339Nano) != want {
-							t.Errorf("%s time=%s, persisted time=%s", label, got.Format(time.RFC3339Nano), want)
+						if got.UTC().Format(time.RFC3339Nano) != want {
+							t.Errorf("%s time=%s, persisted time=%s", label, got.UTC().Format(time.RFC3339Nano), want)
 						}
 					}
 					if first.Duplicate || !replay.Duplicate || first.MessageID != replay.MessageID ||
