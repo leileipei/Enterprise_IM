@@ -1,5 +1,7 @@
 package importpreflight
 
+import "strings"
+
 // Names and order are part of the public diagnostic contract.
 type Entity string
 type Field string
@@ -76,4 +78,57 @@ func knownField(e Entity, s string) (Field, bool) {
 		}
 	}
 	return "", false
+}
+
+type fieldSpec struct {
+	kind        string
+	nullable    bool
+	defaultText string
+	defaultBool bool
+	hasDefault  bool
+	enums       []string
+	nonblank    bool
+}
+
+func specification(e Entity, f Field) fieldSpec {
+	s := fieldSpec{kind: "text"}
+	if f == "id" || strings.HasSuffix(string(f), "_id") {
+		s.kind = "uuid"
+	}
+	switch f {
+	case "parent_id", "legal_entity_id", "scope_organization_id", "employee_no", "title", "effective_to":
+		s.nullable = true
+	}
+	if f == "effective_from" || f == "effective_to" {
+		s.kind = "time"
+	}
+	if f == "is_primary" {
+		s.kind = "bool"
+		s.hasDefault = true
+	}
+	if f == "issuer" || f == "subject" {
+		s.nonblank = true
+	}
+	switch f {
+	case "status":
+		s.hasDefault = true
+		s.defaultText = "active"
+		switch e {
+		case "tenants":
+			s.enums = []string{"active", "suspended"}
+		case "users":
+			s.enums = []string{"active", "frozen", "departed"}
+		case "user_organizations", "user_departments":
+			s.enums = []string{"active", "suspended", "ended"}
+		case "admin_grants":
+			s.enums = []string{"active", "revoked"}
+		default:
+			s.enums = []string{"active", "disabled"}
+		}
+	case "org_type":
+		s.enums = []string{"virtual_group", "headquarters", "company", "branch", "division", "overseas"}
+	case "role":
+		s.enums = []string{"group_admin", "organization_admin"}
+	}
+	return s
 }
