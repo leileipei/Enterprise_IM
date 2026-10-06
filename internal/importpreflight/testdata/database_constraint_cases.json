@@ -1,0 +1,68 @@
+[
+  {
+    "case_id": "DB01",
+    "title": "同 issuer／subject 重复绑定",
+    "sql": "INSERT INTO external_identities (issuer, subject, tenant_id, user_id) VALUES ('https://sso.example.invalid/group', 'synthetic-subject-03', 'ae5368d5-748f-56c0-a4f8-1d486ba4e6ca', '52ecb4ab-a140-5c46-8225-ff564bf11e74');",
+    "expected_sqlstate": "23505"
+  },
+  {
+    "case_id": "DB02",
+    "title": "同用户同 issuer 绑定多个主体",
+    "sql": "INSERT INTO external_identities (issuer, subject, tenant_id, user_id) VALUES ('https://sso.example.invalid/group', 'synthetic-subject-03-alias', 'ae5368d5-748f-56c0-a4f8-1d486ba4e6ca', '9b78ccc4-2a27-5364-b347-918e6ff7d22f');",
+    "expected_sqlstate": "23505"
+  },
+  {
+    "case_id": "DB03",
+    "title": "跨租户身份绑定",
+    "sql": "INSERT INTO external_identities (issuer, subject, tenant_id, user_id) VALUES ('https://sso.example.invalid/group', 'synthetic-cross-tenant', '6e773085-71a9-5b7c-91ae-804141f35ac2', '9b78ccc4-2a27-5364-b347-918e6ff7d22f');",
+    "expected_sqlstate": "23503"
+  },
+  {
+    "case_id": "DB04",
+    "title": "组织树成环",
+    "sql": "UPDATE organizations SET parent_id='92ca796b-b918-54d0-b3ac-8851dc871378' WHERE id='18a215b5-3701-5e8c-8bf8-4a5c31f3d574';",
+    "expected_sqlstate": "23514"
+  },
+  {
+    "case_id": "DB05",
+    "title": "部门父节点跨组织",
+    "sql": "UPDATE departments SET parent_id='66c71e61-6830-5597-bdd7-3bd6a649fb74' WHERE id='ed367807-5d80-5dd5-94b8-d3c81f78008d';",
+    "expected_sqlstate": "23503"
+  },
+  {
+    "case_id": "DB06",
+    "title": "虚拟组织任职",
+    "sql": "INSERT INTO user_organizations (id, tenant_id, user_id, organization_id, employee_no, title, effective_from, effective_to, is_primary, status) VALUES ('c43c5b61-67db-5a9d-b8d8-64579153b09f', 'ae5368d5-748f-56c0-a4f8-1d486ba4e6ca', '46372d54-39a3-5664-b4c0-ce458a842898', '18a215b5-3701-5e8c-8bf8-4a5c31f3d574', 'SYNTH-HQ-01', '集团管理员', '2026-01-01T00:00:00+08:00', NULL, FALSE, 'active');",
+    "expected_sqlstate": "23514"
+  },
+  {
+    "case_id": "DB07",
+    "title": "同用户同组织区间重叠",
+    "sql": "INSERT INTO user_organizations (id, tenant_id, user_id, organization_id, employee_no, title, effective_from, effective_to, is_primary, status) VALUES ('2b42f51f-fa61-5b13-917e-7cdff2e37cd7', 'ae5368d5-748f-56c0-a4f8-1d486ba4e6ca', '9b78ccc4-2a27-5364-b347-918e6ff7d22f', 'b7da0f02-3de1-5b4a-9673-2be524da1a2a', 'SYNTH-A-03', '甲普通员工', '2026-01-01T00:00:00+08:00', NULL, FALSE, 'active');",
+    "expected_sqlstate": "23P01"
+  },
+  {
+    "case_id": "DB08",
+    "title": "同用户主任职区间重叠",
+    "sql": "INSERT INTO user_organizations (id, tenant_id, user_id, organization_id, employee_no, title, effective_from, effective_to, is_primary, status) VALUES ('61cef58b-ba0c-52f1-9b28-c05a85074221', 'ae5368d5-748f-56c0-a4f8-1d486ba4e6ca', '46372d54-39a3-5664-b4c0-ce458a842898', '1167daf2-900b-5d86-8471-1e696d0f2158', 'SYNTH-HQ-01', '集团管理员', '2026-01-01T00:00:00+08:00', NULL, TRUE, 'active');",
+    "expected_sqlstate": "23P01"
+  },
+  {
+    "case_id": "DB09",
+    "title": "部门任职超出组织任职区间",
+    "sql": "INSERT INTO user_departments (id, tenant_id, user_organization_id, organization_id, department_id, effective_from, effective_to, is_primary, status) VALUES ('98c4455b-c19f-5794-b4fb-e736755d9bf4', 'ae5368d5-748f-56c0-a4f8-1d486ba4e6ca', '9cca3cb4-6e01-52f6-bb3d-a9f5be110da9', 'b7da0f02-3de1-5b4a-9673-2be524da1a2a', 'ed367807-5d80-5dd5-94b8-d3c81f78008d', '2026-01-01T00:00:00+08:00', NULL, FALSE, 'ended');",
+    "expected_sqlstate": "23514"
+  },
+  {
+    "case_id": "DB10",
+    "title": "缩短组织任职导致部门区间越界",
+    "sql": "UPDATE user_organizations SET effective_to='2026-10-01T00:00:00+08:00' WHERE id='5ca5bf04-eef3-5357-b832-71e698ce174c';",
+    "expected_sqlstate": "23514"
+  },
+  {
+    "case_id": "DB11",
+    "title": "集团工号重复",
+    "sql": "INSERT INTO users (id, tenant_id, global_employee_no, display_name, status) VALUES ('3dfae135-8cb7-5ffd-a65e-15049c1d1f44', 'ae5368d5-748f-56c0-a4f8-1d486ba4e6ca', 'SYNTH-03', '虚构测试人员03', 'active');",
+    "expected_sqlstate": "23505"
+  }
+]

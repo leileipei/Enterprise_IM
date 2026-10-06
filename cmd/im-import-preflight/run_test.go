@@ -80,6 +80,7 @@ func TestCLIReportsAndExitCodes(t *testing.T) {
 		if code != tc.code {
 			t.Fatalf("exit %d %s", code, err.String())
 		}
+		originalOutput := out.String()
 		var r map[string]any
 		dec := json.NewDecoder(&out)
 		if dec.Decode(&r) != nil || r["status"] != tc.status {
@@ -89,7 +90,7 @@ func TestCLIReportsAndExitCodes(t *testing.T) {
 		if dec.Decode(&tail) != io.EOF {
 			t.Fatal("multiple outputs")
 		}
-		if strings.Contains(out.String()+err.String(), "private-marker") {
+		if strings.Contains(originalOutput+err.String(), "private-marker") {
 			t.Fatal("path leaked")
 		}
 	}
