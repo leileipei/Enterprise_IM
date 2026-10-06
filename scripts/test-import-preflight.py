@@ -119,7 +119,7 @@ def main():
         result['container_id'] = container
         result['owner'] = owner
         for _ in range(100):
-            cp = subprocess.run(['docker', 'exec', container, 'pg_isready', '-U', 'postgres', '-d', 'im_preflight'],
+            cp = subprocess.run(['docker', 'exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'im_preflight'],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
             if cp.returncode == 0:
                 break
@@ -186,6 +186,9 @@ def main():
                         time.sleep(.1)
             else:
                 result['cleanup']['removed'] = True
+        if container and not result['cleanup']['removed']:
+            result['status'] = 'failed'
+            result.setdefault('failure', 'fixture cleanup not confirmed')
         (out/'verification.json').write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n')
         print('verification', result['status'], 'cleanup', result['cleanup'], flush=True)
     if not result['cleanup']['removed']:
