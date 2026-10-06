@@ -8,6 +8,33 @@
 
 P4-21～P4-26 已实现文件元数据与生命周期、上传与受控扫描、单聊／群聊附件消息、授权下载、文件名搜索及保全感知清理，并完成正式 API 装配和本地进程验收。附件业务总开关 `IM_FILE_BUSINESS_ENABLED` 默认关闭；上传和物理清理独立启用，25 MiB 是模型上限。配置与验收边界见 [附件运行配置](docs/企业IM-P4-26-附件运行配置.md) 和 [P4-26 验收记录](docs/开发增量-P4-26-验收记录.md)。客户联调、完整 M4 及生产放行仍未完成。
 
+## P4-27 离线组织与身份预检
+
+新增独立命令 `im-import-preflight`（版本 0.1.0）：只读取一份本地 JSON 文件，校验文件内部九表关系，输出确定性的 JSON 报告。它不连接服务、不读取 `IM_*` 连接配置，也不执行导入。
+
+```sh
+go build -mod=readonly -o ./bin/im-import-preflight ./cmd/im-import-preflight
+./bin/im-import-preflight --input internal/importpreflight/testdata/sample_data_v1.json
+./bin/im-import-preflight --help
+./bin/im-import-preflight --version
+```
+
+`--input=FILE` 同样支持；input/help/version 必须独立使用。输入为普通文件，路径中的符号链接、目录、FIFO、设备和套接字会拒绝。Linux/macOS 有安全打开实现；其他平台明确拒绝。macOS `/tmp` 常为链接，使用该目录时须传物理路径（例如 `/private/tmp/...`）。
+
+文件必须包含完整九表（可为空数组），所有外键须在同一文件中闭合；必填字段、数据库默认值、可空字段及声明的来源元数据见 [输入契约](docs/superpowers/specs/2026-10-06-p4-27-import-preflight-design.md)。不接受 SQL、CSV、stdin、URL 或增量记录。示例中的组织、人员与身份全部虚构。
+
+| 退出码 | 含义 |
+| --- | --- |
+| 0 | 文件通过完整预检；或独立 help/version |
+| 1 | 输入或模型错误；结构/资源错误时检查未完成 |
+| 2 | 参数、文件读取、取消、超时或输出失败 |
+
+报告固定包含 `report_version`、`validation_profile`、`status`、`checks_complete`、同次读取原始字节的 `input_sha256`、九表与 total 的 `counts`、`errors_total`、`issues`、`issues_truncated`。未解析数量和不完整读取的哈希为 null。问题只含固定表/字段、1 起始行号、原因码及可选关联行，不回显人员数据、未知字段名或路径。`scope=offline_file`，`database_checked`、`identity_provider_checked`、`import_authorized` 始终 false。
+
+上限：原始文件 10 MiB，JSON 深度 16，九表合计 10,000 条，每个字符串值 4,096 UTF-8 字节；展示前 200 个排序/去重问题，完整报告最多 256 KiB。输入和检查共用 10 秒预算，取消/超时返回 incomplete，输出失败退出 2。任职有效区间与历史状态按数据库约束校验，不以系统当前时间过滤。
+
+通过报告只说明文件内部符合契约；数据库存量冲突、真实身份源映射、写入授权、客户联调、完整 M4 和生产验收仍未执行。验证命令及已知 Linux 消息 ACK 精度问题见 [P4-27 验收记录](docs/开发增量-P4-27-验收记录.md)。
+
 受保护管理 API 合约：
 
 | 方法与路径 | 用途 | 成功响应 |
