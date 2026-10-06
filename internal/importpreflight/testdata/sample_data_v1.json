@@ -1,0 +1,718 @@
+{
+  "format_version": 1,
+  "baseline_commit": "80424dbd5a537023c33e56654f4a12b522885a21",
+  "data_origin": "entirely_synthetic",
+  "reference_time": "2026-10-06T00:00:00+08:00",
+  "identity_source_selected": false,
+  "tables": {
+    "tenants": [
+      {
+        "id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "code": "M4_SYNTH_GROUP",
+        "name": "虚构联调集团",
+        "status": "active"
+      },
+      {
+        "id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "code": "M4_SYNTH_OTHER",
+        "name": "虚构隔离集团",
+        "status": "active"
+      }
+    ],
+    "legal_entities": [
+      {
+        "id": "46d7ccf8-1e39-5294-9f06-8fd7e4f74684",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "code": "SYNTH_LE_HQ",
+        "name": "虚构总部法人",
+        "status": "active"
+      },
+      {
+        "id": "09369320-7734-5dfa-9ede-1e2a5e455fc9",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "code": "SYNTH_LE_A",
+        "name": "虚构甲公司法人",
+        "status": "active"
+      },
+      {
+        "id": "a9bb91ae-0a5d-5fd8-96c7-d1ee96d259d7",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "code": "SYNTH_LE_B",
+        "name": "虚构乙公司法人",
+        "status": "active"
+      },
+      {
+        "id": "5565d88e-d999-5da5-8c33-56645a963b7f",
+        "tenant_id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "code": "SYNTH_LE_OTHER",
+        "name": "虚构隔离法人",
+        "status": "active"
+      }
+    ],
+    "organizations": [
+      {
+        "id": "18a215b5-3701-5e8c-8bf8-4a5c31f3d574",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "parent_id": null,
+        "legal_entity_id": null,
+        "org_type": "virtual_group",
+        "code": "SYNTH_ORG_ROOT",
+        "name": "虚构集团根节点",
+        "status": "active"
+      },
+      {
+        "id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "parent_id": "18a215b5-3701-5e8c-8bf8-4a5c31f3d574",
+        "legal_entity_id": "46d7ccf8-1e39-5294-9f06-8fd7e4f74684",
+        "org_type": "headquarters",
+        "code": "SYNTH_ORG_HQ",
+        "name": "虚构集团总部",
+        "status": "active"
+      },
+      {
+        "id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "parent_id": "18a215b5-3701-5e8c-8bf8-4a5c31f3d574",
+        "legal_entity_id": "09369320-7734-5dfa-9ede-1e2a5e455fc9",
+        "org_type": "company",
+        "code": "SYNTH_ORG_A",
+        "name": "虚构甲子公司",
+        "status": "active"
+      },
+      {
+        "id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "parent_id": "18a215b5-3701-5e8c-8bf8-4a5c31f3d574",
+        "legal_entity_id": "a9bb91ae-0a5d-5fd8-96c7-d1ee96d259d7",
+        "org_type": "company",
+        "code": "SYNTH_ORG_B",
+        "name": "虚构乙子公司",
+        "status": "active"
+      },
+      {
+        "id": "99e2f5e7-7624-51be-83b4-aaf6a48f4baa",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "parent_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "legal_entity_id": "a9bb91ae-0a5d-5fd8-96c7-d1ee96d259d7",
+        "org_type": "division",
+        "code": "SYNTH_ORG_DIVISION",
+        "name": "虚构跨法人事业部",
+        "status": "active"
+      },
+      {
+        "id": "61ac066c-8257-5ed3-be71-508bad482825",
+        "tenant_id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "parent_id": null,
+        "legal_entity_id": "5565d88e-d999-5da5-8c33-56645a963b7f",
+        "org_type": "company",
+        "code": "SYNTH_ORG_OTHER",
+        "name": "虚构隔离组织",
+        "status": "active"
+      }
+    ],
+    "departments": [
+      {
+        "id": "f15a49c4-f9f7-5523-bae2-2791d7fd18a9",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "parent_id": null,
+        "code": "SYNTH_DEPT_HQ-OFFICE",
+        "name": "虚构总部办公室",
+        "status": "active"
+      },
+      {
+        "id": "c25d2e71-7e84-5057-bef4-5fff4c1d21bd",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "parent_id": null,
+        "code": "SYNTH_DEPT_A-ROOT",
+        "name": "虚构甲公司部门根节点",
+        "status": "active"
+      },
+      {
+        "id": "ed367807-5d80-5dd5-94b8-d3c81f78008d",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "parent_id": "c25d2e71-7e84-5057-bef4-5fff4c1d21bd",
+        "code": "SYNTH_DEPT_A-ENG",
+        "name": "虚构甲工程部",
+        "status": "active"
+      },
+      {
+        "id": "66c71e61-6830-5597-bdd7-3bd6a649fb74",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "parent_id": null,
+        "code": "SYNTH_DEPT_B-ROOT",
+        "name": "虚构乙公司部门根节点",
+        "status": "active"
+      },
+      {
+        "id": "5947c941-bdd7-5aef-aaf2-8aa3ffd721f7",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "parent_id": "66c71e61-6830-5597-bdd7-3bd6a649fb74",
+        "code": "SYNTH_DEPT_B-QA",
+        "name": "虚构乙品质部",
+        "status": "active"
+      },
+      {
+        "id": "34c6d22b-5fa8-504a-be1d-5eb5ecc2edc5",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "organization_id": "99e2f5e7-7624-51be-83b4-aaf6a48f4baa",
+        "parent_id": null,
+        "code": "SYNTH_DEPT_DIVISION",
+        "name": "虚构事业部团队",
+        "status": "active"
+      },
+      {
+        "id": "ed78b697-35ed-59b5-ba03-09f4bb235943",
+        "tenant_id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "organization_id": "61ac066c-8257-5ed3-be71-508bad482825",
+        "parent_id": null,
+        "code": "SYNTH_DEPT_OTHER",
+        "name": "虚构隔离部门",
+        "status": "active"
+      }
+    ],
+    "users": [
+      {
+        "id": "46372d54-39a3-5664-b4c0-ce458a842898",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-01",
+        "display_name": "虚构测试人员01",
+        "status": "active"
+      },
+      {
+        "id": "cbe91f64-eefc-5132-876b-eb258c035573",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-02",
+        "display_name": "虚构测试人员02",
+        "status": "active"
+      },
+      {
+        "id": "9b78ccc4-2a27-5364-b347-918e6ff7d22f",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-03",
+        "display_name": "虚构测试人员03",
+        "status": "active"
+      },
+      {
+        "id": "52ecb4ab-a140-5c46-8225-ff564bf11e74",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-04",
+        "display_name": "虚构测试人员04",
+        "status": "active"
+      },
+      {
+        "id": "fcb1bde5-0a04-5c8b-acc5-6142204bcce3",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-05",
+        "display_name": "虚构测试人员05",
+        "status": "active"
+      },
+      {
+        "id": "c0404c71-c99a-5844-a56b-850af9f9e569",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-06",
+        "display_name": "虚构测试人员06",
+        "status": "active"
+      },
+      {
+        "id": "a413df49-caaa-5bd4-b7c3-96d5073c8736",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-07",
+        "display_name": "虚构测试人员07",
+        "status": "departed"
+      },
+      {
+        "id": "7feb4a53-7b8f-514d-a2f2-0fc27d84c1dd",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-08",
+        "display_name": "虚构测试人员08",
+        "status": "frozen"
+      },
+      {
+        "id": "6e20c2c3-51bb-5a61-bd7d-2ed4a1c1a6d8",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-09",
+        "display_name": "虚构测试人员09",
+        "status": "active"
+      },
+      {
+        "id": "ef5084fe-a3a9-5abb-bfb1-4c2009df7ceb",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-10",
+        "display_name": "虚构测试人员10",
+        "status": "active"
+      },
+      {
+        "id": "02a6bda6-bd29-5a36-a83d-d782948ac892",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "global_employee_no": "SYNTH-11",
+        "display_name": "虚构测试人员11",
+        "status": "active"
+      },
+      {
+        "id": "3c4d3add-1bed-5bb9-9423-d74e9590bcf4",
+        "tenant_id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "global_employee_no": "SYNTH-12",
+        "display_name": "虚构测试人员12",
+        "status": "active"
+      }
+    ],
+    "user_organizations": [
+      {
+        "id": "2317a5ef-8d67-5247-85c4-c77c9d484cab",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "46372d54-39a3-5664-b4c0-ce458a842898",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "employee_no": "SYNTH-HQ-01",
+        "title": "集团管理员",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "4dc3f6a9-f320-5bb6-a30f-d6cb6f6c57c8",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "cbe91f64-eefc-5132-876b-eb258c035573",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "employee_no": "SYNTH-A-02",
+        "title": "甲组织管理员",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "5ca5bf04-eef3-5357-b832-71e698ce174c",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "9b78ccc4-2a27-5364-b347-918e6ff7d22f",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "employee_no": "SYNTH-A-03",
+        "title": "甲普通员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "44b16b87-2199-5115-a5af-d41c8e9d9af5",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "52ecb4ab-a140-5c46-8225-ff564bf11e74",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "employee_no": "SYNTH-B-04",
+        "title": "乙普通员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "09ce4164-2fe8-5ea9-b924-0fc37a794a11",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "fcb1bde5-0a04-5c8b-acc5-6142204bcce3",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "employee_no": "SYNTH-HQ-05",
+        "title": "双任职员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "1e930427-3a61-5598-91ba-4714b5a120b4",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "fcb1bde5-0a04-5c8b-acc5-6142204bcce3",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "employee_no": "SYNTH-B-05",
+        "title": "双任职员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": false,
+        "status": "active"
+      },
+      {
+        "id": "70d269e2-dffb-5e86-ba64-2ab20181d747",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "c0404c71-c99a-5844-a56b-850af9f9e569",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "employee_no": "SYNTH-HQ-06",
+        "title": "单组织离职员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "18dc47cc-b5c2-53e4-ab7e-24b2df458e62",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "c0404c71-c99a-5844-a56b-850af9f9e569",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "employee_no": "SYNTH-A-06",
+        "title": "单组织离职员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": "2026-10-01T00:00:00+08:00",
+        "is_primary": false,
+        "status": "ended"
+      },
+      {
+        "id": "2697f9d7-984e-5945-8f4e-ef392d353a45",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "a413df49-caaa-5bd4-b7c3-96d5073c8736",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "employee_no": "SYNTH-B-07",
+        "title": "集团离职员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": "2026-10-01T00:00:00+08:00",
+        "is_primary": true,
+        "status": "ended"
+      },
+      {
+        "id": "867bffb0-7571-56ca-b7d0-f630c4ca1840",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "7feb4a53-7b8f-514d-a2f2-0fc27d84c1dd",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "employee_no": "SYNTH-B-08",
+        "title": "冻结账号员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "6ea863a6-4673-5a29-a437-e1b2baeb198c",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "6e20c2c3-51bb-5a61-bd7d-2ed4a1c1a6d8",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "employee_no": "SYNTH-B-09",
+        "title": "未绑定身份员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "d86c3e6c-c787-58a6-94ae-f41926cce932",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "ef5084fe-a3a9-5abb-bfb1-4c2009df7ceb",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "employee_no": "SYNTH-HQ-10",
+        "title": "身份绑定停用员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "9cca3cb4-6e01-52f6-bb3d-a9f5be110da9",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "02a6bda6-bd29-5a36-a83d-d782948ac892",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "employee_no": "SYNTH-A-11",
+        "title": "跨公司调动员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": "2026-10-01T00:00:00+08:00",
+        "is_primary": true,
+        "status": "ended"
+      },
+      {
+        "id": "91f8073a-8aa5-5b9a-b18a-b3e6d59bd7d5",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "02a6bda6-bd29-5a36-a83d-d782948ac892",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "employee_no": "SYNTH-B-11",
+        "title": "跨公司调动员工",
+        "effective_from": "2026-10-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "61288ce5-8b80-5fb4-a37a-1c75c8dc94ae",
+        "tenant_id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "user_id": "3c4d3add-1bed-5bb9-9423-d74e9590bcf4",
+        "organization_id": "61ac066c-8257-5ed3-be71-508bad482825",
+        "employee_no": "SYNTH-OTHER-12",
+        "title": "其他集团员工",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      }
+    ],
+    "user_departments": [
+      {
+        "id": "55d4ad66-52bd-512e-825b-2dde249ff056",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "2317a5ef-8d67-5247-85c4-c77c9d484cab",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "department_id": "f15a49c4-f9f7-5523-bae2-2791d7fd18a9",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "ddffaef9-f001-5aac-8508-b2deb2532eb1",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "4dc3f6a9-f320-5bb6-a30f-d6cb6f6c57c8",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "department_id": "ed367807-5d80-5dd5-94b8-d3c81f78008d",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "6da8d096-3c62-5c77-b001-565c513954a4",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "5ca5bf04-eef3-5357-b832-71e698ce174c",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "department_id": "ed367807-5d80-5dd5-94b8-d3c81f78008d",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "c8be468b-f706-5c9f-ac9b-814dea9c419d",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "44b16b87-2199-5115-a5af-d41c8e9d9af5",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "department_id": "5947c941-bdd7-5aef-aaf2-8aa3ffd721f7",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "242e3ac1-8fef-5b31-a688-5e5c4fba4b9f",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "09ce4164-2fe8-5ea9-b924-0fc37a794a11",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "department_id": "f15a49c4-f9f7-5523-bae2-2791d7fd18a9",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "56e158ec-5340-5848-9bbe-94206284506d",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "1e930427-3a61-5598-91ba-4714b5a120b4",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "department_id": "5947c941-bdd7-5aef-aaf2-8aa3ffd721f7",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "6b0c5084-968a-53f3-85b7-4cb1ab74d811",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "70d269e2-dffb-5e86-ba64-2ab20181d747",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "department_id": "f15a49c4-f9f7-5523-bae2-2791d7fd18a9",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "53e443b5-fe03-5898-bba1-e05bc9bc648c",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "18dc47cc-b5c2-53e4-ab7e-24b2df458e62",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "department_id": "ed367807-5d80-5dd5-94b8-d3c81f78008d",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": "2026-10-01T00:00:00+08:00",
+        "is_primary": true,
+        "status": "ended"
+      },
+      {
+        "id": "3636eade-23bc-51e8-9e1e-680517e80731",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "2697f9d7-984e-5945-8f4e-ef392d353a45",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "department_id": "5947c941-bdd7-5aef-aaf2-8aa3ffd721f7",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": "2026-10-01T00:00:00+08:00",
+        "is_primary": true,
+        "status": "ended"
+      },
+      {
+        "id": "10eb9388-7ed6-5986-bdf6-f5d70af43a4b",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "867bffb0-7571-56ca-b7d0-f630c4ca1840",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "department_id": "5947c941-bdd7-5aef-aaf2-8aa3ffd721f7",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "124298af-4c7c-51cb-a5a4-574986b0bb03",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "6ea863a6-4673-5a29-a437-e1b2baeb198c",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "department_id": "5947c941-bdd7-5aef-aaf2-8aa3ffd721f7",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "52cf4e9c-bbe3-5019-aeb9-7e1829036944",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "d86c3e6c-c787-58a6-94ae-f41926cce932",
+        "organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "department_id": "f15a49c4-f9f7-5523-bae2-2791d7fd18a9",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "aa10f5df-f5db-5ef8-aa17-ec8bee6e2ea2",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "9cca3cb4-6e01-52f6-bb3d-a9f5be110da9",
+        "organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "department_id": "ed367807-5d80-5dd5-94b8-d3c81f78008d",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": "2026-10-01T00:00:00+08:00",
+        "is_primary": true,
+        "status": "ended"
+      },
+      {
+        "id": "4d91b038-feaa-593e-bc56-d0f24e2f1602",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_organization_id": "91f8073a-8aa5-5b9a-b18a-b3e6d59bd7d5",
+        "organization_id": "1167daf2-900b-5d86-8471-1e696d0f2158",
+        "department_id": "5947c941-bdd7-5aef-aaf2-8aa3ffd721f7",
+        "effective_from": "2026-10-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      },
+      {
+        "id": "6b80ceb5-4542-51fa-8ff3-1f61b8191306",
+        "tenant_id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "user_organization_id": "61288ce5-8b80-5fb4-a37a-1c75c8dc94ae",
+        "organization_id": "61ac066c-8257-5ed3-be71-508bad482825",
+        "department_id": "ed78b697-35ed-59b5-ba03-09f4bb235943",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null,
+        "is_primary": true,
+        "status": "active"
+      }
+    ],
+    "external_identities": [
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-01",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "46372d54-39a3-5664-b4c0-ce458a842898",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-02",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "cbe91f64-eefc-5132-876b-eb258c035573",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-03",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "9b78ccc4-2a27-5364-b347-918e6ff7d22f",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-04",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "52ecb4ab-a140-5c46-8225-ff564bf11e74",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-05",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "fcb1bde5-0a04-5c8b-acc5-6142204bcce3",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-06",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "c0404c71-c99a-5844-a56b-850af9f9e569",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-07",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "a413df49-caaa-5bd4-b7c3-96d5073c8736",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-08",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "7feb4a53-7b8f-514d-a2f2-0fc27d84c1dd",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-10",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "ef5084fe-a3a9-5abb-bfb1-4c2009df7ceb",
+        "status": "disabled"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-11",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "user_id": "02a6bda6-bd29-5a36-a83d-d782948ac892",
+        "status": "active"
+      },
+      {
+        "issuer": "https://sso.example.invalid/group",
+        "subject": "synthetic-subject-12",
+        "tenant_id": "6e773085-71a9-5b7c-91ae-804141f35ac2",
+        "user_id": "3c4d3add-1bed-5bb9-9423-d74e9590bcf4",
+        "status": "active"
+      }
+    ],
+    "admin_grants": [
+      {
+        "id": "670453fd-d202-50b0-93db-fd9897b41601",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "membership_id": "2317a5ef-8d67-5247-85c4-c77c9d484cab",
+        "membership_organization_id": "92ca796b-b918-54d0-b3ac-8851dc871378",
+        "role": "group_admin",
+        "scope_organization_id": null,
+        "status": "active",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null
+      },
+      {
+        "id": "d1b43545-9da0-5b5d-8fe2-d499d02f6fd2",
+        "tenant_id": "ae5368d5-748f-56c0-a4f8-1d486ba4e6ca",
+        "membership_id": "4dc3f6a9-f320-5bb6-a30f-d6cb6f6c57c8",
+        "membership_organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "role": "organization_admin",
+        "scope_organization_id": "b7da0f02-3de1-5b4a-9673-2be524da1a2a",
+        "status": "active",
+        "effective_from": "2026-01-01T00:00:00+08:00",
+        "effective_to": null
+      }
+    ]
+  }
+}
