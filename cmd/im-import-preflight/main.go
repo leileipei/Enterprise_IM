@@ -9,6 +9,8 @@ import (
 )
 
 func runWithSignals(args []string, stdout, stderr io.Writer, reader inputReader) int {
+	// Go otherwise terminates on EPIPE from fd 1/2 before returning a write error.
+	signal.Ignore(syscall.SIGPIPE)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	return runWithReader(ctx, args, stdout, stderr, reader)

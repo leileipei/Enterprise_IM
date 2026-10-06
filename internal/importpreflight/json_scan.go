@@ -81,6 +81,7 @@ func scanJSON(ctx context.Context, raw []byte, c *Collector) error {
 	}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
+	totalRows := 0
 	var value func(scanLocation, int) error
 	value = func(l scanLocation, depth int) error {
 		if e := ContextFailure(ctx); e != nil {
@@ -138,6 +139,10 @@ func scanJSON(ctx context.Context, raw []byte, c *Collector) error {
 					child := l
 					child.mode = ""
 					if l.mode == "rows" {
+						totalRows++
+						if totalRows > MaxRows {
+							return Failure{"ROW_LIMIT"}
+						}
 						child.row = row
 					}
 					if e := value(child, depth+1); e != nil {

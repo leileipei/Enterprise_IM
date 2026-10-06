@@ -44,6 +44,9 @@ func runWithReader(parent context.Context, args []string, stdout, stderr io.Writ
 			text = "im-import-preflight 0.1.0\n"
 		}
 		if writeComplete(ctx, stdout, []byte(text)) != nil {
+			diagCtx, stop := context.WithTimeout(context.Background(), time.Second)
+			defer stop()
+			_ = writeComplete(diagCtx, stderr, []byte("OUTPUT_WRITE_FAILED\n"))
 			return 2
 		}
 		return 0

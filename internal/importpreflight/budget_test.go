@@ -73,3 +73,29 @@ func TestPreflightDiagnosticsOver200(t *testing.T) {
 		}
 	}
 }
+func TestPreflightDuplicateKeysStopAtRowLimit(t *testing.T) {
+	duplicateRows := func(n int) string { return strings.Repeat(`{"id":0,"id":0},`, n-1) + `{"id":0,"id":0}` }
+	for _, tc := range []struct {
+		name         string
+		users, legal int
+		limit        bool
+		total        int
+	}{{"exact", 10000, 0, false, 10000}, {"over", 20000, 0, true, 10001}, {"cumulative", 6000, 6000, true, 10001}} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := strings.Replace(emptyInput(), `"users":[]`, `"users":[`+duplicateRows(tc.users)+`]`, 1)
+			if tc.legal > 0 {
+				raw = strings.Replace(raw, `"legal_entities":[]`, `"legal_entities":[`+duplicateRows(tc.legal)+`]`, 1)
+			}
+			r := Evaluate(context.Background(), []byte(raw))
+			if r.ExitCode() != 1 || r.ChecksComplete || hasCode(r, "ROW_LIMIT") != tc.limit || r.ErrorsTotal != tc.total {
+				t.Fatalf("combined limit ignored: total=%d, issues=%+v", r.ErrorsTotal, r.Issues)
+			}
+			if !hasCode(r, "DUPLICATE_JSON_KEY") {
+				t.Fatal("prior diagnostic lost")
+			}
+			if tc.limit && r.Issues[0].Code != "ROW_LIMIT" {
+				t.Fatal("document resource error not retained first")
+			}
+		})
+	}
+}

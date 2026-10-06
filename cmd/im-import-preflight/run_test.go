@@ -225,3 +225,55 @@ func (w *blockingWriter) Write(b []byte) (int, error) {
 	<-w.release
 	return len(b), nil
 }
+func TestCLIClosedOutputPipe(t *testing.T) {
+	d, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := filepath.Join(d, "ordinary.json")
+	if err := os.WriteFile(input, sample(t), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"--input", input}, {"--version"}, {"--help"}} {
+		t.Run(strings.TrimPrefix(args[0], "--"), func(t *testing.T) {
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Close()
+			defer w.Close()
+			cmd := exec.Command(binary(t), args...)
+			cmd.Stdout = w
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			err = cmd.Run()
+			if err == nil {
+				t.Fatal("closed stdout returned success")
+			}
+			var exit *exec.ExitError
+			if !errors.As(err, &exit) || exit.ExitCode() != 2 {
+				t.Fatalf("closed stdout exit: %v; stderr: %s", err, stderr.String())
+			}
+			if stderr.String() != "OUTPUT_WRITE_FAILED\n" {
+				t.Fatalf("fixed output diagnostic: %q", stderr.String())
+			}
+		})
+	}
+}
+func TestCLIClosedErrorPipe(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Close()
+	defer w.Close()
+	cmd := exec.Command(binary(t), "--unknown-private-marker")
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = w
+	err = cmd.Run()
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 2 || stdout.Len() != 0 {
+		t.Fatalf("closed stderr exit: %v", err)
+	}
+}
