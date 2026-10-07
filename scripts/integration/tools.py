@@ -6,12 +6,9 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
-import sys
-import urllib.request
 from .model import SourceSnapshot, Toolchain
 
 RUNTIME=Path('/Users/leo.cui/.cache/codex-runtimes/codex-primary-runtime/dependencies/node')
-MC_URL='https://dl.min.io/client/mc/release/darwin-arm64/archive/mc.RELEASE.2024-11-05T11-29-45Z'
 
 
 def file_digest(path):
@@ -104,15 +101,8 @@ def discover_toolchain(snapshot: SourceSnapshot,private: Path) -> Toolchain:
     versions['playwright']=json.loads(package.read_text())['version']
     if versions['playwright']!=pins['playwright']:raise ValueError('playwright_version_mismatch')
     hashes['playwright_package']=file_digest(package)
-    mc=private/'mc'
-    if not mc.exists():
-        try:
-            with urllib.request.urlopen(MC_URL,timeout=60) as src,mc.open('xb') as dst:
-                shutil.copyfileobj(src,dst)
-            verify_digest(mc,pins['mc-test-client-sha256-darwin-arm64'])
-            mc.chmod(0o700)
-        except (OSError,ValueError) as exc:raise ValueError('locked_mc_unavailable') from exc
-    verify_digest(mc,pins['mc-test-client-sha256-darwin-arm64']);paths['mc']=mc
+    from .mc import provision_mc
+    paths['mc']=provision_mc(private,pins,paths['go'])
     versions['mc']=run('mc',['--version']).splitlines()[0]
     for key,path in paths.items():
         if key!='node_modules':hashes[key]=file_digest(path)

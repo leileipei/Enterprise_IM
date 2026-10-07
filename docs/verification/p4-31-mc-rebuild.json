@@ -1,0 +1,34 @@
+{
+  "source_commit": "6ac18619cf881074fe6edcc79ab62c9c85da60b9",
+  "source_archive_sha256": "9a2d79da5e5de3ea34315ea705d3fb02b5f0eb440663ee381b6de0ae73b93bb3",
+  "release": "RELEASE.2024-11-05T11-29-45Z",
+  "compiler_version": "1.27.1",
+  "compiler_sha256": "548608a910c46de32c65a3934f461b1787acf6ddd371044826068d8503b8509b",
+  "binary_sha256": "e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea",
+  "module_hashes": {
+    "go.mod": "775923f0f99977e6335f6030272b5df30c6c71da2a4a5ced61b285ed855dfd21",
+    "go.sum": "a1be60007d5c5c3c3c2e6efe3f10e5158e32e0077a337f96dfb33d26df151c22"
+  },
+  "schema_version": "mc_source_rebuild_v1",
+  "source_url": "https://github.com/minio/mc/tree/6ac18619cf881074fe6edcc79ab62c9c85da60b9",
+  "archive_url": "https://codeload.github.com/minio/mc/tar.gz/6ac18619cf881074fe6edcc79ab62c9c85da60b9",
+  "platform": "darwin/arm64",
+  "build_flags": [
+    "-mod=readonly",
+    "-buildvcs=false",
+    "-trimpath",
+    "-tags",
+    "kqueue",
+    "-ldflags",
+    "-s -w -X github.com/minio/mc/cmd.Version=2024-11-05T11:29:45Z -X github.com/minio/mc/cmd.CopyrightYear=2024 -X github.com/minio/mc/cmd.ReleaseTag=RELEASE.2024-11-05T11-29-45Z -X github.com/minio/mc/cmd.CommitID=6ac18619cf881074fe6edcc79ab62c9c85da60b9 -X github.com/minio/mc/cmd.ShortCommitID=6ac18619cf88"
+  ],
+  "repeated_build": {
+    "separate_source_directories": true,
+    "separate_build_and_module_caches": true,
+    "first_binary_sha256": "e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea",
+    "second_binary_sha256": "e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea"
+  },
+  "historical_publisher_lock_changed": false,
+  "full_project_acceptance": "not_executed",
+  "production_acceptance": "not_executed"
+}

@@ -101,7 +101,7 @@ assert archive_module_marker == 'committed'
 ```
 
 - [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_source.py' -v`及 `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_environment.py' -v`。Expected：缺接口或目标断言失败。
-- [x] **Step 3：实现固定源与白名单。** 入口在解包、校验自身哈希之前不import integration；之后从归档scripts目录加载，核验模块来源。归档有repository_root只供git archive读取；测试cwd为snapshot.root。工具路径从已知安装/捆绑路径发现并固定，mc缺失时从锁定官方release取得darwin-arm64二进制，必须匹配既有SHA `e745d9866fc40ff7cf876abeb28e05e153a8cfeba601bcc8daa6e124b81384c5`，获取失败为toolchain失败。标准库环境仅放PATH/TMPDIR/LANG/TZ、明确Go缓存/GOFLAGS/GOWORK/NODE_PATH及本轮必须IM_TEST变量，管理与产品变量按用途分组；禁继承未知env、GODEBUG和子进程开关。按 `go list -json ./...` 与 `go test -json -list . -p 1 ./...`记录当前平台每包和顶层清单，不用源码正则代替build-tag解析。
+- [x] **Step 3：实现固定源与白名单。** 入口在解包、校验自身哈希之前不import integration；之后从归档scripts目录加载，核验模块来源。归档有repository_root只供git archive读取；测试cwd为snapshot.root。工具路径从已知安装/捆绑路径发现并固定，mc缺失时从锁定官方release取得darwin-arm64二进制，原官方下载地址HTTP410后，用户已确认同release源码重建；按规格修订的固定源码、只读依赖、固定元数据和新二进制SHA获取，历史file-runtime锁不变。获取失败或任一摘要不符仍为toolchain失败。标准库环境仅放PATH/TMPDIR/LANG/TZ、明确Go缓存/GOFLAGS/GOWORK/NODE_PATH及本轮必须IM_TEST变量，管理与产品变量按用途分组；禁继承未知env、GODEBUG和子进程开关。按 `go list -json ./...` 与 `go test -json -list . -p 1 ./...`记录当前平台每包和顶层清单，不用源码正则代替build-tag解析。
 - [ ] **Step 4：验证GREEN/实际只读发现。** 运行Step2的两个source/environment命令；对本机工具/镜像只读发现，记录发现状态和真实版本/哈希；mc获取在本任务执行时按锁定值进行；此步不启动服务。Expected：反例PASS，当前平台清单非空，未知版本拒绝。
 - [ ] **Step 5：提交。** `feat: pin integration source tools and isolated environments`，只add本任务文件和无秘密lock。
 

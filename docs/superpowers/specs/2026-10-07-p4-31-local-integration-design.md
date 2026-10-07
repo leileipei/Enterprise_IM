@@ -58,6 +58,7 @@ python3 scripts/test-project-integration.py \
 - 所有产品构建、测试与子脚本来自该归档；编排器自身 SHA 与工具版本另记录；运行入口须与目标归档内同名文件哈希一致，不一致即拒绝。未提交工作区不得进入验证，输出目录须新建、不覆盖旧尝试并拒绝符号链接路径。
 - Go 模块使用锁定依赖、`GOWORK=off`、`-mod=readonly` 和明确缓存路径；不升级 `go.mod/go.sum`。无 Git 元数据的构建显式提供已验证源码 SHA，记录实际构建参数、平台和二进制哈希，不把传入标签当唯一来源证明。
 - 运行配置包括工具绝对路径、当前镜像摘要和扫描定义来源。采用已有 `testdata/file-runtime/versions.lock` 与已安装工具，实际版本/哈希不符合锁定值即预检失败，不替换共用安装来迁就测试。
+- 2026-10-07 用户确认同版本 mc 源码重建：官方 release 提交 `6ac18619cf881074fe6edcc79ab62c9c85da60b9`，源码归档 SHA256 `9a2d79da5e5de3ea34315ea705d3fb02b5f0eb440663ee381b6de0ae73b93bb3`，Go1.27.1/darwin-arm64 固定参数两次独立构建摘要均为 `e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea`。仅本期 project-integration 锁覆盖 mc 二进制摘要，历史 file-runtime 锁不变；任何源码/摘要/版本不符仍拒绝预检。证据见 `docs/verification/p4-31-mc-rebuild.json`。
 - PG16 和 MinIO 沿用既有锁定摘要；Redis 采用本机已核对的 `redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499`，实际架构与 ImageID 在执行前再次核对，并写入本阶段非秘密锁定清单。镜像不足时按清单获取确切构建；不使用浮动 latest 或静默升级。
 - 从最终修正提交重新运行所有门禁和完整/race 套件；本阶段成功记录不使用历史完整套件复用选项。失败尝试独立保存，不拼接不同源码的 PASS。
 
@@ -214,4 +215,4 @@ message_realtime 至少要求以下已有调用方实际通过：`TestTwoDeviceR
 - [正式附件进程夹具](../../../testdata/file-runtime/business-runtime.md)
 - 现有 file-runtime/messages/download-retention/web-files/business-runtime 脚本，以及 test-import-apply.py 的十四门禁为被复用的事实基线；链接中的旧源 PASS 仍为历史证据。
 
-规格自检：已明确目标、允许修改、源码固定、资源/角色隔离、运行绑定、环境守卫、门禁与唯一辅助例外、计数、失败修正、清理及交付；没有未决业务参数或以目录存在替代健康证明。当前已实现结果判定、固定源码/环境及资源登记部分，并取得局部测试证据；mc工具预检待决，统一编排、17门禁及完整/race联调尚未完成。
+规格自检：已明确目标、允许修改、源码固定、资源/角色隔离、运行绑定、环境守卫、门禁与唯一辅助例外、计数、失败修正、清理及交付；没有未决业务参数或以目录存在替代健康证明。当前已实现结果判定、固定源码/环境及资源登记部分，并取得局部测试证据；mc重建已核验，完整工具/镜像预检进行中，统一编排、17门禁及完整/race联调尚未完成。
