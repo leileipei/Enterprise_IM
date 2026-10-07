@@ -129,8 +129,11 @@ func (s *Service) Apply(ctx context.Context, pn access.ImportPrincipal, requestI
 	if len(raw) > p.MaxInput {
 		return fail(ErrInvalidInput)
 	}
-	_, doc := p.EvaluateDocument(ctx, raw)
+	report, doc := p.EvaluateDocument(ctx, raw)
 	if doc == nil {
+		if report.Status == "incomplete" || ctx.Err() != nil {
+			return fail(ErrRetryable)
+		}
 		return fail(ErrInvalidInput)
 	}
 	tenants := doc.Tables["tenants"]

@@ -46,8 +46,20 @@ func TestPreflightPostgresOracle(t *testing.T) {
 		t.Fatal("migration manifest")
 	}
 	paths, e := filepath.Glob("../../db/migrations/*.up.sql")
-	if e != nil || len(paths) != 21 {
-		t.Fatal("frozen migration count")
+	if e != nil {
+		t.Fatal(e)
+	}
+	// The approved sample is pinned to its original manifest, even when later
+	// features add migrations to the repository.
+	baselinePaths := paths[:0]
+	for _, path := range paths {
+		if _, approved := manifest.Hashes["db/migrations/"+filepath.Base(path)]; approved {
+			baselinePaths = append(baselinePaths, path)
+		}
+	}
+	paths = baselinePaths
+	if len(paths) != len(manifest.Hashes) {
+		t.Fatal("approved sample migration missing")
 	}
 	for _, path := range paths {
 		b, e := os.ReadFile(path)

@@ -56,7 +56,8 @@ func (s *Service) Get(ctx context.Context, p access.ImportPrincipal, requestID s
 	if !found {
 		reason = "NOT_RECORDED"
 	}
-	if _, e = m.Exec(ctx, "INSERT INTO "+tableName(s.schema, "audit_events")+" (tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at) VALUES($1,$2,$3,'controlled_import.query','import_batch',$4,'allow',$5,$6)", p.Identity.TenantID, p.Identity.UserID, p.Identity.ActingMembershipID, requestID, reason, time.Now().UTC()); e != nil {
+	tag, e := m.Exec(ctx, "INSERT INTO "+tableName(s.schema, "audit_events")+" (tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at) VALUES($1,$2,$3,'controlled_import.query','import_batch',$4,'allow',$5,$6)", p.Identity.TenantID, p.Identity.UserID, p.Identity.ActingMembershipID, requestID, reason, time.Now().UTC())
+	if e != nil || tag.RowsAffected() != 1 {
 		return fail(ErrAuditUnavailable)
 	}
 	if e = access.AuthorizeImport(ctx, m, s.schema, p, time.Now()); e != nil {

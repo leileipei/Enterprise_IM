@@ -2,11 +2,14 @@ package httpserver
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	a "github.com/leileipei/Enterprise_IM/internal/importapply"
 	p "github.com/leileipei/Enterprise_IM/internal/importpreflight"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
 	"strings"
@@ -25,18 +28,23 @@ func HandlerWithImports(next http.Handler, auth Authenticator, service ImportSer
 	}
 	slots := make(chan struct{}, 1)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		const prefix = "/api/admin/import-batches/"
 		if r.URL.Path != "/api/admin/import-batches" && !strings.HasPrefix(r.URL.Path, prefix) {
 			next.ServeHTTP(w, r)
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
-		reject := func(status int, code string) { writeAdminError(w, status, code) }
+		var randomID [16]byte
+		_, _ = rand.Read(randomID[:])
+		safeID := hex.EncodeToString(randomID[:])
+		r = r.WithContext(context.WithValue(r.Context(), importCorrelationKey{}, safeID))
+		w.Header().Set("X-Request-ID", safeID)
+		reject := func(status int, code string) { rejectImport(w, r, status, code) }
 		if service == nil {
 			reject(404, "IMPORT_DISABLED")
 			return
 		}
-		start := time.Now()
 		authCtx, authCancel := context.WithDeadline(r.Context(), start.Add(30*time.Second))
 		defer authCancel()
 		verified, status, _ := bearerIdentity(authCtx, r, auth)
@@ -68,7 +76,7 @@ func HandlerWithImports(next http.Handler, auth Authenticator, service ImportSer
 		}
 		principal := access.ImportPrincipal{Identity: access.TrustedIdentity{TenantID: verified.TenantID, UserID: verified.UserID, ActingMembershipID: memberships[0]}, Issuer: verified.Issuer, Subject: verified.Subject, ExpiresAt: verified.ExpiresAt}
 		if e = service.Preauthorize(ctx, principal); e != nil {
-			importServiceError(w, r.Method, e)
+			importServiceError(w, r, e)
 			return
 		}
 		id := strings.TrimPrefix(r.URL.Path, prefix)
@@ -129,7 +137,7 @@ func HandlerWithImports(next http.Handler, auth Authenticator, service ImportSer
 			result, e = service.Get(ctx, principal, id)
 		}
 		if e != nil {
-			importServiceError(w, r.Method, e)
+			importServiceError(w, r, e)
 			return
 		}
 		status = 200
@@ -145,14 +153,14 @@ func HandlerWithImports(next http.Handler, auth Authenticator, service ImportSer
 		_, _ = w.Write(result.Encoded)
 	}), nil
 }
-func importServiceError(w http.ResponseWriter, method string, e error) {
+func importServiceError(w http.ResponseWriter, r *http.Request, e error) {
 	status := 503
 	code := "IMPORT_DATABASE_UNAVAILABLE"
 	switch {
 	case errors.Is(e, a.ErrBusy):
 		code = "IMPORT_BUSY"
 		status = 409
-		if method == http.MethodGet {
+		if r.Method == http.MethodGet {
 			status = 202
 		}
 	case errors.Is(e, a.ErrNotRecorded):
@@ -160,7 +168,7 @@ func importServiceError(w http.ResponseWriter, method string, e error) {
 		code = "IMPORT_NOT_RECORDED"
 	case errors.Is(e, a.ErrKeyConflict):
 		status = 409
-		code = "IMPORT_KEY_CONFLICT"
+		code = "BATCH_KEY_CONFLICT"
 	case errors.Is(e, a.ErrInvalidInput):
 		status = 422
 		code = "IMPORT_INPUT_INVALID"
@@ -172,7 +180,15 @@ func importServiceError(w http.ResponseWriter, method string, e error) {
 	case errors.Is(e, a.ErrAuditUnavailable):
 		code = "IMPORT_AUDIT_UNAVAILABLE"
 	case errors.Is(e, a.ErrCommitUnknown):
-		code = "IMPORT_COMMIT_UNKNOWN"
+		code = "COMMIT_OUTCOME_UNKNOWN"
 	}
+	rejectImport(w, r, status, code)
+}
+
+type importCorrelationKey struct{}
+
+func rejectImport(w http.ResponseWriter, r *http.Request, status int, code string) {
+	id, _ := r.Context().Value(importCorrelationKey{}).(string)
+	slog.WarnContext(r.Context(), "controlled import request rejected", "error_code", code, "request_correlation_id", id)
 	writeAdminError(w, status, code)
 }

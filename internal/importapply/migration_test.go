@@ -78,9 +78,40 @@ func TestAppendPGMigration(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
-			if _, e = f.Admin.PgConn().Exec(ctx, string(down)).ReadAll(); e != nil {
+			if _, e = f.Admin.PgConn().Exec(ctx, string(down)).ReadAll(); e == nil {
+				t.Fatal("down erased immutable receipts")
+			}
+			if _, e = f.Admin.Exec(ctx, "ROLLBACK"); e != nil {
 				t.Fatal(e)
 			}
+			var n int
+			if e = f.Pool.QueryRow(ctx, "SELECT count(*) FROM "+table).Scan(&n); e != nil || n != 1 {
+				t.Fatal("down changed stored terminal", e)
+			}
+
 		})
+	}
+}
+
+func TestAppendPGMigrationEmptyDown(t *testing.T) {
+	f := appendDB(t, 22)
+	ctx := context.Background()
+	down, e := os.ReadFile("../../db/migrations/000022_import_batches.down.sql")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = f.Admin.PgConn().Exec(ctx, string(down)).ReadAll(); e != nil {
+		t.Fatal("empty down rejected", e)
+	}
+	up, e := os.ReadFile("../../db/migrations/000022_import_batches.up.sql")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = f.Admin.PgConn().Exec(ctx, string(up)).ReadAll(); e != nil {
+		t.Fatal("empty reapply rejected", e)
+	}
+	var n int
+	if e = f.Admin.QueryRow(ctx, "SELECT count(*) FROM import_batches").Scan(&n); e != nil || n != 0 {
+		t.Fatal("empty reapply failed", e)
 	}
 }

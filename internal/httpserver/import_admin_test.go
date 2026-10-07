@@ -3,6 +3,7 @@ package httpserver
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	a "github.com/leileipei/Enterprise_IM/internal/importapply"
@@ -62,7 +63,7 @@ func TestAppendHTTPStatusContract(t *testing.T) {
 		code         string
 	}{
 		{"first", "POST", nil, a.Applied, false, 201, ""}, {"replay", "POST", nil, a.Applied, true, 200, ""}, {"rejected", "POST", nil, a.Rejected, false, 409, ""}, {"rejectedReplay", "POST", nil, a.Rejected, true, 409, ""}, {"getRejected", "GET", nil, a.Rejected, false, 200, ""},
-		{"postBusy", "POST", a.ErrBusy, "", false, 409, "IMPORT_BUSY"}, {"getBusy", "GET", a.ErrBusy, "", false, 202, "IMPORT_BUSY"}, {"key", "POST", a.ErrKeyConflict, "", false, 409, "IMPORT_KEY_CONFLICT"}, {"invalid", "POST", a.ErrInvalidInput, "", false, 422, "IMPORT_INPUT_INVALID"}, {"forbidden", "POST", a.ErrForbidden, "", false, 403, "IMPORT_FORBIDDEN"}, {"database", "POST", a.ErrDatabaseUnavailable, "", false, 503, "IMPORT_DATABASE_UNAVAILABLE"}, {"retry", "POST", a.ErrRetryable, "", false, 503, "IMPORT_RETRYABLE"}, {"audit", "POST", a.ErrAuditUnavailable, "", false, 503, "IMPORT_AUDIT_UNAVAILABLE"}, {"unknown", "POST", a.ErrCommitUnknown, "", false, 503, "IMPORT_COMMIT_UNKNOWN"}, {"missing", "GET", a.ErrNotRecorded, "", false, 404, "IMPORT_NOT_RECORDED"},
+		{"postBusy", "POST", a.ErrBusy, "", false, 409, "IMPORT_BUSY"}, {"getBusy", "GET", a.ErrBusy, "", false, 202, "IMPORT_BUSY"}, {"key", "POST", a.ErrKeyConflict, "", false, 409, "BATCH_KEY_CONFLICT"}, {"invalid", "POST", a.ErrInvalidInput, "", false, 422, "IMPORT_INPUT_INVALID"}, {"forbidden", "POST", a.ErrForbidden, "", false, 403, "IMPORT_FORBIDDEN"}, {"database", "POST", a.ErrDatabaseUnavailable, "", false, 503, "IMPORT_DATABASE_UNAVAILABLE"}, {"retry", "POST", a.ErrRetryable, "", false, 503, "IMPORT_RETRYABLE"}, {"audit", "POST", a.ErrAuditUnavailable, "", false, 503, "IMPORT_AUDIT_UNAVAILABLE"}, {"unknown", "POST", a.ErrCommitUnknown, "", false, 503, "COMMIT_OUTCOME_UNKNOWN"}, {"missing", "GET", a.ErrNotRecorded, "", false, 404, "IMPORT_NOT_RECORDED"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -127,6 +128,7 @@ func TestAppendHTTPNoSecrets(t *testing.T) {
 	h, _ := HandlerWithImports(http.NotFoundHandler(), authFunc(func(context.Context, string) (VerifiedIdentity, error) { return VerifiedIdentity{}, errors.New(marker) }), importStub{})
 	r := importRequest("POST", "/api/admin/import-batches/"+marker, strings.NewReader(marker))
 	r.Header.Set("Authorization", "Bearer "+marker)
+	r.Header.Set("X-Request-ID", marker)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	h, _ = HandlerWithImports(http.NotFoundHandler(), authFunc(importAuth), importStub{apply: func(context.Context, access.ImportPrincipal, string, []byte) (a.Result, error) {
@@ -137,6 +139,27 @@ func TestAppendHTTPNoSecrets(t *testing.T) {
 	if strings.Contains(w.Body.String()+w2.Body.String()+logs.String(), marker) {
 		t.Fatal("untrusted details leaked")
 	}
+	lines := strings.Split(strings.TrimSpace(logs.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatal("expected two safe rejection events", len(lines))
+	}
+	seen := map[string]bool{}
+	for i, line := range lines {
+		var event map[string]any
+		if e := json.Unmarshal([]byte(line), &event); e != nil {
+			t.Fatal("safe event missing", e)
+		}
+		id, ok := event["request_correlation_id"].(string)
+		if !ok || len(id) != 32 || seen[id] {
+			t.Fatal("unsafe or absent server correlation")
+		}
+		seen[id] = true
+		code := []string{"IMPORT_UNAUTHORIZED", "IMPORT_DATABASE_UNAVAILABLE"}[i]
+		if event["error_code"] != code {
+			t.Fatal("unsafe event code")
+		}
+	}
+
 }
 func TestAppendHTTPIngressLimits(t *testing.T) {
 	for _, tc := range []struct {

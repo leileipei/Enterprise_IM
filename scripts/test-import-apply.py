@@ -19,14 +19,14 @@ REQUIRED_GATES = ['unit', 'race', 'migration', 'authorization', 'append_database
 REQUIRED_TESTS = {
  'unit':['TestAppendDecisionParity','TestAppendProtectedEntities','TestAppendPlanDeepTree','TestAppendReceiptStrictDecode','TestAppendHTTPStatusContract','TestAppendHTTPAuthBeforeRead','TestAppendHTTPNoSecrets','TestAppendHTTPIngressLimits','TestAppendRuntimeDefaultOff'],
  'race':['TestAppendPGConcurrentSameBatch','TestAppendPGCommitOutcome','TestAppendHTTPRealOIDCToReceipt'],
- 'migration':['TestAppendPGMigration/base1','TestAppendPGMigration/base21'],
+ 'migration':['TestAppendPGMigration/base1','TestAppendPGMigration/base21','TestAppendPGMigrationEmptyDown'],
  'authorization':['TestAppendPGAuthorization','TestAppendPGAuthorizationExpiry','TestAppendPGAuthNoCommit'],
- 'append_database':['TestAppendPGApplyAtomic','TestAppendPGReplayBinding','TestAppendPGSavepointReject','TestAppendPGAuditFailure','TestAppendPGLockCleanup','TestAppendPGWriterProfile','TestAppendPGSnapshotLocks','TestAppendPGStoredLimits','TestAppendRuntimeMissingMigration'],
+ 'append_database':['TestAppendPGApplyAtomic','TestAppendPGReplayBinding','TestAppendPGSavepointReject','TestAppendPGAuditFailure','TestAppendPGLockCleanup','TestAppendPGWriterProfile','TestAppendPGSnapshotLocks','TestAppendPGStoredLimits','TestAppendRuntimeMissingMigration','TestAppendPGAuditZeroRows/apply','TestAppendPGAuditZeroRows/get','TestAppendPGPreflightCanceled/cancel','TestAppendPGPreflightCanceled/deadline','TestAppendPGTerminalAndTriggerFault/receipt','TestAppendPGTerminalAndTriggerFault/unknownTrigger'],
  'http_oidc':['TestAppendHTTPRealOIDCToReceipt'],
  'concurrency':['TestAppendPGConcurrentSameBatch','TestAppendPGSnapshotAfterSessionLock','TestAppendPGConcurrentMutation','TestAppendPGConcurrentInsertRace','TestAppendPGRetryErrors/serialization','TestAppendPGRetryErrors/deadlock','TestAppendPGRetryErrors/lockTimeout','TestAppendPGAuthorityExpiresDuringWrite','TestAppendPGInventoryMutationBlocked'],
- 'commit_fault':['TestAppendPGCommitOutcome/'+x for x in ['beforeCommit','afterCommit','cancelBeforeWrite','processRestart']],
+ 'commit_fault':['TestAppendPGCommitOutcome/'+x for x in ['beforeCommit','afterCommit','cancelBeforeWrite','processRestart','tokenExpiryDuringCommit']],
  'resources':['TestAppendHTTPResourceEdges/'+x for x in ['body10m','body10mplus1','rows10000','rows10001','stored20000','stored20001','stored64m','stored64mplus1','string4096','string4097','report200','report201','deepTree','slowBodyExpiry','disconnectAfterCommit']],
- 'readonly_regression':['TestComparePGSnapshotReadOnly','TestComparePGIsolation','TestComparePGProfile','TestComparePGColumnWritePermission','TestComparePGStructuralProfile','TestComparePGResourceEdges','TestComparePGUnsupportedTimes','TestComparePGGlobalOccupancy','TestComparePGDDLAndRevoke','TestComparePGQueryBudget','TestCompareProcessEnvIsolation','TestCompareProcessActualSIGTERM','TestComparePGTLS/verify_full','TestCompareProcessTLS/verify_full_home_traps','TestCompareProcessResourceEdges/bytes_plus_one'],
+ 'readonly_regression':['TestPreflightPostgresOracle','TestComparePGSnapshotReadOnly','TestComparePGIsolation','TestComparePGProfile','TestComparePGColumnWritePermission','TestComparePGStructuralProfile','TestComparePGResourceEdges','TestComparePGUnsupportedTimes','TestComparePGGlobalOccupancy','TestComparePGDDLAndRevoke','TestComparePGQueryBudget','TestCompareProcessEnvIsolation','TestCompareProcessActualSIGTERM','TestComparePGTLS/verify_full','TestCompareProcessTLS/verify_full_home_traps','TestCompareProcessResourceEdges/bytes_plus_one'],
  'groupdb_regression':['TestAllowsParallelOrganizationsAndAdjacentIntervals','TestMigrationCanRollBackAndReapply'],
  'access_regression':['TestAppendPGAuthorization'],
  'ack_regression':['TestMessageACKUsesPersistedTime'],
@@ -127,10 +127,10 @@ def main():
    ['go','test','-json','-p','1','-timeout=5m','-count=1','-skip',skip]+offline,
    ['go','test','-json','-p','1','-count=1','-run',new_unit,'./internal/importapply','./internal/httpserver','./cmd/im-api']],db_env)
   host('race',['./internal/importapply','./internal/httpserver','./internal/oidcauth'],'^TestAppend(Budget|PGConcurrentSameBatch|PGCommitOutcome|HTTPAuthBeforeRead|HTTPIngressLimits|HTTPRealOIDC)', ['-race'])
-  host('migration',['./internal/importapply'],'^TestAppendPGMigration$')
+  host('migration',['./internal/importapply'],'^TestAppendPGMigration')
   host('authorization',['./internal/access'],'^TestAppendPG(Auth|Authorization)')
   gate('append_database',[
-   ['go','test','-json','-count=1','./internal/importapply','-run','^TestAppend(PG(Apply|Replay|Savepoint|Audit|Lock|Snapshot|Writer|Stored)|Budget)'],
+   ['go','test','-json','-count=1','./internal/importapply','-run','^TestAppend(PG(Apply|Replay|Savepoint|Audit|Lock|Snapshot|Writer|Stored|Preflight|Terminal)|Budget)'],
    ['go','test','-json','-count=1','./cmd/im-api','-run','^TestAppendRuntime']],db_env)
   host('http_oidc',['./internal/oidcauth'],'^TestAppendHTTPRealOIDCToReceipt$')
   host('concurrency',['./internal/importapply'],'^TestAppendPG(Concurrent|SnapshotAfter|Retry|Authority|Inventory)')
@@ -141,7 +141,7 @@ def main():
   if psql(writer,inventory)!=baseline:raise RuntimeError('writer fixture schema or role residue')
   # Independent readonly fixture retains P4-29 migrations1..21 and strict role checks.
   linux=dict(env,GOOS='linux',GOARCH='arm64',CGO_ENABLED='0')
-  for name,path in [('importcompare','internal/importcompare'),('compare_cli','cmd/im-import-compare')]:gate(name+'_build',['go','test','-c','-o',str(bins/(name+'.test')),'./'+path],linux,parse='none')
+  for name,path in [('importpreflight','internal/importpreflight'),('importcompare','internal/importcompare'),('compare_cli','cmd/im-import-compare')]:gate(name+'_build',['go','test','-c','-o',str(bins/(name+'.test')),'./'+path],linux,parse='none')
   for name in ['im-import-compare','im-import-preflight']:gate(name+'_build',['go','build','-buildvcs=false','-o',str(bins/(name+'-linux-arm64')),'./cmd/'+name],linux,parse='none')
   tls=private/'tls';tls.mkdir()
   for prefix in ['ca','wrong-ca']:
@@ -160,7 +160,7 @@ def main():
   else:raise RuntimeError('TLS fixture reload failed')
   readonly_env=['PATH=/usr/local/bin:/usr/bin:/bin','TZ=UTC','IM_TEST_DATABASE_URL=host=/var/run/postgresql port=5432 user=postgres dbname=im_append sslmode=disable','IM_COMPARE_TEST_BINARY=/bins/im-import-compare-linux-arm64','IM_PREFLIGHT_TEST_BINARY=/bins/im-import-preflight-linux-arm64','IM_COMPARE_TEST_CA=/tls/ca.crt','IM_COMPARE_TEST_WRONG_CA=/tls/wrong-ca.crt']
   commands=[]
-  for name,path in [('importcompare','internal/importcompare'),('compare_cli','cmd/im-import-compare')]:commands.append(['docker','exec','-w','/source/'+path,readonly,'env','-i']+readonly_env+['/bins/'+name+'.test','-test.v','-test.timeout=10m','-test.count=1'])
+  for name,path in [('importpreflight','internal/importpreflight'),('importcompare','internal/importcompare'),('compare_cli','cmd/im-import-compare')]:commands.append(['docker','exec','-w','/source/'+path,readonly,'env','-i']+readonly_env+['/bins/'+name+'.test','-test.v','-test.timeout=10m','-test.count=1'])
   gate('readonly_regression',commands,parse='verbose')
   if psql(readonly,inventory)!=before_readonly:raise RuntimeError('readonly fixture schema or role residue')
   events.append(dict(name='fixture_cleanup',exit_code=0,schema_role_residue=0))

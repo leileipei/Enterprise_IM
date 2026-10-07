@@ -28,7 +28,7 @@ type commitProxy struct {
 	stop     chan struct{}
 }
 
-func faultProxy(t *testing.T, f *appendFixture, before bool) (*pgxpool.Pool, *commitProxy) {
+func faultProxy(t *testing.T, f *appendFixture, before bool, holdUntil ...time.Time) (*pgxpool.Pool, *commitProxy) {
 	t.Helper()
 	cfg := f.Pool.Config()
 	target := net.JoinHostPort(cfg.ConnConfig.Host, strconv.Itoa(int(cfg.ConnConfig.Port)))
@@ -75,9 +75,9 @@ func faultProxy(t *testing.T, f *appendFixture, before bool) (*pgxpool.Pool, *co
 				}
 				backend.Write(length[:])
 				backend.Write(payload)
-				responses := make(chan struct{})
+				p.wg.Add(1)
 				go func() {
-					defer close(responses)
+					defer p.wg.Done()
 					for {
 						kind, payload, e := readFrame(backend)
 						if e != nil {
@@ -87,7 +87,19 @@ func faultProxy(t *testing.T, f *appendFixture, before bool) (*pgxpool.Pool, *co
 						if isCommit {
 							select {
 							case <-armed:
-								once.Do(func() { p.cut <- "backend_COMMIT_complete_response_dropped" })
+								stage := "backend_COMMIT_complete_response_dropped"
+								if len(holdUntil) > 0 {
+									stage = "backend_COMMIT_complete_held_until_token_expiry"
+								}
+								once.Do(func() { p.cut <- stage })
+								if len(holdUntil) > 0 {
+									timer := time.NewTimer(time.Until(holdUntil[0]))
+									select {
+									case <-timer.C:
+									case <-p.stop:
+									}
+									timer.Stop()
+								}
 								client.Close()
 								backend.Close()
 								return
@@ -127,6 +139,7 @@ func faultProxy(t *testing.T, f *appendFixture, before bool) (*pgxpool.Pool, *co
 		t.Fatal(e)
 	}
 	t.Cleanup(func() {
+		close(p.stop)
 		pool.Close()
 		ln.Close()
 		p.mu.Lock()
@@ -189,7 +202,7 @@ func TestAppendPGCommitOutcome(t *testing.T) {
 		}
 		os.Exit(23)
 	}
-	for _, scenario := range []string{"beforeCommit", "afterCommit", "cancelBeforeWrite", "processRestart"} {
+	for _, scenario := range []string{"beforeCommit", "afterCommit", "cancelBeforeWrite", "processRestart", "tokenExpiryDuringCommit"} {
 		t.Run(scenario, func(t *testing.T) {
 			f := appendDB(t, 22)
 			actor := seedApplyActor(t, f)
@@ -220,7 +233,12 @@ func TestAppendPGCommitOutcome(t *testing.T) {
 					t.Fatal("cancel before write mislabeled", e)
 				}
 			} else {
-				pool, proxy := faultProxy(t, f, scenario == "beforeCommit")
+				var hold []time.Time
+				if scenario == "tokenExpiryDuringCommit" {
+					actor.ExpiresAt = time.Now().Add(1500 * time.Millisecond)
+					hold = append(hold, actor.ExpiresAt.Add(100*time.Millisecond))
+				}
+				pool, proxy := faultProxy(t, f, scenario == "beforeCommit", hold...)
 				s, _ := NewService(pool, f.Schema)
 				_, e := s.Apply(ctx, actor, fixtureRequest, applyInput(t))
 				if !errors.Is(e, ErrCommitUnknown) {
@@ -229,15 +247,19 @@ func TestAppendPGCommitOutcome(t *testing.T) {
 				select {
 				case stage := <-proxy.cut:
 					t.Log(stage)
+					if scenario == "tokenExpiryDuringCommit" && (stage != "backend_COMMIT_complete_held_until_token_expiry" || time.Now().Before(actor.ExpiresAt)) {
+						t.Fatal("token did not expire during the pending actual COMMIT response")
+					}
 				case <-time.After(time.Second):
 					t.Fatal("proxy did not intercept actual COMMIT")
 				}
 			}
+			actor.ExpiresAt = time.Now().Add(time.Hour)
 			r, e := plain.Apply(ctx, actor, fixtureRequest, applyInput(t))
 			if e != nil || r.Receipt.State != Applied || r.Receipt.Counts["total"].Inserted != 6 {
 				t.Fatal("recovery", e)
 			}
-			expectReplay := scenario == "afterCommit" || scenario == "processRestart"
+			expectReplay := scenario == "afterCommit" || scenario == "processRestart" || scenario == "tokenExpiryDuringCommit"
 			if r.Replay != expectReplay {
 				t.Fatal("wrong commit outcome recovery")
 			}

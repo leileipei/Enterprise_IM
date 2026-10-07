@@ -87,6 +87,12 @@ func AuditImportTerminal(ctx context.Context, tx pgx.Tx, schema string, p Import
 		return ErrInvalidIdentity
 	}
 	id := p.Identity
-	_, e := tx.Exec(ctx, "INSERT INTO "+importTable(schema, "audit_events")+" (tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at) VALUES($1,$2,$3,'controlled_import.apply','import_batch',$4,$5,$6,$7)", id.TenantID, id.UserID, id.ActingMembershipID, requestID, outcome, reason, at.UTC())
-	return e
+	tag, e := tx.Exec(ctx, "INSERT INTO "+importTable(schema, "audit_events")+" (tenant_id,actor_user_id,acting_membership_id,action,resource_type,resource_id,outcome,reason,occurred_at) VALUES($1,$2,$3,'controlled_import.apply','import_batch',$4,$5,$6,$7)", id.TenantID, id.UserID, id.ActingMembershipID, requestID, outcome, reason, at.UTC())
+	if e != nil {
+		return e
+	}
+	if tag.RowsAffected() != 1 {
+		return errors.New("import audit not recorded")
+	}
+	return nil
 }
