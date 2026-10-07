@@ -191,7 +191,7 @@ if applyAuditCount != 0 { t.Fatal("failed audit produced a terminal apply event"
 - 私有 `importEnabledFromEnv(getenv func(string)string,oidcEnabled bool)(bool,error)`：空/false 关闭、true 开启，其他值配置错误；`startImportService(ctx context.Context,pool *pgxpool.Pool,enabled bool)(*importapply.Service,error)`，固定正式 schema public，开启时 CheckReady。
 - handler 持有每实例容量 1 的 POST semaphore；从请求进入记录 start，认证后调用 Task 4 RequestContext 创建同绝对 deadline 与 SQL预算的上下文。POST Preauthorize 后抢槽位，再检查 Content-Type application/json、拒绝非空非 identity Content-Encoding、MaxBytesReader 10 MiB 后读取；GET 无正文，不能抢 POST 槽位。
 
-- [ ] **Step 1：写 RED。** `TestAppendHTTPStatusContract` 201/200/409/202/400/413/422/401/403/503 与固定码逐项覆盖；`TestAppendHTTPAuthBeforeRead` 无权限时标记 reader 从未 Read，busy 不可见；`TestAppendHTTPNoSecrets` 恶意 path/header/body/DB error 标记不入响应/日志；`TestAppendHTTPIngressLimits` 重复认证头、压缩/超限/并发忙碌、慢正文取消；`TestAppendRuntimeDefaultOff` 默认两个路径404、true 无 OIDC/迁移/权限启动失败。
+- [x] **Step 1：写 RED。** `TestAppendHTTPStatusContract` 201/200/409/202/400/413/422/401/403/503 与固定码逐项覆盖；`TestAppendHTTPAuthBeforeRead` 无权限时标记 reader 从未 Read，busy 不可见；`TestAppendHTTPNoSecrets` 恶意 path/header/body/DB error 标记不入响应/日志；`TestAppendHTTPIngressLimits` 重复认证头、压缩/超限/并发忙碌、慢正文取消；`TestAppendRuntimeDefaultOff` 默认两个路径404、true 无 OIDC/迁移/权限启动失败。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -201,10 +201,10 @@ if response.Code != http.StatusForbidden || body.reads != 0 { t.Fatal("unauthori
 if response.Header().Get("Cache-Control") != "no-store" { t.Fatal("cacheable admin response") }
 ```
 
-- [ ] **Step 2：观察失败。** `go test ./internal/httpserver ./cmd/im-api -run '^TestAppend(HTTP|Runtime)' -count=1`；handler 单测不启用真实上传/扫描依赖。
-- [ ] **Step 3：最小实现。** 不使用丢失 ExpiresAt 的 authenticateAdmin，不把 issuer/subject 从 HTTP 字段赋值；复用 bearer 解析并保留可信来源。独立固定拒绝器不记录原 URL/SQL。new wrapper 在最终组合位置处理导入路径，健康/原管理/文件/Web 路由仍委托原 handler。
-- [ ] **Step 4：验证 GREEN。** 同命令及 `TestAppendHTTPRealOIDCToReceipt`，用真实签名 OIDC+普通角色 PG 从 HTTP 到回执/审计；所有响应 no-store，applied replay200、rejected replay409、GET终态200。预算包括认证、授权、读取、执行，不阶段重置。
-- [ ] **Step 5：提交。** `feat: expose guarded import endpoints behind default-off runtime`。
+- [x] **Step 2：观察失败。** `go test ./internal/httpserver ./cmd/im-api -run '^TestAppend(HTTP|Runtime)' -count=1`；handler 单测不启用真实上传/扫描依赖。
+- [x] **Step 3：最小实现。** 不使用丢失 ExpiresAt 的 authenticateAdmin，不把 issuer/subject 从 HTTP 字段赋值；复用 bearer 解析并保留可信来源。独立固定拒绝器不记录原 URL/SQL。new wrapper 在最终组合位置处理导入路径，健康/原管理/文件/Web 路由仍委托原 handler。
+- [x] **Step 4：验证 GREEN。** 同命令及 `TestAppendHTTPRealOIDCToReceipt`，用真实签名 OIDC+普通角色 PG 从 HTTP 到回执/审计；所有响应 no-store，applied replay200、rejected replay409、GET终态200。预算包括认证、授权、读取、执行，不阶段重置。
+- [x] **Step 5：提交。** `feat: expose guarded import endpoints behind default-off runtime`。
 
 ### Task 7：真实并发、提交中断与资源边界
 
