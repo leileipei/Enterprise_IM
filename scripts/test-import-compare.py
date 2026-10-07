@@ -32,6 +32,7 @@ REQUIRED_TESTS = {
     'ack_regression': ['TestMessageACKUsesPersistedTime'],
     'oidc_regression': ['TestSignedTokenThroughHTTPToAuditedAdminAndOrdinaryDirectory'],
 }
+REQUIRED_COMMANDS = ['build_all', 'vet_all', 'provenance', 'fixture_cleanup', 'signal_repeat']
 ENTITIES = ['tenants', 'legal_entities', 'organizations', 'departments', 'users',
             'user_organizations', 'user_departments', 'external_identities', 'admin_grants']
 
@@ -75,8 +76,8 @@ def validate_required_gates(events):
         failures.append('cleanup')
     if duplicate:
         failures.append('duplicate_gate')
-    for name in ['build_all', 'vet_all', 'provenance', 'fixture_cleanup', 'signal_repeat']:
-        if name in groups and groups[name].get('exit_code') != 0:
+    for name in REQUIRED_COMMANDS:
+        if name not in groups or groups[name].get('exit_code') != 0:
             failures.append(name)
     full = groups.get('full_suite', {})
     return {'required_gates_passed': not failures, 'full_suite_passed': green(full),
@@ -266,8 +267,8 @@ def main():
         dbgate('offline_linux','preflight_cli')
         dbgate('offline_oracle','importpreflight',['-test.run=^TestPreflightPostgresOracle$'])
         for pkg in ['groupdb','access','oidcauth']:
-            dbgate(pkg+'_regression',pkg)
-        ack = '^TestMessageACKUsesPersistedTime$|^TestSendTextMessage|^TestSendGroupTextMessage|^TestFileMessageDirect|^TestFileMessageGroup|^TestValidateClientMessageIDWindowAndVersion$|^TestMessageContentBounds$|^TestFileMessageDigestCanonical$'
+            dbgate(('oidc' if pkg == 'oidcauth' else pkg)+'_regression',pkg)
+        ack = '^TestMessageACKUsesPersistedTime$|^TestSendTextMessage|^TestSendGroupTextMessage|^TestFileMessageDirect|^TestFileMessageGroup|^TestTextSend|^TestTextReplay|^TestFileMessageHistory|^TestFileMessageIdempotency|^TestValidateClientMessageIDWindowAndVersion$|^TestMessageContentBounds$|^TestFileMessageDigestCanonical$'
         dbgate('ack_regression','policystore',['-test.run='+ack])
         # All per-test schema and role cleanup must succeed before disposing the container.
         residue = checked(psql + ["select (select count(*) from pg_namespace where nspname like 'im_compare_%') + (select count(*) from pg_roles where rolname like 'im_compare_%')"])
