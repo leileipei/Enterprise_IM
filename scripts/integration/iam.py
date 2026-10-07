@@ -25,8 +25,8 @@ def product_credentials(keys):
 
 
 def parse_mc_output(command,output):
-    # The pinned mc pipe command writes byte progress even with --json.
-    # Only stat supplies a structured result consumed as evidence here.
+    # Successful provisioning commands do not supply structured gate evidence.
+    # Only stat supplies the structured version result consumed here.
     if command!='stat':return []
     try:rows=[json.loads(line) for line in output.splitlines() if line.strip()]
     except ValueError as exc:raise ValueError('iam_stat_output_invalid') from exc
@@ -65,7 +65,7 @@ def prepare_iam(bundle,tools,private,deadline):
         mc(['admin','policy','attach','fixture','p431-'+role,'--user',key])
     mc(['alias','set','bootstrap',bundle.environment['IM_TEST_S3_ENDPOINT'],*keys['bootstrap']])
     mc(['pipe','bootstrap/'+bucket+'/_im_runtime/read-probe/v1'],input='enterprise-im-file-read-probe-v1\n')
-    stat=mc(['stat','bootstrap/'+bucket+'/_im_runtime/read-probe/v1'])
+    stat=mc(['stat','fixture/'+bucket+'/_im_runtime/read-probe/v1'])
     version=stat[0].get('versionID')
     if not version or version=='null':raise ValueError('iam_probe_version_unproven')
     bundle.environment.update(product_credentials(keys))
