@@ -102,8 +102,8 @@ assert archive_module_marker == 'committed'
 
 - [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_source.py' -v`及 `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_environment.py' -v`。Expected：缺接口或目标断言失败。
 - [x] **Step 3：实现固定源与白名单。** 入口在解包、校验自身哈希之前不import integration；之后从归档scripts目录加载，核验模块来源。归档有repository_root只供git archive读取；测试cwd为snapshot.root。工具路径从已知安装/捆绑路径发现并固定，mc缺失时从锁定官方release取得darwin-arm64二进制，原官方下载地址HTTP410后，用户已确认同release源码重建；按规格修订的固定源码、只读依赖、固定元数据和新二进制SHA获取，历史file-runtime锁不变。获取失败或任一摘要不符仍为toolchain失败。标准库环境仅放PATH/TMPDIR/LANG/TZ、明确Go缓存/GOFLAGS/GOWORK/NODE_PATH及本轮必须IM_TEST变量，管理与产品变量按用途分组；禁继承未知env、GODEBUG和子进程开关。按 `go list -json ./...` 与 `go test -json -list . -p 1 ./...`记录当前平台每包和顶层清单，不用源码正则代替build-tag解析。
-- [ ] **Step 4：验证GREEN/实际只读发现。** 运行Step2的两个source/environment命令；对本机工具/镜像只读发现，记录发现状态和真实版本/哈希；mc获取在本任务执行时按锁定值进行；此步不启动服务。Expected：反例PASS，当前平台清单非空，未知版本拒绝。
-- [ ] **Step 5：提交。** `feat: pin integration source tools and isolated environments`，只add本任务文件和无秘密lock。
+- [x] **Step 4：验证GREEN/实际只读发现。** 运行Step2的两个source/environment命令；对本机工具/镜像只读发现，记录发现状态和真实版本/哈希；mc获取在本任务执行时按锁定值进行；此步不启动服务。Expected：反例PASS，当前平台清单非空，未知版本拒绝。
+- [x] **Step 5：提交。** `feat: pin integration source tools and isolated environments`，只add本任务文件和无秘密lock。
 
 ### Task 3：资源登记、命令监管与测试进程桥
 
@@ -130,11 +130,11 @@ assert verdict_for_pending_auto_remove != 'removed'
 
 **Interfaces:** `prepare_services(snapshot:SourceSnapshot,tools:Toolchain,registry:Registry,private:Path,deadline:float)->FixtureBundle`；`probe_services(bundle:FixtureBundle,tools:Toolchain,deadline:float)->GateEvent`；`prepare_iam(bundle:FixtureBundle,tools:Toolchain,private:Path,deadline:float)->FixtureBundle`。所有秘密只存FixtureBundle/0600文件，不公开序列化。
 
-- [ ] **Step 1：写测试。** `test_service_labels_loopback_db_and_roles`、`test_four_iam_principals_and_no_admin_child_env`、`test_failed_preflight_cleans_created_resources`、`test_probe_version_not_created_by_api`，及真实 `TestIntegrationFixtureIAM`：匿名拒绝、上传/扫描/下载/cleanup允许矩阵、cleanup nil/empty/null versionid拒绝。策略模板仅替换本轮两个bucket名和主体，读探针固定 `_im_runtime/read-probe/v1`、内容 `enterprise-im-file-read-probe-v1`+LF。
-- [ ] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_services.py' -v`。Expected：准备接口或权限矩阵断言缺失失败；真实IAM测试待Step4具备服务后执行，环境缺失/SKIP不当RED/PASS。
-- [ ] **Step 3：准备及最小实现。** 新建带 `im.integration.owner=<owner>` 和 `im.integration.source=<commit>` 的PG/Redis/MinIO，环回随机端口，tmpfs/本轮数据目录，无客户卷。PG建enterprise_im_files、btree_gist、TLS CA/错误CA/SAN127.0.0.1证书；实际TLS连接验证。mc使用私密config-dir，输出只记录模板，创建版本主桶/策略桶、四独立权限主体与管理/引导主体；cleanup模板按锁定MinIO支持的非空非null `s3:versionid`条件实际测，不笼统给DeleteObject。管理员准备与普通API/repair角色分离，导入/只读独立profile留子门禁。故障时按registry清理。
-- [ ] **Step 4：验证GREEN。** Step2 unittest全PASS；真实probe_services及私密bundle环境中的 `go test ./internal/testfixtures -run '^TestIntegrationFixtureIAM$' -count=1 -v` exit0且必要名PASS、0SKIP；再读bucket/version/匿名/角色/label/TLS库存确认，清理本任务真实夹具。记录真实端口和资源ID的安全元数据，绝不打印凭据。
-- [ ] **Step 5：提交。** `feat: provision owned database redis and versioned IAM fixtures`，大型数据/秘密不入Git。
+- [x] **Step 1：写测试。** `test_service_labels_loopback_db_and_roles`、`test_four_iam_principals_and_no_admin_child_env`、`test_failed_preflight_cleans_created_resources`、`test_probe_version_not_created_by_api`，及真实 `TestIntegrationFixtureIAM`：匿名拒绝、上传/扫描/下载/cleanup允许矩阵、cleanup nil/empty/null versionid拒绝。策略模板仅替换本轮两个bucket名和主体，读探针固定 `_im_runtime/read-probe/v1`、内容 `enterprise-im-file-read-probe-v1`+LF。
+- [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_services.py' -v`。Expected：准备接口或权限矩阵断言缺失失败；真实IAM测试待Step4具备服务后执行，环境缺失/SKIP不当RED/PASS。
+- [x] **Step 3：准备及最小实现。** 新建带 `im.integration.owner=<owner>` 和 `im.integration.source=<commit>` 的PG/Redis/MinIO，环回随机端口，tmpfs/本轮数据目录，无客户卷。PG建enterprise_im_files、btree_gist、TLS CA/错误CA/SAN127.0.0.1证书；实际TLS连接验证。mc使用私密config-dir，输出只记录模板，创建版本主桶/策略桶、四独立权限主体与管理/引导主体；cleanup模板按锁定MinIO支持的非空非null `s3:versionid`条件实际测，不笼统给DeleteObject。管理员准备与普通API/repair角色分离，导入/只读独立profile留子门禁。故障时按registry清理。
+- [x] **Step 4：验证GREEN。** Step2 unittest全PASS；真实probe_services及私密bundle环境中的 `go test ./internal/testfixtures -run '^TestIntegrationFixtureIAM$' -count=1 -v` exit0且必要名PASS、0SKIP；再读bucket/version/匿名/角色/label/TLS库存确认，清理本任务真实夹具。记录真实端口和资源ID的安全元数据，绝不打印凭据。
+- [x] **Step 5：提交。** `feat: provision owned database redis and versioned IAM fixtures`，大型数据/秘密不入Git。
 
 ### Task 5：扫描运行绑定与浏览器预检
 
@@ -219,4 +219,4 @@ assert child['source_commit'] == snapshot.commit
 | §12 I01–I11 | I01→2/7；I02→4/5/7；I03→4；I04→5/6/8；I05→3/6/8；I06→6/8；I07→6/8；I08→1/2/7/8；I09→8/9；I10→3/7/9；I11→7/9 |
 | §13交付/执行方式 | Task9、当前助手逐项实现及一次最终评审 |
 
-接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1已按RED→GREEN实现结果判定，Task2实现及18项编排单测通过，真实工具预检因锁定mc缺失待决；Task3已完成本地资源/桥单测与旧helper编译，真实业务联调尚未完成。
+接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1–4已完成各自阶段验证。Task2工具/镜像预检通过；Task4固定源4fb6623实际TLS/IAM顶层1项+子例8项PASS、0FAIL/0SKIP、容器及凭据清理成功。Task5定义准备已开始，17门禁及完整/race联调尚未完成。
