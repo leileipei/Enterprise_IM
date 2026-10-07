@@ -209,7 +209,7 @@ def main():
                  '-keyout',str(tls/'server.key'),'-out',str(tls/'server.csr')])
         (tls/'server.ext').write_text('subjectAltName=IP:127.0.0.1\nextendedKeyUsage=serverAuth\n')
         checked(['openssl','x509','-req','-in',str(tls/'server.csr'),'-CA',str(tls/'ca.crt'),
-                 '-CAkey',str(tls/'ca.key'),'-CAcreateserial','-days','2','-extfile',str(tls/'server.ext'),
+                 '-CAkey',str(tls/'ca.key'),'-CAserial',str(tls/'ca.srl'),'-CAcreateserial','-days','2','-extfile',str(tls/'server.ext'),
                  '-out',str(tls/'server.crt')])
         for path in tls.iterdir():
             path.chmod(0o600)
@@ -234,6 +234,8 @@ def main():
             raise RuntimeError('fixture exposure changed')
         psql = ['docker','exec',container,'psql','-U','postgres','-d','im_compare','-Atc']
         result['postgres_version'] = checked(psql + ['select version()'])
+        inventory_sql = "select 'schema:'||nspname from pg_namespace union all select 'role:'||rolname from pg_roles order by 1"
+        baseline_inventory = checked(psql + [inventory_sql])
         checked(['docker','exec',container,'sh','-c',
                  'cp /tls/server.key /tls/server.crt /var/lib/postgresql/data/; chown postgres:postgres /var/lib/postgresql/data/server.*; chmod 600 /var/lib/postgresql/data/server.key'])
         for key, value in [('ssl','on'),('ssl_cert_file','/var/lib/postgresql/data/server.crt'),
@@ -269,7 +271,7 @@ def main():
         dbgate('ack_regression','policystore',['-test.run='+ack])
         # All per-test schema and role cleanup must succeed before disposing the container.
         residue = checked(psql + ["select (select count(*) from pg_namespace where nspname like 'im_compare_%') + (select count(*) from pg_roles where rolname like 'im_compare_%')"])
-        if residue != '0':
+        if residue != '0' or checked(psql + [inventory_sql]) != baseline_inventory:
             raise RuntimeError('comparison fixture schema/role residue')
         events.append({'name':'fixture_cleanup','exit_code':0,'schema_role_residue':0})
         sample = source/'internal/importpreflight/testdata/sample_data_v1.json'
