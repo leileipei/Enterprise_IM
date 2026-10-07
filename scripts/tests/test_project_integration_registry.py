@@ -164,6 +164,28 @@ class RegistryTests(unittest.TestCase):
             except ProcessLookupError:self.fail('process exit between identity reads was treated as cleanup failure')
         self.assertIsNone(actual)
 
+    def test_process_exit_during_workdir_lookup_is_absence_not_unproven(self):
+        proc=self.sleep(self.root/OWNER)
+        def exit_during_lookup(pid):
+            proc.terminate();proc.wait();return None
+        with patch('integration.registry._cwd',side_effect=exit_during_lookup):
+            try:actual=self.fingerprint(proc.pid)
+            except ValueError:self.fail('already exited process was reported as an unproven live workdir')
+        self.assertIsNone(actual)
+        live=self.sleep(self.root/OWNER)
+        with patch('integration.registry._cwd',return_value=None),self.assertRaisesRegex(ValueError,'unproven_process_workdir'):
+            self.fingerprint(live.pid)
+
+    def test_process_exit_before_signal_requires_actual_absence(self):
+        proc=self.sleep(self.root/OWNER)
+        self.registry.add(self.Ref('process',OWNER,str(proc.pid),self.fingerprint(proc.pid)))
+        original_kill=os.kill
+        def exit_before_signal(pid,sig):
+            original_kill(pid,sig);proc.wait();raise ProcessLookupError(3,'No such process')
+        with patch('integration.registry.os.kill',side_effect=exit_before_signal):
+            result=self.registry.cleanup(time.monotonic()+3)
+        self.assertTrue(result.removed,result.failures)
+
     def test_registry_rejects_malformed_or_symlinked_state(self):
         with self.registry.path.open('a') as f:f.write('{broken\n')
         self.assertFalse(self.registry.cleanup(time.monotonic()+1).removed)

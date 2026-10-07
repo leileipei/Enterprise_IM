@@ -42,7 +42,10 @@ def process_fingerprint(pid):
         executable=Path(found)
     executable=executable.resolve()
     cwd=_cwd(pid)
-    if cwd is None:raise ValueError('unproven_process_workdir')
+    if cwd is None:
+        rc,current_state=_capture(['/bin/ps','-p',str(pid),'-o','stat='])
+        if rc or not current_state.strip() or current_state.strip().startswith('Z'):return None
+        raise ValueError('unproven_process_workdir')
     try:pgid=os.getpgid(pid)
     except ProcessLookupError:return None
     return dict(pid=pid,uid=int(parts[0]),start_time=' '.join(parts[1:6]),
@@ -187,7 +190,10 @@ class Registry:
         if not any(Path(actual[k]).resolve().is_relative_to(self.root) for k in ('workdir','executable_path')):
             raise ValueError('process_outside_owned_root')
         # Signal only the verified process; command supervisor owns group cancellation.
-        os.kill(pid,signal.SIGTERM)
+        try:os.kill(pid,signal.SIGTERM)
+        except ProcessLookupError:
+            if process_fingerprint(pid) is None:return
+            raise ValueError('process_identity_changed_before_signal')
         while time.monotonic()<deadline:
             current=process_fingerprint(pid)
             if current is None:return
