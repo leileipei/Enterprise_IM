@@ -1,5 +1,6 @@
 """Owned cleanup exercises real processes; Docker responses are protocol fixtures."""
 import json
+import shutil
 import os
 from pathlib import Path
 import subprocess
@@ -43,6 +44,38 @@ class RegistryTests(unittest.TestCase):
         result=self.registry.cleanup(time.monotonic()+5)
         self.assertTrue(result.removed,result.failures)
         self.assertIsNotNone(proc.poll())
+
+    def test_cancel_gap_in_nested_owned_workdir(self):
+        directory=self.root/OWNER/'nested';directory.mkdir(mode=0o700)
+        proc=self.sleep(directory)
+        self.assertIsNone(proc.poll(),'recovery probe was not alive before cleanup')
+        result=self.registry.cleanup(time.monotonic()+5)
+        self.assertTrue(result.removed,result.failures)
+        self.assertIsNotNone(proc.poll(),'nested owned process survived successful cleanup')
+
+    def test_cancel_gap_owned_binary_with_fixed_source_workdir(self):
+        binary=self.root/OWNER/'owned-sleeper';program=self.root/OWNER/'sleep.go'
+        program.write_text('package main\nimport "time"\nfunc main(){time.Sleep(30*time.Second)}\n')
+        subprocess.run([shutil.which('go'),'build','-o',str(binary),str(program)],check=True,capture_output=True,timeout=60)
+        source=self.root/'source';source.mkdir(mode=0o700)
+        proc=subprocess.Popen([str(binary),'30'],cwd=source,start_new_session=True)
+        def stop():
+            if proc.poll() is None:proc.terminate()
+            proc.wait()
+        self.addCleanup(stop)
+        self.assertIsNone(proc.poll(),'owned binary probe was not alive before cleanup')
+        self.assertEqual(self.fingerprint(proc.pid)['executable_path'],str(binary))
+        result=self.registry.cleanup(time.monotonic()+5)
+        self.assertTrue(result.removed,result.failures)
+        self.assertIsNotNone(proc.poll(),'owned fixture binary survived successful cleanup')
+
+    def test_recovery_keeps_foreign_near_prefix_process(self):
+        foreign=self.root/(OWNER+'-foreign');foreign.mkdir(mode=0o700)
+        proc=self.sleep(foreign)
+        self.assertIsNone(proc.poll())
+        result=self.registry.cleanup(time.monotonic()+3)
+        self.assertTrue(result.removed,result.failures)
+        self.assertIsNone(proc.poll(),'near-prefix foreign process was stopped')
 
     def test_pid_reuse_and_foreign_owner(self):
         self.registry.reserve(CHILD)

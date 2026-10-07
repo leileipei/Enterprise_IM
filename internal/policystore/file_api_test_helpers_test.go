@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -74,11 +76,15 @@ func startFileWorkerProcess(t *testing.T, binary string, env []string) *exec.Cmd
 	if e = cmd.Start(); e != nil {
 		t.Fatal(e)
 	}
-	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait(); log.Close() })
+	t.Cleanup(func() { log.Close() })
+	registration := trackFileProductProcess(t, cmd)
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		b, _ := os.ReadFile(log.Name())
 		if strings.Contains(string(b), "file worker started") {
+			if err := registration.Ready(); err != nil {
+				t.Fatal(err)
+			}
 			return cmd
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -140,4 +146,39 @@ func fileProductCommand(binary string, configuration []string) *exec.Cmd {
 	}
 	cmd.Env = processChildEnv(values)
 	return cmd
+}
+
+// Track actual product fixture children, including externally Waited workers.
+func trackFileProductProcess(t *testing.T, cmd *exec.Cmd) *testfixtures.IntegrationProcess {
+	t.Helper()
+	var registration *testfixtures.IntegrationProcess
+	t.Cleanup(func() {
+		expected := "signal:killed"
+		alreadyWaited := cmd.ProcessState != nil && cmd.ProcessState.Exited()
+		if !alreadyWaited {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}
+		actual := "wait_error"
+		if state := cmd.ProcessState; state != nil {
+			actual = fmt.Sprintf("exit:%d", state.ExitCode())
+			if status, ok := state.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+				actual = "signal:" + status.Signal().String()
+			}
+		}
+		if alreadyWaited && actual != "signal:killed" {
+			expected = "exit:0"
+		}
+		if registration != nil {
+			if err := registration.Exited(expected, actual); err != nil {
+				t.Error(err)
+			}
+		}
+	})
+	var err error
+	registration, err = testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return registration
 }

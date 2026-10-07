@@ -60,11 +60,8 @@ func startProductionAPI(t *testing.T, binary string, environment []string) strin
 		logFile.Close()
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-		_ = logFile.Close()
-	})
+	t.Cleanup(func() { logFile.Close() })
+	registration := trackFileProductProcess(t, cmd)
 	client := &http.Client{Timeout: time.Second}
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
@@ -76,6 +73,9 @@ func startProductionAPI(t *testing.T, binary string, environment []string) strin
 			if err == nil {
 				res.Body.Close()
 				if res.StatusCode == http.StatusOK {
+					if err := registration.Ready(); err != nil {
+						t.Fatal(err)
+					}
 					return url
 				}
 			}

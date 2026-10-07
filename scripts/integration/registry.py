@@ -163,17 +163,18 @@ class Registry:
         else:
             _,out=_capture(['/usr/sbin/lsof','-a','-u',str(os.getuid()),'-d','cwd','-Fpn'])
             candidates=[];pid=None
-            private_roots={r['fingerprint']['private_root'] for r in rows if r['event']=='reserve'}
             for line in out.splitlines():
                 if line.startswith('p'):pid=int(line[1:])
-                elif line.startswith('n') and pid and str(Path(line[1:]).resolve()) in private_roots:
+                elif line.startswith('n') and pid and Path(line[1:]).resolve().is_relative_to(self.root):
                     candidates.append(pid)
         for reserved in [r for r in rows if r['event']=='reserve']:
             owner=reserved['owner'];directory=Path(reserved['fingerprint']['private_root'])
+            if directory!=self.root/owner or directory.is_symlink():raise ValueError('invalid_reserved_private_root')
+            if directory.exists() and (directory.stat().st_uid!=os.getuid() or directory.stat().st_mode & 0o077):raise ValueError('unsafe_reserved_private_root')
             for pid in candidates:
                 if str(pid) in known:continue
                 f=process_fingerprint(pid)
-                if not f or f['uid']!=os.getuid() or f['workdir']!=str(directory):continue
+                if not f or f['uid']!=os.getuid() or not any(Path(f[k]).is_relative_to(directory) for k in ('workdir','executable_path')):continue
                 start=datetime.datetime.strptime(f['start_time'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=datetime.timezone.utc).timestamp()
                 if start<int(reserved['time']):continue
                 self.add(ResourceRef('process',owner,str(pid),f));known.add(str(pid))

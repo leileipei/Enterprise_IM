@@ -176,7 +176,8 @@ func startFileMessageProduction(t *testing.T, binary string, environment []strin
 	if e = cmd.Start(); e != nil {
 		t.Fatal(e)
 	}
-	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait(); log.Close() })
+	t.Cleanup(func() { log.Close() })
+	registration := trackFileProductProcess(t, cmd)
 	client := &http.Client{Timeout: time.Second}
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
@@ -186,6 +187,9 @@ func startFileMessageProduction(t *testing.T, binary string, environment []strin
 			if e == nil {
 				res.Body.Close()
 				if res.StatusCode == 200 {
+					if err := registration.Ready(); err != nil {
+						t.Fatal(err)
+					}
 					return "http://" + addr, log.Name()
 				}
 			}
