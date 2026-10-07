@@ -162,7 +162,6 @@ func TestComparePGTLS(t *testing.T) {
 		settings[k] = v
 	}
 	settings["host"] = "127.0.0.1"
-	settings["port"] = "5432"
 	settings["sslmode"] = "verify-full"
 	settings["sslrootcert"] = root
 	cfg.connection = settings

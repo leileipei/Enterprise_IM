@@ -2,6 +2,7 @@ package importcompare
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	p "github.com/leileipei/Enterprise_IM/internal/importpreflight"
@@ -63,7 +64,12 @@ func newCompareFixture(t *testing.T) *compareFixture {
 			f.insert(t, s, row)
 		}
 	}
-	f.exec(t, "CREATE ROLE "+quote(f.role)+" LOGIN")
+	randomPassword := make([]byte, 24)
+	if _, err := rand.Read(randomPassword); err != nil {
+		t.Fatal("read-only fixture password generation failed")
+	}
+	password := fmt.Sprintf("%x", randomPassword)
+	f.exec(t, "CREATE ROLE "+quote(f.role)+" LOGIN PASSWORD '"+password+"'")
 	f.exec(t, "GRANT USAGE ON SCHEMA "+quote(f.schema)+" TO "+quote(f.role))
 	f.exec(t, "GRANT SELECT ON ALL TABLES IN SCHEMA "+quote(f.schema)+" TO "+quote(f.role))
 	settings, e := ParseDSN(dsn)
@@ -71,6 +77,7 @@ func newCompareFixture(t *testing.T) *compareFixture {
 		t.Fatal(e)
 	}
 	settings["user"] = f.role
+	settings["password"] = password
 	f.reader = PGReader{Config: Config{connection: settings, Schema: f.schema}}
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
