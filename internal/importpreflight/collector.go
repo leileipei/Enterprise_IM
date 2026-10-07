@@ -30,9 +30,10 @@ func (h *issueHeap) Push(v any)        { *h = append(*h, v.(Issue)) }
 func (h *issueHeap) Pop() any          { old := *h; v := old[len(old)-1]; *h = old[:len(old)-1]; return v }
 
 type Collector struct {
-	seen  map[Issue]struct{}
-	items issueHeap
-	total int
+	seen    map[Issue]struct{}
+	items   issueHeap
+	total   int
+	observe func(Issue)
 }
 
 func NewCollector() *Collector { return &Collector{seen: make(map[Issue]struct{})} }
@@ -42,6 +43,9 @@ func (c *Collector) Add(v Issue) {
 	}
 	c.seen[v] = struct{}{}
 	c.total++
+	if c.observe != nil {
+		c.observe(v)
+	}
 	if len(c.items) < MaxIssues {
 		heap.Push(&c.items, v)
 	} else if less(v, c.items[0]) {

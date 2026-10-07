@@ -8,6 +8,22 @@
 
 P4-21～P4-26 已实现文件元数据与生命周期、上传与受控扫描、单聊／群聊附件消息、授权下载、文件名搜索及保全感知清理，并完成正式 API 装配和本地进程验收。附件业务总开关 `IM_FILE_BUSINESS_ENABLED` 默认关闭；上传和物理清理独立启用，25 MiB 是模型上限。配置与验收边界见 [附件运行配置](docs/企业IM-P4-26-附件运行配置.md) 和 [P4-26 验收记录](docs/开发增量-P4-26-验收记录.md)。客户联调、完整 M4 及生产放行仍未完成。
 
+## P4-29 目标库只读冲突预检
+
+新增 `im-import-compare`（0.1.0），先校验一份闭合的单租户九表 JSON，再在只读重复读事务中比较已有租户，按输入记录输出新增、完全一致、冲突数量。现有记录的差异不会自动更新，报告不包含人员原文。此前 P4-28 的 ACK 持久化时间修正已显式集成到本分支。
+
+```sh
+go build -mod=readonly -o ./bin/im-import-compare ./cmd/im-import-compare
+./bin/im-import-compare --help
+./bin/im-import-compare --input /absolute/path/tenant_data.json --tenant-id 00000000-0000-4000-8000-000000000001
+```
+
+运行比较须提供 `IM_IMPORT_COMPARE_DATABASE_URL`，可选 `IM_IMPORT_COMPARE_SCHEMA`（默认 `public`）。数据库角色须对九表具备 SELECT 且无表级或列级写入权限，无 superuser／BYPASSRLS；目标须符合集团模型结构契约。TCP 连接须显式指定主机、端口、库、用户及 `sslmode=verify-full`，证书使用显式路径；专属 Unix socket 可使用 `sslmode=disable`。连接配置不沿用 `PG*` 或 HOME 中的默认文件。
+
+文件须只包含 `--tenant-id` 指定的一个已有租户；P4-27 的双租户样例不能直接作为此命令的输入。文件无效时不会读取连接配置或连接数据库。总预算 30 秒、清理额外最多 1 秒，最多读取 20,000 条／64 MiB 库存、执行 128 条 SQL。比较未完成时分类数量全部为 `null`，退出码 2；完整但有冲突退出 1，完整且无冲突退出 0。
+
+有效报告仅证明该数据库快照下的已知追加兼容性；身份源、自定义数据库规则、写入并发及导入授权标志始终为 false。该命令不执行导入、迁移或审计写入。验收证据和全仓测试限制见 [P4-29 验收记录](docs/开发增量-P4-29-验收记录.md)。
+
 ## P4-27 离线组织与身份预检
 
 新增独立命令 `im-import-preflight`（版本 0.1.0）：只读取一份本地 JSON 文件，校验文件内部九表关系，输出确定性的 JSON 报告。它不连接服务、不读取 `IM_*` 连接配置，也不执行导入。

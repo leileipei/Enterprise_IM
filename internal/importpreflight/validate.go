@@ -7,9 +7,14 @@ import (
 )
 
 func Evaluate(ctx context.Context, raw []byte) Report {
+	r, _ := EvaluateDocument(ctx, raw)
+	return r
+}
+
+func EvaluateDocument(ctx context.Context, raw []byte) (Report, *Document) {
 	c := NewCollector()
 	o := Outcome{Status: "invalid"}
-	runtimeFailure := func(e error) Report {
+	runtimeFailure := func(e error) (Report, *Document) {
 		code := Code("CANCELED")
 		if f, ok := e.(Failure); ok {
 			code = f.Code
@@ -17,14 +22,14 @@ func Evaluate(ctx context.Context, raw []byte) Report {
 		c.Add(Issue{Entity: "document", Field: "_document", Code: code})
 		o.Status = "incomplete"
 		o.ChecksComplete = false
-		return BuildReport(o, c)
+		return BuildReport(o, c), nil
 	}
 	if e := ContextFailure(ctx); e != nil {
 		return runtimeFailure(e)
 	}
 	if len(raw) > MaxInput {
 		c.Add(Issue{Entity: "document", Field: "_document", Code: "INPUT_TOO_LARGE"})
-		return BuildReport(o, c)
+		return BuildReport(o, c), nil
 	}
 	h := sha256.New()
 	for i := 0; i < len(raw); i += 65536 {
@@ -44,7 +49,7 @@ func Evaluate(ctx context.Context, raw []byte) Report {
 		return runtimeFailure(e)
 	}
 	if !ok {
-		return BuildReport(o, c)
+		return BuildReport(o, c), nil
 	}
 	doc, counts, ok, e := Normalize(ctx, rd, c)
 	o.Counts = counts
@@ -52,20 +57,9 @@ func Evaluate(ctx context.Context, raw []byte) Report {
 		return runtimeFailure(e)
 	}
 	if !ok {
-		return BuildReport(o, c)
+		return BuildReport(o, c), nil
 	}
-	idx, e := BuildIndex(ctx, doc, c)
-	if e != nil {
-		return runtimeFailure(e)
-	}
-	rels, e := CheckReferences(ctx, doc, idx, c)
-	if e != nil {
-		return runtimeFailure(e)
-	}
-	if e = CheckGraphs(ctx, doc, idx, rels, c); e != nil {
-		return runtimeFailure(e)
-	}
-	if e = CheckIntervals(ctx, doc, idx, rels, c); e != nil {
+	if e = ValidateModel(ctx, doc, c); e != nil {
 		return runtimeFailure(e)
 	}
 	if e = ContextFailure(ctx); e != nil {
@@ -73,5 +67,9 @@ func Evaluate(ctx context.Context, raw []byte) Report {
 	}
 	o.Status = "valid"
 	o.ChecksComplete = true
-	return BuildReport(o, c)
+	r := BuildReport(o, c)
+	if r.Status != "valid" {
+		return r, nil
+	}
+	return r, &doc
 }
