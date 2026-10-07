@@ -68,3 +68,39 @@ func main(){l,e:=net.Listen("tcp","127.0.0.1:0");if e!=nil{panic(e)};fmt.Printf(
 		t.Fatal("actual graceful protocol worker Wait failed")
 	}
 }
+
+func TestFileBusinessOneShotLifecycle(t *testing.T) {
+	root := t.TempDir()
+	os.Chmod(root, 0700)
+	ledger := filepath.Join(root, "registry.jsonl")
+	seed, _ := json.Marshal(map[string]any{"schema_version": 1, "owner": strings.Repeat("b", 32), "source_commit": strings.Repeat("a", 40), "event": "reserve", "fingerprint": map[string]string{"private_root": root}})
+	if err := os.WriteFile(ledger, append(seed, '\n'), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for key, value := range map[string]string{"IM_TEST_INTEGRATION_REGISTRY": ledger, "IM_TEST_INTEGRATION_OWNER": strings.Repeat("b", 32), "IM_TEST_INTEGRATION_SOURCE_SHA": strings.Repeat("a", 40), "IM_TEST_INTEGRATION_GATE": "file_components"} {
+		t.Setenv(key, value)
+	}
+	source := filepath.Join(root, "main.go")
+	binary := filepath.Join(root, "protocol-once")
+	if err := os.WriteFile(source, []byte("package main\nfunc main(){}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := exec.Command("go", "build", "-o", binary, source).CombinedOutput(); err != nil {
+		t.Fatalf("protocol build failed: %v %s", err, output)
+	}
+	f := &fileBusinessProcessFixture{privateRoot: root, binaries: map[string]string{"im-file-cleaner": binary}, processes: map[string]*exec.Cmd{}, processPIDs: map[string]int{}, logs: map[string]*os.File{}, waits: map[string]chan error{}}
+	f.restartRepair(t, true)
+	data, err := os.ReadFile(ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(data), `"event":"exited"`) != 1 {
+		t.Fatal("actual successful one-shot has no terminal lifecycle proof")
+	}
+	if strings.Contains(string(data), `"event":"ready"`) {
+		t.Fatal("one-shot terminal was reported as live readiness")
+	}
+	if !strings.Contains(string(data), `"actual_exit":"exit:0"`) {
+		t.Fatal("one-shot actual Wait success missing")
+	}
+}
