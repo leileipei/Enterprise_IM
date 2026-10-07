@@ -77,6 +77,28 @@ class RegistryTests(unittest.TestCase):
         self.assertTrue(result.removed,result.failures)
         self.assertIsNone(proc.poll(),'near-prefix foreign process was stopped')
 
+    def test_cancel_gap_external_tool_in_fixed_source_workdir(self):
+        source=self.root/'source';source.mkdir(mode=0o700)
+        proc=self.sleep(source)
+        self.assertIsNone(proc.poll())
+        result=self.registry.cleanup(time.monotonic()+5)
+        self.assertTrue(result.removed,result.failures)
+        self.assertIsNotNone(proc.poll(),'fixed-source external fixture child survived cleanup')
+
+    def test_source_recovery_rejects_foreign_near_prefix(self):
+        directory=self.root/'source-foreign';directory.mkdir(mode=0o700)
+        proc=self.sleep(directory)
+        self.assertTrue(self.registry.cleanup(time.monotonic()+3).removed)
+        self.assertIsNone(proc.poll(),'foreign near-source participant stopped')
+
+    def test_source_recovery_does_not_follow_foreign_link(self):
+        foreign_tmp=tempfile.TemporaryDirectory();self.addCleanup(foreign_tmp.cleanup)
+        foreign=Path(foreign_tmp.name).resolve();foreign.chmod(0o700)
+        (self.root/'source').symlink_to(foreign,target_is_directory=True)
+        proc=self.sleep(foreign)
+        self.assertTrue(self.registry.cleanup(time.monotonic()+3).removed)
+        self.assertIsNone(proc.poll(),'foreign source symlink target was stopped')
+
     def test_pid_reuse_and_foreign_owner(self):
         self.registry.reserve(CHILD)
         proc=self.sleep(self.root/CHILD)

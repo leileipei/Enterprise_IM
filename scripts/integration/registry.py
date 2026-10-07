@@ -171,10 +171,14 @@ class Registry:
             owner=reserved['owner'];directory=Path(reserved['fingerprint']['private_root'])
             if directory!=self.root/owner or directory.is_symlink():raise ValueError('invalid_reserved_private_root')
             if directory.exists() and (directory.stat().st_uid!=os.getuid() or directory.stat().st_mode & 0o077):raise ValueError('unsafe_reserved_private_root')
+            source_root=self.root/'source'
+            source_owned=(owner==self.owner and source_root.exists() and not source_root.is_symlink() and source_root.stat().st_uid==os.getuid() and not source_root.stat().st_mode & 0o077)
             for pid in candidates:
                 if str(pid) in known:continue
                 f=process_fingerprint(pid)
-                if not f or f['uid']!=os.getuid() or not any(Path(f[k]).is_relative_to(directory) for k in ('workdir','executable_path')):continue
+                if not f or f['uid']!=os.getuid():continue
+                owned=any(Path(f[k]).is_relative_to(directory) for k in ('workdir','executable_path'))
+                if not owned and not (source_owned and Path(f['workdir']).is_relative_to(source_root)):continue
                 start=datetime.datetime.strptime(f['start_time'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=datetime.timezone.utc).timestamp()
                 if start<int(reserved['time']):continue
                 self.add(ResourceRef('process',owner,str(pid),f));known.add(str(pid))

@@ -187,6 +187,8 @@ def _finalize(snapshot,output,tools,bundle,registry,events,inventory,total_deadl
         else:events.append(_check('evidence_integrity',snapshot,output,failures=['evidence_publication_failed']))
     try:
         events.append(_check('resource_cleanup',snapshot,output,['owned_resources_absent','private_directory_removed'] if cleanup.removed else [],cleanup.failures))
+        snapshot.resource_records=registry.records()
+        snapshot.binary_hashes=[dict(path=r['fingerprint'].get('executable_path'),sha256=r['fingerprint'].get('executable_sha256'),source_commit=r['source_commit']) for r in snapshot.resource_records if r['event'] in {'registered','completed'} and r['kind']=='process' and r['fingerprint'].get('executable_sha256')]
         verdict=write_evidence(output,snapshot,tools,events,cleanup,inventory,bundle.secrets)
     except (ValueError,OSError,KeyError,UnicodeError):
         verdict=Verdict(False,False,False,['evidence_finalization_failed'])

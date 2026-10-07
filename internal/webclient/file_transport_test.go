@@ -3,6 +3,7 @@ package webclient
 import (
 	"context"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,7 +34,7 @@ func runFileUnit(t *testing.T, name, script string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, script)
-	cmd.Env = append(os.Environ(), "FILE_UNIT_SOURCE="+p)
+	cmd.Env = testfixtures.BrowserEnvironment(map[string]string{"FILE_UNIT_SOURCE": p})
 	out, e := cmd.CombinedOutput()
 	if e != nil {
 		t.Fatalf("%s unit: %v: %s", name, e, out)

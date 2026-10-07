@@ -104,3 +104,23 @@ func TestFileBusinessOneShotLifecycle(t *testing.T) {
 		t.Fatal("one-shot actual Wait success missing")
 	}
 }
+
+func TestWebFileBrowserEnvironmentIsolation(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "browser.go")
+	binary := filepath.Join(root, "protocol-browser")
+	code := `package main
+import("fmt";"os")
+func main(){fmt.Printf("{\"no_management_environment\":%t}\n",os.Getenv("IM_TEST_S3_ADMIN_SECRET_KEY")=="" && os.Getenv("PGPASSWORD")=="")}`
+	if err := os.WriteFile(source, []byte(code), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := exec.Command("go", "build", "-o", binary, source).CombinedOutput(); err != nil {
+		t.Fatalf("protocol build failed: %v %s", err, output)
+	}
+	t.Setenv("IM_TEST_BROWSER_NODE", binary)
+	t.Setenv("IM_TEST_S3_ADMIN_SECRET_KEY", "controlled-management-probe")
+	t.Setenv("PGPASSWORD", "controlled-password-probe")
+	f := &webFileFixture{baseURL: "http://127.0.0.1:1"}
+	f.browser(t, "file_search", map[string]any{})
+}

@@ -49,6 +49,23 @@ class RunTests(unittest.TestCase):
   with self.patches(prepare):self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
   for p in processes:p.wait(timeout=2)
   report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed']);self.assertIn('cancelled',report['failures'])
+ def test_recovered_process_identity_present_in_final_receipt(self):
+  processes=[]
+  def prepare(snapshot,tools,registry,private,deadline):
+   directory=registry.root/registry.owner/'gap';directory.mkdir(mode=0o700)
+   proc=subprocess.Popen(['/bin/sleep','30'],cwd=directory,start_new_session=True);processes.append(proc)
+   self.assertIsNone(proc.poll())
+   raise KeyboardInterrupt()
+  try:
+   with self.patches(prepare):self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
+   for proc in processes:proc.wait(timeout=2)
+   report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
+   self.assertTrue(any(row['event']=='registered' and row['kind']=='process' and row['identity']==str(processes[0].pid) for row in report['resource_records']),'recovered actual process omitted from final receipt')
+  finally:
+   for proc in processes:
+    if proc.poll() is None:proc.kill()
+    proc.wait()
+
  def test_full_inventory_early_child_exit(self):
   path=self.output/'early.jsonl';rows=go_rows('fixture',[('TestFirst','pass')]);payload=''.join(json.dumps(x)+'\n' for x in rows)
   with path.open('w') as f:subprocess.run([sys.executable,'-c','import sys;sys.stdout.write('+repr(payload)+')'],stdout=f,check=True)

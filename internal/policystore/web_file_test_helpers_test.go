@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/leileipei/Enterprise_IM/internal/files"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -322,7 +323,7 @@ func (f *webFileFixture) browser(t *testing.T, name string, data map[string]any)
 	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Getenv("IM_TEST_BROWSER_NODE"), script)
-	cmd.Env = append(os.Environ(), "WEB_FILE_INPUT="+p)
+	cmd.Env = testfixtures.BrowserEnvironment(map[string]string{"WEB_FILE_INPUT": p})
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
 	cmd.WaitDelay = 5 * time.Second
 	out, e := cmd.CombinedOutput()
