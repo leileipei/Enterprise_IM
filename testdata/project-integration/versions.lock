@@ -1,0 +1,7 @@
+# P4-31 local integration pins; not production acceptance.
+# Service/scanner/mc pins are also enforced from testdata/file-runtime/versions.lock.
+go = 1.27.1
+node = 24.19.0
+chrome = 154.0.8037.98
+playwright = 1.62.1
+redis-image = redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499

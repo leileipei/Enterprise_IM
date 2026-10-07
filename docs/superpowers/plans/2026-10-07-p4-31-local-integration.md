@@ -92,7 +92,7 @@ assert not evaluate(all_green_except_full, CleanupResult(True, []), commit).full
 
 **Interfaces:** 入口 `bootstrap(repository_root:Path,commit:str,out:Path)->Dict[str,str]`（仅标准库）；`load_archived_runner(data:Dict[str,str])->Callable[[Dict[str,str],Path],int]`（返回归档中的execute_bootstrap）；source `verify_snapshot(data:Dict[str,str])->SourceSnapshot`、`collect_inventory(snapshot,tools,env,selection:Optional[Dict[str,str]])->Inventory`；tools `discover_toolchain(snapshot,private:Path)->Toolchain`；environment `test_environment(tools:Toolchain,private:Path,values:Dict[str,str])->Dict[str,str]`。
 
-- [ ] **Step 1：写测试。** `test_dirty_module_never_executes`（临时Git库含已提交模块，编辑本机模块加入探针，执行只能看到归档探针）、`test_archive_link_traversal_and_output_reuse`、`test_entry_digest_and_wrong_repository`、`test_environment_excludes_home_pg_and_child_flags`、`test_inventory_go_list_and_test_list`、`test_tool_digest_mismatch_and_missing_mc`。Go缓存和工具路径为测试参数，不修改系统变量/共用安装。
+- [x] **Step 1：写测试。** `test_dirty_module_never_executes`（临时Git库含已提交模块，编辑本机模块加入探针，执行只能看到归档探针）、`test_archive_link_traversal_and_output_reuse`、`test_entry_digest_and_wrong_repository`、`test_environment_excludes_home_pg_and_child_flags`、`test_inventory_go_list_and_test_list`、`test_tool_digest_mismatch_and_missing_mc`。Go缓存和工具路径为测试参数，不修改系统变量/共用安装。
 
 ```python
 assert 'HOME' not in test_environment(tools, private, values)
@@ -100,8 +100,8 @@ assert 'IM_APPEND_CHILD_SCHEMA' not in test_environment(tools, private, values)
 assert archive_module_marker == 'committed'
 ```
 
-- [ ] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_source.py' -v`及 `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_environment.py' -v`。Expected：缺接口或目标断言失败。
-- [ ] **Step 3：实现固定源与白名单。** 入口在解包、校验自身哈希之前不import integration；之后从归档scripts目录加载，核验模块来源。归档有repository_root只供git archive读取；测试cwd为snapshot.root。工具路径从已知安装/捆绑路径发现并固定，mc缺失时从锁定官方release取得darwin-arm64二进制，必须匹配既有SHA `e745d9866fc40ff7cf876abeb28e05e153a8cfeba601bcc8daa6e124b81384c5`，获取失败为toolchain失败。标准库环境仅放PATH/TMPDIR/LANG/TZ、明确Go缓存/GOFLAGS/GOWORK/NODE_PATH及本轮必须IM_TEST变量，管理与产品变量按用途分组；禁继承未知env、GODEBUG和子进程开关。按 `go list -json ./...` 与 `go test -json -list . -p 1 ./...`记录当前平台每包和顶层清单，不用源码正则代替build-tag解析。
+- [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_source.py' -v`及 `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_environment.py' -v`。Expected：缺接口或目标断言失败。
+- [x] **Step 3：实现固定源与白名单。** 入口在解包、校验自身哈希之前不import integration；之后从归档scripts目录加载，核验模块来源。归档有repository_root只供git archive读取；测试cwd为snapshot.root。工具路径从已知安装/捆绑路径发现并固定，mc缺失时从锁定官方release取得darwin-arm64二进制，必须匹配既有SHA `e745d9866fc40ff7cf876abeb28e05e153a8cfeba601bcc8daa6e124b81384c5`，获取失败为toolchain失败。标准库环境仅放PATH/TMPDIR/LANG/TZ、明确Go缓存/GOFLAGS/GOWORK/NODE_PATH及本轮必须IM_TEST变量，管理与产品变量按用途分组；禁继承未知env、GODEBUG和子进程开关。按 `go list -json ./...` 与 `go test -json -list . -p 1 ./...`记录当前平台每包和顶层清单，不用源码正则代替build-tag解析。
 - [ ] **Step 4：验证GREEN/实际只读发现。** 运行Step2的两个source/environment命令；对本机工具/镜像只读发现，记录发现状态和真实版本/哈希；mc获取在本任务执行时按锁定值进行；此步不启动服务。Expected：反例PASS，当前平台清单非空，未知版本拒绝。
 - [ ] **Step 5：提交。** `feat: pin integration source tools and isolated environments`，只add本任务文件和无秘密lock。
 
@@ -219,4 +219,4 @@ assert child['source_commit'] == snapshot.commit
 | §12 I01–I11 | I01→2/7；I02→4/5/7；I03→4；I04→5/6/8；I05→3/6/8；I06→6/8；I07→6/8；I08→1/2/7/8；I09→8/9；I10→3/7/9；I11→7/9 |
 | §13交付/执行方式 | Task9、当前助手逐项实现及一次最终评审 |
 
-接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1已按RED→GREEN实现结果判定，其他任务与完整联调尚未完成。
+接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1已按RED→GREEN实现结果判定，Task2实现及18项编排单测通过，真实工具预检因锁定mc缺失待决；其他任务与完整联调尚未完成。
