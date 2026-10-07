@@ -31,6 +31,14 @@ class GateTests(unittest.TestCase):
    elif mutate=='tests':row['executed_tests']=[]
    else:row['reports']=[]
    self.assertFalse(gates.validate_required_gates(rows)['required_gates_passed'])
+ def test_tls_cannot_pass_without_cli(self):
+  rows=self.events();row=next(r for r in rows if r['name']=='tls')
+  row['executed_tests']=['TestComparePGTLS/'+k for k in ['verify_full','wrong_ca','wrong_hostname']]
+  self.assertFalse(gates.validate_required_gates(rows)['required_gates_passed'])
+ def test_resource_cannot_pass_without_cli(self):
+  rows=[r for r in self.events() if r['name']!='resource_process']
+  rows.append({'name':'resource_process','exit_code':0,'counts':{'top_pass':1,'sub_pass':5,'fail':0,'skip':0},'executed_tests':[]})
+  self.assertFalse(gates.validate_required_gates(rows)['required_gates_passed'])
  def test_full_suite_stays_false(self):
   rows=self.events()+[{'name':'full_suite','exit_code':1,'counts':{'fail':1,'skip':1}}]
   result=gates.validate_required_gates(rows)

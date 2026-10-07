@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 
 REQUIRED_GATES = ['unit', 'race', 'cli_linux', 'comparison_database', 'tls',
-                  'append_oracle', 'offline_linux', 'offline_oracle',
+                  'append_oracle', 'resource_process', 'offline_linux', 'offline_oracle',
                   'groupdb_regression', 'access_regression', 'ack_regression',
                   'oidc_regression']
 REQUIRED_TESTS = {
@@ -25,7 +25,8 @@ REQUIRED_TESTS = {
     'cli_linux': ['TestCompareProcessNoNetwork', 'TestCompareProcessBadPrivateWorker',
         'TestCompareProcessSharedAbsoluteDeadline', 'TestCompareProcessSignalAndPipe'],
     'tls': ['TestComparePGTLS/verify_full', 'TestComparePGTLS/wrong_ca',
-        'TestComparePGTLS/wrong_hostname'],
+        'TestComparePGTLS/wrong_hostname'] + ['TestCompareProcessTLS/'+k for k in ['verify_full_home_traps','wrong_ca','wrong_hostname','downgrade']],
+    'resource_process': ['TestCompareProcessResourceEdges/'+k for k in ['rows_20000','rows_20001','bytes_64_mib','bytes_plus_one','cell_4097']],
     'append_oracle': ['TestComparePGOracle/' + x for x in
         ['new', 'pk', 'unique', 'interval', 'dependency_fk', 'additional_check']],
     'offline_oracle': ['TestPreflightPostgresOracle'],
@@ -179,7 +180,7 @@ def main():
             env['PATH'] = str(node) + os.pathsep + env.get('PATH', '')
         packages = ['./internal/importpreflight', './internal/importinput', './internal/importcompare',
                     './cmd/im-import-preflight', './cmd/im-import-compare']
-        skip = '^TestComparePG|^TestPreflightPostgresOracle$|^TestCompareProcessEnvIsolation$|^TestCompareProcessActualSIGTERM$'
+        skip = '^TestComparePG|^TestPreflightPostgresOracle$|^TestCompareProcessEnvIsolation$|^TestCompareProcessActualSIGTERM$|^TestCompareProcessTLS$|^TestCompareProcessResourceEdges$'
         for name, extra in [('unit', []), ('race', ['-race'])]:
             gate(name, ['go', 'test', '-json', '-timeout=5m', '-count=1', '-skip', skip] + extra + packages,
                  env=env, parse='json')
@@ -262,7 +263,8 @@ def main():
         dbgate('comparison_database','importcompare', ['-test.run=^TestComparePG|^TestCompareProcessEnvIsolation$|^TestCompareProcessActualSIGTERM$',
                 '-test.skip=^TestComparePGTLS$|^TestComparePGOracle$'])
         dbgate('signal_repeat','importcompare',['-test.run=^TestCompareProcessActualSIGTERM$','-test.count=3'])
-        dbgate('tls','importcompare',['-test.run=^TestComparePGTLS$'])
+        dbgate('tls','importcompare',['-test.run=^TestComparePGTLS$|^TestCompareProcessTLS$'])
+        dbgate('resource_process','importcompare',['-test.run=^TestCompareProcessResourceEdges$'])
         dbgate('append_oracle','importcompare',['-test.run=^TestComparePGOracle$'])
         dbgate('offline_linux','preflight_cli')
         dbgate('offline_oracle','importpreflight',['-test.run=^TestPreflightPostgresOracle$'])
