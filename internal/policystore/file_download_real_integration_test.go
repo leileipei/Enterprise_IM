@@ -376,12 +376,57 @@ func (c *evidenceConn) Write(p []byte) (int, error) {
 	return n, e
 }
 func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
+	testDownloadTokenExpiryBlockedWrite(t, 0)
+}
+
+func TestFileDownloadTokenExpiryFixturePreparation(t *testing.T) {
+	testDownloadTokenExpiryBlockedWrite(t, time.Second)
+}
+
+type delayedDownloadPreparationStore struct {
+	objectstore.Store
+	delay time.Duration
+}
+
+func (s *delayedDownloadPreparationStore) ReadVersion(ctx context.Context, v objectstore.VersionRef) (io.ReadCloser, error) {
+	r, err := s.Store.ReadVersion(ctx, v)
+	if err != nil {
+		return nil, err
+	}
+	return &delayedDownloadPreparationReader{ReadCloser: r, ctx: ctx, delay: s.delay}, nil
+}
+
+type delayedDownloadPreparationReader struct {
+	io.ReadCloser
+	ctx   context.Context
+	delay time.Duration
+	once  sync.Once
+	err   error
+}
+
+func (r *delayedDownloadPreparationReader) Read(p []byte) (int, error) {
+	r.once.Do(func() {
+		timer := time.NewTimer(r.delay)
+		defer timer.Stop()
+		select {
+		case <-r.ctx.Done():
+			r.err = r.ctx.Err()
+		case <-timer.C:
+		}
+	})
+	if r.err != nil {
+		return 0, r.err
+	}
+	return r.ReadCloser.Read(p)
+}
+
+func testDownloadTokenExpiryBlockedWrite(t *testing.T, preparationDelay time.Duration) {
 	dedicatedUpload(t)
 	f := realFileMessageFixture(t)
 	sign := downloadJWTIssuer(t, f)
 	m := scanDownloadBody(t, f, bytes.Repeat([]byte("x"), 8<<20))
 	evidence := &tcpEvidence{first: make(chan struct{})}
-	objects := &gatedObjects{Store: realTransferObjects(t), entered: make(chan struct{}), release: make(chan struct{})}
+	objects := &gatedObjects{Store: &delayedDownloadPreparationStore{Store: realTransferObjects(t), delay: preparationDelay}, entered: make(chan struct{}), release: make(chan struct{})}
 	base, _, _ := explicitDownload(t, f, objects, evidence)
 	expiry := time.Unix(time.Now().Add(4*time.Second).Unix(), 0)
 	go func() {
@@ -402,6 +447,11 @@ func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
 	reader := bufio.NewReaderSize(conn, 1024)
 	line, e := reader.ReadString('\n')
 	if e != nil || !strings.Contains(line, "200") {
+		var phase, reason string
+		queryErr := f.conn.QueryRow(context.Background(), `SELECT phase,COALESCE(reason_code,'') FROM file_download_sessions WHERE file_id=$1`, m.ID).Scan(&phase, &reason)
+		evidence.mu.Lock()
+		t.Logf("initial-header diagnostic phase=%s reason=%s query-ok=%t token-remaining=%s tcp-accepted=%d write-deadline-set=%t", phase, reason, queryErr == nil, time.Until(expiry), evidence.accepted, !evidence.deadline.IsZero())
+		evidence.mu.Unlock()
 		t.Fatal("initial TCP headers", e, line)
 	}
 	for {
