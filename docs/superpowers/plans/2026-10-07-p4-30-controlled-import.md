@@ -1,6 +1,6 @@
 # P4-30 受控追加导入实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 为已有集团租户交付受 OIDC 与当前集团管理员权限保护的主数据追加接口，做到整批写入/拒绝、审计与回执原子提交、相同批次安全恢复。
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** 仓库锁定 Go 1.27.1、pgx/v5 v5.11.0、现有 JWT/OIDC 组件、PostgreSQL 16、Python 验证脚本；不新增或升级产品依赖。
 
-**Spec:** [P4-30 已确认规格](../specs/2026-10-07-p4-30-controlled-import-design.md)。用户于 2026-10-07 回复“确认”。本计划用户于 2026-10-07 确认，正在执行；执行方式沿用当前助手逐项实现，不派实现代理，最终一次独立整体评审。
+**Spec:** [P4-30 已确认规格](../specs/2026-10-07-p4-30-controlled-import-design.md)。用户于 2026-10-07 回复“确认”。本计划用户于 2026-10-07 确认，八项实施已完成并交付验收记录；执行方式沿用当前助手逐项实现，不派实现代理，最终一次独立整体评审。
 
 ## Global Constraints
 
@@ -233,7 +233,7 @@ if finalInsertedCounts != expectedInsertedCounts { t.Fatal("partial or duplicate
 
 **Interfaces:** Required gates 名称固定 `unit,race,migration,authorization,append_database,http_oidc,concurrency,commit_fault,resources,readonly_regression,groupdb_regression,access_regression,ack_regression,oidc_regression`。每门禁必须 exit0、FAIL=0、SKIP=0、具名顶层PASS>0，检查必需测试名清单，不以 glob 空匹配通过。
 
-- [ ] **Step 1：测试门禁判定。** `scripts/test_import_apply_gates.py` 对缺测试/零测试/SKIP/FAIL/重复门禁/只跑纯函数/清理失败逐项判失败，full_suite_passed 独立计算；`python3 scripts/test_import_apply_gates.py` 必须 PASS。
+- [x] **Step 1：测试门禁判定。** `scripts/test_import_apply_gates.py` 对缺测试/零测试/SKIP/FAIL/重复门禁/只跑纯函数/清理失败逐项判失败，full_suite_passed 独立计算；`python3 scripts/test_import_apply_gates.py` 必须 PASS。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -243,11 +243,11 @@ assert not validate_required_gates(events_with_one_skip)["required_gates_passed"
 assert not validate_required_gates(events_with_zero_tests)["required_gates_passed"]
 ```
 
-- [ ] **Step 2：固定交付源验证。** `python3 scripts/test-import-apply.py --source-commit <任务7完整提交> --output-dir <新证据目录>`；在 archive 源执行 go build ./...、go vet ./...、go test -race 新模块与受影响边界、全部 required gates。ACK 及完整 OIDC 不得缩减为选取通过测试；P4-29 用自身独立只读夹具，不能拿 writer 角色代跑。
-- [ ] **Step 3：完整仓库套件一次。** 同固定源 `go test -json -timeout=10m -count=1 ./...`，解析具名顶层/子测试 PASS/FAIL/SKIP，保留完整失败和跳过名称。P4-29 记录的105失败/825跳过仅作历史参考，不当成此次结果；缺Redis/S3/角色/扫描器等夹具不能写全套通过。
-- [ ] **Step 4：最终一次独立整体只读评审。** 对产品基线到固定源的整个差异，重点授权/权限、COMMIT不明、保存点拒绝、池session锁清理、旧CLI兼容及实际接口证据。沿用原执行方式的最终评审代理，禁止实现代理或逐任务额外评审；按评审结果修正具体问题；若产品源码变更，重新固定最终源码并重跑全部必需门禁，完整仓库套件仅为受影响的具体风险补跑，历史全套结果必须标明它自己的源码提交，不冒充最终源码全套通过。
-- [ ] **Step 5：整理交付并提交。** 文档列出API示例（无真实凭据）、默认关闭、拒绝批次修正文需新编号、结果不明保留原编号/正文、无自动授权/登录映射、专属夹具与生产未验收。记录最终源码SHA、证据SHA256、独立评审和实际耗时；提交 `docs: deliver P4-30 controlled import verification`。
-- [ ] **Step 6：检查分支并交付。** `git diff <固定源> HEAD -- cmd internal scripts db go.mod go.sum` 应为空（否则固定验证源失效，重新验证变更）；工作树干净，旧PR不变。按已有草稿交付方式创建以 P4-29 分支为基线的独立 draft PR 并 attach_artifact，核对远端 head；禁止合并/部署。如推送授权或网络不可用，明确未发布且交付本地提交与文档，不宣称PR已创建。
+- [x] **Step 2：固定交付源验证。** `python3 scripts/test-import-apply.py --source-commit <任务7完整提交> --output-dir <新证据目录>`；在 archive 源执行 go build ./...、go vet ./...、go test -race 新模块与受影响边界、全部 required gates。ACK 及完整 OIDC 不得缩减为选取通过测试；P4-29 用自身独立只读夹具，不能拿 writer 角色代跑。
+- [x] **Step 3：完整仓库套件一次。** 同固定源 `go test -json -timeout=10m -count=1 ./...`，解析具名顶层/子测试 PASS/FAIL/SKIP，保留完整失败和跳过名称。P4-29 记录的105失败/825跳过仅作历史参考，不当成此次结果；缺Redis/S3/角色/扫描器等夹具不能写全套通过。
+- [x] **Step 4：最终一次独立整体只读评审。** 对产品基线到固定源的整个差异，重点授权/权限、COMMIT不明、保存点拒绝、池session锁清理、旧CLI兼容及实际接口证据。沿用原执行方式的最终评审代理，禁止实现代理或逐任务额外评审；按评审结果修正具体问题；若产品源码变更，重新固定最终源码并重跑全部必需门禁，完整仓库套件仅为受影响的具体风险补跑，历史全套结果必须标明它自己的源码提交，不冒充最终源码全套通过。
+- [x] **Step 5：整理交付并提交。** 文档列出API示例（无真实凭据）、默认关闭、拒绝批次修正文需新编号、结果不明保留原编号/正文、无自动授权/登录映射、专属夹具与生产未验收。记录最终源码SHA、证据SHA256、独立评审和实际耗时；提交 `docs: deliver P4-30 controlled import verification`。
+- [x] **Step 6：检查分支并交付。** `git diff <固定源> HEAD -- cmd internal scripts db go.mod go.sum` 应为空（否则固定验证源失效，重新验证变更）；工作树干净，旧PR不变。按已有草稿交付方式创建以 P4-29 分支为基线的独立 draft PR 并 attach_artifact，核对远端 head；禁止合并/部署。如推送授权或网络不可用，明确未发布且交付本地提交与文档，不宣称PR已创建。
 
 ## 规格覆盖与计划自检
 
@@ -262,4 +262,4 @@ assert not validate_required_gates(events_with_zero_tests)["required_gates_passe
 | §7限额/关闭开关/兼容 | Task4、6、7、8 |
 | §8十类验收与真实证据 | Task7、8；前六任务保留各自RED/GREEN |
 
-计划自检已明确文件、跨任务签名、五项 Review Focus 的所属测试和全部规格覆盖；未写产品实现或运行产品测试。用户批准后，读取 executing-plans 技能，逐项更新状态与证据；最后依原方式做一次独立整体评审。
+计划已按八项执行；实施证据、15项裁决和唯一评审见 [P4-30 验收记录](../../开发增量-P4-30-验收记录.md)。最终必需门禁固定源 `24cc1ffaf218cd73a7066f1affc73501b34e4024`；完整套件保留修正前 `ac8bef72f68ee834cdaa728e5378abc5fcc6fa47` 的实际失败/跳过，不声称全套通过。文档提交后的 task-done 校验固定归档与无产品差异、已授权草稿交付状态。
