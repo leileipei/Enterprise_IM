@@ -222,7 +222,7 @@ def main():
             '--mount','type=bind,src='+str(tls)+',dst=/tls,readonly',inspect['Id']])
         result['container_id'] = container
         for _ in range(100):
-            cp = subprocess.run(['docker','exec',container,'pg_isready','-U','postgres','-d','im_compare'],
+            cp = subprocess.run(['docker','exec',container,'pg_isready','-h','127.0.0.1','-U','postgres','-d','im_compare'],
                                 stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
             if cp.returncode == 0:
                 break
