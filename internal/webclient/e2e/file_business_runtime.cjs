@@ -45,6 +45,11 @@ const fs=require('node:fs/promises'),path=require('node:path'),{spawn}=require('
  }
  const script=path.join(input.evidenceDir,'browser-scenario.cjs'),config=path.join(input.evidenceDir,'browser-input.json');
  await fs.writeFile(script,source,{mode:0o600,flag:'wx'});await fs.writeFile(config,JSON.stringify(input),{mode:0o600,flag:'wx'});
+ // The registered Node already owns the lifecycle pipes and Playwright hook.
+ // Load the exact generated scenario here so its real Chrome is supervised.
+ if(process.env.IM_BROWSER_LIFECYCLE_WRITE_FD==='3'){
+  process.env.WEB_FILE_INPUT=config;require(script);return;
+ }
  const child=spawn(process.execPath,[script],{env:{...process.env,WEB_FILE_INPUT:config},stdio:['ignore','pipe','pipe']});
  child.stdout.pipe(process.stdout);child.stderr.pipe(process.stderr);
  process.on('SIGINT',()=>child.kill('SIGINT'));
