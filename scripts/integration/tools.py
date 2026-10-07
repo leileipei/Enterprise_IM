@@ -90,7 +90,11 @@ def discover_toolchain(snapshot: SourceSnapshot,private: Path) -> Toolchain:
         elif not path.is_file():raise ValueError('tool_missing:'+key)
     versions={};hashes={}
     def run(key,args):
-        result=subprocess.run([str(paths[key]),*args],capture_output=True,text=True,timeout=60)
+        kwargs={}
+        if key=='docker':
+            from .services import docker_environment
+            kwargs['env']=docker_environment()
+        result=subprocess.run([str(paths[key]),*args],capture_output=True,text=True,timeout=60,**kwargs)
         if result.returncode:raise ValueError('tool_probe_failed:'+key)
         return result.stdout+result.stderr
     for key in ('go','node','chrome','qpdf','clamd','sigtool','freshclam','python'):

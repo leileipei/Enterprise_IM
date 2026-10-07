@@ -124,7 +124,8 @@ class Registry:
     def docker(self,args):
         cli=shutil.which('docker')
         if not cli:raise ValueError('docker_unavailable_for_cleanup')
-        result=subprocess.run([cli,*args],capture_output=True,text=True,timeout=5)
+        from .services import docker_environment
+        result=subprocess.run([cli,*args],capture_output=True,text=True,timeout=5,env=docker_environment())
         if args[0]=='ps':
             if result.returncode:raise ValueError('docker_list_failed')
             return result.stdout.splitlines()
