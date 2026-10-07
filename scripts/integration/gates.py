@@ -8,7 +8,7 @@ from .model import GateEvent,Inventory
 from .results import parse_go,parse_verbose,validate_gate
 from .commands import run_command
 from .environment import test_environment
-from .source import collect_inventory
+from .source import collect_inventory,collect_python_inventory
 from .services import docker_environment
 
 PREFIX='github.com/leileipei/Enterprise_IM/'
@@ -176,7 +176,13 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
         event=validate_import_child(child/'verification.json',snapshot.commit);event.failures.extend(outer.failures)
         if (child/'source.tar').is_file() and _digest(child/'source.tar')!=snapshot.archive_sha256:event.failures.append('child_archive_differs_from_parent')
         if outer.exit_code:event.exit_code=outer.exit_code
+        event.argv_template=argv
+        if (child/'verification.json').is_file():
+            child_data=json.loads((child/'verification.json').read_text())
+            event.related_logs=[child/r[k] for r in child_data.get('events',[]) for k in ['log','stderr'] if r.get(k)]
+        event.related_logs=list(getattr(event,'related_logs',[]))+[outer.log,Path(str(outer.log)+'.stderr')]
         return event
+    python_inventory=collect_python_inventory(snapshot,tools,env) if name=='orchestrator_contract' else None
     if name=='message_realtime':
         from .results import parse_go
         first=[str(tools.paths['go']),'test','-json','-p','1','-timeout=30m','-count=1','./internal/access','./internal/oidcauth']
@@ -184,14 +190,26 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
         b=run_command(name,'test',snapshot.commit,[str(tools.paths['go']),'test','-json','-p','1','-timeout=30m','-count=1','./internal/policystore','-run',spec['argv'][-1]],snapshot.root,env,root/'realtime.jsonl',deadline,registry)
         log=root/'message_realtime.jsonl';log.write_bytes(a.log.read_bytes()+b.log.read_bytes());log.chmod(0o600)
         outer=GateEvent(name,'test',snapshot.commit,a.exit_code or b.exit_code,log,failures=a.failures+b.failures)
+        outer.argv_template=[first,[str(tools.paths['go']),'test','-json','-p','1','-timeout=30m','-count=1','./internal/policystore','-run',spec['argv'][-1]]]
     else:outer=run_command(name,spec['kind'],snapshot.commit,argv,spec['cwd'],env,log,deadline,registry)
     if spec['kind']=='check':
-        outer.checks=[name+'_command_completed'] if outer.exit_code==0 and not outer.failures else [];return outer
+        outer.checks=[name+'_command_completed'] if outer.exit_code==0 and not outer.failures else []
+        if name=='build_all' and outer.exit_code==0 and not outer.failures:
+            related=[]
+            for program,key in [('im-import-compare','IM_COMPARE_TEST_BINARY'),('im-import-preflight','IM_PREFLIGHT_TEST_BINARY')]:
+                target=Path(bundle.environment[key])
+                built=run_command(name,'check',snapshot.commit,[str(tools.paths['go']),'build','-buildvcs=false','-o',str(target),'./cmd/'+program],snapshot.root,env,root/(program+'.build.log'),deadline,registry)
+                related += [built.log,Path(str(built.log)+'.stderr')]
+                outer.failures.extend(built.failures)
+                if built.exit_code or not target.is_file():outer.exit_code=built.exit_code or 1;outer.failures.append('import_program_build_failed:'+program)
+                else:outer.checks.append(program+'_binary_sha256:'+_digest(target))
+            outer.related_logs=related
+        return outer
     if name=='orchestrator_contract':
         from .results import parse_unittest
         # unittest reports to stderr; its dedicated command diagnostic is the authoritative stream.
         event=parse_unittest(outer.log.with_suffix(outer.log.suffix+'.stderr'),name,snapshot.commit,outer.exit_code)
-        event.inventory=Inventory({'unittest'},{'unittest':{s.split('::',1)[1] for s in event.started}},set())
+        event.inventory=python_inventory
     else:
         if name=='file_components':
             bundle.metadata['file_runtime_exit']=outer.exit_code
@@ -204,4 +222,6 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
             top=required.split('/')[0];matched=[p for p,names in event.inventory.tests.items() if top in names]
             if len(matched)!=1:event.failures.append('required_name_not_unique_in_inventory:'+required)
             else:event.inventory.required_subtests.add(matched[0]+'::'+required)
+    event.related_logs=list(getattr(event,'related_logs',[]))+[outer.log]+([Path(str(a.log)+'.stderr'),Path(str(b.log)+'.stderr')] if name=='message_realtime' else [Path(str(outer.log)+'.stderr')])
+    event.argv_template=getattr(outer,'argv_template',argv)
     event.failures.extend(outer.failures);return event

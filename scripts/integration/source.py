@@ -66,3 +66,21 @@ def collect_inventory(snapshot: SourceSnapshot,tools: Toolchain,env: Dict[str,st
         if seen!=chosen:raise ValueError('missing_inventory_package')
         return Inventory(chosen,tests,set())
     except (KeyError,TypeError,json.JSONDecodeError) as exc:raise ValueError('invalid_inventory_json') from exc
+
+
+def collect_python_inventory(snapshot,tools,env):
+    """Discover test IDs in a separate interpreter, before any execution events."""
+    script="""import json,unittest
+suite=unittest.defaultTestLoader.discover('scripts/tests',pattern='test_project_integration_*.py')
+def names(suite):
+ for item in suite:
+  if isinstance(item,unittest.TestSuite):yield from names(item)
+  else:yield item.id()
+print(json.dumps(sorted(names(suite))))
+"""
+    result=subprocess.run([str(tools.paths['python']),'-c',script],cwd=snapshot.root,env=env,capture_output=True,text=True,timeout=60)
+    if result.returncode:raise ValueError('python_inventory_failed')
+    try:ids=json.loads(result.stdout)
+    except ValueError as exc:raise ValueError('python_inventory_invalid_json') from exc
+    if not isinstance(ids,list) or not ids or len(ids)!=len(set(ids)) or any(not isinstance(i,str) or i.startswith('unittest.loader._FailedTest') for i in ids):raise ValueError('python_inventory_incomplete')
+    return Inventory({'unittest'},{'unittest':set(ids)},set())

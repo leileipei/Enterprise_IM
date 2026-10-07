@@ -33,7 +33,7 @@ def test_environment(tools: Toolchain,private: Path,values: Dict[str,str]) -> Di
     paths=sorted({str(path.parent) for key,path in tools.paths.items() if key!='node_modules'})
     env=dict(PATH=':'.join(paths+['/opt/homebrew/bin','/usr/local/bin','/usr/bin','/bin','/usr/sbin','/sbin']),
              LANG='C.UTF-8',TZ='UTC',GOWORK='off',GOFLAGS='-mod=readonly -buildvcs=false',
-             GOENV='off',PYTHONDONTWRITEBYTECODE='1')
+             GOENV='off',GOTOOLCHAIN='local',PYTHONDONTWRITEBYTECODE='1')
     env.update({key:str(value) for key,value in directories.items()})
     if 'node_modules' in tools.paths:env['NODE_PATH']=str(tools.paths['node_modules'])
     env.update(values)
