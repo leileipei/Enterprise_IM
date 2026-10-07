@@ -17,7 +17,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -171,8 +170,7 @@ func startFileMessageProduction(t *testing.T, binary string, environment []strin
 		t.Fatal(e)
 	}
 	os.Chmod(log.Name(), 0600)
-	cmd := exec.Command(binary)
-	cmd.Env = append(os.Environ(), environment...)
+	cmd := fileProductCommand(binary, environment)
 	cmd.Stdout = log
 	cmd.Stderr = log
 	if e = cmd.Start(); e != nil {

@@ -68,8 +68,7 @@ func startFileWorkerProcess(t *testing.T, binary string, env []string) *exec.Cmd
 	if e != nil {
 		t.Fatal(e)
 	}
-	cmd := exec.Command(binary)
-	cmd.Env = append(os.Environ(), env...)
+	cmd := fileProductCommand(binary, env)
 	cmd.Stdout = log
 	cmd.Stderr = log
 	if e = cmd.Start(); e != nil {
@@ -126,4 +125,19 @@ func filePublicRequest(t *testing.T, method, base, path, token, membership strin
 		}
 	}
 	return out
+}
+
+// This constructor is shared by official product process fixtures.
+func fileProductCommand(binary string, configuration []string) *exec.Cmd {
+	cmd := exec.Command(binary)
+	values := map[string]string{}
+	for _, item := range configuration {
+		key, value, ok := strings.Cut(item, "=")
+		if !ok || key == "" {
+			panic("invalid explicit product configuration")
+		}
+		values[key] = value
+	}
+	cmd.Env = processChildEnv(values)
+	return cmd
 }
