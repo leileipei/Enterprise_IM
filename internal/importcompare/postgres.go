@@ -70,6 +70,12 @@ func (r PGReader) Read(parent context.Context, tenantID string, input p.Document
 				}
 			}
 			_ = conn.Close(clean)
+			select {
+			case <-conn.PgConn().CleanupDone():
+			case <-clean.Done():
+				_ = conn.PgConn().Conn().Close()
+			}
+
 		}
 	}()
 	b = &queryBudget{}

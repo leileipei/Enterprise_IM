@@ -37,6 +37,10 @@ func controlDeadline(ctx context.Context) (time.Time, error) {
 	if err := unix.Fstat(3, &stat); err != nil || stat.Mode&unix.S_IFMT != unix.S_IFIFO {
 		return bad()
 	}
+	flags, err := unix.FcntlInt(3, unix.F_GETFD, 0)
+	if err != nil || flags&unix.FD_CLOEXEC != 0 {
+		return bad()
+	}
 	f := os.NewFile(3, "compare-control")
 	if f == nil {
 		return bad()

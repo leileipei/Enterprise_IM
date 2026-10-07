@@ -3,8 +3,10 @@ package importcompare
 import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgconn/ctxwatch"
 	"os"
 	"strings"
+	"time"
 )
 
 func driverConfig(c Config) (*pgx.ConnConfig, error) {
@@ -21,6 +23,9 @@ func driverConfig(c Config) (*pgx.ConnConfig, error) {
 	cfg, err := pgx.ParseConfigWithOptions(c.connection.canonical(), pgx.ParseConfigOptions{ParseConfigOptions: pgconn.ParseConfigOptions{ConnStringAllowedKeys: connectionKeys}})
 	if err != nil {
 		return nil, configFailure()
+	}
+	cfg.BuildContextWatcherHandler = func(conn *pgconn.PgConn) ctxwatch.Handler {
+		return &pgconn.CancelRequestContextWatcherHandler{Conn: conn, CancelRequestDelay: 0, DeadlineDelay: 200 * time.Millisecond}
 	}
 	cfg.RuntimeParams = map[string]string{}
 	cfg.Fallbacks = nil
