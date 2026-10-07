@@ -40,6 +40,12 @@ class ResultsTests(unittest.TestCase):
                 rows.append(event)
         return rows
 
+    def test_adapter_error_survives_missing_inventory(self):
+        event=self.m.GateEvent("file_components","test",COMMIT,1,self.root/"missing",failures=["stage_exception:UnboundLocalError"])
+        verdict=self.r.evaluate([event],self.m.CleanupResult(True,[]),COMMIT)
+        self.assertIn("file_components:stage_exception:UnboundLocalError",verdict.failures)
+        self.assertIn("file_components:missing_discovered_inventory",verdict.failures)
+
     def test_zero_missing_subtest_nonzero_exit(self):
         # Removing coverage or trusting PASS despite exit 7 must reject.
         self.assertEqual(self.r.validate_gate(self.event(), self.inventory(), None), [])

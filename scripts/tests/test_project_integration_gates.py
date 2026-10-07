@@ -69,6 +69,26 @@ class GateTests(unittest.TestCase):
   self.assertEqual(cwd,registry.root/registry.owner)
   self.assertEqual(argv[argv.index('--repository-root')+1],str(self.snapshot.repository_root))
 
+ def test_component_branch_parses_actual_output_without_realtime_import(self):
+  from unittest.mock import patch
+  from integration.model import FixtureBundle,Toolchain,GateEvent
+  from integration.registry import Registry
+  from support import go_rows
+  registry=Registry(self.root/'registry.jsonl','b'*32,self.snapshot.commit)
+  tools=Toolchain({'python':Path(sys.executable),'go':Path('/opt/homebrew/bin/go'),'node':Path('/bin/echo'),'chrome':Path('/bin/echo')},{},{},{},'darwin','arm64')
+  bundle=FixtureBundle({},set(),registry.path,{registry.owner},{'source_commit':self.snapshot.commit})
+  package='github.com/leileipei/Enterprise_IM/internal/files'
+  inventory=Inventory({package},{package:{'TestFileControlled'}},set())
+  def command(name,kind,commit,argv,cwd,env,log,deadline,registry):
+   import subprocess
+   payload=''.join(json.dumps(r)+'\n' for r in go_rows(package,[('TestFileControlled','pass')]))
+   with (log.parent/'components.json').open('w') as stream:subprocess.run([sys.executable,'-c','import sys;sys.stdout.write('+repr(payload)+')'],stdout=stream,check=True)
+   (log.parent/'assembly.json').write_text('');log.write_text('completed');Path(str(log)+'.stderr').write_text('')
+   return GateEvent(name,kind,commit,0,log)
+  with patch.object(self.g,'run_command',side_effect=command),patch.object(self.g,'collect_inventory',return_value=inventory),patch.object(self.g,'docker_environment',return_value={'DOCKER_HOST':'local','PATH':'/usr/bin'}):
+   event=self.g.run_stage(self.specs()['file_components'],self.snapshot,tools,bundle,registry,1e12)
+  self.assertEqual(event.exit_code,0);self.assertFalse(event.failures);self.assertIn(package+'::TestFileControlled',event.passed)
+
  def test_resource_registration_precedes_container_start(self):
   try:from integration import resource_command
   except ImportError:self.fail('owned resource launcher missing')

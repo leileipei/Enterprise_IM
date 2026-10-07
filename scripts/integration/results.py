@@ -232,6 +232,7 @@ def evaluate(events: List[GateEvent], cleanup: CleanupResult, commit: str) -> Ve
         expected='check' if event.name in CHECK_GATES else 'test'
         if event.kind!=expected: problems.append('unexpected_gate_kind')
         if event.kind=='test' and event.inventory is None:
+            problems.extend(event.failures)
             problems.append('missing_discovered_inventory')
         else:
             problems.extend(validate_gate(event,event.inventory or Inventory(set(),{},set()),

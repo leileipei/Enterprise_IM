@@ -116,7 +116,13 @@ def execute(snapshot,output):
             if probe.failures or probe.exit_code:raise ValueError('scanner_revalidation_failed')
             active=spec['name'];started=time.time();print(active,'START',flush=True)
             try:event=run_stage(spec,snapshot,tools,bundle,registry,deadline())
-            except (ValueError,OSError,KeyError) as exc:event=GateEvent(spec['name'],spec['kind'],snapshot.commit,1,private/(spec['name']+'-failed.json'),failures=[str(exc) if isinstance(exc,ValueError) else 'stage_evidence_missing'])
+            except Exception as exc:
+                code=str(exc) if isinstance(exc,ValueError) else 'stage_exception:'+type(exc).__name__
+                event=GateEvent(spec['name'],spec['kind'],snapshot.commit,1,private/(spec['name']+'-failed.json'),failures=[code])
+                # The adapter can fail after its real command has already written evidence.
+                # Preserve those streams before the owned directory is removed.
+                stage_root=private/'gates'/spec['env_group']
+                event.related_logs=[p for p in stage_root.rglob('*') if p.is_file() and not any(q.is_symlink() for q in (p,*p.parents)) and (p.suffix in {'.jsonl','.log','.stderr','.txt'} or p.name in {'assembly.json','components.json'})] if stage_root.is_dir() else []
             if not Path(event.log).exists():
                 event.log=_check(spec['name']+'-error',snapshot,private,failures=event.failures).log
             event.argv_template=getattr(event,'argv_template',[str(x) for x in spec['argv']]);event.started_at=started;event.ended_at=time.time();event.seconds=round(event.ended_at-started,3)
@@ -132,8 +138,8 @@ def execute(snapshot,output):
     except KeyboardInterrupt:
         cancelled=True
         events.append(_check('evidence_integrity',snapshot,private,failures=['cancelled']))
-    except (ValueError,OSError,KeyError,ImportError) as exc:
-        code=str(exc) if isinstance(exc,ValueError) else 'attempt_setup_failed'
+    except Exception as exc:
+        code=str(exc) if isinstance(exc,ValueError) else 'attempt_exception:'+type(exc).__name__
         if active in {'toolchain','fixture_preflight'} and not any(e.name==active for e in events):events.append(_check(active,snapshot,private,failures=[code]))
         events.append(_check('evidence_integrity',snapshot,private,failures=[code]))
     finally:

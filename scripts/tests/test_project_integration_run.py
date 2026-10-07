@@ -3,7 +3,7 @@ import copy,hashlib,importlib.util,json,os,signal,subprocess,sys,tempfile,time,u
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from integration.model import SourceSnapshot,Toolchain,Inventory,GateEvent,CleanupResult,ResourceRef
+from integration.model import SourceSnapshot,Toolchain,Inventory,GateEvent,CleanupResult,ResourceRef,FixtureBundle
 from integration.results import REQUIRED_GATES,CHECK_GATES,parse_go
 from support import go_rows,write_json
 
@@ -61,12 +61,13 @@ class RunTests(unittest.TestCase):
   with self.patches(prepare):self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
   self.assertEqual(calls,['prepare']);report=json.loads((self.output/'verification.json').read_text());self.assertIn('cancelled',report['failures'])
  def test_raw_secret_is_not_published_or_retained(self):
-  secret='private-fixture-password-123';path=self.output/'raw.log';path.write_text(secret+'\n-----BEGIN PRIVATE KEY-----\nfixture-secret\n-----END PRIVATE KEY-----\n')
+  secret='private-fixture-password-123';path=self.output/'raw.log';path.write_text(secret+'\npostgresql://reader:uri-password-unregistered@127.0.0.1:45678/db\n-----BEGIN PRIVATE KEY-----\nfixture-secret\n-----END PRIVATE KEY-----\n')
   event=GateEvent('toolchain','check',self.snapshot.commit,0,path,checks=['tool_fixture'])
   self.evidence.write_evidence(self.output,self.snapshot,self.tools,[event],CleanupResult(True,[]),Inventory(set(),{},set()),{secret})
   self.assertFalse(path.exists(),'raw credential-bearing log must be disposed')
   for p in self.output.rglob('*'):
-   if p.is_file() and p.suffix in ['.json','.log','.txt']:self.assertNotIn(secret,p.read_text())
+   if p.is_file() and p.suffix in ['.json','.log','.txt']:
+    self.assertNotIn(secret,p.read_text());self.assertNotIn('uri-password-unregistered',p.read_text())
   report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['log_dispositions'][0]['original_disposed']);self.assertNotIn('BEGIN PRIVATE KEY',json.dumps(report))
  def test_foreign_original_is_never_removed_or_published(self):
   path=self.base/'foreign.log';secret='outside-private-value';path.write_text(secret)
@@ -96,6 +97,31 @@ class RunTests(unittest.TestCase):
   with self.assertRaises(ValueError):self.evidence.validate_delivery(self.snapshot.commit,report,self.snapshot.repository_root)
   data['cleanup']['removed']=False;report.write_text(json.dumps(data))
   with self.assertRaises(ValueError):self.evidence.validate_delivery(self.snapshot.commit,report,self.snapshot.repository_root)
+ def test_unexpected_stage_error_keeps_raw_log_and_runs_next_gate(self):
+  tools=copy.deepcopy(self.tools);tools.paths['go']=Path(sys.executable);calls=[]
+  def specs(*args):return [{'name':'orchestrator_contract','kind':'test','env_group':'orchestrator_contract','argv':[]},{'name':'file_messages','kind':'test','env_group':'file_messages','argv':[]},{'name':'web_files','kind':'test','env_group':'web_files','argv':[]}]
+  def probe(bundle,*args):
+   path=self.output/next(iter(bundle.owners))/'probe.log';path.write_text('controlled fixture protocol')
+   return GateEvent('fixture_preflight','check',self.snapshot.commit,0,path,checks=['protocol_fixture'])
+  def stage(spec,snapshot,tools,bundle,registry,deadline):
+   calls.append(spec['name'])
+   if spec['name']=='orchestrator_contract':return self.contract(spec,snapshot,tools,bundle,registry,deadline)
+   path=registry.root/registry.owner/'gates'/spec['env_group'];path.mkdir(mode=0o700,parents=True,exist_ok=True)
+   raw=path/'business.jsonl';write_json(raw,go_rows('fixture',[('TestProtocol','pass')]))
+   if spec['name']=='file_messages':raise UnboundLocalError('controlled parser regression')
+   event=parse_go(raw,spec['name'],snapshot.commit,0);event.inventory=Inventory({'fixture'},{'fixture':{'TestProtocol'}},set());return event
+  from integration.commands import run_command as actual_command
+  def iam_command(name,kind,commit,argv,cwd,env,log,deadline,registry):
+   if name=='orchestrator_contract':return actual_command(name,kind,commit,argv,cwd,env,log,deadline,registry)
+   write_json(log,go_rows('github.com/leileipei/Enterprise_IM/internal/testfixtures',[('TestIntegrationFixtureIAM','pass')]));Path(str(log)+'.stderr').write_text('')
+   return GateEvent(name,kind,commit,0,log)
+  with patch.multiple(self.run,discover_toolchain=lambda *a:tools,gate_specs=specs,run_stage=stage,prepare_services=lambda *a:FixtureBundle({},set(),a[2].path,{a[2].owner},{'source_commit':self.snapshot.commit}),prepare_iam=lambda b,*a:b,prepare_scanner=lambda b,*a:b,complete_profile=lambda *a:None,probe_services=probe,probe_scanner=probe,probe_browser=probe,collect_inventory=lambda *a:Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())),patch('integration.commands.run_command',side_effect=iam_command):
+   self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
+  self.assertEqual(calls,['orchestrator_contract','file_messages','web_files'])
+  report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
+  self.assertTrue(any(r['original_path'].endswith('business.jsonl') and r['published_path'] for r in report['log_dispositions']))
+  self.assertTrue(any('UnboundLocalError' in x for x in report['failures']))
+
  def test_global_deadline_interrupts_blocked_setup(self):
   self.assertTrue(hasattr(self.run,'TOTAL_SECONDS'),'global deadline timer missing')
   def prepare(*args):time.sleep(5);self.fail('deadline failed to interrupt blocked setup')

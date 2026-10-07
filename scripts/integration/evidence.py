@@ -20,6 +20,8 @@ def sanitize(text,secrets):
     for secret in sorted(secrets,key=len,reverse=True):
         if secret:text=text.replace(secret,'[PRIVATE FIXTURE VALUE]')
     text=re.sub(r'-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----.*?-----END (?:[A-Z ]+ )?PRIVATE KEY-----','[PRIVATE KEY DISPOSED]',text,flags=re.S)
+    # Dynamically created test roles are not all known to the parent fixture.
+    text=re.sub(r'([a-zA-Z][a-zA-Z0-9+.-]*://)([^\s/@]+)@',r'\1[PRIVATE URI USERINFO]@',text)
     text=re.sub(r'\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b','[TOKEN DISPOSED]',text)
     if re.search(r'-----BEGIN [A-Z ]*PRIVATE KEY-----',text):raise ValueError('unsafe_incomplete_private_key')
     return text

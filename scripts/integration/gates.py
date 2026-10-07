@@ -184,7 +184,6 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
         return event
     python_inventory=collect_python_inventory(snapshot,tools,env) if name=='orchestrator_contract' else None
     if name=='message_realtime':
-        from .results import parse_go
         first=[str(tools.paths['go']),'test','-json','-p','1','-timeout=30m','-count=1','./internal/access','./internal/oidcauth']
         a=run_command(name,'test',snapshot.commit,first,snapshot.root,env,root/'auth.jsonl',deadline,registry)
         b=run_command(name,'test',snapshot.commit,[str(tools.paths['go']),'test','-json','-p','1','-timeout=30m','-count=1','./internal/policystore','-run',spec['argv'][-1]],snapshot.root,env,root/'realtime.jsonl',deadline,registry)
