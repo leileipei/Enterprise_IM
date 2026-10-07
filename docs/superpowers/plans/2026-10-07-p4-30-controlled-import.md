@@ -8,7 +8,7 @@
 
 **Tech Stack:** 仓库锁定 Go 1.27.1、pgx/v5 v5.11.0、现有 JWT/OIDC 组件、PostgreSQL 16、Python 验证脚本；不新增或升级产品依赖。
 
-**Spec:** [P4-30 已确认规格](../specs/2026-10-07-p4-30-controlled-import-design.md)。用户于 2026-10-07 回复“确认”。本计划待评审；执行方式沿用当前助手逐项实现，不派实现代理，最终一次独立整体评审。
+**Spec:** [P4-30 已确认规格](../specs/2026-10-07-p4-30-controlled-import-design.md)。用户于 2026-10-07 回复“确认”。本计划用户于 2026-10-07 确认，正在执行；执行方式沿用当前助手逐项实现，不派实现代理，最终一次独立整体评审。
 
 ## Global Constraints
 
@@ -61,7 +61,7 @@
 - `importapply.Plan{Rows []PlannedRow; Counts map[string]TableCounts; Issues []Issue; ErrorsTotal int; IssuesTruncated bool}`；`PlannedRow{Ref c.RowRef; Record p.Record}`；`BuildPlan(ctx context.Context,input p.Document,decisions []c.RowDecision,issues *c.Collector)(Plan,error)`。
 - Task 2 的 TableCounts/Issue 在本任务先定义于 plan.go，下一任务移动至 receipt.go：TableCounts 是 Input/New/Identical/Conflict/Inserted 五个 int；Issue 是 Entity p.Entity、Row int、Field p.Field、Code string，仅固定枚举。Plan/PlannedRow 拒绝 JSON 编码，避免库存/输入流入日志。
 
-- [ ] **Step 1：写 RED。** `TestAppendDecisionParity` 断言旧 Compare 分类及报告字节不变；`TestAppendProtectedEntities` 断言禁止表 new 转 conflict，码 PROTECTED_ENTITY_NEW，计数闭合；`TestAppendPlanStableOrder` 将 org/department 父子顺序打乱，断言六表顺序及父在子前；`TestAppendPlanDeepTree` 10,000 层链不递归溢出；`TestAppendDecisionTruncation` 第 201 个冲突仍不进入 Rows。
+- [x] **Step 1：写 RED。** `TestAppendDecisionParity` 断言旧 Compare 分类及报告字节不变；`TestAppendProtectedEntities` 断言禁止表 new 转 conflict，码 PROTECTED_ENTITY_NEW，计数闭合；`TestAppendPlanStableOrder` 将 org/department 父子顺序打乱，断言六表顺序及父在子前；`TestAppendPlanDeepTree` 10,000 层链不递归溢出；`TestAppendDecisionTruncation` 第 201 个冲突仍不进入 Rows。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -71,10 +71,10 @@ if indexOf(plan.Rows, parentRef) >= indexOf(plan.Rows, childRef) { t.Fatal("pare
 if plan.Counts["admin_grants"].Inserted != 0 { t.Fatal("protected entity was selected") }
 ```
 
-- [ ] **Step 2：观察失败。** `go test ./internal/importcompare ./internal/importapply -run 'TestAppend(Decision|Protected|Plan)' -count=1`，新符号缺失或行为断言 FAIL；归档红日志。
-- [ ] **Step 3：最小实现。** 从现有完整 conflicts/identical 映射提取决策，禁止从截断 Issues 反推冲突。Kahn 迭代拓扑按规范 UUID 稳定排序，已有父节点无需再次插入；只将六表 new 放入 Rows。
-- [ ] **Step 4：验证 GREEN。** 重跑 Step 2，再 `go test ./internal/importpreflight ./internal/importcompare -count=1`，纯测试 PASS；数据库测试缺夹具的 SKIP 必须保留，不能视为 DB 通过。
-- [ ] **Step 5：提交。** `feat: derive append decisions and stable insert plan`，仅本任务 Files。
+- [x] **Step 2：观察失败。** `go test ./internal/importcompare ./internal/importapply -run 'TestAppend(Decision|Protected|Plan)' -count=1`，新符号缺失或行为断言 FAIL；归档红日志。
+- [x] **Step 3：最小实现。** 从现有完整 conflicts/identical 映射提取决策，禁止从截断 Issues 反推冲突。Kahn 迭代拓扑按规范 UUID 稳定排序，已有父节点无需再次插入；只将六表 new 放入 Rows。
+- [x] **Step 4：验证 GREEN。** 重跑 Step 2，再 `go test ./internal/importpreflight ./internal/importcompare -count=1`，纯测试 PASS；数据库测试缺夹具的 SKIP 必须保留，不能视为 DB 通过。
+- [x] **Step 5：提交。** `feat: derive append decisions and stable insert plan`，仅本任务 Files。
 
 ### Task 2：回执协议、幂等记录与迁移
 

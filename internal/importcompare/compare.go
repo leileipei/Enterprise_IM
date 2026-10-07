@@ -116,8 +116,8 @@ func checkStored(ctx context.Context, d p.Document) error {
 	}
 	return nil
 }
-func Compare(ctx context.Context, input p.Document, snapshot Snapshot) (Classifications, *Collector, error) {
-	fail := func(err error) (Classifications, *Collector, error) { return nil, nil, err }
+func Decide(ctx context.Context, input p.Document, snapshot Snapshot) ([]RowDecision, *Collector, error) {
+	fail := func(err error) ([]RowDecision, *Collector, error) { return nil, nil, err }
 	if err := p.ContextFailure(ctx); err != nil {
 		return fail(err)
 	}
@@ -210,28 +210,21 @@ func Compare(ctx context.Context, input p.Document, snapshot Snapshot) (Classifi
 	if unlocated {
 		return fail(p.Failure{Code: "DATABASE_DATA_INVALID"})
 	}
-	classes := Classifications{}
-	totalNew, totalSame, totalConflict := 0, 0, 0
-	for _, s := range p.Schema() {
-		a, b, d := 0, 0, 0
-		for _, r := range input.Tables[s.Entity] {
-			ref := RowRef{s.Entity, r.Ordinal}
+	decisions := []RowDecision{}
+	for _, schema := range p.Schema() {
+		for _, row := range input.Tables[schema.Entity] {
+			ref := RowRef{schema.Entity, row.Ordinal}
+			kind := New
 			if conflicts[ref] {
-				d++
+				kind = Conflict
 			} else if identical[ref] {
-				b++
-			} else {
-				a++
+				kind = Identical
 			}
+			decisions = append(decisions, RowDecision{Ref: ref, Kind: kind})
 		}
-		classes[string(s.Entity)] = Classification{&a, &b, &d}
-		totalNew += a
-		totalSame += b
-		totalConflict += d
 	}
-	classes["total"] = Classification{&totalNew, &totalSame, &totalConflict}
 	if err := p.ContextFailure(ctx); err != nil {
 		return fail(err)
 	}
-	return classes, c, nil
+	return decisions, c, nil
 }
