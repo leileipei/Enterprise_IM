@@ -1,0 +1,55 @@
+{
+  "source_commit": "27fddbd91ce11c481f158037837be9a463d17e99",
+  "source_archive_sha256": "74f2919409b647ddd413926760dfff4e4ffad0fd8e5fa3dff96e720ecab4f49e",
+  "output": "/private/tmp/ip5-32df3488",
+  "accepted": true,
+  "scanner_pids": [
+    97503,
+    97518
+  ],
+  "definitions": {
+    "main.cvd": {
+      "version": "63",
+      "build_time": "2025-12-16T23:18:00+00:00",
+      "sha256": "0b2182d229f46981ec8f535382222f7c9dfdd656b250ad47988b910a8d302365"
+    },
+    "daily.cvd": {
+      "version": "28146",
+      "build_time": "2026-10-07T06:24:00+00:00",
+      "sha256": "4cc99bd2fbce18b7ba5f1dd65d01f8062ba762db5189a1175dd147b4bd5cdf45"
+    },
+    "bytecode.cvd": {
+      "version": "339",
+      "build_time": "2025-09-11T08:29:00-04:00",
+      "sha256": "6d4aa01f219e988060fc419f495d07f27e0cdf1a2cccc065971da922c76f7ffb"
+    }
+  },
+  "browser_checks": [
+    "browser_launched",
+    "browser_version_verified",
+    "browser_closed"
+  ],
+  "exit_code": 0,
+  "passed": [
+    "github.com/leileipei/Enterprise_IM/internal/filescanner::TestScannerRealAttestation",
+    "github.com/leileipei/Enterprise_IM/internal/filescanner::TestScannerRealCleanEICARProtocol",
+    "github.com/leileipei/Enterprise_IM/internal/filescanner::TestScannerRealNearStreamLimit",
+    "github.com/leileipei/Enterprise_IM/internal/filescanner::TestScannerRealNoIncompleteReady",
+    "github.com/leileipei/Enterprise_IM/internal/filescanner::TestScannerRealTrustedRuntime"
+  ],
+  "failures": [],
+  "skips": [],
+  "cleanup": {
+    "removed": true,
+    "failures": [],
+    "private_directory_removed": true
+  },
+  "scope": "Task5 native scanner and browser tool preflight only",
+  "required_gates_passed": false,
+  "full_suite_passed": false,
+  "race_suite_passed": false,
+  "logs_sha256": {
+    "scanner-go-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "scanner-go.json": "d835dc771a2f2b90e616aeea755bb2654df4e8796359db77a2cccffd589835a6"
+  }
+}
