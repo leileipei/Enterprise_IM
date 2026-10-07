@@ -60,7 +60,7 @@ func fileRuntimeEnv(t *testing.T, dsn, dir string) []string {
 			t.Skip("controlled file dependencies required; run-all checks environment")
 		}
 	}
-	return []string{"IM_DATABASE_URL=" + dsn, "IM_FILE_SPOOL_DIR=" + dir, "IM_FILE_S3_ENDPOINT=" + os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION=us-east-1", "IM_FILE_S3_BUCKET=" + os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_CREDENTIAL_SOURCE=environment", "IM_FILE_S3_PATH_STYLE=true"}
+	return []string{"IM_DATABASE_URL=" + dsn, "IM_FILE_SPOOL_DIR=" + dir, "IM_FILE_S3_ENDPOINT=" + os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION=us-east-1", "IM_FILE_S3_BUCKET=" + os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_CREDENTIAL_SOURCE=environment", "IM_FILE_S3_PATH_STYLE=true", "IM_FILE_S3_ACCESS_KEY=" + os.Getenv("IM_FILE_S3_ACCESS_KEY"), "IM_FILE_S3_SECRET_KEY=" + os.Getenv("IM_FILE_S3_SECRET_KEY")}
 }
 func startFileWorkerProcess(t *testing.T, binary string, env []string) *exec.Cmd {
 	t.Helper()

@@ -26,6 +26,8 @@ GATE_SECONDS=3600
 CLEANUP_SECONDS=60
 
 
+IAM_SUBCASES=('postgres_tls_and_wrong_ca','buckets_versioned_and_probe_fixed','upload_allowed_and_versioned','anonymous_denied','worker_read_only','download_read_only','cleanup_rejects_nil_empty_null_versions','cleanup_exact_version_only')
+
 class Cancelled(KeyboardInterrupt):pass
 
 
@@ -100,7 +102,8 @@ def execute(snapshot,output):
         outer=run_command('fixture_preflight','test',snapshot.commit,[str(tools.paths['go']),'test','-json','-p','1','-count=1','./internal/testfixtures','-run','^TestIntegrationFixtureIAM$'],snapshot.root,env,iam_log,deadline(),registry)
         iam_event=parse_go(iam_log,'fixture_preflight',snapshot.commit,outer.exit_code)
         expected='github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM'
-        failed=service.failures+scanner.failures+browser.failures+iam_event.failures+outer.failures
+        iam_inventory=Inventory({'github.com/leileipei/Enterprise_IM/internal/testfixtures'},{'github.com/leileipei/Enterprise_IM/internal/testfixtures':{'TestIntegrationFixtureIAM'}},{expected+'/'+case for case in IAM_SUBCASES})
+        failed=service.failures+scanner.failures+browser.failures+validate_gate(iam_event,iam_inventory,None)+outer.failures
         if any(e.exit_code for e in [service,scanner,browser,outer]) or expected not in iam_event.passed or iam_event.skips:failed.append('fixture_actual_checks_failed')
         preflight=_check('fixture_preflight',snapshot,private,service.checks+scanner.checks+browser.checks+(['actual_iam_permission_matrix'] if not failed else []),failed);events.append(preflight)
         # Preserve each underlying fixture proof as evidence, without adding duplicate gates.

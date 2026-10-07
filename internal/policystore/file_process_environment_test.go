@@ -25,3 +25,19 @@ func TestFileProcessEnvironmentIsolation(t *testing.T) {
 		t.Fatal("explicit product configuration lost")
 	}
 }
+
+func TestFileRuntimeExplicitUploadCredentials(t *testing.T) {
+	for _, key := range []string{"IM_TEST_S3_ENDPOINT", "IM_TEST_S3_BUCKET", "IM_FILE_S3_ACCESS_KEY", "IM_FILE_S3_SECRET_KEY", "IM_TEST_SCANNER_MANIFEST", "IM_TEST_CLAMD_SOCKET", "IM_TEST_QPDF_PATH", "IM_TEST_FILE_WORKER_ACCESS_KEY", "IM_TEST_FILE_WORKER_SECRET_KEY"} {
+		t.Setenv(key, "controlled-fixture-value")
+	}
+	child := fileProductCommand("/usr/bin/env", fileRuntimeEnv(t, "postgresql://ordinary@localhost/db", t.TempDir()))
+	output, err := child.Output()
+	if err != nil {
+		t.Fatal("controlled configuration child failed")
+	}
+	for _, key := range []string{"IM_FILE_S3_ACCESS_KEY", "IM_FILE_S3_SECRET_KEY"} {
+		if !bytes.Contains(output, []byte(key+"=controlled-fixture-value")) {
+			t.Fatal("explicit required upload configuration omitted", key)
+		}
+	}
+}

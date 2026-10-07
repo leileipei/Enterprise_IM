@@ -113,7 +113,7 @@ class RunTests(unittest.TestCase):
   from integration.commands import run_command as actual_command
   def iam_command(name,kind,commit,argv,cwd,env,log,deadline,registry):
    if name=='orchestrator_contract':return actual_command(name,kind,commit,argv,cwd,env,log,deadline,registry)
-   write_json(log,go_rows('github.com/leileipei/Enterprise_IM/internal/testfixtures',[('TestIntegrationFixtureIAM','pass')]));Path(str(log)+'.stderr').write_text('')
+   write_json(log,go_rows('github.com/leileipei/Enterprise_IM/internal/testfixtures',[( 'TestIntegrationFixtureIAM/'+name,'pass') for name in self.run.IAM_SUBCASES]+[('TestIntegrationFixtureIAM','pass')]));Path(str(log)+'.stderr').write_text('')
    return GateEvent(name,kind,commit,0,log)
   with patch.multiple(self.run,discover_toolchain=lambda *a:tools,gate_specs=specs,run_stage=stage,prepare_services=lambda *a:FixtureBundle({},set(),a[2].path,{a[2].owner},{'source_commit':self.snapshot.commit}),prepare_iam=lambda b,*a:b,prepare_scanner=lambda b,*a:b,complete_profile=lambda *a:None,probe_services=probe,probe_scanner=probe,probe_browser=probe,collect_inventory=lambda *a:Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())),patch('integration.commands.run_command',side_effect=iam_command):
    self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
@@ -121,6 +121,28 @@ class RunTests(unittest.TestCase):
   report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
   self.assertTrue(any(r['original_path'].endswith('business.jsonl') and r['published_path'] for r in report['log_dispositions']))
   self.assertTrue(any('UnboundLocalError' in x for x in report['failures']))
+
+ def test_iam_top_only_cannot_start_business_gates(self):
+  tools=copy.deepcopy(self.tools);tools.paths['go']=Path(sys.executable);calls=[]
+  def specs(*args):return [{'name':'orchestrator_contract','kind':'test','env_group':'orchestrator_contract','argv':[]},{'name':'file_messages','kind':'test','env_group':'file_messages','argv':[]}]
+  def probe(bundle,*args):
+   path=self.output/next(iter(bundle.owners))/'probe.log';path.write_text('controlled fixture protocol')
+   return GateEvent('fixture_preflight','check',self.snapshot.commit,0,path,checks=['protocol_fixture'])
+  def stage(spec,snapshot,tools,bundle,registry,deadline):
+   calls.append(spec['name'])
+   if spec['name']=='orchestrator_contract':return self.contract(spec,snapshot,tools,bundle,registry,deadline)
+   path=registry.root/registry.owner/'unexpected.jsonl';write_json(path,go_rows('fixture',[('TestProtocol','pass')]))
+   return parse_go(path,spec['name'],snapshot.commit,0)
+  from integration.commands import run_command as actual_command
+  def iam_command(name,kind,commit,argv,cwd,env,log,deadline,registry):
+   if name=='orchestrator_contract':return actual_command(name,kind,commit,argv,cwd,env,log,deadline,registry)
+   write_json(log,go_rows('github.com/leileipei/Enterprise_IM/internal/testfixtures',[('TestIntegrationFixtureIAM','pass')]));Path(str(log)+'.stderr').write_text('')
+   return GateEvent(name,kind,commit,0,log)
+  with patch.multiple(self.run,discover_toolchain=lambda *a:tools,gate_specs=specs,run_stage=stage,prepare_services=lambda *a:FixtureBundle({},set(),a[2].path,{a[2].owner},{'source_commit':self.snapshot.commit}),prepare_iam=lambda b,*a:b,prepare_scanner=lambda b,*a:b,complete_profile=lambda *a:None,probe_services=probe,probe_scanner=probe,probe_browser=probe,collect_inventory=lambda *a:Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())),patch('integration.commands.run_command',side_effect=iam_command):
+   self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
+  self.assertEqual(calls,['orchestrator_contract'],'missing IAM matrix was accepted before business execution')
+  report=json.loads((self.output/'verification.json').read_text())
+  self.assertTrue(any('missing_required_subtest' in x or 'missing_required_pass' in x for x in report['failures']))
 
  def test_global_deadline_interrupts_blocked_setup(self):
   self.assertTrue(hasattr(self.run,'TOTAL_SECONDS'),'global deadline timer missing')
