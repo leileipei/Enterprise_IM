@@ -263,7 +263,7 @@ func TestFileBusinessProcessRP13(t *testing.T) {
 	_, e := f.s3Client("DOWNLOAD", os.Getenv("IM_TEST_S3_ENDPOINT")).ListObjectVersions(ctx, &s3.ListObjectVersionsInput{Bucket: bucket})
 	businessAccessDenied(t, e)
 	upload := f.s3Client("UPLOAD", os.Getenv("IM_TEST_S3_ENDPOINT"))
-	owned := aws.String("_im_runtime/owned-" + processRandom(t))
+	owned := aws.String("tenants/p431/files/owned-" + processRandom(t))
 	put, e := upload.PutObject(ctx, &s3.PutObjectInput{Bucket: bucket, Key: owned, Body: stringsReader("owned")})
 	if e != nil {
 		t.Fatal("upload IAM write denied")

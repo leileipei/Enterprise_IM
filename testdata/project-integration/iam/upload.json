@@ -9,8 +9,7 @@
         "s3:GetBucketPolicy"
       ],
       "Resource": [
-        "arn:aws:s3:::{{bucket}}",
-        "arn:aws:s3:::{{policy_bucket}}"
+        "arn:aws:s3:::{{bucket}}"
       ]
     },
     {
@@ -20,8 +19,7 @@
         "s3:GetObjectVersion"
       ],
       "Resource": [
-        "arn:aws:s3:::{{bucket}}/_im_runtime/read-probe/v1",
-        "arn:aws:s3:::{{policy_bucket}}/_im_runtime/read-probe/v1"
+        "arn:aws:s3:::{{bucket}}/_im_runtime/read-probe/v1"
       ]
     },
     {
@@ -32,8 +30,7 @@
         "s3:GetObjectVersion"
       ],
       "Resource": [
-        "arn:aws:s3:::{{bucket}}/tenants/*/files/*",
-        "arn:aws:s3:::{{policy_bucket}}/tenants/*/files/*"
+        "arn:aws:s3:::{{bucket}}/tenants/*/files/*"
       ]
     },
     {
@@ -42,8 +39,7 @@
         "s3:ListBucketVersions"
       ],
       "Resource": [
-        "arn:aws:s3:::{{bucket}}",
-        "arn:aws:s3:::{{policy_bucket}}"
+        "arn:aws:s3:::{{bucket}}"
       ]
     }
   ]

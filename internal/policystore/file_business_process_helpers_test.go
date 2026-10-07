@@ -438,6 +438,10 @@ func (f *fileBusinessProcessFixture) apiEnvironment(upload, business bool, node 
 }
 func (f *fileBusinessProcessFixture) launch(t *testing.T, name, binary string, env map[string]string, args ...string) {
 	t.Helper()
+	f.launchProcess(t, name, binary, env, false, args...)
+}
+func (f *fileBusinessProcessFixture) launchProcess(t *testing.T, name, binary string, env map[string]string, allowCompleted bool, args ...string) {
+	t.Helper()
 	if f.processes[name] != nil {
 		t.Fatal("fixture process already active")
 	}
@@ -454,9 +458,27 @@ func (f *fileBusinessProcessFixture) launch(t *testing.T, name, binary string, e
 		t.Fatal("official process failed to start")
 	}
 	registration, registerErr := testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+	done := make(chan error, 1)
+	go func(result chan error) { result <- cmd.Wait(); close(result) }(done)
+	if registerErr != nil && allowCompleted {
+		select {
+		case waitErr := <-done:
+			// Actual Wait proves the fast child has terminated. A terminal record
+			// does not claim a live UID/start/pgid or allow a Ready proof.
+			registration, registerErr = testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+			done = make(chan error, 1)
+			done <- waitErr
+			close(done)
+		case <-time.After(35 * time.Second):
+			_ = cmd.Process.Kill()
+			<-done
+			_ = log.Close()
+			t.Fatal("invalid startup did not terminate after registration failure")
+		}
+	}
 	if registerErr != nil {
 		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
+		<-done
 		_ = log.Close()
 		t.Fatal(registerErr)
 	}
@@ -467,9 +489,7 @@ func (f *fileBusinessProcessFixture) launch(t *testing.T, name, binary string, e
 	f.processes[name] = cmd
 	f.processPIDs[name] = cmd.Process.Pid
 	f.logs[name] = log
-	done := make(chan error, 1)
 	f.waits[name] = done
-	go func() { done <- cmd.Wait(); close(done) }()
 }
 func (f *fileBusinessProcessFixture) await(t *testing.T, name string, timeout time.Duration, predicate func([]byte) bool) {
 	t.Helper()
@@ -700,7 +720,7 @@ func (f *fileBusinessProcessFixture) waitState(t *testing.T, node, id, want stri
 func (f *fileBusinessProcessFixture) expectStartupFailure(t *testing.T, settings map[string]string) {
 	t.Helper()
 	name := "negative-" + processRandom(t)
-	f.launch(t, name, "im-api", settings)
+	f.launchProcess(t, name, "im-api", settings, true)
 	select {
 	case e := <-f.waits[name]:
 		if proofErr := f.integrationProcesses[name].Exited("exit:1", integrationProcessExit(e)); proofErr != nil {

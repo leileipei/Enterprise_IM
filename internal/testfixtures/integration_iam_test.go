@@ -138,8 +138,14 @@ func TestIntegrationFixtureIAM(t *testing.T) {
 	}
 	t.Run("anonymous_denied", func(t *testing.T) {
 		for _, role := range []string{"UPLOAD", "WORKER", "DOWNLOAD", "CLEANUP"} {
-			_, err := clients[role].GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{Bucket: aws.String("p426-p431-00000000000000000000000000000000")})
-			denied(t, err)
+			for _, foreign := range []string{"p426-p431-00000000000000000000000000000000", bucket + "-policy"} {
+				_, err := clients[role].GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{Bucket: aws.String(foreign)})
+				denied(t, err)
+				_, err = clients[role].GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(foreign), Key: aws.String(key), VersionId: aws.String(first)})
+				denied(t, err)
+				_, err = clients[role].PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(foreign), Key: aws.String(key), Body: strings.NewReader("forbidden")})
+				denied(t, err)
+			}
 		}
 		client := http.Client{Timeout: 10 * time.Second}
 		response, err := client.Get(endpoint + "/" + bucket + "/" + key)

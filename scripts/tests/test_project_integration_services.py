@@ -56,6 +56,14 @@ class ServicePlanTests(unittest.TestCase):
             self.assertNotIn('s3:GetBucketAcl',allactions(p),'locked MinIO rejects this AWS IAM action')
         self.assertNotIn('arn:aws:s3:::*',json.dumps(policies))
 
+    def test_product_roles_cannot_access_negative_fixture_bucket(self):
+        bucket='p426-p431-'+self.owner;negative=bucket+'-policy'
+        for role in ('upload','worker','download','cleanup'):
+            policy=self.policy(role,bucket,negative)
+            with self.subTest(role=role):
+                self.assertNotIn(negative,json.dumps(policy),'negative bucket must actually deny product role metadata and data')
+        self.assertIn(negative,json.dumps(self.policy('bootstrap',bucket,negative)))
+
     def test_probe_version_not_created_by_api(self):
         p=self.policy('upload','p426-p431-'+self.owner,'p426-p431-'+self.owner+'-policy')
         for s in p['Statement']:

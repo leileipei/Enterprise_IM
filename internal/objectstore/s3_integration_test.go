@@ -87,14 +87,32 @@ func TestS3PrivatePolicyIntegration(t *testing.T) {
 		t.Fatal(e)
 	}
 	s := store.(*s3Store)
+	setup := s.client
+	// The parent fixture mutates policy; the runtime metadata reader has no
+	// policy-write privilege. Keep the legacy single-principal fixture usable.
+	if os.Getenv("IM_TEST_S3_ADMIN_ACCESS_KEY") != "" {
+		config := s.config
+		reader, err := newS3Client(config, "environment", "IM_TEST_FILE_BOOTSTRAP_ACCESS_KEY", "IM_TEST_FILE_BOOTSTRAP_SECRET_KEY")
+		if err != nil {
+			t.Fatal("fixture metadata reader unavailable")
+		}
+		setup, err = newS3Client(config, "environment", "IM_TEST_S3_ADMIN_ACCESS_KEY", "IM_TEST_S3_ADMIN_SECRET_KEY")
+		if err != nil {
+			t.Fatal("fixture policy administrator unavailable")
+		}
+		s.client = reader
+	}
 	ctx := context.Background()
+	if err := store.ValidateCapabilities(ctx); err != nil {
+		t.Fatal("private fixture capabilities failed before policy mutation")
+	}
 	bucket := aws.String(bucketName)
 	policy := `{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::` + *bucket + `/*"]}]}`
-	if _, e := s.client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{Bucket: bucket, Policy: aws.String(policy)}); e != nil {
+	if _, e := setup.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{Bucket: bucket, Policy: aws.String(policy)}); e != nil {
 		t.Fatal("fixture policy setup failed")
 	}
 	defer func() {
-		if _, e := s.client.DeleteBucketPolicy(ctx, &s3.DeleteBucketPolicyInput{Bucket: bucket}); e != nil {
+		if _, e := setup.DeleteBucketPolicy(ctx, &s3.DeleteBucketPolicyInput{Bucket: bucket}); e != nil {
 			t.Error("fixture policy cleanup failed")
 		}
 	}()

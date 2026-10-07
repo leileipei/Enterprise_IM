@@ -64,6 +64,43 @@ func TestIntegrationRegistryProof(t *testing.T) {
 			t.Fatalf("bad lifecycle: %#v", row)
 		}
 	}
+	t.Run("already_waited_process", func(t *testing.T) {
+		child := exec.Command("/usr/bin/false")
+		child.Dir = root
+		if err := child.Start(); err != nil {
+			t.Fatal(err)
+		}
+		if err := child.Wait(); err == nil {
+			t.Fatal("actual negative child did not fail")
+		}
+		proof, err := RegisterIntegrationProcess(child, "full_repository", "TestNegativeStartup")
+		if err != nil {
+			t.Fatal("actual waited process should retain terminal evidence:", err)
+		}
+		if err = proof.Ready(); err == nil {
+			t.Fatal("already completed process accepted as ready")
+		}
+		if err = proof.Exited("exit:1", "exit:1"); err != nil {
+			t.Fatal(err)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := strings.Split(strings.TrimSpace(string(data)), "\n")
+		var completed map[string]any
+		if err = json.Unmarshal([]byte(rows[len(rows)-2]), &completed); err != nil {
+			t.Fatal(err)
+		}
+		if completed["event"] != "completed" {
+			t.Fatal("terminal evidence claimed live registration")
+		}
+		fingerprint := completed["fingerprint"].(map[string]any)
+		if _, ok := fingerprint["start_time"]; ok {
+			t.Fatal("fabricated live start time")
+		}
+	})
+
 	t.Setenv("IM_TEST_INTEGRATION_REGISTRY", "")
 	disabled, err := RegisterIntegrationProcess(nil, "", "")
 	if err != nil {

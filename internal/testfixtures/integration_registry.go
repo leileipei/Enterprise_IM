@@ -20,6 +20,7 @@ import (
 type IntegrationProcess struct {
 	path, owner, source, gate, test, identity string
 	fingerprint                               map[string]any
+	completedExit                             string
 }
 
 func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationProcess, error) {
@@ -79,20 +80,6 @@ func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationP
 	}
 	pid := cmd.Process.Pid
 	p.identity = strconv.Itoa(pid)
-	ps := exec.Command("/bin/ps", "-p", p.identity, "-o", "uid=,lstart=,comm=")
-	ps.Env = []string{"PATH=/usr/bin:/bin", "TZ=UTC"}
-	raw, err := ps.Output()
-	if err != nil {
-		return nil, err
-	}
-	fields := strings.Fields(string(raw))
-	if len(fields) < 7 {
-		return nil, errors.New("unproven process identity")
-	}
-	uid, err := strconv.Atoi(fields[0])
-	if err != nil || uid != os.Getuid() {
-		return nil, errors.New("foreign process user")
-	}
 	executable, err := filepath.EvalSymlinks(cmd.Path)
 	if err != nil {
 		return nil, err
@@ -122,6 +109,35 @@ func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationP
 	}
 	if !owned(executable) && !owned(directory) {
 		return nil, errors.New("process outside private root")
+	}
+	if state := cmd.ProcessState; state != nil {
+		if state.Pid() != pid || !state.Exited() || cmd.SysProcAttr != nil && cmd.SysProcAttr.Credential != nil {
+			return nil, errors.New("unproven completed process")
+		}
+		info, err := os.Stat(executable)
+		if err != nil || info.Mode()&(os.ModeSetuid|os.ModeSetgid) != 0 {
+			return nil, errors.New("unsafe completed executable")
+		}
+		p.completedExit = fmt.Sprintf("exit:%d", state.ExitCode())
+		p.fingerprint = map[string]any{"pid": pid, "executable_path": executable, "executable_sha256": fmt.Sprintf("%x", sha256.Sum256(binary)), "workdir": directory}
+		if err := p.write("completed", map[string]any{"actual_exit": p.completedExit, "actual_wait": true}); err != nil {
+			return nil, err
+		}
+		return p, nil
+	}
+	ps := exec.Command("/bin/ps", "-p", p.identity, "-o", "uid=,lstart=,comm=")
+	ps.Env = []string{"PATH=/usr/bin:/bin", "TZ=UTC"}
+	raw, err := ps.Output()
+	if err != nil {
+		return nil, err
+	}
+	fields := strings.Fields(string(raw))
+	if len(fields) < 7 {
+		return nil, errors.New("unproven process identity")
+	}
+	uid, err := strconv.Atoi(fields[0])
+	if err != nil || uid != os.Getuid() {
+		return nil, errors.New("foreign process user")
 	}
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
@@ -165,7 +181,15 @@ func (p *IntegrationProcess) write(event string, detail map[string]any) error {
 	return file.Sync()
 }
 
-func (p *IntegrationProcess) Ready() error { return p.write("ready", nil) }
+func (p *IntegrationProcess) Ready() error {
+	if p.completedExit != "" {
+		return errors.New("completed process cannot become ready")
+	}
+	return p.write("ready", nil)
+}
 func (p *IntegrationProcess) Exited(expected, actual string) error {
+	if p.completedExit != "" && (actual != p.completedExit || expected != actual) {
+		return errors.New("completed exit proof differs from actual Wait")
+	}
 	return p.write("exited", map[string]any{"expected_exit": expected, "actual_exit": actual})
 }
