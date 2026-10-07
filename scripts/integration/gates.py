@@ -2,6 +2,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 from .model import GateEvent,Inventory
@@ -222,5 +223,28 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
             if len(matched)!=1:event.failures.append('required_name_not_unique_in_inventory:'+required)
             else:event.inventory.required_subtests.add(matched[0]+'::'+required)
     event.related_logs=list(getattr(event,'related_logs',[]))+[outer.log]+([Path(str(a.log)+'.stderr'),Path(str(b.log)+'.stderr')] if name=='message_realtime' else [Path(str(outer.log)+'.stderr')])
+    # Only explicit Go business proofs in this attempt's reserved private root.
+    # No recursive log collection, source-tree files, or environment JSON.
+    proof_root=root if name=='file_business_process' else root/'business-fixtures'
+    reserved=registry.root/registry.owner
+    for fixture in proof_root.glob('im-p426-process-*'):
+        if not re.fullmatch(r'im-p426-process-[0-9]+',fixture.name):continue
+        if not fixture.is_dir() or any(p.is_symlink() for p in (fixture,*fixture.parents)) or not fixture.resolve().is_relative_to(reserved.resolve()):raise ValueError('foreign_business_proof_directory')
+        stat=fixture.stat()
+        if stat.st_uid!=os.getuid() or stat.st_mode&0o077:raise ValueError('unsafe_business_proof_directory')
+        for path in [fixture/'evidence.json',*fixture.glob('query-*.json')]:
+            if not path.exists():continue
+            if not path.is_file() or path.is_symlink() or path.stat().st_uid!=os.getuid() or path.stat().st_mode&0o077:raise ValueError('unsafe_business_proof_file')
+            proof=json.loads(path.read_text())
+            if path.name=='evidence.json':
+                allowed={'stage','test','source_sha','schema','probe_version_id','process_pids','binary_sha256','nodes','business_handlers_in_fixture','repository_replacements'}
+                if not isinstance(proof,dict) or set(proof)-allowed or proof.get('source_sha')!=snapshot.commit:raise ValueError('unsafe_business_binary_proof')
+                hashes=proof.get('binary_sha256',{})
+                if not isinstance(hashes,dict) or not hashes or any(not re.fullmatch(r'im-(api|file-worker|outbox-worker|file-cleaner|api-linux)',k) or not re.fullmatch('[a-f0-9]{64}',str(v)) for k,v in hashes.items()):raise ValueError('invalid_business_binary_hash')
+            else:
+                allowed={'path_class','duration_ms','actual_sql_execute_frames','returned_matches','has_more'}
+                if not re.fullmatch(r'query-[0-9]+\.json',path.name) or not isinstance(proof,dict) or set(proof)!=allowed or proof['path_class']!='filename_search':raise ValueError('unsafe_business_query_proof')
+                if not isinstance(proof['has_more'],bool) or any(type(proof[k]) is not int or proof[k]<0 for k in allowed-{'path_class','has_more'}):raise ValueError('invalid_business_query_counts')
+            event.related_logs.append(path)
     event.argv_template=getattr(outer,'argv_template',argv)
     event.failures.extend(outer.failures);return event

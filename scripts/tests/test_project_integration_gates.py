@@ -79,15 +79,21 @@ class GateTests(unittest.TestCase):
   bundle=FixtureBundle({},set(),registry.path,{registry.owner},{'source_commit':self.snapshot.commit})
   package='github.com/leileipei/Enterprise_IM/internal/files'
   inventory=Inventory({package},{package:{'TestFileControlled'}},set())
+  proof_value={'source_sha':self.snapshot.commit,'binary_sha256':{'im-api-linux':'a'*64}}
   def command(name,kind,commit,argv,cwd,env,log,deadline,registry):
    import subprocess
    payload=''.join(json.dumps(r)+'\n' for r in go_rows(package,[('TestFileControlled','pass')]))
    with (log.parent/'components.json').open('w') as stream:subprocess.run([sys.executable,'-c','import sys;sys.stdout.write('+repr(payload)+')'],stdout=stream,check=True)
+   proof=log.parent/'business-fixtures'/'im-p426-process-123456'/'evidence.json';proof.parent.mkdir(mode=0o700,parents=True,exist_ok=True);proof.write_text(json.dumps(proof_value));proof.chmod(0o600)
    (log.parent/'assembly.json').write_text('');log.write_text('completed');Path(str(log)+'.stderr').write_text('')
    return GateEvent(name,kind,commit,0,log)
   with patch.object(self.g,'run_command',side_effect=command),patch.object(self.g,'collect_inventory',return_value=inventory),patch.object(self.g,'docker_environment',return_value={'DOCKER_HOST':'local','PATH':'/usr/bin'}):
    event=self.g.run_stage(self.specs()['file_components'],self.snapshot,tools,bundle,registry,1e12)
+   proof_value['environment']={'admin_key':'test-only-management-value'}
+   with self.assertRaisesRegex(ValueError,'unsafe_business_binary_proof'):
+    self.g.run_stage(self.specs()['file_components'],self.snapshot,tools,bundle,registry,1e12)
   self.assertEqual(event.exit_code,0);self.assertFalse(event.failures);self.assertIn(package+'::TestFileControlled',event.passed)
+  self.assertTrue(any(Path(p).name=='evidence.json' for p in event.related_logs),'source-bound binary evidence was dropped')
 
  def test_resource_registration_precedes_container_start(self):
   try:from integration import resource_command
