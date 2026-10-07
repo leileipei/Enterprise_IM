@@ -325,6 +325,8 @@ type tcpEvidence struct {
 	mu                      sync.Mutex
 	first                   chan struct{}
 	once                    sync.Once
+	writeGate               time.Time
+	writeGateOnce           sync.Once
 	last, deadline, started time.Time
 	accepted                int64
 	timeout                 bool
@@ -359,6 +361,15 @@ func (c *evidenceConn) SetWriteDeadline(at time.Time) error {
 	return c.Conn.SetWriteDeadline(at)
 }
 func (c *evidenceConn) Write(p []byte) (int, error) {
+	// Hold only the real wire write; object staging and authorization have
+	// already completed. The underlying socket retains its actual deadline.
+	c.e.writeGateOnce.Do(func() {
+		if !c.e.writeGate.IsZero() {
+			timer := time.NewTimer(time.Until(c.e.writeGate))
+			defer timer.Stop()
+			<-timer.C
+		}
+	})
 	start := time.Now()
 	n, e := c.Conn.Write(p)
 	c.e.mu.Lock()
@@ -379,7 +390,7 @@ func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
 	testDownloadTokenExpiryBlockedWrite(t, 0)
 }
 
-func TestFileDownloadTokenExpiryFixturePreparation(t *testing.T) {
+func TestFileDownloadRealTokenExpiryPreparationBeforeWire(t *testing.T) {
 	testDownloadTokenExpiryBlockedWrite(t, time.Second)
 }
 
@@ -425,16 +436,10 @@ func testDownloadTokenExpiryBlockedWrite(t *testing.T, preparationDelay time.Dur
 	f := realFileMessageFixture(t)
 	sign := downloadJWTIssuer(t, f)
 	m := scanDownloadBody(t, f, bytes.Repeat([]byte("x"), 8<<20))
-	evidence := &tcpEvidence{first: make(chan struct{})}
-	objects := &gatedObjects{Store: &delayedDownloadPreparationStore{Store: realTransferObjects(t), delay: preparationDelay}, entered: make(chan struct{}), release: make(chan struct{})}
-	base, _, _ := explicitDownload(t, f, objects, evidence)
 	expiry := time.Unix(time.Now().Add(4*time.Second).Unix(), 0)
-	go func() {
-		timer := time.NewTimer(time.Until(expiry.Add(-800 * time.Millisecond)))
-		defer timer.Stop()
-		<-timer.C
-		close(objects.release)
-	}()
+	evidence := &tcpEvidence{first: make(chan struct{}), writeGate: expiry.Add(-800 * time.Millisecond)}
+	objects := &delayedDownloadPreparationStore{Store: realTransferObjects(t), delay: preparationDelay}
+	base, _, _ := explicitDownload(t, f, objects, evidence)
 	token := sign("admin", expiry)
 	address := strings.TrimPrefix(base, "http://")
 	conn, e := dialSmallReceiveWindow(address)
