@@ -95,7 +95,7 @@ class RunTests(unittest.TestCase):
   self.assertEqual(path.read_text(),secret)
   self.assertFalse((self.output/'share').exists(),'foreign log was published')
 
- def green_events(self):
+ def green_events(self,resource_receipts=True):
   rows=[]
   inventory=Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())
   for name in REQUIRED_GATES:
@@ -105,7 +105,48 @@ class RunTests(unittest.TestCase):
    else:
     write_json(path,go_rows('fixture',[('TestProtocol','pass')]));event=parse_go(path,name,self.snapshot.commit,0);event.inventory=inventory
    rows.append(event)
+  if resource_receipts:
+   from test_project_integration_gates import GateTests
+   fixture=GateTests();fixture.setUp()
+   self.addCleanup(fixture.doCleanups)
+   fixture.root=self.output/'linux-resource';fixture.root.mkdir(mode=0o700)
+   fixture.snapshot=self.snapshot;fixture.resource_fixture()
+   event=fixture.g.parse_resource_logs(fixture.root,self.snapshot.commit,0)
+   self.assertFalse(event.failures)
+   rows=[event if r.name=='file_resources' else r for r in rows]
+   self.tools.images['alpine-resource-image']={'image_id':'sha256:'+'a'*64}
+   self.snapshot.resource_records=[dict(kind='container',event='registered',identity=format(n,'064x'),owner='b'*32,source_commit=self.snapshot.commit) for n in range(1,5)]
   return rows,inventory
+
+ def test_resource_delivery_rejects_missing_bound_artifacts(self):
+  events,inventory=self.green_events(resource_receipts=False)
+  self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
+  with self.assertRaisesRegex(ValueError,'resource'):
+   self.evidence.validate_delivery(self.snapshot.commit,self.output/'verification.json',self.snapshot.repository_root)
+
+ def test_resource_rehashed_claims_cannot_hide_wrong_limits_or_binary(self):
+  events,inventory=self.green_events()
+  self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
+  report=self.output/'verification.json';baseline=json.loads(report.read_text())
+  for name,change in [('resource.log.proof.json',lambda d:d.update(memory=1)),
+                      ('resource.log.proof.json',lambda d:d.update(environment={'unexpected':'synthetic-not-a-credential'})),
+                      ('resource-build.json',lambda d:d['binaries'][0].update(sha256='f'*64))]:
+   with self.subTest(artifact=name):
+    data=copy.deepcopy(baseline);event=next(e for e in data['events'] if e['name']=='file_resources')
+    artifact=next(a for a in event['resource_evidence']['artifacts'] if a['name']==name)
+    row=next(r for r in data['log_dispositions'] if r['original_path']==artifact['original_path'])
+    original=Path(row['original_path']);published=self.output/row['published_path'];raw=original.read_bytes()
+    value=json.loads(raw);change(value);changed=json.dumps(value).encode()
+    original.write_bytes(changed);published.write_bytes(changed);digest=hashlib.sha256(changed).hexdigest()
+    row['original_sha256']=digest;row['published_sha256']=digest;artifact['sha256']=digest
+    report.write_text(json.dumps(data))
+    try:
+     with self.assertRaisesRegex(ValueError,'resource'):
+      self.evidence.validate_delivery(self.snapshot.commit,report,self.snapshot.repository_root)
+    finally:original.write_bytes(raw);published.write_bytes(raw)
+  report.write_text(json.dumps(baseline))
+  self.evidence.validate_delivery(self.snapshot.commit,report,self.snapshot.repository_root)
+
  def test_changed_hash_and_false_cleanup_override_green(self):
   events,inventory=self.green_events();verdict=self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
   self.assertTrue(verdict.required_gates_passed,'synthetic all-gate protocol fixture only')

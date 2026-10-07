@@ -326,10 +326,12 @@ func (f *webFileFixture) browser(t *testing.T, name string, data map[string]any)
 	cmd.Env = testfixtures.BrowserEnvironment(map[string]string{"WEB_FILE_INPUT": p})
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
 	cmd.WaitDelay = 5 * time.Second
-	out, e := cmd.CombinedOutput()
+	out, e := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if e != nil {
 		var states string
-		f.real.pool.QueryRow(context.Background(), `SELECT COALESCE(string_agg(state::text,','),'') FROM file_objects`).Scan(&states)
+		if f.real != nil && f.real.pool != nil {
+			f.real.pool.QueryRow(context.Background(), `SELECT COALESCE(string_agg(state::text,','),'') FROM file_objects`).Scan(&states)
+		}
 		t.Fatal("real browser flow failed", name, e, string(out), "DB states:", states)
 	}
 	var facts map[string]bool

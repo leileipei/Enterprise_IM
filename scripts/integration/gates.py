@@ -19,6 +19,7 @@ WEB={'TestWebFileReal'+x for x in ['Lifecycle','RejectedScan','Settings','Produc
 BUSINESS={f'TestFileBusinessProcessRP{i:02d}' for i in range(1,15)}|{'TestFileBusinessProcessRP08/slow_client_SIGTERM'}
 REALTIME={'TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect','TestMultiProcessRealtimeWorkerFanoutAndReconnect','TestProductionAPIWithOIDCAndRealtimeProcesses','TestRealBrowserLoginRealtimeAndOfflinePull'}
 RESOURCES={'TestScannerRealResourceBoundary','TestFileTransferRealDiskFull'}
+RESOURCE_SUBCASES={PREFIX+'internal/filetransfer::'+name for name in ('TestFileSpoolCrashRecovery/upload','TestFileSpoolCrashRecovery/scan','TestFileSpoolStartupSafety/symlink','TestFileSpoolStartupSafety/public_permissions')}
 COMPONENTS='TestFile|TestS3|TestClamd|TestScanner|TestUploadPolicy'
 
 
@@ -104,23 +105,36 @@ def validate_import_child(report,source_commit):
     return event
 
 
-def parse_resource_logs(root,source_commit,exit_code):
+def parse_resource_logs(root,source_commit,exit_code,owner='',image_id='',verify_binaries=True,binary_root=None):
+    from .resource_evidence import RESOURCE_FILES,validate_build,validate_proof
     root=Path(root);event=GateEvent('file_resources','test',source_commit,exit_code,root/'resource.log')
-    tests={};required=set()
-    for log,list_log,package,mandatory in [
-        ('resource.log','resource-list.log','internal/filescanner','TestScannerRealResourceBoundary'),
-        ('disk-full.log','disk-full-list.log','internal/filetransfer','TestFileTransferRealDiskFull')]:
-        pkg=PREFIX+package
-        try:
+    event.related_logs=[];tests={};required=set();artifacts=[];proofs=[]
+    def artifact(name):
+        path=_private_path(root,name)
+        if path.stat().st_uid!=os.getuid():raise ValueError('foreign_resource_evidence_user')
+        path.chmod(0o600)
+        event.related_logs.append(path);artifacts.append(dict(name=name,original_path=str(path),sha256=_digest(path)))
+        return path
+    try:
+        path=_private_path(root,'resource-build.json');build=json.loads(path.read_text())
+        owner=owner or build.get('owner','')
+        binaries=validate_build(build,source_commit,owner,Path(binary_root or root),verify_binaries)
+        artifact('resource-build.json')
+        identities=set()
+        for log,list_log,package,mandatory,binary in [
+            ('resource.log','resource-list.log','internal/filescanner','TestScannerRealResourceBoundary',binaries['structure.test']),
+            ('disk-full.log','disk-full-list.log','internal/filetransfer','TestFileTransferRealDiskFull',binaries['transfer.test'])]:
+            pkg=PREFIX+package
             listed=_private_path(root,list_log).read_text().splitlines()
-            names={s for s in listed if re.fullmatch('Test[A-Za-z0-9_]+',s)}
+            names={line for line in listed if re.fullmatch('Test[A-Za-z0-9_]+',line)}
             if mandatory not in names:raise ValueError('resource_list_missing_required_name')
-            proof=json.loads(_private_path(root,log+'.proof.json').read_text())
-            if proof.get('source_commit')!=source_commit or proof.get('exit_code')!=0 or proof.get('cleanup') is not True or proof.get('memory')!=536870912 or proof.get('nano_cpus')!=1000000000:
-                raise ValueError('resource_limits_unproven')
-            if log=='disk-full.log' and proof.get('tmpfs',{}).get('/limited')!='size=1048576,mode=0700':raise ValueError('disk_full_limit_unproven')
-            raw=_private_path(root,log);text=raw.read_text()
-            # Standalone Go test binaries emit PASS, not a package summary.
+            for name in (list_log+'.proof.json',log+'.proof.json'):
+                proof=json.loads(_private_path(root,name).read_text())
+                image_id=image_id or proof.get('image_id','')
+                validate_proof(proof,source_commit,owner,image_id,binary,log=='disk-full.log')
+                if proof['container_id'] in identities:raise ValueError('resource_container_identity_reused')
+                identities.add(proof['container_id']);proofs.append(proof);artifact(name)
+            artifact(list_log);raw=artifact(log);text=raw.read_text()
             if not re.search(r'^PASS\s*$',text,re.M):raise ValueError('resource_binary_not_passed')
             normalized=root/(log+'.normalized');normalized.write_text(text+'\nok '+pkg+'\n');normalized.chmod(0o600)
             parsed=parse_verbose(normalized,'file_resources',source_commit,exit_code)
@@ -129,8 +143,11 @@ def parse_resource_logs(root,source_commit,exit_code):
             event.package_status.update(parsed.package_status)
             for key,value in parsed.counts.items():event.counts[key]=event.counts.get(key,0)+value
             tests[pkg]=names;required.add(pkg+'::'+mandatory)
-        except (ValueError,KeyError,OSError,TypeError) as exc:event.failures.append(str(exc) if isinstance(exc,ValueError) else 'missing_resource_evidence')
-    event.inventory=Inventory(set(tests),tests,required)
+        event.resource_evidence=dict(artifacts=artifacts,binaries=list(binaries.values()),owner=owner,image_id=image_id)
+        event.resource_execution_seconds=round(sum(p['seconds'] for p in proofs),3)
+    except (ValueError,KeyError,OSError,TypeError) as exc:
+        event.failures.append(str(exc) if isinstance(exc,ValueError) else 'missing_resource_evidence')
+    event.inventory=Inventory(set(tests),tests,required|RESOURCE_SUBCASES)
     event.failures.extend(validate_gate(event,event.inventory,None));return event
 
 
@@ -152,7 +169,7 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
     name=spec['name'];private=registry.root/registry.owner/'gates';private.mkdir(mode=0o700,parents=True,exist_ok=True)
     root=private/spec['env_group'];root.mkdir(mode=0o700,exist_ok=True)
     if name=='file_resources':
-        event=parse_resource_logs(root,snapshot.commit,bundle.metadata.get('file_runtime_exit',125));return event
+        event=parse_resource_logs(root,snapshot.commit,bundle.metadata.get('file_runtime_exit',125),registry.owner,tools.images['alpine-resource-image']['image_id']);return event
     values=dict(bundle.environment)
     values.update(IM_TEST_INTEGRATION_REGISTRY=str(registry.path),IM_TEST_INTEGRATION_OWNER=registry.owner,
                   IM_TEST_INTEGRATION_SOURCE_SHA=snapshot.commit,IM_TEST_INTEGRATION_GATE=name)

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"io"
 	"log"
 	"math/big"
@@ -231,14 +232,15 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 
 	browser := exec.Command(node, "../webclient/e2e/real_backend.cjs")
 	browser.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	browser.Env = processChildEnv(map[string]string{"IM_TEST_WEB_URL": proxy.URL, "NODE_PATH": os.Getenv("NODE_PATH"), "CHROMIUM_EXECUTABLE": os.Getenv("CHROMIUM_EXECUTABLE")})
+	browser.Env = testfixtures.BrowserEnvironment(map[string]string{"IM_TEST_WEB_URL": proxy.URL, "NODE_PATH": os.Getenv("NODE_PATH"), "CHROMIUM_EXECUTABLE": os.Getenv("CHROMIUM_EXECUTABLE")})
 	var output bytes.Buffer
 	browser.Stdout, browser.Stderr = &output, &output
-	if err := browser.Start(); err != nil {
-		t.Fatal(err)
+	lifecycle, startErr := testfixtures.StartIntegrationBrowser(browser, t.Name(), true)
+	if startErr != nil {
+		t.Fatal(startErr)
 	}
 	done := make(chan error, 1)
-	go func() { done <- browser.Wait() }()
+	go func() { done <- lifecycle.Wait() }()
 	timer := time.NewTimer(90 * time.Second)
 	defer timer.Stop()
 	select {

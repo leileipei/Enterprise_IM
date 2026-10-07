@@ -52,7 +52,8 @@ def event_dict(event):
                 failures=event.failures,skips=event.skips,checks=event.checks,helper_proofs=event.helper_proofs,
                 package_status=event.package_status,inventory=inventory_dict(event.inventory),
                 argv_template=getattr(event,'argv_template',[]),started_at=getattr(event,'started_at',None),
-                ended_at=getattr(event,'ended_at',None),seconds=getattr(event,'seconds',None))
+                ended_at=getattr(event,'ended_at',None),seconds=getattr(event,'seconds',None),
+                resource_evidence=getattr(event,'resource_evidence',{}),resource_execution_seconds=getattr(event,'resource_execution_seconds',None))
 
 
 def _publish_log(output,path,number,secrets,cleanup,cached=None):
@@ -124,7 +125,7 @@ def write_evidence(output,snapshot,tools,events,cleanup,inventory,secrets):
         cleanup=dict(removed=cleanup.removed,failures=cleanup.failures),
         events=[event_dict(e) for e in events],stage_statuses={name:'executed' if name in {e.name for e in events} else 'not_executed' for name in REQUIRED_GATES},inventory=inventory_dict(inventory),log_dispositions=dispositions,
         tools=dict(paths={k:str(p) for k,p in tools.paths.items()},versions=tools.versions,hashes=tools.hashes,images=tools.images,goos=tools.goos,goarch=tools.goarch),
-        binary_hashes=getattr(snapshot,'binary_hashes',[]),resource_records=getattr(snapshot,'resource_records',[]),
+        binary_hashes=getattr(snapshot,'binary_hashes',[])+[b for e in events for b in getattr(e,'resource_evidence',{}).get('binaries',[])],resource_records=getattr(snapshot,'resource_records',[]),
         customer_acceptance='not_executed',production_acceptance='not_executed')
     try:payload=_safe(payload,secrets)
     except ValueError:
@@ -163,6 +164,8 @@ def validate_delivery(source_commit,report,repository_root):
             if original.exists():raise ValueError('disposed_original_retained')
             if not re.fullmatch('[a-f0-9]{64}',row['original_sha256']):raise ValueError('disposed_original_hash_missing')
         elif not original.is_file() or digest(original)!=row['original_sha256']:raise ValueError('delivery_original_hash_mismatch')
+    from .resource_evidence import validate_delivery_resources
+    validate_delivery_resources(data,root)
     archive=Path(data['source_archive_path'])
     if digest(archive)!=data['source_archive_sha256']:raise ValueError('delivery_archive_hash_mismatch')
     env={'PATH':'/usr/bin:/bin','LANG':'en_US.UTF-8','TZ':'UTC','GIT_NO_REPLACE_OBJECTS':'1','GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':os.devnull}

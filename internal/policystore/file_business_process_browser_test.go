@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"io"
 	"net/http"
 	"os"
@@ -139,7 +140,7 @@ func (f *fileBusinessProcessFixture) browser(t *testing.T, scenario string, opti
 	cmd.Env = processChildEnv(map[string]string{"NODE_PATH": os.Getenv("NODE_PATH"), "CHROMIUM_EXECUTABLE": os.Getenv("CHROMIUM_EXECUTABLE")})
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
 	cmd.WaitDelay = 5 * time.Second
-	out, e := cmd.CombinedOutput()
+	out, e := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	processPrivateFile(t, filepath.Join(dir, "browser.log"), out)
 	if e != nil {
 		t.Fatal("official Chrome scenario failed", scenario, "private browser.log retained")

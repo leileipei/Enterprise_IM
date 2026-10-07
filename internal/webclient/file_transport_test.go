@@ -35,7 +35,7 @@ func runFileUnit(t *testing.T, name, script string) {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, script)
 	cmd.Env = testfixtures.BrowserEnvironment(map[string]string{"FILE_UNIT_SOURCE": p})
-	out, e := cmd.CombinedOutput()
+	out, e := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), false)
 	if e != nil {
 		t.Fatalf("%s unit: %v: %s", name, e, out)
 	}

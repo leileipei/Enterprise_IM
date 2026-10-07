@@ -22,6 +22,7 @@ type IntegrationProcess struct {
 	fingerprint                               map[string]any
 	completedExit                             string
 	kind                                      string
+	privateRoot                               string
 }
 
 func integrationRecord(gate, test string) (*IntegrationProcess, error) {
@@ -69,6 +70,8 @@ func integrationRecord(gate, test string) (*IntegrationProcess, error) {
 		}
 		if row["event"] == "reserve" && row["owner"] == p.owner {
 			reserved = true
+			fp, _ := row["fingerprint"].(map[string]any)
+			p.privateRoot, _ = fp["private_root"].(string)
 		}
 	}
 	scanErr := scanner.Err()

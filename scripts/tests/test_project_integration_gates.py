@@ -105,14 +105,15 @@ class GateTests(unittest.TestCase):
   def docker(args,**kwargs):
    calls.append(args)
    if args[0]=='create':return cid+'\n'
-   if args[0]=='inspect':return json.dumps([{'Id':cid,'Config':{'Labels':{'im.integration.owner':'b'*32,'im.integration.source':self.snapshot.commit}},'HostConfig':{'Memory':536870912,'NanoCpus':1000000000,'Tmpfs':{'/limited':'size=1048576,mode=0700'}}}])
+   if args[0]=='inspect':return json.dumps([{'Id':cid,'Config':{'Labels':{'im.integration.owner':'b'*32,'im.integration.source':self.snapshot.commit}},'State':{'Running':False,'ExitCode':0},'HostConfig':{'Memory':536870912,'NanoCpus':1000000000,'Tmpfs':{'/limited':'size=1048576,mode=0700'}}}])
    if args[0]=='start':
     self.assertTrue(any(r['identity']==cid and r['event']=='registered' for r in registry.records()))
     return 'PASS\n'
    if args[0]=='rm':return ''
    self.fail(args)
+  binary=self.root/registry.owner/'transfer.test';binary.write_bytes(b'actual protocol fixture')
   with patch.object(resource_command,'docker',side_effect=docker),patch.object(registry,'_owned_container',return_value=None),patch('sys.stdout'):
-   report=resource_command.launch(['--rm','--memory=512m','--cpus=1','--tmpfs','/limited:size=1048576,mode=0700','alpine@sha256:'+'a'*64,'/fixtures/transfer.test'],registry,self.root/registry.owner/'proof.json')
+   report=resource_command.launch(['--rm','--memory=512m','--cpus=1','--tmpfs','/limited:size=1048576,mode=0700','alpine@sha256:'+'a'*64,'/fixtures/transfer.test'],registry,self.root/registry.owner/'proof.json',binary)
   self.assertEqual(report['memory'],536870912);self.assertEqual(report['nano_cpus'],1000000000)
   self.assertEqual([a[0] for a in calls][:3],['create','inspect','start'])
 
@@ -120,5 +121,55 @@ class GateTests(unittest.TestCase):
   spec=self.specs()['file_resources'];self.assertIn('TestScannerRealResourceBoundary',spec['required']);self.assertIn('TestFileTransferRealDiskFull',spec['required'])
   event=self.g.parse_resource_logs(self.root,self.snapshot.commit,0)
   self.assertTrue(event.failures);self.assertEqual(len(event.passed),0)
+
+
+ def resource_fixture(self, missing=None):
+  binaries=[]
+  for name,package in [('structure.test','filescanner'),('transfer.test','filetransfer')]:
+   path=self.root/name;path.write_bytes(('actual protocol binary '+name).encode())
+   binaries.append(dict(name=name,path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),package='./internal/'+package,
+                        argv=['go','test','-c','-o',str(path),'./internal/'+package]))
+  build=dict(schema_version='file_resource_build_v1',source_commit=self.snapshot.commit,owner='b'*32,
+             goos='linux',goarch='arm64',cgo_enabled='0',go_flags='-mod=readonly -buildvcs=false',go_work='off',binaries=binaries)
+  (self.root/'resource-build.json').write_text(json.dumps(build));(self.root/'resource-build.json').chmod(0o600)
+  groups=[('resource.log','resource-list.log','TestScannerRealResourceBoundary',[]),
+          ('disk-full.log','disk-full-list.log','TestFileTransferRealDiskFull',[
+            'TestFileSpoolCrashRecovery/upload','TestFileSpoolCrashRecovery/scan',
+            'TestFileSpoolStartupSafety/symlink','TestFileSpoolStartupSafety/public_permissions'])]
+  for log,listed,mandatory,subs in groups:
+   tops={mandatory}|{s.split('/')[0] for s in subs}
+   (self.root/listed).write_text('\n'.join(sorted(tops))+'\n')
+   names=sorted(tops)+[s for s in subs if s!=missing]
+   (self.root/log).write_text(''.join('=== RUN   '+s+'\n--- PASS: '+s+' (0.01s)\n' for s in names)+'PASS\n')
+   proof=dict(source_commit=self.snapshot.commit,owner='b'*32,exit_code=0,cleanup=True,
+              memory=536870912,nano_cpus=1000000000,tmpfs={'/limited':'size=1048576,mode=0700'} if log=='disk-full.log' else {})
+   index=0 if log=='resource.log' else 2
+   binary=binaries[0 if log=='resource.log' else 1]
+   for offset,proof_name in enumerate((listed+'.proof.json',log+'.proof.json')):
+    proof.update(container_id=format(index+offset+1,'064x'),image_id='sha256:'+'a'*64,
+                 binary_name=binary['name'],binary_sha256=binary['sha256'],started_at=10.0,ended_at=11.0,seconds=1.0)
+    (self.root/proof_name).write_text(json.dumps(proof));(self.root/proof_name).chmod(0o600)
+   for name in (log,listed):(self.root/name).chmod(0o600)
+
+
+ def test_resource_required_subcase_cannot_disappear(self):
+  for missing in ('TestFileSpoolCrashRecovery/upload','TestFileSpoolCrashRecovery/scan',
+                  'TestFileSpoolStartupSafety/symlink','TestFileSpoolStartupSafety/public_permissions'):
+   with self.subTest(missing=missing):
+    self.resource_fixture(missing)
+    event=self.g.parse_resource_logs(self.root,self.snapshot.commit,0)
+    self.assertTrue(event.failures,'required Linux subcase disappeared but gate passed: '+missing)
+  self.resource_fixture()
+  self.assertFalse(self.g.parse_resource_logs(self.root,self.snapshot.commit,0).failures)
+
+
+ def test_resource_safe_artifacts_and_binary_hashes_retained(self):
+  self.resource_fixture()
+  event=self.g.parse_resource_logs(self.root,self.snapshot.commit,0)
+  expected={'resource.log','disk-full.log','resource-list.log','disk-full-list.log',
+            'resource.log.proof.json','disk-full.log.proof.json','resource-list.log.proof.json','disk-full-list.log.proof.json','resource-build.json'}
+  self.assertTrue(expected <= {Path(p).name for p in getattr(event,'related_logs',[])},'safe Linux proofs/list/logs dropped before cleanup')
+  receipts=getattr(event,'resource_evidence',{})
+  self.assertEqual({b['name'] for b in receipts.get('binaries',[])},{'structure.test','transfer.test'})
 
 if __name__=='__main__':unittest.main()
