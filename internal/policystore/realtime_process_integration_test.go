@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
@@ -72,7 +73,7 @@ func TestRealtimeAPIChild(t *testing.T) {
 	}
 }
 
-func processDatabaseURL(t *testing.T, schema string) string {
+func fixtureDatabaseURL(t *testing.T, schema string) string {
 	t.Helper()
 	parsed, err := url.Parse(os.Getenv("IM_TEST_DATABASE_URL"))
 	if err != nil {
@@ -81,6 +82,65 @@ func processDatabaseURL(t *testing.T, schema string) string {
 	query := parsed.Query()
 	query.Set("search_path", schema+",public")
 	parsed.RawQuery = query.Encode()
+	return parsed.String()
+}
+
+// Scoped ordinary authority is only prepared for the controlled integration profile.
+func processDatabaseURL(t *testing.T, schema string) string {
+	t.Helper()
+	dsn := fixtureDatabaseURL(t, schema)
+	if os.Getenv("IM_TEST_INTEGRATION_REGISTRY") == "" {
+		return dsn
+	}
+	if !strings.HasPrefix(schema, "im_policy_") || strings.Trim(schema[len("im_policy_"):], "0123456789") != "" || len(schema) <= len("im_policy_") {
+		t.Fatal("invalid owned product schema")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	admin, err := pgx.Connect(ctx, os.Getenv("IM_TEST_DATABASE_URL"))
+	if err != nil {
+		t.Fatal("product role preparation connection failed")
+	}
+	defer admin.Close(context.Background())
+	role := "p431_product_" + processRandom(t)
+	password := processRandom(t)
+	quotedRole := pgx.Identifier{role}.Sanitize()
+	quotedSchema := pgx.Identifier{schema}.Sanitize()
+	if _, err := admin.Exec(ctx, "CREATE ROLE "+quotedRole+" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'"); err != nil {
+		t.Fatal("ordinary product role creation failed")
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cleanupCancel()
+		cleanup, err := pgx.Connect(cleanupCtx, os.Getenv("IM_TEST_DATABASE_URL"))
+		if err != nil {
+			t.Error("ordinary role cleanup connection failed")
+			return
+		}
+		defer cleanup.Close(context.Background())
+		if _, err = cleanup.Exec(cleanupCtx, "DROP OWNED BY "+quotedRole); err != nil {
+			t.Error("ordinary role grants cleanup failed")
+		}
+		if _, err = cleanup.Exec(cleanupCtx, "DROP ROLE "+quotedRole); err != nil {
+			t.Error("ordinary role cleanup failed")
+		}
+	})
+	for _, statement := range []string{
+		"GRANT USAGE ON SCHEMA " + quotedSchema + " TO " + quotedRole,
+		"GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA " + quotedSchema + " TO " + quotedRole,
+		"GRANT USAGE ON ALL SEQUENCES IN SCHEMA " + quotedSchema + " TO " + quotedRole,
+		"ALTER DEFAULT PRIVILEGES IN SCHEMA " + quotedSchema + " GRANT SELECT,INSERT,UPDATE ON TABLES TO " + quotedRole,
+		"ALTER DEFAULT PRIVILEGES IN SCHEMA " + quotedSchema + " GRANT USAGE ON SEQUENCES TO " + quotedRole,
+	} {
+		if _, err := admin.Exec(ctx, statement); err != nil {
+			t.Fatal("ordinary scoped product grants failed")
+		}
+	}
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		t.Fatal("product role DSN invalid")
+	}
+	parsed.User = url.UserPassword(role, password)
 	return parsed.String()
 }
 
@@ -171,9 +231,8 @@ func TestMultiProcessRealtimeWorkerFanoutAndReconnect(t *testing.T) {
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build production worker: %v: %s", err, output)
 	}
-	worker := exec.Command(workerBinary)
-	worker.Env = append(os.Environ(), "IM_DATABASE_URL="+databaseURL,
-		"IM_OUTBOX_REDIS_URL="+os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM="+stream)
+	worker := fileProductCommand(workerBinary, []string{"IM_DATABASE_URL=" + databaseURL,
+		"IM_OUTBOX_REDIS_URL=" + os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM=" + stream})
 	startRealtimeProcess(t, worker, func() bool {
 		return client.Exists(context.Background(), outbox.PublisherPresenceKey(stream)).Val() == 1
 	})
@@ -182,9 +241,9 @@ func TestMultiProcessRealtimeWorkerFanoutAndReconnect(t *testing.T) {
 	for index := range addresses {
 		readyFile := filepath.Join(t.TempDir(), "api-ready")
 		api := exec.Command(os.Args[0], "-test.run=^TestRealtimeAPIChild$")
-		api.Env = append(os.Environ(), "IM_TEST_REALTIME_API_CHILD=1",
-			"IM_TEST_PROCESS_DATABASE_URL="+databaseURL, "IM_TEST_PROCESS_STREAM="+stream,
-			"IM_TEST_PROCESS_LISTEN=127.0.0.1:0", "IM_TEST_PROCESS_READY_FILE="+readyFile)
+		api.Env = processChildEnv(map[string]string{"IM_TEST_REALTIME_API_CHILD": "1", "IM_TEST_REDIS_URL": os.Getenv("IM_TEST_REDIS_URL"),
+			"IM_TEST_PROCESS_DATABASE_URL": databaseURL, "IM_TEST_PROCESS_STREAM": stream,
+			"IM_TEST_PROCESS_LISTEN": "127.0.0.1:0", "IM_TEST_PROCESS_READY_FILE": readyFile})
 		startRealtimeProcess(t, api, func() bool {
 			data, err := os.ReadFile(readyFile)
 			if err != nil {

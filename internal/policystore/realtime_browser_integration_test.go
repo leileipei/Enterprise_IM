@@ -192,9 +192,8 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 			t.Errorf("clean Redis test keys: %v", err)
 		}
 	})
-	worker := exec.Command(productionTestBinary(t, "im-outbox-worker"))
-	worker.Env = append(os.Environ(), "IM_DATABASE_URL="+databaseURL,
-		"IM_OUTBOX_REDIS_URL="+os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM="+stream)
+	worker := fileProductCommand(productionTestBinary(t, "im-outbox-worker"), []string{"IM_DATABASE_URL=" + databaseURL,
+		"IM_OUTBOX_REDIS_URL=" + os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM=" + stream})
 	startRealtimeProcess(t, worker, func() bool {
 		return client.Exists(context.Background(), outbox.PublisherPresenceKey(stream)).Val() == 1
 	})
@@ -232,7 +231,7 @@ func TestRealBrowserLoginRealtimeAndOfflinePull(t *testing.T) {
 
 	browser := exec.Command(node, "../webclient/e2e/real_backend.cjs")
 	browser.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	browser.Env = append(os.Environ(), "IM_TEST_WEB_URL="+proxy.URL)
+	browser.Env = processChildEnv(map[string]string{"IM_TEST_WEB_URL": proxy.URL, "NODE_PATH": os.Getenv("NODE_PATH"), "CHROMIUM_EXECUTABLE": os.Getenv("CHROMIUM_EXECUTABLE")})
 	var output bytes.Buffer
 	browser.Stdout, browser.Stderr = &output, &output
 	if err := browser.Start(); err != nil {
