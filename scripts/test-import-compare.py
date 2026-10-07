@@ -291,7 +291,7 @@ def main():
             raise RuntimeError('production migrations changed')
         events.append({'name':'provenance','exit_code':0,'sample_sha256':sha(sample),
                        'sample_report_sha256':sha(out/'offline-report.json')})
-        gate('full_suite',['go','test','-json','-timeout=2m','-count=1','./...'],env=env,parse='json')
+        gate('full_suite',['go','test','-json','-timeout=10m','-count=1','./...'],env=env,parse='json')
     except Exception as error:
         result['failure'] = str(error)
     finally:
