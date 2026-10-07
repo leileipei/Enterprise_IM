@@ -8,7 +8,7 @@
 
 **Tech Stack:** 锁定 Go/pgx/Redis/AWS SDK；Python3.9+ 标准库和 unittest；已有 Docker、OpenSSL、固定 mc、qpdf/ClamAV；已有 Node/Playwright/Chrome。不升级产品依赖。
 
-**Spec:** [已确认 P4-31 规格](../specs/2026-10-07-p4-31-local-integration-design.md)。用户于2026-10-07回复“继续”确认书面规格，设计提交 `e90e43a035cf5d9a4fa82672f2a5d0b6dcefcceb`。本计划待用户审阅；保留此前选定的执行方式：当前助手逐项实现，最终一次独立整体评审。
+**Spec:** [已确认 P4-31 规格](../specs/2026-10-07-p4-31-local-integration-design.md)。用户于2026-10-07回复“继续”确认书面规格，设计提交 `e90e43a035cf5d9a4fa82672f2a5d0b6dcefcceb`。用户于2026-10-07回复“确认”批准本计划；保留此前选定的执行方式：当前助手逐项实现，最终一次独立整体评审。
 
 本计划只开发一个统一验证系统，复用的消息、数据库、文件等已有业务不拆成新产品子项目。以下九项各有独立测试周期；未批准本计划前不写实现、安装运行依赖或启动夹具。
 
@@ -60,7 +60,7 @@ model.py定义下列可序列化类型，秘密字段不得出现在repr/公开�
 - `SourceSnapshot(commit:str, repository_root:Path, root:Path, archive:Path, archive_sha256:str)`。
 - `Toolchain(paths:Dict[str,Path], versions:Dict[str,str], hashes:Dict[str,str], images:Dict[str,Dict[str,str]], goos:str, goarch:str)`，paths固定键go/python/node/node_modules/chrome/qpdf/clamd/sigtool/freshclam/mc/openssl/docker。
 - `Inventory(packages:Set[str], tests:Dict[str,Set[str]], required_subtests:Set[str])`；完整名称格式 `package::TestName[/sub]`。无测试包仍在packages中且tests为空；仅清单确认无测试、实际Go输出为`[no test files]`且命令成功时接受该包终态，不把包级无测试记录当具名测试SKIP或PASS。
-- `GateEvent(name:str, kind:str, source_commit:str, exit_code:int, log:Path, counts:Dict[str,int], executed:Set[str], failures:List[str], skips:List[str], checks:List[str], helper_proofs:List[dict])`；kind为test/check，counts分top/sub/package的pass/fail/skip及ordinary_skip/helper_skip。
+- `GateEvent(name:str, kind:str, source_commit:str, exit_code:int, log:Path, counts:Dict[str,int], executed:Set[str], failures:List[str], skips:List[str], checks:List[str], helper_proofs:List[dict], passed:Set[str], package_status:Dict[str,str], started:Set[str], inventory:Optional[Inventory])`；kind为test/check，counts分top/sub/package的pass/fail/skip及ordinary_skip/helper_skip。
 - `ResourceRef(kind:str, owner:str, identity:str, fingerprint:dict, state:str)`；kind为container/process/directory，fingerprint为私密登记结构，公开转换只返回安全归属元数据。
 - `CleanupResult(removed:bool, failures:List[str])`、`FixtureBundle(environment:Dict[str,str], secrets:Set[str], registry_path:Path, owners:Set[str], metadata:dict)`，FixtureBundle不允许公开自动序列化。
 - `Verdict(required_gates_passed:bool, full_suite_passed:bool, race_suite_passed:bool, failures:List[str])`。
@@ -73,7 +73,7 @@ model.py定义下列可序列化类型，秘密字段不得出现在repr/公开�
 
 **Interfaces:** `parse_go(log:Path,name:str,source_commit:str,exit_code:int)->GateEvent`、`parse_verbose(log:Path,name:str,source_commit:str,exit_code:int)->GateEvent`、`parse_unittest(log:Path,name:str,source_commit:str,exit_code:int)->GateEvent`（返回kind=test，命令元数据由调用方显式传入）；`validate_gate(event:GateEvent, inventory:Inventory, allowed_helper:Optional[str])->List[str]`；`evaluate(events:List[GateEvent], cleanup:CleanupResult, commit:str)->Verdict`。常量 `REQUIRED_GATES`与任务7的17名完全一致，检查型门禁需非空checks且exit0，测试型门禁需具名PASS。
 
-- [ ] **Step 1：写反例与正向测试。** 测试名 `test_zero_missing_subtest_nonzero_exit`、`test_truncated_json_and_missing_package`、`test_duplicate_source_hash_failure`、`test_helper_requires_parent_and_two_processes`、`test_full_and_race_are_independent`、`test_unittest_missing_fail_skip_and_zero_match`。support生成真实协议形状的合成事件，不标作集成证明。
+- [x] **Step 1：写反例与正向测试。** 测试名 `test_zero_missing_subtest_nonzero_exit`、`test_truncated_json_and_missing_package`、`test_duplicate_source_hash_failure`、`test_helper_requires_parent_and_two_processes`、`test_full_and_race_are_independent`、`test_unittest_missing_fail_skip_and_zero_match`。support生成真实协议形状的合成事件，不标作集成证明。
 
 ```python
 # event_without_one_test、complete_inventory由本任务support建立；删除一条顶层PASS仍必须失败。
@@ -81,10 +81,10 @@ assert validate_gate(event_without_one_test, complete_inventory, None)
 assert not evaluate(all_green_except_full, CleanupResult(True, []), commit).full_suite_passed
 ```
 
-- [ ] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_results.py' -v`。Expected：缺接口或指定反例断言失败；保存实际输出，不能把测试语法错误当RED。
-- [ ] **Step 3：实现解析/判定。** 严格区分包和测试终态，合法Go输出可含构建诊断但缺失/截断JSON事件不能成为PASS；完整清单要求每项终态，普通SKIP失败，helper例外仅full/race及固定包名。两个子进程都须registered/ready/exit证据，来源相同且对应真实调用方PASS，原始SKIP保留。全结果遇重复门禁、缺门禁、来源错误或清理失败拒绝。unittest解析具名ok/FAIL/ERROR/skipped及Ran总数，核对固定源unittest发现清单，失败/跳过/零匹配/截断不能作为orchestrator_contract通过。
-- [ ] **Step 4：验证GREEN。** 同Step2，Expected：所有判定正/反例PASS，完整/race失败不被其他绿色门禁覆盖。
-- [ ] **Step 5：提交。** 显式add本任务文件；`test: enforce complete integration gate evidence`。
+- [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_results.py' -v`。Expected：缺接口或指定反例断言失败；保存实际输出，不能把测试语法错误当RED。
+- [x] **Step 3：实现解析/判定。** 严格区分包和测试终态，合法Go输出可含构建诊断但缺失/截断JSON事件不能成为PASS；完整清单要求每项终态，普通SKIP失败，helper例外仅full/race及固定包名。两个子进程都须registered/ready/exit证据，来源相同且对应真实调用方PASS，原始SKIP保留。全结果遇重复门禁、缺门禁、来源错误或清理失败拒绝。unittest解析具名ok/FAIL/ERROR/skipped及Ran总数，核对固定源unittest发现清单，失败/跳过/零匹配/截断不能作为orchestrator_contract通过。
+- [x] **Step 4：验证GREEN。** 同Step2，Expected：所有判定正/反例PASS，完整/race失败不被其他绿色门禁覆盖。
+- [x] **Step 5：提交。** 显式add本任务文件；`test: enforce complete integration gate evidence`。
 
 ### Task 2：固定源码、工具锁定、环境与测试清单
 
@@ -219,4 +219,4 @@ assert child['source_commit'] == snapshot.commit
 | §12 I01–I11 | I01→2/7；I02→4/5/7；I03→4；I04→5/6/8；I05→3/6/8；I06→6/8；I07→6/8；I08→1/2/7/8；I09→8/9；I10→3/7/9；I11→7/9 |
 | §13交付/执行方式 | Task9、当前助手逐项实现及一次最终评审 |
 
-接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。计划目前只有文档，未实现或执行任何新门禁。
+接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1已按RED→GREEN实现结果判定，其他任务与完整联调尚未完成。
