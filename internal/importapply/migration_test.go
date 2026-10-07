@@ -31,7 +31,7 @@ func TestAppendPGMigration(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
-			_, e = f.Admin.Exec(ctx, "GRANT SELECT,INSERT,UPDATE,DELETE ON import_batches TO im_import_writer")
+			_, e = f.Admin.Exec(ctx, "GRANT SELECT,INSERT,UPDATE,DELETE ON import_batches TO "+pgx.Identifier{f.Pool.Config().ConnConfig.User}.Sanitize())
 			if e != nil {
 				t.Fatal(e)
 			}

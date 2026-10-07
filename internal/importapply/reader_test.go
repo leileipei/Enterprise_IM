@@ -60,14 +60,22 @@ func TestAppendPGWriterProfile(t *testing.T) {
 			f := appendDB(t, 22)
 			ctx := context.Background()
 			if scenario == "audit_insert_only" {
-				f.Admin.Exec(ctx, "REVOKE SELECT ON audit_events FROM im_import_writer")
+				if _, e := f.Admin.Exec(ctx, "REVOKE SELECT ON audit_events FROM "+pgx.Identifier{f.Pool.Config().ConnConfig.User}.Sanitize()); e != nil {
+					t.Fatal(e)
+				}
 			}
 			if scenario == "column_insert" {
-				f.Admin.Exec(ctx, "REVOKE INSERT ON users FROM im_import_writer")
-				f.Admin.Exec(ctx, "GRANT INSERT(id,tenant_id,global_employee_no,display_name,status) ON users TO im_import_writer")
+				if _, e := f.Admin.Exec(ctx, "REVOKE INSERT ON users FROM "+pgx.Identifier{f.Pool.Config().ConnConfig.User}.Sanitize()); e != nil {
+					t.Fatal(e)
+				}
+				if _, e := f.Admin.Exec(ctx, "GRANT INSERT(id,tenant_id,global_employee_no,display_name,status) ON users TO "+pgx.Identifier{f.Pool.Config().ConnConfig.User}.Sanitize()); e != nil {
+					t.Fatal(e)
+				}
 			}
 			if scenario == "readonly" {
-				f.Admin.Exec(ctx, "REVOKE UPDATE ON ALL TABLES IN SCHEMA "+pgx.Identifier{f.Schema}.Sanitize()+" FROM im_import_writer")
+				if _, e := f.Admin.Exec(ctx, "REVOKE UPDATE ON ALL TABLES IN SCHEMA "+pgx.Identifier{f.Schema}.Sanitize()+" FROM "+pgx.Identifier{f.Pool.Config().ConnConfig.User}.Sanitize()); e != nil {
+					t.Fatal(e)
+				}
 			}
 			if scenario == "rls" {
 				f.Admin.Exec(ctx, "ALTER TABLE users ENABLE ROW LEVEL SECURITY")
