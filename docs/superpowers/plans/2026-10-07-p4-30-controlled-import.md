@@ -212,7 +212,7 @@ if response.Header().Get("Cache-Control") != "no-store" { t.Fatal("cacheable adm
 
 **Interfaces:** 脚本参数 `--source-commit SHA --output-dir DIR`；拒绝非不可变提交/已有 output-dir，使用 git archive 固定源；结果含 required_gates_passed、full_suite_passed、customer_acceptance=not_executed。夹具创建独占 PG16 容器/普通角色，产品连接不使用容器管理员；隔离端口、随机 schema 与 role，清理验证零新增残留。
 
-- [ ] **Step 1：写 RED。** `TestAppendPGConcurrentSameBatch` 两个服务实例并发同编号；`TestAppendPGSnapshotAfterSessionLock` 精确控制前次 commit 与下一 BEGIN；`TestAppendPGConcurrentMutation` 已有组织父节点/任职区间/映射停用/授权撤销、跨租户 UUID/自然键抢占；`TestAppendPGRetryErrors` 真实 40001/40P01/lock timeout，零自动重试。
+- [x] **Step 1：写 RED。** `TestAppendPGConcurrentSameBatch` 两个服务实例并发同编号；`TestAppendPGSnapshotAfterSessionLock` 精确控制前次 commit 与下一 BEGIN；`TestAppendPGConcurrentMutation` 已有组织父节点/任职区间/映射停用/授权撤销、跨租户 UUID/自然键抢占；`TestAppendPGRetryErrors` 真实 40001/40P01/lock timeout，零自动重试。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -222,10 +222,10 @@ if finalReceiptCount != 1 || finalApplyAuditCount != 1 { t.Fatal("batch duplicat
 if finalInsertedCounts != expectedInsertedCounts { t.Fatal("partial or duplicate insert") }
 ```
 
-- [ ] **Step 2：补 RED 故障/边界。** `TestAppendPGCommitOutcome` 用专属 TCP 代理断开实际 Commit 应答、提交前取消、成功后断 HTTP、进程退出/重启；不能仅 fake Commit 返回错误。`TestAppendHTTPResourceEdges` 实际接口10 MiB/+1、10k/+1、20k/+1、64 MiB/+1、4096/4097、报告200/201、令牌临近到期/总预算、深树及池连接再利用。
-- [ ] **Step 3：运行并观察 FAIL。** `go test -json ./internal/importapply ./internal/httpserver -run '^TestAppend(PG(Concurrent|SnapshotAfter|Retry|Commit)|HTTPResource)' -count=1`；脚本逐门禁记录 executed_tests，预期所选缺口真实 FAIL，夹具缺失不得替代。
-- [ ] **Step 4：仅修复这些行为缺口并 GREEN。** 断链后查询/原编号重试只能得到同一回执或重新执行一次完整未提交批次；业务表/回执/apply 审计一致。上限已完整覆盖但耗时超过预算时允许明确回滚失败，不允许部分通过；关闭故障代理、恢复权限、证明 session锁已释放或连接关闭。
-- [ ] **Step 5：提交。** `test: prove import concurrency recovery and resource boundaries`，留存测试名与实际故障时间线；产品修复也在本任务显式列出，不顺便修旧模块。
+- [x] **Step 2：补 RED 故障/边界。** `TestAppendPGCommitOutcome` 用专属 TCP 代理断开实际 Commit 应答、提交前取消、成功后断 HTTP、进程退出/重启；不能仅 fake Commit 返回错误。`TestAppendHTTPResourceEdges` 实际接口10 MiB/+1、10k/+1、20k/+1、64 MiB/+1、4096/4097、报告200/201、令牌临近到期/总预算、深树及池连接再利用。
+- [x] **Step 3：运行并观察 FAIL。** `go test -json ./internal/importapply ./internal/httpserver -run '^TestAppend(PG(Concurrent|SnapshotAfter|Retry|Commit)|HTTPResource)' -count=1`；脚本逐门禁记录 executed_tests，预期所选缺口真实 FAIL，夹具缺失不得替代。
+- [x] **Step 4：仅修复这些行为缺口并 GREEN。** 断链后查询/原编号重试只能得到同一回执或重新执行一次完整未提交批次；业务表/回执/apply 审计一致。上限已完整覆盖但耗时超过预算时允许明确回滚失败，不允许部分通过；关闭故障代理、恢复权限、证明 session锁已释放或连接关闭。
+- [x] **Step 5：提交。** `test: prove import concurrency recovery and resource boundaries`，留存测试名与实际故障时间线；产品修复也在本任务显式列出，不顺便修旧模块。
 
 ### Task 8：固定源码门禁、整体评审与交付
 

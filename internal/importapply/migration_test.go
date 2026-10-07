@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"os"
 	"testing"
@@ -16,7 +17,7 @@ const fixtureRequest = "90000000-0000-4000-8000-000000000004"
 
 func TestAppendPGMigration(t *testing.T) {
 	for _, base := range []int{1, 21} {
-		t.Run(string(rune('A'+base)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("base%d", base), func(t *testing.T) {
 			f := appendDB(t, base)
 			ctx := context.Background()
 			up, e := os.ReadFile("../../db/migrations/000022_import_batches.up.sql")

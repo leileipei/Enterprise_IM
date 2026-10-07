@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leileipei/Enterprise_IM/internal/access"
+	p "github.com/leileipei/Enterprise_IM/internal/importpreflight"
 )
 
 var (
@@ -30,6 +31,10 @@ func publicError(e error) error {
 		if errors.Is(e, v) {
 			return v
 		}
+	}
+	var failure p.Failure
+	if errors.As(e, &failure) && (failure.Code == "TIMEOUT" || failure.Code == "CANCELED") {
+		return ErrRetryable
 	}
 	var pe *pgconn.PgError
 	if errors.As(e, &pe) {

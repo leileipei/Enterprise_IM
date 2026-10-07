@@ -198,7 +198,12 @@ func readGlobalKeys(ctx context.Context, b *queryBudget, schema, tenant string, 
 }
 
 func readSnapshot(ctx context.Context, b *queryBudget, schema, tenantID string, input p.Document, lockRows bool) (Snapshot, error) {
-	fail := func(e error) (Snapshot, error) { return Snapshot{}, mappedError(ctx, e) }
+	fail := func(e error) (Snapshot, error) {
+		if lockRows {
+			return Snapshot{}, e
+		}
+		return Snapshot{}, mappedError(ctx, e)
+	}
 	var e error
 	snapshot := Snapshot{Data: p.Document{Tables: map[p.Entity][]p.Record{}}, GlobalKeys: map[RowRef]bool{}}
 	rowCount, byteCount := 0, 0

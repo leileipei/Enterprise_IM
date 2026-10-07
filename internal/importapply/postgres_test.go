@@ -134,7 +134,7 @@ func TestAppendPGLockCleanup(t *testing.T) {
 		t.Fatal("committed receipt lost due cleanup error", e)
 	}
 	var held int
-	if e := f.Admin.QueryRow(ctx, "SELECT count(*) FROM pg_catalog.pg_locks WHERE locktype='advisory' AND pid IN (SELECT pid FROM pg_catalog.pg_stat_activity WHERE usename='im_import_writer')").Scan(&held); e != nil || held != 0 {
+	if e := f.Admin.QueryRow(ctx, "SELECT count(*) FROM pg_catalog.pg_locks WHERE locktype='advisory' AND pid IN (SELECT pid FROM pg_catalog.pg_stat_activity WHERE usename=$1)", f.Pool.Config().ConnConfig.User).Scan(&held); e != nil || held != 0 {
 		t.Fatal("session lock retained", e, held)
 	}
 	if f.Pool.Stat().TotalConns() != 0 {
