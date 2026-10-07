@@ -63,7 +63,7 @@ def _generate_tls(tools,private,deadline):
                     '-keyout',str(tls/'server.key'),'-out',str(tls/'server.csr')],deadline)
     _private_file(tls/'extensions','subjectAltName=IP:127.0.0.1\nextendedKeyUsage=serverAuth\n')
     _openssl(tools,['x509','-req','-in',str(tls/'server.csr'),'-CA',str(tls/'ca.crt'),
-                    '-CAkey',str(tls/'ca.key'),'-CAcreateserial','-days','2',
+                    '-CAkey',str(tls/'ca.key'),'-CAserial',str(tls/'ca.srl'),'-CAcreateserial','-days','2',
                     '-extfile',str(tls/'extensions'),'-out',str(tls/'server.crt')],deadline)
     for path in tls.iterdir():path.chmod(0o600)
 
@@ -76,6 +76,7 @@ def _openssl(tools,args,deadline):
 
 
 def prepare_services(snapshot,tools,registry,private,deadline):
+    if snapshot.commit!=registry.commit:raise ValueError('service_source_mismatch')
     private=Path(private).resolve()
     if not private.is_relative_to(registry.root):raise ValueError('service_private_root_not_owned')
     private.mkdir(mode=0o700,parents=True,exist_ok=True)

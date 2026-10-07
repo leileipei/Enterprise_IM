@@ -89,6 +89,36 @@ class ServiceFailureTests(unittest.TestCase):
             self.assertFalse(present['value'],'created container leaked after preparation failure')
             self.assertTrue(any(r['event']=='registered' and r['identity']==cid for r in registry.records()))
 
+    def test_tls_serial_stays_inside_private_root_with_dot_in_path(self):
+        from integration.services import _generate_tls
+        from integration.model import Toolchain
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve();private=root/'owner.with-dot';private.mkdir(mode=0o700)
+            tools=Toolchain({'openssl':Path('/usr/bin/openssl')},{},{},{},'darwin','arm64')
+            _generate_tls(tools,private,time.monotonic()+30)
+            self.assertTrue((private/'tls/ca.srl').is_file(),'LibreSSL serial escaped the private TLS directory')
+            self.assertFalse((root/'owner.srl').exists(),'serial created outside the owned TLS root')
+
+    def test_foreign_source_rejected_before_creating_resources(self):
+        from integration.services import prepare_services
+        from integration.registry import Registry
+        from integration.model import SourceSnapshot,Toolchain
+        from unittest.mock import patch
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve();root.chmod(0o700)
+            registry=Registry(root/'registry.jsonl','b'*32,'c'*40)
+            snapshot=SourceSnapshot('d'*40,root,root,root/'unused','a'*64)
+            tools=Toolchain({}, {}, {}, {},'darwin','arm64')
+            with patch('integration.services._generate_tls'),patch('integration.services.docker_environment',return_value={}):
+                try:prepare_services(snapshot,tools,registry,root/registry.owner/'services',time.monotonic()+30)
+                except Exception as exc:
+                    self.assertIsInstance(exc,ValueError)
+                    self.assertEqual(str(exc),'service_source_mismatch')
+                else:self.fail('foreign source was accepted')
+            self.assertEqual([r['event'] for r in registry.records()],['reserve'])
+
     def test_cleanup_docker_ignores_ambient_remote_context(self):
         from integration.registry import Registry
         from unittest.mock import patch
