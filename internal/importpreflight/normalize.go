@@ -174,14 +174,12 @@ func Normalize(ctx context.Context, raw RawDocument, c *Collector) (Document, Co
 			if er := ContextFailure(ctx); er != nil {
 				return doc, counts, false, er
 			}
-			r := Record{Ordinal: i + 1, Values: map[Field]Value{}}
-			for _, f := range fields[e] {
-				b, present := row[f]
-				v, code := normalizeValue(b, present, specification(e, f))
-				r.Values[f] = v
-				if code != "" {
-					add(e, i+1, f, code)
-				}
+			r, issues, er := NormalizeRecord(ctx, e, i+1, row)
+			if er != nil {
+				return doc, counts, false, er
+			}
+			for _, issue := range issues {
+				add(issue.Entity, issue.Row, issue.Field, issue.Code)
 			}
 			doc.Tables[e] = append(doc.Tables[e], r)
 		}
