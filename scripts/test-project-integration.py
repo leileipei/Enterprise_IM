@@ -73,15 +73,17 @@ def bootstrap(repository_root: Path, commit: str, out: Path) -> Dict[str,str]:
     if not out.is_absolute() or any(p.is_symlink() for p in (out,*out.parents)):
         raise ValueError('output_requires_absolute_nonlink_path')
     if out.exists():raise ValueError('output_exists')
+    git_env={'PATH':'/usr/bin:/bin','TZ':'UTC','LANG':'en_US.UTF-8',
+             'GIT_NO_REPLACE_OBJECTS':'1','GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':os.devnull}
     try:
-        actual=subprocess.check_output(['git','-C',str(repository_root),'rev-parse','--show-toplevel'],stderr=subprocess.DEVNULL).decode().strip()
-        resolved=subprocess.check_output(['git','-C',str(repository_root),'rev-parse','--verify',commit+'^{commit}'],stderr=subprocess.DEVNULL).decode().strip()
+        actual=subprocess.check_output(['/usr/bin/git','-C',str(repository_root),'rev-parse','--show-toplevel'],env=git_env,stderr=subprocess.DEVNULL).decode().strip()
+        resolved=subprocess.check_output(['/usr/bin/git','-C',str(repository_root),'rev-parse','--verify',commit+'^{commit}'],env=git_env,stderr=subprocess.DEVNULL).decode().strip()
     except subprocess.CalledProcessError as exc:raise ValueError('invalid_repository_or_commit') from exc
     if Path(actual).resolve()!=repository_root or resolved!=commit:raise ValueError('repository_root_mismatch')
     out.mkdir(mode=0o700,parents=True)
     archive=out/'source.tar'
     with archive.open('xb') as f:
-        subprocess.run(['git','-C',str(repository_root),'archive','--format=tar',commit],stdout=f,stderr=subprocess.DEVNULL,check=True)
+        subprocess.run(['/usr/bin/git','-C',str(repository_root),'archive','--format=tar',commit],env=git_env,stdout=f,stderr=subprocess.DEVNULL,check=True)
     archive.chmod(0o600)
     root=out/'source'
     extract_archive(archive,root)

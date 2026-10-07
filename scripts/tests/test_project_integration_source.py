@@ -53,6 +53,15 @@ class SourceTests(unittest.TestCase):
         (snapshot.root/'scripts/integration/probe.py').write_text("MARKER='tampered'\n")
         with self.assertRaises(ValueError): self.source.verify_snapshot(data)
 
+    def test_git_replace_cannot_change_fixed_source(self):
+        (self.repo/'scripts/integration/probe.py').write_text("MARKER='replacement'\n")
+        replacement=self.commit()
+        self.git('replace',self.sha,replacement)
+        out=self.root/'replaced'
+        data=self.entry.bootstrap(self.repo,self.sha,out)
+        self.entry.load_archived_runner(data)(data,out)
+        self.assertEqual((out/'marker').read_text(),'committed')
+
     def test_archive_link_traversal_and_output_reuse(self):
         (self.repo/'unsafe').symlink_to('/etc/passwd')
         bad=self.commit()
