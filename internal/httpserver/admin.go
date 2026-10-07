@@ -30,6 +30,8 @@ type VerifiedIdentity struct {
 	TenantID  string
 	UserID    string
 	ExpiresAt time.Time
+	Issuer    string `json:"-"`
+	Subject   string `json:"-"`
 }
 
 type Authenticator interface {
@@ -188,22 +190,31 @@ func authenticateAdmin(w http.ResponseWriter, r *http.Request, authenticator Aut
 
 func authenticateBearer(w http.ResponseWriter, r *http.Request, authenticator Authenticator) (VerifiedIdentity, bool) {
 	w.Header().Set("Cache-Control", "no-store")
+	verified, status, code := bearerIdentity(r.Context(), r, authenticator)
+	if status != 0 {
+		return denyBearer(w, r, status, code)
+	}
+	return verified, true
+}
+
+// Shared parsing performs no logging; each route chooses its safe rejection policy.
+func bearerIdentity(ctx context.Context, r *http.Request, authenticator Authenticator) (VerifiedIdentity, int, string) {
 	values := r.Header.Values("Authorization")
 	if len(values) != 1 {
-		return denyBearer(w, r, http.StatusUnauthorized, "unauthorized")
+		return VerifiedIdentity{}, 401, "unauthorized"
 	}
 	scheme, token, found := strings.Cut(values[0], " ")
 	if !found || !strings.EqualFold(scheme, "Bearer") || token == "" || strings.ContainsAny(token, " \t\r\n") || len(token) > 8192 {
-		return denyBearer(w, r, http.StatusUnauthorized, "unauthorized")
+		return VerifiedIdentity{}, 401, "unauthorized"
 	}
-	verified, err := authenticator.Authenticate(r.Context(), token)
+	verified, err := authenticator.Authenticate(ctx, token)
 	if errors.Is(err, ErrAuthUnavailable) {
-		return denyBearer(w, r, http.StatusServiceUnavailable, "unavailable")
+		return VerifiedIdentity{}, 503, "unavailable"
 	}
 	if err != nil || !validUUID(verified.TenantID) || !validUUID(verified.UserID) {
-		return denyBearer(w, r, http.StatusUnauthorized, "unauthorized")
+		return VerifiedIdentity{}, 401, "unauthorized"
 	}
-	return verified, true
+	return verified, 0, ""
 }
 
 func denyBearer(w http.ResponseWriter, r *http.Request, status int, code string) (VerifiedIdentity, bool) {

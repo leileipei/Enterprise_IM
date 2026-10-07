@@ -282,6 +282,44 @@ export IM_WEB_SCOPE='openid profile'
 
 这些地址和客户端 ID 必须替换为身份提供方实际配置；JWKS 地址必须经 HTTPS 直接访问，重定向会被拒绝，密钥须声明 `use=sig`，访问令牌须携带 `kid`。启用时配置不完整或初次获取验签密钥失败，服务启动失败。身份绑定不自动按姓名或邮箱创建。非标准或不透明令牌需另建适配器。
 
+
+## 受控追加导入（P4-30）
+
+`IM_IMPORT_ENABLED` 默认为空/`false`。开启需同时配置真实 OIDC、应用 `000022_import_batches` 迁移，并为 API 配置非超级用户、无 BYPASSRLS 的数据库角色；启动会检查所需表、结构与权限。配置为 `true` 但缺少条件时启动失败。默认关闭时两个导入入口均返回 404。
+
+```sh
+export IM_IMPORT_ENABLED=true
+```
+
+操作者必须是当前有效的集团管理员。已验证令牌提供租户、用户、issuer/subject；`X-Acting-Membership-ID` 选择操作者的当前任职，服务端重新核对身份映射、任职、组织、法人及集团管理员授权。导入文件和请求头不能授予权限。
+
+| 入口 | 用途与返回 |
+| --- | --- |
+| `POST /api/admin/import-batches/{request_id}` | 原始 JSON 文件；首次 applied 201、原样 applied 回放 200、整批 rejected 或编号冲突/忙碌 409；改绑编号返回 `BATCH_KEY_CONFLICT` |
+| `GET /api/admin/import-batches/{request_id}` | 当前有效集团管理员查询本租户终态；终态 200、执行中 202、未记录 404 |
+
+```sh
+curl -X POST 'https://im.example.test/api/admin/import-batches/00000000-0000-4000-8000-000000000901' \
+  -H 'Authorization: Bearer <verified_access_token>' \
+  -H 'X-Acting-Membership-ID: <current_membership_uuid>' \
+  -H 'Content-Type: application/json' \
+  --data-binary @./import.json
+
+curl 'https://im.example.test/api/admin/import-batches/00000000-0000-4000-8000-000000000901' \
+  -H 'Authorization: Bearer <verified_access_token>' \
+  -H 'X-Acting-Membership-ID: <current_membership_uuid>'
+```
+
+沿用九表 JSON 格式，文件引用必须闭合且仅含一个已有租户。六表 `legal_entities / organizations / departments / users / user_organizations / user_departments` 可追加；完全相同的记录跳过，任一冲突整批拒绝。`tenants / external_identities / admin_grants` 只能与库存一致，不能借导入新增租户、登录绑定或管理授权。导入的新人员须通过另外的身份管理流程配置登录映射。
+
+成功批次的主数据、不可变回执和 apply 审计同事务提交；约束拒绝的六表 inserted 均为 0。回执只含固定状态、理由、计数和定位信息。拒绝后修正文档必须生成新编号；超时、断网、`COMMIT_OUTCOME_UNKNOWN` 或收到不完整回执时，保留原编号、原始文件字节和原操作者任职，先 GET 查询，再原样重试，不能自动换编号。当前管理员可查询他人旧批次，但 POST 回放绑定原操作者及任职。服务不会自动重试写事务。
+
+每实例同时执行一个 POST，GET 独立；正文上限 10 MiB、文件总行数 10,000、JSON 深度 16、字符串 4,096 字节、库存总行数 20,000、库存读取数据 64 MiB、回执 256 KiB、问题展示 200 条。完整冲突计数不因展示截断而减少。认证、授权、读取和执行共用从入口起 30 秒的绝对期限，并受令牌到期和客户端取消约束；单条 SQL 最长 5 秒、锁等待 1 秒、清理最多另加 1 秒。所有导入响应 `Cache-Control: no-store`。拒绝事件仅记录固定错误码和服务生成的关联号，响应 `X-Request-ID` 可用于定位；不记录 URL、正文、令牌或数据库错误原文。
+
+数据库权限包括九表读取及行锁所需 UPDATE 权限、六表 INSERT、批次表 SELECT/INSERT、审计表 INSERT 和审计序列 USAGE；额外 CHECK/触发器仍可能拒绝批次。正式环境须由 DBA 核对实际角色和最小授权。迁移22存在任何回执时拒绝回滚，保护原编号去重与恢复证据。迁移回滚仅用于可丢弃的测试数据库；生产回执与审计应按证据保留和恢复流程处理。
+
+实现及验证记录见 [P4-30 验收记录](docs/开发增量-P4-30-验收记录.md)。专属夹具测试不等同于客户身份源、客户数据库或生产验收。
+
 ## 测试
 
 ```sh
@@ -295,6 +333,6 @@ go vet ./...
 
 `multi_device_recovery.cjs` 使用共享模拟 HTTP 数据和模拟 WebSocket 信号验证两个 Web 页面；真实 Go/Redis 双节点广播由下述 Go 集成测试覆盖。`TestRealBrowserLoginRealtimeAndOfflinePull` 在本地 Chrome/Chromium 中经临时 HTTPS 入口完成两次 OIDC PKCE 登录，连接生产 API/Worker 和真实 PostgreSQL/Redis；第二个浏览器在测试中关闭定时轮询，验证实际 WebSocket 通知、重连 `ready` 帧触发的增量补拉和离线恢复，同时从生产管理员 API 展示正文／摘要清理批次与已解除／有效法务保全，并通过浏览器实际登记／解除一项保全，断言查询、写入审计与事件记录；同时实际修改租户正文保留期，通过页面读取已提交审批历史、按允许／拒绝结果查询管理审计并核对查询审计、已有消息时拒绝延长和另一租户不受影响。客户环境的身份源、证书、代理与浏览器兼容性仍需联调验收。
 
-集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。回滚时按 `000021` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000021` 在有下载会话、删除承诺、删除任务、文件策略历史或相关运行证据时，`000020` 在有文件消息或附件关联时，`000019` 在有上传、扫描、文件 Worker 审计或上传策略历史时，`000018` 在有文件对象或生命周期事件时会拒绝回滚；`000017` 仅删除本次新增的消息检索索引。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚。不应为绕过回滚保护而删除业务证据；应按数据保护和恢复方案处理。
+集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。`000022` 在存在任何导入回执时拒绝回滚，保护原编号去重与恢复证据。回滚时按 `000022` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000021` 在有下载会话、删除承诺、删除任务、文件策略历史或相关运行证据时，`000020` 在有文件消息或附件关联时，`000019` 在有上传、扫描、文件 Worker 审计或上传策略历史时，`000018` 在有文件对象或生命周期事件时会拒绝回滚；`000017` 仅删除本次新增的消息检索索引。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚。不应为绕过回滚保护而删除业务证据；应按数据保护和恢复方案处理。
 
 真实浏览器集成测试在 macOS/Linux 上运行，需额外设置 `IM_TEST_BROWSER_NODE`（Node 可执行文件）、`NODE_PATH`（包含 Playwright 的 `node_modules`）；使用外部安装的 Chrome/Chromium 时设置 `CHROMIUM_EXECUTABLE`，再运行 `go test ./internal/policystore -run '^TestRealBrowserLoginRealtimeAndOfflinePull$' -count=1`。未设置 `IM_TEST_BROWSER_NODE` 时该用例跳过；需同时设置上述 PostgreSQL 与 Redis 测试 URL。

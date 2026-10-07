@@ -70,6 +70,12 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 		logger.Error("invalid OIDC configuration")
 		return errors.New("api startup unavailable")
 	}
+	importEnabled, err := importEnabledFromEnv(getenv, enabled)
+	if err != nil {
+		logger.Error("invalid controlled import configuration")
+		return errors.New("api startup unavailable")
+	}
+	var importAuthenticator httpserver.Authenticator
 	fileEnabled, fileConfig, fileSpool, err := fileUploadConfigFromEnv(getenv, enabled)
 	if err != nil {
 		logger.Error("invalid file upload configuration")
@@ -113,6 +119,7 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 			logger.Error("OIDC authentication unavailable")
 			return errors.New("api startup unavailable")
 		}
+		importAuthenticator = authenticator
 		handler, err = httpserver.HandlerWithAdmin(pool, authenticator, access.Service{DB: pool})
 		if err != nil {
 			logger.Error("admin API unavailable")
@@ -221,11 +228,31 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 		logger.Error("runtime readiness unavailable")
 		return errors.New("api startup unavailable")
 	}
+	var importHandlerService httpserver.ImportService
+	if importEnabled {
+		importService, startErr := startImportService(ctx, pool, true)
+		if startErr != nil {
+			logger.Error("controlled import runtime unavailable")
+			return errors.New("api startup unavailable")
+		}
+		importHandlerService = importService
+	} else {
+		importAuthenticator = nil
+	}
+	handler, err = httpserver.HandlerWithImports(handler, importAuthenticator, importHandlerService)
+	if err != nil {
+		logger.Error("controlled import API unavailable")
+		return errors.New("api startup unavailable")
+	}
+	writeTimeout := 10 * time.Second
+	if importEnabled {
+		writeTimeout = 35 * time.Second
+	}
 	server := &http.Server{
 		Addr:              address,
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
+		WriteTimeout:      writeTimeout,
 		IdleTimeout:       60 * time.Second,
 	}
 	listener, err := net.Listen("tcp", address)

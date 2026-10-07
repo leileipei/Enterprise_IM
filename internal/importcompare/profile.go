@@ -65,7 +65,14 @@ func checkProfile(ctx context.Context, b *queryBudget, schema string) error {
 	if n != 9 {
 		return dbFailure("DATABASE_PROFILE_UNSUPPORTED")
 	}
-	rows, err = b.query(ctx, `SELECT c.relname,a.attname,t.typname,nt.nspname,a.attnotnull,coalesce(col.collisdeterministic,true) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid JOIN pg_catalog.pg_type t ON t.oid=a.atttypid JOIN pg_catalog.pg_namespace nt ON nt.oid=t.typnamespace LEFT JOIN pg_catalog.pg_collation col ON col.oid=a.attcollation WHERE n.nspname=$1 AND c.relname=ANY($2::text[]) AND a.attnum>0 AND NOT a.attisdropped`, schema, tables)
+	return checkStructure(ctx, b, schema)
+}
+func checkStructure(ctx context.Context, b *queryBudget, schema string) error {
+	tables := []string{}
+	for _, s := range p.Schema() {
+		tables = append(tables, string(s.Entity))
+	}
+	rows, err := b.query(ctx, `SELECT c.relname,a.attname,t.typname,nt.nspname,a.attnotnull,coalesce(col.collisdeterministic,true) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid JOIN pg_catalog.pg_type t ON t.oid=a.atttypid JOIN pg_catalog.pg_namespace nt ON nt.oid=t.typnamespace LEFT JOIN pg_catalog.pg_collation col ON col.oid=a.attcollation WHERE n.nspname=$1 AND c.relname=ANY($2::text[]) AND a.attnum>0 AND NOT a.attisdropped`, schema, tables)
 	if err != nil {
 		return err
 	}

@@ -477,3 +477,34 @@ func TestOIDCDownloadExpiry(t *testing.T) {
 		t.Fatal("missing exp accepted")
 	}
 }
+
+func TestAppendOIDCVerifiedSource(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := lookupFunc(func(_ context.Context, issuer, subject string) (httpserver.VerifiedIdentity, error) {
+		if subject != testSubject {
+			return httpserver.VerifiedIdentity{}, ErrIdentityNotFound
+		}
+		return httpserver.VerifiedIdentity{TenantID: testTenant, UserID: testUser, Issuer: "untrusted-store", Subject: "untrusted-store"}, nil
+	})
+	auth, err := newAuthenticator(config(), func(*jwt.Token) (any, error) { return &key.PublicKey, nil }, store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims := testClaims()
+	id, err := auth.Authenticate(context.Background(), signToken(t, key, claims, "at+jwt", jwt.SigningMethodRS256))
+	if err != nil || id.Issuer != testIssuer || id.Subject != testSubject || !id.ExpiresAt.Equal(claims.ExpiresAt.Time) {
+		t.Fatal("verified source not carried")
+	}
+	claims.Subject = "unknown"
+	if _, err = auth.Authenticate(context.Background(), signToken(t, key, claims, "at+jwt", jwt.SigningMethodRS256)); err == nil {
+		t.Fatal("unknown mapping accepted")
+	}
+	claims = testClaims()
+	claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Second))
+	if _, err = auth.Authenticate(context.Background(), signToken(t, key, claims, "at+jwt", jwt.SigningMethodRS256)); err == nil {
+		t.Fatal("expired accepted")
+	}
+}

@@ -14,13 +14,18 @@ const maxStoredBytes = 64 * 1024 * 1024
 type queryBudget struct {
 	tx    pgx.Tx
 	count int
+	limit int
 }
 
 func (b *queryBudget) step(ctx context.Context) error {
 	if err := p.ContextFailure(ctx); err != nil {
 		return err
 	}
-	if b.count >= maxSQL {
+	limit := b.limit
+	if limit == 0 {
+		limit = maxSQL
+	}
+	if b.count >= limit {
 		return p.Failure{Code: "DATABASE_LIMIT"}
 	}
 	b.count++
