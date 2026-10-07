@@ -158,9 +158,23 @@ func (f *fileBusinessProcessFixture) proveLinuxDownloadUID(t *testing.T) {
 	}
 }
 
+// Compile the embedded control program itself: compiling this test package
+// does not validate a Go program stored in a string.
+func TestFileBusinessLinuxRelayBuild(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "relay.go")
+	processPrivateFile(t, source, []byte(linuxProcessRelaySource))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "go", "build", "-o", filepath.Join(root, "relay"), source)
+	cmd.Env = append(os.Environ(), "GOOS=linux", "CGO_ENABLED=0")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("embedded Linux relay compile failed: %s", output)
+	}
+}
+
 const linuxProcessRelaySource = `package main
-import("fmt";"io";"net";"os";"os/exec";"os/signal";"strings";"syscall";"time"
- "github.com/leileipei/Enterprise_IM/internal/testfixtures")
+import("fmt";"io";"net";"os";"os/exec";"os/signal";"strings";"syscall";"time")
 func main(){
  st,e:=os.Stat("/download");if e!=nil{os.Exit(2)};uid:=st.Sys().(*syscall.Stat_t).Uid
  fmt.Printf("fixture_download_uid=%d api_uid=%d\n",uid,os.Geteuid())
