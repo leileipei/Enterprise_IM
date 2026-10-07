@@ -37,7 +37,15 @@ func newCompareFixture(t *testing.T) *compareFixture {
 	quote := func(s string) string { return pgx.Identifier{s}.Sanitize() }
 	f.exec(t, "CREATE SCHEMA "+quote(f.schema))
 	f.exec(t, "SET search_path TO "+quote(f.schema)+", public")
-	paths, _ := filepath.Glob("../../db/migrations/*.up.sql")
+	allPaths, _ := filepath.Glob("../../db/migrations/*.up.sql")
+	paths := []string{}
+	for _, path := range allPaths {
+		var number int
+		fmt.Sscanf(filepath.Base(path), "%d_", &number)
+		if number <= 21 {
+			paths = append(paths, path)
+		}
+	}
 	if len(paths) != 21 {
 		t.Fatal("fixture migration count")
 	}

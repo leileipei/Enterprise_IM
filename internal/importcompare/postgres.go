@@ -105,102 +105,9 @@ func (r PGReader) Read(parent context.Context, tenantID string, input p.Document
 	if e = checkProfile(ctx, b, r.Config.Schema); e != nil {
 		return fail(e)
 	}
-	snapshot := Snapshot{Data: p.Document{Tables: map[p.Entity][]p.Record{}}, GlobalKeys: map[RowRef]bool{}}
-	rowCount, byteCount := 0, 0
-	for _, s := range p.Schema() {
-		table := s.Entity
-		snapshot.Data.Tables[table] = []p.Record{}
-		projection := []string{}
-		cellTooLong := []string{}
-		for _, f := range s.Fields {
-			column := pgx.Identifier{string(f.Name)}.Sanitize()
-			cell := column + "::text"
-			if f.Kind == "time" {
-				cell = "CASE WHEN " + column + " IS NULL THEN NULL WHEN pg_catalog.isfinite(" + column + ") AND " + column + " >= TIMESTAMPTZ '0001-01-01 00:00:00+00' AND " + column + " < TIMESTAMPTZ '10000-01-01 00:00:00+00' THEN pg_catalog.to_char(" + column + " AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') ELSE 'unsupported' END"
-			}
-			length := "pg_catalog.octet_length(" + cell + ")>4096"
-			cellTooLong = append(cellTooLong, "coalesce("+length+",false)")
-			projection = append(projection, "CASE WHEN "+length+" THEN NULL ELSE "+cell+" END")
-		}
-		projection = append([]string{strings.Join(cellTooLong, " OR ")}, projection...)
-		selector := "tenant_id"
-		if table == "tenants" {
-			selector = "id"
-		}
-		order := []string{}
-		for _, f := range pk(table) {
-			order = append(order, pgx.Identifier{string(f)}.Sanitize())
-		}
-		sql := "SELECT " + strings.Join(projection, ",") + " FROM " + qualified(r.Config.Schema, table) + " WHERE " + pgx.Identifier{selector}.Sanitize() + "=$1::uuid ORDER BY " + strings.Join(order, ",") + " LIMIT $2::integer"
-		rows, e := b.query(ctx, sql, tenantID, maxStoredRows-rowCount+1)
-		if e != nil {
-			return fail(e)
-		}
-		for rows.Next() {
-			rowCount++
-			if rowCount > maxStoredRows {
-				rows.Close()
-				return fail(dbFailure("DATABASE_LIMIT"))
-			}
-			tooLong := false
-			cells := make([]*string, len(s.Fields))
-			scan := []any{&tooLong}
-			for n := range cells {
-				scan = append(scan, &cells[n])
-			}
-			if e = rows.Scan(scan...); e != nil {
-				rows.Close()
-				return fail(e)
-			}
-			if tooLong {
-				rows.Close()
-				return fail(dbFailure("DATABASE_DATA_UNSUPPORTED"))
-			}
-			values := map[p.Field]json.RawMessage{}
-			for n, f := range s.Fields {
-				cell := cells[n]
-				if cell == nil {
-					values[f.Name] = json.RawMessage("null")
-					continue
-				}
-				byteCount += len(*cell)
-				if byteCount > maxStoredBytes {
-					rows.Close()
-					return fail(dbFailure("DATABASE_LIMIT"))
-				}
-				if f.Kind == "bool" {
-					values[f.Name] = json.RawMessage(*cell)
-				} else {
-					values[f.Name], _ = json.Marshal(*cell)
-				}
-			}
-			record, issues, e := p.NormalizeRecord(ctx, table, len(snapshot.Data.Tables[table])+1, values)
-			if e != nil {
-				rows.Close()
-				return fail(e)
-			}
-			if len(issues) > 0 {
-				rows.Close()
-				return fail(dbFailure("DATABASE_DATA_UNSUPPORTED"))
-			}
-			snapshot.Data.Tables[table] = append(snapshot.Data.Tables[table], record)
-		}
-		e = rows.Err()
-		rows.Close()
-		if e != nil {
-			return fail(e)
-		}
-		if table == "tenants" {
-			snapshot.TenantFound = len(snapshot.Data.Tables[table]) == 1
-			if !snapshot.TenantFound {
-				break
-			}
-		}
-	}
-	if snapshot.TenantFound {
-		if e = readGlobalKeys(ctx, b, r.Config.Schema, tenantID, input, snapshot.GlobalKeys); e != nil {
-			return fail(e)
-		}
+	snapshot, e := readSnapshot(ctx, b, r.Config.Schema, tenantID, input, false)
+	if e != nil {
+		return fail(e)
 	}
 	if e = b.rollback(ctx); e != nil {
 		return fail(e)
@@ -288,4 +195,111 @@ func readGlobalKeys(ctx context.Context, b *queryBudget, schema, tenant string, 
 		}
 	}
 	return nil
+}
+
+func readSnapshot(ctx context.Context, b *queryBudget, schema, tenantID string, input p.Document, lockRows bool) (Snapshot, error) {
+	fail := func(e error) (Snapshot, error) { return Snapshot{}, mappedError(ctx, e) }
+	var e error
+	snapshot := Snapshot{Data: p.Document{Tables: map[p.Entity][]p.Record{}}, GlobalKeys: map[RowRef]bool{}}
+	rowCount, byteCount := 0, 0
+	for _, s := range p.Schema() {
+		table := s.Entity
+		snapshot.Data.Tables[table] = []p.Record{}
+		projection := []string{}
+		cellTooLong := []string{}
+		for _, f := range s.Fields {
+			column := pgx.Identifier{string(f.Name)}.Sanitize()
+			cell := column + "::text"
+			if f.Kind == "time" {
+				cell = "CASE WHEN " + column + " IS NULL THEN NULL WHEN pg_catalog.isfinite(" + column + ") AND " + column + " >= TIMESTAMPTZ '0001-01-01 00:00:00+00' AND " + column + " < TIMESTAMPTZ '10000-01-01 00:00:00+00' THEN pg_catalog.to_char(" + column + " AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') ELSE 'unsupported' END"
+			}
+			length := "pg_catalog.octet_length(" + cell + ")>4096"
+			cellTooLong = append(cellTooLong, "coalesce("+length+",false)")
+			projection = append(projection, "CASE WHEN "+length+" THEN NULL ELSE "+cell+" END")
+		}
+		projection = append([]string{strings.Join(cellTooLong, " OR ")}, projection...)
+		selector := "tenant_id"
+		if table == "tenants" {
+			selector = "id"
+		}
+		order := []string{}
+		for _, f := range pk(table) {
+			order = append(order, pgx.Identifier{string(f)}.Sanitize())
+		}
+		sql := "SELECT " + strings.Join(projection, ",") + " FROM " + qualified(schema, table) + " WHERE " + pgx.Identifier{selector}.Sanitize() + "=$1::uuid ORDER BY " + strings.Join(order, ",") + " LIMIT $2::integer"
+		if lockRows {
+			sql += " FOR SHARE"
+		}
+		rows, e := b.query(ctx, sql, tenantID, maxStoredRows-rowCount+1)
+		if e != nil {
+			return fail(e)
+		}
+		for rows.Next() {
+			rowCount++
+			if rowCount > maxStoredRows {
+				rows.Close()
+				return fail(dbFailure("DATABASE_LIMIT"))
+			}
+			tooLong := false
+			cells := make([]*string, len(s.Fields))
+			scan := []any{&tooLong}
+			for n := range cells {
+				scan = append(scan, &cells[n])
+			}
+			if e = rows.Scan(scan...); e != nil {
+				rows.Close()
+				return fail(e)
+			}
+			if tooLong {
+				rows.Close()
+				return fail(dbFailure("DATABASE_DATA_UNSUPPORTED"))
+			}
+			values := map[p.Field]json.RawMessage{}
+			for n, f := range s.Fields {
+				cell := cells[n]
+				if cell == nil {
+					values[f.Name] = json.RawMessage("null")
+					continue
+				}
+				byteCount += len(*cell)
+				if byteCount > maxStoredBytes {
+					rows.Close()
+					return fail(dbFailure("DATABASE_LIMIT"))
+				}
+				if f.Kind == "bool" {
+					values[f.Name] = json.RawMessage(*cell)
+				} else {
+					values[f.Name], _ = json.Marshal(*cell)
+				}
+			}
+			record, issues, e := p.NormalizeRecord(ctx, table, len(snapshot.Data.Tables[table])+1, values)
+			if e != nil {
+				rows.Close()
+				return fail(e)
+			}
+			if len(issues) > 0 {
+				rows.Close()
+				return fail(dbFailure("DATABASE_DATA_UNSUPPORTED"))
+			}
+			snapshot.Data.Tables[table] = append(snapshot.Data.Tables[table], record)
+		}
+		e = rows.Err()
+		rows.Close()
+		if e != nil {
+			return fail(e)
+		}
+		if table == "tenants" {
+			snapshot.TenantFound = len(snapshot.Data.Tables[table]) == 1
+			if !snapshot.TenantFound {
+				break
+			}
+		}
+	}
+	if snapshot.TenantFound {
+		if e = readGlobalKeys(ctx, b, schema, tenantID, input, snapshot.GlobalKeys); e != nil {
+			return fail(e)
+		}
+	}
+	snapshot.SQLCount = b.count
+	return snapshot, nil
 }

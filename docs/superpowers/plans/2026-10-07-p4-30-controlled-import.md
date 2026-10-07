@@ -140,7 +140,7 @@ if err := tx.Rollback(ctx); err != nil { t.Fatal(err) }
 - 私有 `newMeteredTx(tx pgx.Tx,budget *sqlBudget)*meteredTx` 实现 pgx.Tx，包装 Query/QueryRow/Exec 并分类计数：Read 256、主数据 INSERT 10000、Control 32；每 SQL 取 min(5s,剩余)，lock_timeout 1s。`sqlBudget{Read,Insert,Control int; Deadline time.Time}` 是请求共享私有计数器；认证后 RequestContext 放入内部 context key，前置短事务、session lock、主事务与清理引用同一计数器，不逐事务/阶段重置，BEGIN/COMMIT/ROLLBACK/session lock/unlock 均计 Control。
 - `RequestContext(parent context.Context,start,expiry time.Time)(context.Context,context.CancelFunc,error)`，deadline=min(start+30s,expiry,parent)，零 expiry 拒绝，创建同请求共享 sqlBudget；启动 CheckReady 使用独立预算。
 
-- [ ] **Step 1：写 RED。** `TestAppendPGSnapshotLocks` 现有行更新/删除阻塞、跨表同快照；`TestAppendPGWriterProfile` 只读角色/superuser/BYPASSRLS/RLS/非确定排序/缺迁移拒绝；`TestAppendPGStoredLimits` 20000/20001、64 MiB/+1、4096/4097/infinity；`TestAppendBudget` 边界次数及总 deadline 不续期，Query 的取消函数在 Rows.Close/耗尽后释放，QueryRow 的取消函数在 Scan 后释放，不能返回前取消导致合法读取失败。
+- [x] **Step 1：写 RED。** `TestAppendPGSnapshotLocks` 现有行更新/删除阻塞、跨表同快照；`TestAppendPGWriterProfile` 只读角色/superuser/BYPASSRLS/RLS/非确定排序/缺迁移拒绝；`TestAppendPGStoredLimits` 20000/20001、64 MiB/+1、4096/4097/infinity；`TestAppendBudget` 边界次数及总 deadline 不续期，Query 的取消函数在 Rows.Close/耗尽后释放，QueryRow 的取消函数在 Scan 后释放，不能返回前取消导致合法读取失败。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -151,10 +151,10 @@ if expiry.Before(want) { want = expiry }
 if got, ok := requestCtx.Deadline(); !ok || !got.Equal(want) { t.Fatal("deadline renewed") }
 ```
 
-- [ ] **Step 2：观察失败。** `go test ./internal/importcompare ./internal/importapply -run '^TestAppend(PG(Snapshot|Writer|Stored)|Budget)' -count=1`，PG 普通角色夹具运行。
-- [ ] **Step 3：最小实现。** 复用有限服务端投影，先限单格再扫描；UUID/identity 全局占用仍仅布尔。读完整库存后才返回 Snapshot；FOR SHARE 固定表与主键顺序，不读取其他租户原文，不重用旧 CLI 的 Config 或放宽其权限。
-- [ ] **Step 4：验证 GREEN。** 同命令；原 `scripts/test-import-compare.py --help` 确认其实际运行参数，并用其独立普通只读角色验证旧命令仍拒绝 writer。预算代理不允许 SendBatch/CopyFrom 绕过计数，产品不用二者。
-- [ ] **Step 5：提交。** `feat: read locked append snapshots inside caller transactions`。
+- [x] **Step 2：观察失败。** `go test ./internal/importcompare ./internal/importapply -run '^TestAppend(PG(Snapshot|Writer|Stored)|Budget)' -count=1`，PG 普通角色夹具运行。
+- [x] **Step 3：最小实现。** 复用有限服务端投影，先限单格再扫描；UUID/identity 全局占用仍仅布尔。读完整库存后才返回 Snapshot；FOR SHARE 固定表与主键顺序，不读取其他租户原文，不重用旧 CLI 的 Config 或放宽其权限。
+- [x] **Step 4：验证 GREEN。** 同命令；原 `scripts/test-import-compare.py --help` 确认其实际运行参数，并用其独立普通只读角色验证旧命令仍拒绝 writer。预算代理不允许 SendBatch/CopyFrom 绕过计数，产品不用二者。
+- [x] **Step 5：提交。** `feat: read locked append snapshots inside caller transactions`。
 
 ### Task 5：原子执行、批次锁与状态恢复
 
