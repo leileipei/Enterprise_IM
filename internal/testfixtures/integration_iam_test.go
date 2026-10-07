@@ -128,11 +128,19 @@ func TestIntegrationFixtureIAM(t *testing.T) {
 		if first == second {
 			t.Fatal("object versions not distinct")
 		}
+		_, err := clients["UPLOAD"].DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(bucket), Key: aws.String(key), VersionId: aws.String(first)})
+		denied(t, err)
+		_, err = clients["UPLOAD"].DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(bucket), Key: aws.String(key)})
+		denied(t, err)
 	})
 	if first == "" || second == "" {
 		t.Fatal("matrix cannot proceed without uploaded versions")
 	}
 	t.Run("anonymous_denied", func(t *testing.T) {
+		for _, role := range []string{"UPLOAD", "WORKER", "DOWNLOAD", "CLEANUP"} {
+			_, err := clients[role].GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{Bucket: aws.String("p426-p431-00000000000000000000000000000000")})
+			denied(t, err)
+		}
 		client := http.Client{Timeout: 10 * time.Second}
 		response, err := client.Get(endpoint + "/" + bucket + "/" + key)
 		if err != nil {
@@ -171,6 +179,8 @@ func TestIntegrationFixtureIAM(t *testing.T) {
 		})
 	}
 	t.Run("cleanup_rejects_nil_empty_null_versions", func(t *testing.T) {
+		_, err := clients["CLEANUP"].PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(bucket), Key: aws.String(key), Body: strings.NewReader("forbidden")})
+		denied(t, err)
 		for _, version := range []*string{nil, aws.String(""), aws.String("null")} {
 			_, err := clients["CLEANUP"].DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(bucket), Key: aws.String(key), VersionId: version})
 			denied(t, err)
