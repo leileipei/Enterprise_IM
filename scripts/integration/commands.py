@@ -22,9 +22,11 @@ def run_command(name: str,kind: str,source_commit: str,argv: List[str],cwd: Path
     proc=None;fingerprint=None;failure=[]
     fd=os.open(log,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
     with os.fdopen(fd,'wb') as stream:
+      diagnostic_fd=os.open(str(log)+'.stderr',os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+      with os.fdopen(diagnostic_fd,'wb') as diagnostic:
         try:
             proc=subprocess.Popen(argv,cwd=cwd,env=env,stdout=stream,
-                                  stderr=subprocess.STDOUT,start_new_session=True)
+                                  stderr=diagnostic,start_new_session=True)
             fingerprint=process_fingerprint(proc.pid)
             if fingerprint:
                 registry.add(ResourceRef('process',registry.owner,str(proc.pid),fingerprint))

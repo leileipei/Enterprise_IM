@@ -11,6 +11,7 @@ import tarfile
 import tempfile
 import time
 import uuid
+import sys
 from pathlib import Path
 
 REQUIRED_GATES = ['unit', 'race', 'migration', 'authorization', 'append_database',
@@ -53,27 +54,74 @@ def validate_required_gates(events):
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def checked(args,cwd=None,env=None,input=None,timeout=120):
  return subprocess.check_output(args,cwd=cwd,env=env,input=input,stderr=subprocess.STDOUT,timeout=timeout).decode().strip()
+def parse_arguments(argv=None):
+ parser=argparse.ArgumentParser(description=__doc__)
+ parser.add_argument('--source-commit',required=True);parser.add_argument('--output-dir',required=True,type=Path)
+ parser.add_argument('--repository-root',type=Path);parser.add_argument('--reuse-full-suite',type=Path);parser.add_argument('--required-only',action='store_true')
+ parser.add_argument('--resource-registry',type=Path);parser.add_argument('--resource-owner')
+ args=parser.parse_args(argv)
+ if args.required_only and args.reuse_full_suite:parser.error('required-only cannot reuse full suite')
+ if bool(args.resource_registry)!=bool(args.resource_owner):parser.error('registry and owner must be paired')
+ if args.resource_owner and not re.fullmatch('[a-f0-9]{32}',args.resource_owner):parser.error('owner must be32hex')
+ if args.resource_registry and (not args.resource_registry.is_absolute() or args.resource_registry.is_symlink()):parser.error('private absolute registry required')
+ if not re.fullmatch('[a-f0-9]{40}',args.source_commit):parser.error('full immutable source required')
+ return args
+
+def full_suite_fields(args,commit):
+ return dict(full_suite_status='not_executed' if args.required_only else 'pending',
+             full_suite_source_commit='' if args.required_only else commit,full_suite_passed=False)
+
+def git_environment():
+ return {'PATH':'/usr/bin:/bin','TZ':'UTC','LANG':'en_US.UTF-8','GIT_NO_REPLACE_OBJECTS':'1',
+         'GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':os.devnull}
+
 def main():
- parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--source-commit',required=True);parser.add_argument('--output-dir',required=True,type=Path);parser.add_argument('--reuse-full-suite',type=Path)
- args=parser.parse_args();repo=Path(checked(['git','rev-parse','--show-toplevel']))
- if not re.fullmatch('[0-9a-f]{40}',args.source_commit):parser.error('source must be an immutable full commit SHA')
- commit=checked(['git','rev-parse','--verify',args.source_commit+'^{commit}'],repo)
- out=args.output_dir.resolve();out.mkdir(parents=True,exist_ok=False);source=out/'source';source.mkdir();bins=out/'bin';bins.mkdir();archive=out/'source.tar'
- with archive.open('wb') as f:subprocess.run(['git','archive','--format=tar',commit],cwd=repo,stdout=f,check=True)
+ args=parse_arguments();git_env=git_environment()
+ repo=Path(checked(['/usr/bin/git','rev-parse','--show-toplevel'],cwd=args.repository_root,env=git_env)).resolve()
+ if args.repository_root and repo!=args.repository_root.resolve():raise ValueError('import_repository_root_mismatch')
+ if args.required_only:
+  from integration.services import docker_environment
+  for key in ['DOCKER_CONTEXT','DOCKER_TLS_VERIFY','DOCKER_CERT_PATH']:os.environ.pop(key,None)
+  os.environ['DOCKER_HOST']=docker_environment()['DOCKER_HOST']
+ if not re.fullmatch('[0-9a-f]{40}',args.source_commit):raise ValueError('source must be an immutable full commit SHA')
+ commit=checked(['/usr/bin/git','rev-parse','--verify',args.source_commit+'^{commit}'],repo,env=git_env)
+ out=args.output_dir.resolve();out.mkdir(mode=0o700,parents=True,exist_ok=False);source=out/'source';source.mkdir();bins=out/'bin';bins.mkdir();archive=out/'source.tar'
+ with archive.open('wb') as f:subprocess.run(['/usr/bin/git','archive','--format=tar',commit],cwd=repo,env=git_env,stdout=f,check=True)
  with tarfile.open(archive) as tar:
   for m in tar.getmembers():
    if not(m.isfile() or m.isdir()) or Path(m.name).is_absolute() or '..' in Path(m.name).parts:raise RuntimeError('unsafe source archive')
   tar.extractall(source)
- owner=uuid.uuid4().hex;events=[];containers=[];secrets=[];private=Path(tempfile.mkdtemp(prefix='im-append-private-'));private.chmod(0o700)
- result=dict(source_commit=commit,source_archive_sha256=sha(archive),customer_acceptance='not_executed',owner=owner,events=events,full_suite_source_commit=commit,cleanup=dict(removed=False))
+ if args.required_only and sha(Path(__file__))!=sha(source/'scripts/test-import-apply.py'):raise ValueError('import_entry_not_fixed_source')
+ registry=None
+ if args.resource_registry:
+  from integration.registry import Registry
+  from integration.model import ResourceRef
+  if not args.resource_registry.is_file():raise ValueError('parent_registry_missing')
+  registry=Registry(args.resource_registry,args.resource_owner,commit)
+  if not any(r['event']=='reserve' and r['owner']==args.resource_owner for r in registry.records()):raise ValueError('unreserved_import_owner')
+  if not out.is_relative_to(registry.root/args.resource_owner):raise ValueError('import_output_not_owned')
+ owner=args.resource_owner or uuid.uuid4().hex;events=[];containers=[];secrets=[]
+ private=out/'private' if registry else Path(tempfile.mkdtemp(prefix='im-append-private-'))
+ private.mkdir(mode=0o700,exist_ok=True);private.chmod(0o700)
+ result=dict(source_commit=commit,source_archive_sha256=sha(archive),customer_acceptance='not_executed',owner=owner,events=events,cleanup=dict(removed=False),**full_suite_fields(args,commit))
  def gate(name,commands,env=None,parse='json',cwd=source):
   if commands and isinstance(commands[0],str):commands=[commands]
-  log=out/(name+'.log');start=time.monotonic();code=0
-  with log.open('wb') as f:
+  log=out/(name+'.log');stderr=out/(name+'.stderr.log');start=time.monotonic();code=0
+  with log.open('xb') as f,stderr.open('xb') as err:
+   log.chmod(0o600);stderr.chmod(0o600)
    for command in commands:
-    try:r=subprocess.run(command,cwd=cwd,env=env,stdout=f,stderr=subprocess.STDOUT,timeout=1500);code=r.returncode
+    try:r=subprocess.run(command,cwd=cwd,env=env,stdout=f,stderr=err,timeout=1500);code=r.returncode
     except subprocess.TimeoutExpired:code=124
+    if parse=='verbose':
+     work=command[command.index('-w')+1] if '-w' in command else ''
+     if not work.startswith('/source/'):raise ValueError('unproven_verbose_package')
+     package='github.com/leileipei/Enterprise_IM/'+work[len('/source/'):]
+     f.write((('ok' if code==0 else 'FAIL')+' '+package+'\n').encode());f.flush()
     if code:break
+  for diagnostic in [stderr]:
+   value=diagnostic.read_text(errors='replace')
+   for secret in sorted(secrets,key=len,reverse=True):value=value.replace(secret,'<private fixture value>')
+   diagnostic.write_text(value)
   text=log.read_text(errors='replace')
   for secret in sorted(secrets,key=len,reverse=True):text=text.replace(secret,'<private fixture value>')
   log.write_text(text);counts=dict(top_pass=0,sub_pass=0,fail=0,skip=0);passed=[];failed=[];skipped=[];outcomes=[]
@@ -87,11 +135,15 @@ def main():
   for action,test,package in outcomes:
    if action=='pass':counts['sub_pass' if '/' in test else 'top_pass']+=1;passed.append(test)
    else:counts[action]+=1;(failed if action=='fail' else skipped).append(package+'::'+test)
-  event=dict(name=name,exit_code=code,counts=counts,executed_tests=passed,failed_tests=failed,skipped_tests=skipped,seconds=round(time.monotonic()-start,3),log_sha256=sha(log),log=log.name,commands=commands);events.append(event)
+  event=dict(name=name,exit_code=code,counts=counts,executed_tests=passed,failed_tests=failed,skipped_tests=skipped,seconds=round(time.monotonic()-start,3),log_sha256=sha(log),log=log.name,stderr=stderr.name,stderr_sha256=sha(stderr),parse=parse,commands=commands);events.append(event)
   print(name,code,counts,flush=True)
   if name!='full_suite' and(code or name in REQUIRED_GATES and(counts['fail'] or counts['skip'] or not counts['top_pass'] or not set(REQUIRED_TESTS[name]).issubset(passed))):raise RuntimeError('gate failed: '+name)
  def start_container(name,extra):
-  cid=checked(['docker','run','-d','--rm','--name',name,'--label','im.append.owner='+owner,'--tmpfs','/var/lib/postgresql/data:rw']+extra+[image['Id']]);containers.append(cid)
+  labels=['--label','im.append.owner='+owner]
+  if registry:labels+=['--label','im.integration.owner='+owner,'--label','im.integration.source='+commit]
+  cid=checked(['docker','create','--rm','--name',name,*labels,'--tmpfs','/var/lib/postgresql/data:rw']+extra+[image['Id']]);containers.append(cid)
+  if registry:registry.add(ResourceRef('container',owner,cid,{'container_id':cid}))
+  checked(['docker','start',cid])
   for _ in range(100):
    cp=subprocess.run(['docker','exec',cid,'pg_isready','-h','127.0.0.1','-U','postgres','-d','im_append'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
    if cp.returncode==0:return cid
@@ -100,10 +152,12 @@ def main():
  def psql(cid,sql):return checked(['docker','exec','-i',cid,'psql','-v','ON_ERROR_STOP=1','-U','postgres','-d','im_append','-At'],input=sql.encode())
  inventory="select 'schema:'||nspname from pg_namespace union all select 'role:'||rolname from pg_roles order by 1;"
  try:
-  env={k:v for k,v in os.environ.items() if not k.startswith('IM_')};env.update(GOFLAGS='-mod=readonly',GOWORK='off')
-  node=Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin'
-  if (node/'node').is_file():env['PATH']=str(node)+os.pathsep+env.get('PATH','')
-  result['go_version']=checked(['go','version'],env=env);image=json.loads(checked(['docker','image','inspect','postgres:16-alpine']))[0];result['image_id']=image['Id']
+  env={k:v for k,v in os.environ.items() if not k.startswith('IM_')};env.update(GOFLAGS='-mod=readonly -buildvcs=false',GOWORK='off')
+  if registry:env.update(IM_TEST_INTEGRATION_REGISTRY=str(registry.path),IM_TEST_INTEGRATION_OWNER=owner,IM_TEST_INTEGRATION_SOURCE_SHA=commit,IM_TEST_INTEGRATION_GATE='import_append')
+  if not args.required_only:
+   node=Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin'
+   if (node/'node').is_file():env['PATH']=str(node)+os.pathsep+env.get('PATH','')
+  result['go_version']=checked(['go','version'],env=env);image=json.loads(checked(['docker','image','inspect','postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777']))[0];result['image_id']=image['Id']
   if image['Architecture']!='arm64':raise RuntimeError('requires cached arm64 PG16 image')
   gate('gate_tests',['python3','scripts/test_import_apply_gates.py'],env,parse='none')
   gate('build_all',['go','build','./...'],env,parse='none');gate('vet_all',['go','vet','./...'],env,parse='none')
@@ -147,7 +201,7 @@ def main():
   for prefix in ['ca','wrong-ca']:
    checked(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','2','-subj','/CN=IM append fixture '+prefix,'-keyout',str(tls/(prefix+'.key')),'-out',str(tls/(prefix+'.crt'))])
   checked(['openssl','req','-newkey','rsa:2048','-nodes','-subj','/CN=127.0.0.1','-keyout',str(tls/'server.key'),'-out',str(tls/'server.csr')]);(tls/'server.ext').write_text('subjectAltName=IP:127.0.0.1\nextendedKeyUsage=serverAuth\n')
-  checked(['openssl','x509','-req','-in',str(tls/'server.csr'),'-CA',str(tls/'ca.crt'),'-CAkey',str(tls/'ca.key'),'-CAcreateserial','-days','2','-extfile',str(tls/'server.ext'),'-out',str(tls/'server.crt')])
+  checked(['openssl','x509','-req','-in',str(tls/'server.csr'),'-CA',str(tls/'ca.crt'),'-CAkey',str(tls/'ca.key'),'-CAserial',str(tls/'ca.srl'),'-CAcreateserial','-days','2','-extfile',str(tls/'server.ext'),'-out',str(tls/'server.crt')])
   for path in tls.iterdir():path.chmod(0o600)
   readonly=start_container('im-append-readonly-'+owner[:12],['--network','none','-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_DB=im_append','--mount','type=bind,src='+str(source)+',dst=/source,readonly','--mount','type=bind,src='+str(bins)+',dst=/bins,readonly','--mount','type=bind,src='+str(tls)+',dst=/tls,readonly'])
   before_readonly=psql(readonly,inventory)
@@ -165,13 +219,15 @@ def main():
   if psql(readonly,inventory)!=before_readonly:raise RuntimeError('readonly fixture schema or role residue')
   events.append(dict(name='fixture_cleanup',exit_code=0,schema_role_residue=0))
   for locked in ['go.mod','go.sum']:
-   previous=subprocess.check_output(['git','show',BASE+':'+locked],cwd=repo)
+   previous=subprocess.check_output(['/usr/bin/git','show',BASE+':'+locked],cwd=repo,env=git_env)
    if sha(source/locked)!=hashlib.sha256(previous).hexdigest():raise RuntimeError('dependency lock changed')
-  migrations=checked(['git','diff','--name-only',BASE,commit,'--','db/migrations'],repo).splitlines()
+  migrations=checked(['/usr/bin/git','diff','--name-only',BASE,commit,'--','db/migrations'],repo,env=git_env).splitlines()
   if set(migrations)!={'db/migrations/000022_import_batches.up.sql','db/migrations/000022_import_batches.down.sql'}:raise RuntimeError('unexpected production migration changes')
   events.append(dict(name='provenance',exit_code=0,migration_changes=migrations,locks_unchanged=True))
   result['bin_sha256']={p.name:sha(p) for p in bins.iterdir()}
-  if args.reuse_full_suite:
+  if args.required_only:
+   pass
+  elif args.reuse_full_suite:
    prior=json.loads(args.reuse_full_suite.read_text());full=next(e for e in prior['events'] if e['name']=='full_suite');full=dict(full);old_log=args.reuse_full_suite.parent/full['log'];shutil.copyfile(old_log,out/'full_suite.log');full['log']='full_suite.log';full['log_sha256']=sha(out/'full_suite.log');events.append(full);result['full_suite_source_commit']=prior['full_suite_source_commit'];result['full_suite_reused']=True
   else:host('full_suite',['./...'])
  except Exception as e:
@@ -180,6 +236,15 @@ def main():
  finally:
   removed=True
   for cid in containers:
+   if registry:
+    try:
+     actual=registry._owned_container(cid,owner)
+     if actual and actual.get('State',{}).get('Status')!='removing':registry.docker(['rm','-f',cid])
+     end=time.monotonic()+15
+     while registry._owned_container(cid,owner) is not None and time.monotonic()<end:time.sleep(.1)
+     if registry._owned_container(cid,owner) is not None:removed=False
+    except (ValueError,OSError,subprocess.SubprocessError):removed=False
+    continue
    cp=subprocess.run(['docker','inspect',cid],capture_output=True,text=True,timeout=10)
    if cp.returncode==0:
     meta=json.loads(cp.stdout)[0]
@@ -190,6 +255,10 @@ def main():
      time.sleep(.1)
     else:removed=False
   shutil.rmtree(private);result['cleanup']['removed']=removed;events.append(dict(name='cleanup',removed=removed));result.update(validate_required_gates(events))
+  if args.required_only:
+   result.update(full_suite_fields(args,commit))
+  else:
+   result['full_suite_status']='passed' if result['full_suite_passed'] else 'failed'
   if result['full_suite_source_commit']!=commit:result['full_suite_passed']=False
   if 'failure' in result:result['required_gates_passed']=False
   (out/'verification.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n');print('required_gates_passed',result['required_gates_passed'],'full_suite_passed',result['full_suite_passed'],'cleanup',removed,flush=True)

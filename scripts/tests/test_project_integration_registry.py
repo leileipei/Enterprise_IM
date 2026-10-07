@@ -88,6 +88,16 @@ class RegistryTests(unittest.TestCase):
         self.assertTrue(any(row['event']=='exited' for row in records))
         self.assertEqual(self.registry.path.stat().st_mode & 0o777,0o600)
 
+    def test_json_command_keeps_diagnostics_in_separate_private_file(self):
+        log=self.root/'separate.json'
+        event=self.run('json','test',COMMIT,[sys.executable,'-c',
+            'import sys,time; print("{\\"Action\\":\\"pass\\"}",flush=True); print("diagnostic",file=sys.stderr,flush=True); time.sleep(0.1)'],
+            self.root/OWNER,{'PATH':'/usr/bin:/bin'},log,time.monotonic()+3,self.registry)
+        self.assertEqual(event.exit_code,0)
+        self.assertNotIn('diagnostic',log.read_text())
+        diagnostic=Path(str(log)+'.stderr');self.assertIn('diagnostic',diagnostic.read_text())
+        self.assertEqual(diagnostic.stat().st_mode & 0o777,0o600)
+
     def test_non_ascii_workdir_identity_is_exact(self):
         directory=self.root/'企业IM';directory.mkdir(mode=0o700)
         proc=self.sleep(directory)

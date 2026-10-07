@@ -31,8 +31,16 @@ PYJSON
   GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 go test -c -o "$output/structure.test" ./internal/filescanner
   GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 go test -c -o "$output/transfer.test" ./internal/filetransfer
   image='alpine@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40'
-  docker run --rm --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" -e IM_TEST_STRUCTURE_SAMPLES=/fixtures/structure-samples "$image" /fixtures/structure.test -test.run '^TestScannerRealResourceBoundary$' -test.v > "$output/resource.log"
-  docker run --rm --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -e IM_TEST_SPOOL_FULL_DIR=/limited -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.run '^TestFile(TransferRealDiskFull|Spool)' -test.v > "$output/disk-full.log"
+  if [ -n "${IM_TEST_INTEGRATION_REGISTRY:-}" ]; then
+    for key in IM_TEST_INTEGRATION_OWNER IM_TEST_INTEGRATION_SOURCE_SHA; do require "$key"; done
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/resource-list.log.proof.json" -- --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/structure.test -test.list '^TestScannerRealResourceBoundary$' > "$output/resource-list.log"
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/resource.log.proof.json" -- --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" -e IM_TEST_STRUCTURE_SAMPLES=/fixtures/structure-samples "$image" /fixtures/structure.test -test.run '^TestScannerRealResourceBoundary$' -test.v > "$output/resource.log"
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/disk-full-list.log.proof.json" -- --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.list '^TestFile(TransferRealDiskFull|Spool)' > "$output/disk-full-list.log"
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/disk-full.log.proof.json" -- --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -e IM_TEST_SPOOL_FULL_DIR=/limited -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.run '^TestFile(TransferRealDiskFull|Spool)' -test.v > "$output/disk-full.log"
+  else
+    docker run --rm --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" -e IM_TEST_STRUCTURE_SAMPLES=/fixtures/structure-samples "$image" /fixtures/structure.test -test.run '^TestScannerRealResourceBoundary$' -test.v > "$output/resource.log"
+    docker run --rm --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -e IM_TEST_SPOOL_FULL_DIR=/limited -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.run '^TestFile(TransferRealDiskFull|Spool)' -test.v > "$output/disk-full.log"
+  fi
   if rg --quiet -- '--- SKIP:|--- FAIL:' "$output/resource.log" "$output/disk-full.log"; then printf 'Resource gate incomplete\n' >&2; exit 1; fi
   cat "$output/resource.log" "$output/disk-full.log" ;;
  *) printf 'Usage: %s run-s3|run-scan|run-all\n' "$0" >&2; exit 2 ;;

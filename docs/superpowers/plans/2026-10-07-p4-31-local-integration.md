@@ -142,11 +142,11 @@ assert verdict_for_pending_auto_remove != 'removed'
 
 **Interfaces:** `prepare_scanner(bundle:FixtureBundle,tools:Toolchain,registry:Registry,private:Path,deadline:float)->FixtureBundle`；`probe_scanner(bundle:FixtureBundle,tools:Toolchain,deadline:float)->GateEvent`；`probe_browser(bundle:FixtureBundle,tools:Toolchain,registry:Registry,private:Path,deadline:float)->GateEvent`。工具paths补齐sigtool/freshclam；manifest字段严格沿runtime_binding.go（kind=local-process、pid及三个CVD的hash），不添加产品未识别字段。
 
-- [ ] **Step 1：写测试。** `test_stale_future_definition_refused`、`test_manifest_pid_command_socket_hash_and_modes`、`test_definition_changes_after_start_refused`、`test_browser_closes_private_profile_without_host_home`；用合成签名信息测拒绝路径，真实签名/扫描由Step4证明。
-- [ ] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_scanner.py' -v`。Expected：接口或拒绝断言失败。
-- [ ] **Step 3：实现准备。** 复制真实main/daily/bytecode.cvd到私密目录；sigtool验证签名/构建信息，需更新时freshclam只针对本轮目录。正/负向clamd各自配置0400、私有socket600、真实native argv=`<binary> --config-file=<config>`，先定义后启动再记录manifest；负向MaxFileSize26214400，其余正向合同不放宽。Node probe require锁定已安装Playwright、启动实际Chrome私密profile并关闭；保持Go父环境无HOME，确需配置只作用于受监管浏览器子进程。准备/运行每阶段重新校验定义仍在24小时内，失效中止保存失败，不更新mtime伪造有效性。
-- [ ] **Step 4：验证GREEN与真实运行。** unittest全PASS；在本轮bundle运行 `go test ./internal/filescanner -run '^TestScannerReal(CleanEICARProtocol|NoIncompleteReady|Attestation|TrustedRuntime|NearStreamLimit)$' -count=1 -v`，0FAIL/0SKIP；Node probe输出launch/close和版本检查结果，registry确认本任务创建的扫描/浏览器实例退出。Linux资源由Task6/8独立证明。
-- [ ] **Step 5：提交。** `feat: prepare bound scanner and isolated browser runtimes`。
+- [x] **Step 1：写测试。** `test_stale_future_definition_refused`、`test_manifest_pid_command_socket_hash_and_modes`、`test_definition_changes_after_start_refused`、`test_browser_closes_private_profile_without_host_home`；用合成签名信息测拒绝路径，真实签名/扫描由Step4证明。
+- [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_scanner.py' -v`。Expected：接口或拒绝断言失败。
+- [x] **Step 3：实现准备。** 复制真实main/daily/bytecode.cvd到私密目录；sigtool验证签名/构建信息，需更新时freshclam只针对本轮目录。正/负向clamd各自配置0400、私有socket600、真实native argv=`<binary> --config-file=<config>`，先定义后启动再记录manifest；负向MaxFileSize26214400，其余正向合同不放宽。Node probe require锁定已安装Playwright、启动实际Chrome私密profile并关闭；保持Go父环境无HOME，确需配置只作用于受监管浏览器子进程。准备/运行每阶段重新校验定义仍在24小时内，失效中止保存失败，不更新mtime伪造有效性。
+- [x] **Step 4：验证GREEN与真实运行。** unittest全PASS；在本轮bundle运行 `go test ./internal/filescanner -run '^TestScannerReal(CleanEICARProtocol|NoIncompleteReady|Attestation|TrustedRuntime|NearStreamLimit)$' -count=1 -v`，0FAIL/0SKIP；Node probe输出launch/close和版本检查结果，registry确认本任务创建的扫描/浏览器实例退出。Linux资源由Task6/8独立证明。
+- [x] **Step 5：提交。** `feat: prepare bound scanner and isolated browser runtimes`。
 
 ### Task 6：既有门禁适配和子脚本契约
 
@@ -154,7 +154,7 @@ assert verdict_for_pending_auto_remove != 'removed'
 
 **Interfaces:** `gate_specs(snapshot:SourceSnapshot,inventory:Inventory)->List[dict]`（dict固定键name/kind/argv/cwd/env_group/required）；`run_stage(spec:dict,snapshot:SourceSnapshot,tools:Toolchain,bundle:FixtureBundle,registry:Registry,deadline:float)->GateEvent`；`validate_import_child(report:Path,source_commit:str)->GateEvent`。import子脚本新增 `--required-only`、`--resource-registry <私密路径>`、`--resource-owner <预留32hex>`，相互校验；旧默认仍执行旧完整套件。
 
-- [ ] **Step 1：写测试。** `test_archive_script_with_readonly_git_root`、`test_import_required_only_is_not_full_pass`、`test_child_source_and_hash_mismatch`、`test_all_existing_required_names_preserved`、`test_linux_resource_names_not_zero_match`。现有ApplyGateTests再验证缺新参数时原默认/独立全套判定不变。
+- [x] **Step 1：写测试。** `test_archive_script_with_readonly_git_root`、`test_import_required_only_is_not_full_pass`、`test_child_source_and_hash_mismatch`、`test_all_existing_required_names_preserved`、`test_linux_resource_names_not_zero_match`。现有ApplyGateTests再验证缺新参数时原默认/独立全套判定不变。
 
 ```python
 assert child['full_suite_status'] == 'not_executed'
@@ -162,10 +162,10 @@ assert child['full_suite_passed'] is False
 assert child['source_commit'] == snapshot.commit
 ```
 
-- [ ] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_gates.py' -v`和 `python3 scripts/test_import_apply_gates.py`的新子模式反例。Expected：新接口/模式尚不存在，相关断言失败；原测试通过不冒称RED。
-- [ ] **Step 3：接入门禁。** import脚本必须从snapshot.root调用其归档文件，cwd仅为snapshot.repository_root供git archive读取，内部测试仍自身固定归档；父预留owner被所有新容器登记，finally仍独立清理。required-only不运行/reuse完整套件，完整来源字段为空/not_executed，不能伪造full结果。父验证十四名和所有必要名、源码、归档/日志/二进制hash、子cleanup。文件脚本run-all接口不变，可从明确IM_TEST_INTEGRATION_REGISTRY/OWNER变量登记资源；Linux容器加标签/cid登记，原512MiB/1CPU/1MiB tmpfs不变。
-- [ ] **Step 4：验证GREEN/完整清单。** 两Python命令全PASS；核对file_messages8、download16、web11、RP01–14及slow_client_SIGTERM的现有集合完全保留。file_components按其现有包+regex的编译inventory要求每个选中顶层名；file_resources须具名TestScannerRealResourceBoundary、TestFileTransferRealDiskFull及其既有子例、0SKIP。message_realtime包含完整access/oidcauth包、P4-30完整ACK regex和规格四个实际调用方，不缩减选取绿色测试。
-- [ ] **Step 5：提交。** `feat: compose strict existing gates with owned child resources`。
+- [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_gates.py' -v`和 `python3 scripts/test_import_apply_gates.py`的新子模式反例。Expected：新接口/模式尚不存在，相关断言失败；原测试通过不冒称RED。
+- [x] **Step 3：接入门禁。** import脚本必须从snapshot.root调用其归档文件，cwd仅为snapshot.repository_root供git archive读取，内部测试仍自身固定归档；父预留owner被所有新容器登记，finally仍独立清理。required-only不运行/reuse完整套件，完整来源字段为空/not_executed，不能伪造full结果。父验证十四名和所有必要名、源码、归档/日志/二进制hash、子cleanup。文件脚本run-all接口不变，可从明确IM_TEST_INTEGRATION_REGISTRY/OWNER变量登记资源；Linux容器加标签/cid登记，原512MiB/1CPU/1MiB tmpfs不变。
+- [x] **Step 4：验证GREEN/完整清单。** 两Python命令全PASS；核对file_messages8、download16、web11、RP01–14及slow_client_SIGTERM的现有集合完全保留。file_components按其现有包+regex的编译inventory要求每个选中顶层名；file_resources须具名TestScannerRealResourceBoundary、TestFileTransferRealDiskFull及其既有子例、0SKIP。message_realtime包含完整access/oidcauth包、P4-30完整ACK regex和规格四个实际调用方，不缩减选取绿色测试。
+- [x] **Step 5：提交。** `feat: compose strict existing gates with owned child resources`。
 
 ### Task 7：统一生命周期、完整套件与分享证据
 
