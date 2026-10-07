@@ -30,6 +30,8 @@ type VerifiedIdentity struct {
 	TenantID  string
 	UserID    string
 	ExpiresAt time.Time
+	Issuer    string `json:"-"`
+	Subject   string `json:"-"`
 }
 
 type Authenticator interface {

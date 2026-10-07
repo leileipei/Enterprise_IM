@@ -115,7 +115,7 @@ for _, counts := range receipt.Counts {
 - `access.AuthorizeImport(ctx context.Context,tx pgx.Tx,schema string,p ImportPrincipal,at time.Time)error`：传入事务，按规格锁顺序、固定 schema 验证所有依据，不自行提交。
 - `access.AuditImportTerminal(ctx context.Context,tx pgx.Tx,schema string,p ImportPrincipal,requestID,state,reason string,at time.Time)error`：仅固定两种 outcome 与协议原因，复用 audit 规则但禁止 deny 自行提交。
 
-- [ ] **Step 1：写 RED。** `TestAppendOIDCVerifiedSource` 来源只来自已验签 claims，未知 subject/过期不能映射；`TestAppendPGAuthorization` group_admin 允许，org_admin/冻结/无效 tenant/会员/法人/组织/映射拒绝；`TestAppendPGAuthorizationExpiry` 实际时间越过区间末端、缺来源/ExpiresAt 失败；`TestAppendPGAuthNoCommit` 授权/审计辅助调用不能结束外层事务。
+- [x] **Step 1：写 RED。** `TestAppendOIDCVerifiedSource` 来源只来自已验签 claims，未知 subject/过期不能映射；`TestAppendPGAuthorization` group_admin 允许，org_admin/冻结/无效 tenant/会员/法人/组织/映射拒绝；`TestAppendPGAuthorizationExpiry` 实际时间越过区间末端、缺来源/ExpiresAt 失败；`TestAppendPGAuthNoCommit` 授权/审计辅助调用不能结束外层事务。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -125,10 +125,10 @@ if _, err := tx.Exec(ctx, "SELECT 1"); err != nil { t.Fatal("authorization ended
 if err := tx.Rollback(ctx); err != nil { t.Fatal(err) }
 ```
 
-- [ ] **Step 2：观察失败。** `go test ./internal/oidcauth ./internal/access -run '^TestAppend' -count=1`；PG 与 OIDC 整合所需环境显式提供，记录真实失败。
-- [ ] **Step 3：最小实现。** 共享现有 resolve 检查条件，不增加全局用户可提交的身份字段；锁先 membership 后 tenant，再其余依据。提交前复核使用新 actual UTC 时间，不复用首次 at。
-- [ ] **Step 4：验证 GREEN。** 重跑新用例，加完整 `go test ./internal/oidcauth ./internal/access -count=1` 专属夹具回归；已有令牌/普通目录/ACK 测试不可因新来源要求被整体改变。
-- [ ] **Step 5：提交。** `feat: authorize imports with verified identity and locked grants`。
+- [x] **Step 2：观察失败。** `go test ./internal/oidcauth ./internal/access -run '^TestAppend' -count=1`；PG 与 OIDC 整合所需环境显式提供，记录真实失败。
+- [x] **Step 3：最小实现。** 共享现有 resolve 检查条件，不增加全局用户可提交的身份字段；锁先 membership 后 tenant，再其余依据。提交前复核使用新 actual UTC 时间，不复用首次 at。
+- [x] **Step 4：验证 GREEN。** 重跑新用例，加完整 `go test ./internal/oidcauth ./internal/access -count=1` 专属夹具回归；已有令牌/普通目录/ACK 测试不可因新来源要求被整体改变。
+- [x] **Step 5：提交。** `feat: authorize imports with verified identity and locked grants`。
 
 ### Task 4：写事务投影、权限检查与预算
 
