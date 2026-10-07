@@ -68,7 +68,7 @@
 - `ValidateModel(ctx context.Context, doc Document, collector *Collector) error`：调用现有 BuildIndex／CheckReferences／CheckGraphs／CheckIntervals，不重复模型规则。
 - `NewObservingCollector(observe func(Issue)) *Collector`：每个去重后的 issue 首次 Add 时观察，包含超过明细 200 的 issue；旧 NewCollector 行为不变。
 
-- [ ] **Step 1：写 RED。**`TestReuseDocumentParity` 比较原样本的 Report 字节、SHA 和 74 行结果；`TestReuseObserverBeyond200` 制造 201 个不同诊断，观察器收到 201、报告明细 200、总数 201；`TestReuseSingleRecord` 对默认值／NULL／微秒／4097 字节检查；`TestReuseSchemaCopy` 修改返回副本不影响下一次 Schema。现有最大输入与原报告回归继续保留。
+- [x] **Step 1：写 RED。**`TestReuseDocumentParity` 比较原样本的 Report 字节、SHA 和 74 行结果；`TestReuseObserverBeyond200` 制造 201 个不同诊断，观察器收到 201、报告明细 200、总数 201；`TestReuseSingleRecord` 对默认值／NULL／微秒／4097 字节检查；`TestReuseSchemaCopy` 修改返回副本不影响下一次 Schema。现有最大输入与原报告回归继续保留。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -77,10 +77,10 @@ r, doc := EvaluateDocument(ctx, sampleRaw)
 if doc == nil || r.Status != "valid" || !bytes.Equal(mustEncode(r), baselineReportBytes) { t.Fatal("offline parity") }
 ```
 
-- [ ] **Step 2：观察失败。**运行 `go test ./internal/importpreflight -run '^TestReuse' -count=1`，确认缺失新接口导致失败；补齐最小测试桩后必须看到行为 RED，不能只凭编译错误计逻辑覆盖。
-- [ ] **Step 3：最小实现。**共享原来的规范化与模型步骤，旧错误排序／去重／预算不变；观察器在保留完整去重状态之后、200 明细限制之前执行，不能从 sorted() 的截断结果重建冲突计数。
-- [ ] **Step 4：验证 GREEN。**新增用例通过；原离线单元测试通过，DB oracle 另在任务 8 实际执行。`go list -deps ./internal/importpreflight` 不出现 pgx／Redis／对象存储客户端。
-- [ ] **Step 5：提交。**仅提交本任务实现和测试，消息 `refactor: expose reusable offline validation results`。
+- [x] **Step 2：观察失败。**运行 `go test ./internal/importpreflight -run '^TestReuse' -count=1`，确认缺失新接口导致失败；补齐最小测试桩后必须看到行为 RED，不能只凭编译错误计逻辑覆盖。
+- [x] **Step 3：最小实现。**共享原来的规范化与模型步骤，旧错误排序／去重／预算不变；观察器在保留完整去重状态之后、200 明细限制之前执行，不能从 sorted() 的截断结果重建冲突计数。
+- [x] **Step 4：验证 GREEN。**新增用例通过；原离线单元测试通过，DB oracle 另在任务 8 实际执行。`go list -deps ./internal/importpreflight` 不出现 pgx／Redis／对象存储客户端。
+- [x] **Step 5：提交。**仅提交本任务实现和测试，消息 `refactor: expose reusable offline validation results`。
 
 ### Task 2：提取共享安全读取并保持旧 CLI
 
@@ -88,7 +88,7 @@ if doc == nil || r.Status != "valid" || !bytes.Equal(mustEncode(r), baselineRepo
 
 **Interfaces:** `type Reader func(context.Context,string) ([]byte,*importpreflight.Issue,error)`；`importinput.Read(context.Context,string) ([]byte,*importpreflight.Issue,error)`；为旧测试保留 `OpenRegular(string) (*os.File,error)`、`VerifyOpened(os.FileInfo,*os.File) error` 的共享实现。旧 CLI 的 readInput／openRegular／verifyOpened 变为薄适配，inputReader 签名不变。
 
-- [ ] **Step 1：写 RED。**`TestSharedRead` 验证普通文件字节、10 MiB／超一字节、FIFO／链接／路径替换、同 deadline 取消、错误无路径标记；复用旧 CLI 既有文件和进程测试，新增两调用方读取同样文件得到同样结果。
+- [x] **Step 1：写 RED。**`TestSharedRead` 验证普通文件字节、10 MiB／超一字节、FIFO／链接／路径替换、同 deadline 取消、错误无路径标记；复用旧 CLI 既有文件和进程测试，新增两调用方读取同样文件得到同样结果。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -97,10 +97,10 @@ raw, issue, err := Read(ctx, regularFile)
 if err != nil || issue != nil || !bytes.Equal(raw, wantBytes) { t.Fatal("same protected read") }
 ```
 
-- [ ] **Step 2：观察失败。**`go test ./internal/importinput -run '^TestSharedRead' -count=1`，保留实际文件行为 RED。
-- [ ] **Step 3：最小实现。**移动已有 openat／NOFOLLOW／fstat／有界读逻辑，拒绝不支持的平台，不降低保证；不增加数据库配置或第二次打开计算哈希。
-- [ ] **Step 4：验证 GREEN。**`go test ./internal/importinput ./cmd/im-import-preflight -count=1` 通过；实际 SIGTERM／关闭 stdout 继续用现有进程用例；`GOOS=windows GOARCH=amd64 go build ./cmd/im-import-preflight` 可构建且读取路径固定拒绝。
-- [ ] **Step 5：提交。**消息 `refactor: share protected import file reader`，不提交生成二进制。
+- [x] **Step 2：观察失败。**`go test ./internal/importinput -run '^TestSharedRead' -count=1`，保留实际文件行为 RED。
+- [x] **Step 3：最小实现。**移动已有 openat／NOFOLLOW／fstat／有界读逻辑，拒绝不支持的平台，不降低保证；不增加数据库配置或第二次打开计算哈希。
+- [x] **Step 4：验证 GREEN。**`go test ./internal/importinput ./cmd/im-import-preflight -count=1` 通过；实际 SIGTERM／关闭 stdout 继续用现有进程用例；`GOOS=windows GOARCH=amd64 go build ./cmd/im-import-preflight` 可构建且读取路径固定拒绝。
+- [x] **Step 5：提交。**消息 `refactor: share protected import file reader`，不提交生成二进制。
 
 ### Task 3：新报告和运行状态契约
 
@@ -115,7 +115,7 @@ if err != nil || issue != nil || !bytes.Equal(raw, wantBytes) { t.Fatal("same pr
 - `Collector` 新报告诊断收集器：`NewCollector() *Collector`、`Add(Issue)`、`Issues() []Issue`、`Total() int`；排序 file 在前，再按原固定元组，保留前 200。
 - `BuildReport(file importpreflight.Report, status importpreflight.Status, complete bool, classes Classifications, collector *Collector) Report`，显式 status 不由 complete 推断；complete=false 时强制全部分类 null／checks_complete=false／database_checked=false；`Incomplete(file importpreflight.Report, stage Stage, code importpreflight.Code) Report` 追加固定阶段运行诊断并调用 BuildReport(status=incomplete, complete=false)；`Report.ExitCode() int`、`EncodeReport(Report) ([]byte,error)`。
 
-- [ ] **Step 1：写 RED。**`TestCompareUnitReportContract` 断言 false 四标志、固定 profile／scope、0／1／2 退出语义；`TestCompareUnitIncompleteCounts` 传入已有非零临时分类而 complete=false，仍全部 null；`TestCompareUnitReportPrivacy` 任意动态值不能进入固定 enum；`TestCompareUnitReportTruncation` 总数 201、明细 200、稳定字节；未开始文件时用 file_status=incomplete、未知 Counts／SHA=null。
+- [x] **Step 1：写 RED。**`TestCompareUnitReportContract` 断言 false 四标志、固定 profile／scope、0／1／2 退出语义；`TestCompareUnitIncompleteCounts` 传入已有非零临时分类而 complete=false，仍全部 null；`TestCompareUnitReportPrivacy` 任意动态值不能进入固定 enum；`TestCompareUnitReportTruncation` 总数 201、明细 200、稳定字节；未开始文件时用 file_status=incomplete、未知 Counts／SHA=null。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -124,10 +124,10 @@ r := BuildReport(fileReport, "invalid", false, nonzeroClasses, collector)
 if r.ExitCode() != 1 || r.DatabaseChecked || r.ClassificationCounts["total"].New != nil { t.Fatal("invalid is not partial success") }
 ```
 
-- [ ] **Step 2：观察失败。**`go test ./internal/importcompare -run '^TestCompareUnitReport|^TestCompareUnitIncomplete' -count=1`。
-- [ ] **Step 3：最小实现。**新增报告与旧 Report 分开；输入 invalid／租户不符／目标不存在采用 incomplete comparison 状态而整体 invalid，退出 1；运行 Failure 固定原因码采用整体 incomplete／2；读入及文件阶段 Failure 为 file，配置及之后为 database。所有字段、枚举、空值及排序来自规格。
-- [ ] **Step 4：验证 GREEN。**相同输入同条件报告字节一致；非法结构、超 256 KiB 和伪造枚举返回固定失败，不把 unknown enum 输出；类型／字段与后续任务接口核对。
-- [ ] **Step 5：提交。**消息 `feat: define database comparison report contract`。
+- [x] **Step 2：观察失败。**`go test ./internal/importcompare -run '^TestCompareUnitReport|^TestCompareUnitIncomplete' -count=1`。
+- [x] **Step 3：最小实现。**新增报告与旧 Report 分开；输入 invalid／租户不符／目标不存在采用 incomplete comparison 状态而整体 invalid，退出 1；运行 Failure 固定原因码采用整体 incomplete／2；读入及文件阶段 Failure 为 file，配置及之后为 database。所有字段、枚举、空值及排序来自规格。
+- [x] **Step 4：验证 GREEN。**相同输入同条件报告字节一致；非法结构、超 256 KiB 和伪造枚举返回固定失败，不把 unknown enum 输出；类型／字段与后续任务接口核对。
+- [x] **Step 5：提交。**消息 `feat: define database comparison report contract`。
 
 ### Task 4：追加兼容比较和输入来源映射
 
@@ -135,7 +135,7 @@ if r.ExitCode() != 1 || r.DatabaseChecked || r.ClassificationCounts["total"].New
 
 **Interfaces:** `Compare(ctx context.Context, input importpreflight.Document, snapshot Snapshot) (Classifications,*Collector,error)`；私有 `origin{InputRows []int; Stored bool}` 以 entity／组合 Ordinal 为索引，不用库存行号构造公共报告。
 
-- [ ] **Step 1：写 RED。**`TestCompareUnitClassify` 覆盖一致／新增／全部声明字段差异、默认值、NULL≠空字符串、时间偏移、UUID 大小写；`TestCompareUnitGlobalKeys` 只输出 GLOBAL_KEY_CONFLICT；`TestCompareUnitStoredUnique` 覆盖 code／工号／同用户同 issuer；`TestCompareUnitReverseInterval` 将库存与输入起点先后交换，均定位原输入；`TestCompareUnitMoreThan200Rows` 201 个冲突输入仍全部归 conflict；`TestCompareUnitStoredInvalid` 返回 DATABASE_DATA_INVALID，无库存行内容。
+- [x] **Step 1：写 RED。**`TestCompareUnitClassify` 覆盖一致／新增／全部声明字段差异、默认值、NULL≠空字符串、时间偏移、UUID 大小写；`TestCompareUnitGlobalKeys` 只输出 GLOBAL_KEY_CONFLICT；`TestCompareUnitStoredUnique` 覆盖 code／工号／同用户同 issuer；`TestCompareUnitReverseInterval` 将库存与输入起点先后交换，均定位原输入；`TestCompareUnitMoreThan200Rows` 201 个冲突输入仍全部归 conflict；`TestCompareUnitStoredInvalid` 返回 DATABASE_DATA_INVALID，无库存行内容。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -144,10 +144,10 @@ classes, issues, err := Compare(ctx, input201, snapshot201)
 if err != nil || *classes["total"].Conflict != 201 || len(issues.Issues()) != 200 { t.Fatal("truncation changed classification") }
 ```
 
-- [ ] **Step 2：观察失败。**运行上述 `TestCompareUnit` 组，确认 RED 针对比较与来源定位，而非仅接口不存在。
-- [ ] **Step 3：最小实现。**先独立验证库存模型；按固定主键和字段比较，相同记录去重但关联输入别名，差异及全局／业务键占用排除候选。构造库存＋其余候选并用完整观察器检查模型：若 issue 在库存侧而 related 在输入侧，投影到该输入；双方输入时保留原 related_row；各输入涉及冲突均更新行集合。不能只处理保留下来的 200 项；无法归因的库存问题返回固定 Failure。最后按原输入集合计三类，保证每表与 total 数量守恒。
-- [ ] **Step 4：验证 GREEN。**输入／库存排列变化不改变定位与分类；历史 ended／suspended、半开邻接、主任职、部门包含、组织／部门环逐项通过；共享 context 取消返回 error，不带部分分类；200 限制只作用于明细。
-- [ ] **Step 5：提交。**消息 `feat: compare additive tenant data against stored records`。
+- [x] **Step 2：观察失败。**运行上述 `TestCompareUnit` 组，确认 RED 针对比较与来源定位，而非仅接口不存在。
+- [x] **Step 3：最小实现。**先独立验证库存模型；按固定主键和字段比较，相同记录去重但关联输入别名，差异及全局／业务键占用排除候选。构造库存＋其余候选并用完整观察器检查模型：若 issue 在库存侧而 related 在输入侧，投影到该输入；双方输入时保留原 related_row；各输入涉及冲突均更新行集合。不能只处理保留下来的 200 项；无法归因的库存问题返回固定 Failure。最后按原输入集合计三类，保证每表与 total 数量守恒。
+- [x] **Step 4：验证 GREEN。**输入／库存排列变化不改变定位与分类；历史 ended／suspended、半开邻接、主任职、部门包含、组织／部门环逐项通过；共享 context 取消返回 error，不带部分分类；200 限制只作用于明细。
+- [x] **Step 5：提交。**消息 `feat: compare additive tenant data against stored records`。
 
 ### Task 5：显式连接解析与驱动隔离要求
 
@@ -155,7 +155,7 @@ if err != nil || *classes["total"].Conflict != 201 || len(issues.Issues()) != 20
 
 **Interfaces:** `Config` 使用私有 connectionSettings 与导出 `Schema string`；`LoadConfig(getenv func(string) string) (Config,error)` 仅读取两个指定变量；`ParseDSN(string) (connectionSettings,error)` 为纯解析，无驱动／文件／网络调用；私有 `driverConfig(Config) (*pgx.ConnConfig,error)` 仅在私有工作者的清洁环境调用。Config 的 String／GoString 固定脱敏，不返回连接详情。
 
-- [ ] **Step 1：写 RED。**`TestCompareUnitExplicitConfig` 对 URI／keyword 两种格式、显式必填项、schema 63／64 字节、8 KiB／超限、IPv6、Unix 缺 port、转义密码、TLS 和 timeout 断言；`TestCompareUnitNoAmbiguousDSN` 检查所有未知／重复键，包括被后值覆盖的 service／passfile／ssl alias，均拒绝；`TestCompareUnitDriverEnvironmentGuard` 在 PG*／HOME 非空的非工作者环境拒绝直接使用驱动，且无文件／网络副作用；`TestCompareUnitConfigRedaction` 不含标记。
+- [x] **Step 1：写 RED。**`TestCompareUnitExplicitConfig` 对 URI／keyword 两种格式、显式必填项、schema 63／64 字节、8 KiB／超限、IPv6、Unix 缺 port、转义密码、TLS 和 timeout 断言；`TestCompareUnitNoAmbiguousDSN` 检查所有未知／重复键，包括被后值覆盖的 service／passfile／ssl alias，均拒绝；`TestCompareUnitDriverEnvironmentGuard` 在 PG*／HOME 非空的非工作者环境拒绝直接使用驱动，且无文件／网络副作用；`TestCompareUnitConfigRedaction` 不含标记。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -164,10 +164,10 @@ _, err := LoadConfig(pollutedGetenvWithExplicitServiceDSN)
 if err == nil { t.Fatal("service must be rejected before driver parsing") }
 ```
 
-- [ ] **Step 2：观察失败。**`go test ./internal/importcompare -run '^TestCompareUnitExplicit|^TestCompareUnitNoAmbiguous|^TestCompareUnitDriver|^TestCompareUnitConfigRedaction' -count=1`。
-- [ ] **Step 3：最小实现。**纯 parser 先逐个 raw key 校验，再组装 canonical 连接串，自己处理重复和 alias；不将原始 DSN直接交给驱动。清洁工作者中使用 pgx.ParseConfigWithOptions 的明确键白名单，清空 RuntimeParams／Fallbacks，QueryExecModeExec，无 statement／description 缓存、无默认密码文件或 service，TLS 不降级；设置最大 3 秒超时。驱动原始错误全部映射 fixed Failure，不保存 DSN 到 error。
-- [ ] **Step 4：验证 GREEN。**纯解析在污染 PG* 环境下结果与正常一致，进程全局 env 原值不变；直接驱动误用被拒绝；真实清洁进程＋TLS 行为由任务 7／8 接续验证，不把纯 parser PASS 作为已隔离。
-- [ ] **Step 5：提交。**消息 `feat: require explicit import comparison connection settings`。
+- [x] **Step 2：观察失败。**`go test ./internal/importcompare -run '^TestCompareUnitExplicit|^TestCompareUnitNoAmbiguous|^TestCompareUnitDriver|^TestCompareUnitConfigRedaction' -count=1`。
+- [x] **Step 3：最小实现。**纯 parser 先逐个 raw key 校验，再组装 canonical 连接串，自己处理重复和 alias；不将原始 DSN直接交给驱动。清洁工作者中使用 pgx.ParseConfigWithOptions 的明确键白名单，清空 RuntimeParams／Fallbacks，QueryExecModeExec，无 statement／description 缓存、无默认密码文件或 service，TLS 不降级；设置最大 3 秒超时。驱动原始错误全部映射 fixed Failure，不保存 DSN 到 error。
+- [x] **Step 4：验证 GREEN。**纯解析在污染 PG* 环境下结果与正常一致，进程全局 env 原值不变；直接驱动误用被拒绝；真实清洁进程＋TLS 行为由任务 7／8 接续验证，不把纯 parser PASS 作为已隔离。
+- [x] **Step 5：提交。**消息 `feat: require explicit import comparison connection settings`。
 
 ### Task 6：真实 PostgreSQL 只读快照与结构权限
 
@@ -175,7 +175,7 @@ if err == nil { t.Fatal("service must be rejected before driver parsing") }
 
 **Interfaces:** `PGReader{Config Config}` 实现 SnapshotReader；私有 `queryBudget` 包装全部 Begin／SET／LOCK／Query／Rollback，计尝试数，最多 128；返回 Snapshot.SQLCount 仅给测试使用。`newCompareFixture(t *testing.T) *compareFixture` 提供专属 owner／schema／只读角色／单租户闭合样本；fixture 只在 IM_TEST_DATABASE_URL 指向本轮容器时启用，产品永不读取这个测试变量。
 
-- [ ] **Step 1：写 RED。**`TestComparePGSnapshotReadOnly` 核对九表前后内容摘要及专用角色真实 DML 被拒绝；`TestComparePGIsolation` 在首表读后从第二连接提交变更，剩余读取仍同旧快照；`TestComparePGProfile` 覆盖缺权限／有 DML／super／bypass／RLS／view／foreign／缺字段或错误类型／缺键和区间排斥结构／非 deterministic collation／非 UTF8；`TestComparePGLimits` 检查 20,000／20,001 行、64 MiB／超限、4097 单格、infinity／BC 时间及第 129 次 SQL。
+- [x] **Step 1：写 RED。**`TestComparePGSnapshotReadOnly` 核对九表前后内容摘要及专用角色真实 DML 被拒绝；`TestComparePGIsolation` 在首表读后从第二连接提交变更，剩余读取仍同旧快照；`TestComparePGProfile` 覆盖缺权限／有 DML／super／bypass／RLS／view／foreign／缺字段或错误类型／缺键和区间排斥结构／非 deterministic collation／非 UTF8；`TestComparePGLimits` 检查 20,000／20,001 行、64 MiB／超限、4097 单格、infinity／BC 时间及第 129 次 SQL。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -185,10 +185,10 @@ if err != nil || snapshot.SQLCount > 128 || !snapshot.TenantFound { t.Fatal("bou
 if beforeDigest != afterDigest { t.Fatal("business data changed") }
 ```
 
-- [ ] **Step 2：观察失败。**由本轮实际 PG 夹具执行 `go test ./internal/importcompare -run '^TestComparePG' -count=1`；未配置导致 SKIP 不能充当 RED。仅夹具迁移、填充与 oracle 写入，产品路径保持只读。
-- [ ] **Step 3：最小实现。**开始 REPEATABLE READ READ ONLY，固定 schema 引用与 pg_catalog 函数；取得九表 ACCESS SHARE 后检查模式、角色、对象、列及约束。必要 profile 列取任务 1 Schema；PK／unique／FK／四个区间排斥结构取基线 000001／000002／000004，按类型、字段与作用域核对，接受后续迁移的额外非投影列，不靠输入 baseline_commit 授权。表／字段只来自固定描述，经 pgx.Identifier 引用；禁止插入式字符串数据值。
-- [ ] **Step 4：验证 GREEN。**每表 SQL LIMIT=剩余行数+1，文本先用服务端 UTF8 字节门限投影，逐行累加字段内容，时间有限且 0001～9999；转换用 NormalizeRecord。全局输入键每批≤1,000，参数化查询只返回输入位置与外租户占用 bool，完整核对结果数。结束事务及连接后才返回 Snapshot；缺目标租户只返回 TenantFound=false。真实权限／DDL 改变、超时、撤销权限、锁等待／取消异常都返回固定 Failure；不泄露库存原文或部分 Snapshot。
-- [ ] **Step 5：提交。**消息 `feat: read consistent tenant snapshots with bounded readonly access`。
+- [x] **Step 2：观察失败。**由本轮实际 PG 夹具执行 `go test ./internal/importcompare -run '^TestComparePG' -count=1`；未配置导致 SKIP 不能充当 RED。仅夹具迁移、填充与 oracle 写入，产品路径保持只读。
+- [x] **Step 3：最小实现。**开始 REPEATABLE READ READ ONLY，固定 schema 引用与 pg_catalog 函数；取得九表 ACCESS SHARE 后检查模式、角色、对象、列及约束。必要 profile 列取任务 1 Schema；PK／unique／FK／四个区间排斥结构取基线 000001／000002／000004，按类型、字段与作用域核对，接受后续迁移的额外非投影列，不靠输入 baseline_commit 授权。表／字段只来自固定描述，经 pgx.Identifier 引用；禁止插入式字符串数据值。
+- [x] **Step 4：验证 GREEN。**每表 SQL LIMIT=剩余行数+1，文本先用服务端 UTF8 字节门限投影，逐行累加字段内容，时间有限且 0001～9999；转换用 NormalizeRecord。全局输入键每批≤1,000，参数化查询只返回输入位置与外租户占用 bool，完整核对结果数。结束事务及连接后才返回 Snapshot；缺目标租户只返回 TenantFound=false。真实权限／DDL 改变、超时、撤销权限、锁等待／取消异常都返回固定 Failure；不泄露库存原文或部分 Snapshot。
+- [x] **Step 5：提交。**消息 `feat: read consistent tenant snapshots with bounded readonly access`。
 
 ### Task 7：新 CLI、私有工作者、预算和输出
 
@@ -196,7 +196,7 @@ if beforeDigest != afterDigest { t.Fatal("business data changed") }
 
 **Interfaces:** `Run(context.Context,[]string,io.Writer,io.Writer) int` 为父进程入口；私有 `runWorker(ctx context.Context,args []string,stdout,stderr io.Writer,reader importinput.Reader,getenv func(string)string,provider func(importcompare.Config) importcompare.SnapshotReader) int`，直接消费任务 2 的 Reader 类型和任务 3 的 SnapshotReader。私有 fd 3 消息只含 deadline UnixNano，最大 128 字节；argv[0] 固定 `im-import-compare-worker`，没有新的公开 worker 参数。
 
-- [ ] **Step 1：写 RED。**`TestCompareProcessHelpVersion` 不调用 env／reader／DB；`TestCompareProcessNoNetwork` 无效／多租户／选择不符文件不实际连接；`TestCompareProcessEnvIsolation` 以污染 PG*／HOME 默认文件和故意可达诱饵目标运行，报告相同、诱饵零连接；`TestCompareProcessSignalAndPipe` 验证实际 SIGTERM、短写、stdout关闭、缺 fd／异常工作者输出／worker panic 的 2／incomplete；`TestCompareProcessDeadline` 父 deadline 比30秒短时工作者共享它。
+- [x] **Step 1：写 RED。**`TestCompareProcessHelpVersion` 不调用 env／reader／DB；`TestCompareProcessNoNetwork` 无效／多租户／选择不符文件不实际连接；`TestCompareProcessEnvIsolation` 以污染 PG*／HOME 默认文件和故意可达诱饵目标运行，报告相同、诱饵零连接；`TestCompareProcessSignalAndPipe` 验证实际 SIGTERM、短写、stdout关闭、缺 fd／异常工作者输出／worker panic 的 2／incomplete；`TestCompareProcessDeadline` 父 deadline 比30秒短时工作者共享它。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -205,10 +205,10 @@ result := runRealBinary(t, poisonedEnvironment, validInputArgs)
 if result.ExitCode != 0 || decoyConnections.Load() != 0 || !bytes.Equal(result.Stdout, cleanReportBytes) { t.Fatal("environment changed target") }
 ```
 
-- [ ] **Step 2：观察失败。**先实际构建新命令，再执行指定 TestCompareProcess；保存真实进程 RED，不以 fake provider 的计数替代 env／连接／信号验收。fake reader／provider 仅用于内部状态优先级单测。
-- [ ] **Step 3：最小实现。**固定 usage=`usage: im-import-compare --input FILE --tenant-id UUID | --help | --version\n`、version=`im-import-compare 0.1.0\n`。父 context 最大30秒，私有子进程只带两个配置／TZ，不带 HOME、PG*；fd 控制消息无凭据，禁止凭据 argv。工作者先 Read＋EvaluateDocument＋租户选择，再 LoadConfig＋PGReader＋Compare＋BuildReport。公共 unknown／duplicate／mixed flags 拒绝，不将私有 argv[0] 当作用户权限。
-- [ ] **Step 4：验证 GREEN。**父只接受单份、≤256 KiB、无未知／重复字段、enum 合法且退出语义一致的完整 Report，再 EncodeReport 输出；子 stderr 只作为未公开的失败状态，不转发原文。两层 SIGPIPE 忽略、可恢复 panic 固定失败；取消先终止 DB／工作者，1秒总宽限后 kill＋Wait回收，输出 incomplete，分类全部 null。unsupported 平台正常 help／version，普通读取固定拒绝。P4-27 离线输出仍逐字节一致。
-- [ ] **Step 5：提交。**消息 `feat: add isolated readonly import comparison command`。
+- [x] **Step 2：观察失败。**先实际构建新命令，再执行指定 TestCompareProcess；保存真实进程 RED，不以 fake provider 的计数替代 env／连接／信号验收。fake reader／provider 仅用于内部状态优先级单测。
+- [x] **Step 3：最小实现。**固定 usage=`usage: im-import-compare --input FILE --tenant-id UUID | --help | --version\n`、version=`im-import-compare 0.1.0\n`。父 context 最大30秒，私有子进程只带两个配置／TZ，不带 HOME、PG*；fd 控制消息无凭据，禁止凭据 argv。工作者先 Read＋EvaluateDocument＋租户选择，再 LoadConfig＋PGReader＋Compare＋BuildReport。公共 unknown／duplicate／mixed flags 拒绝，不将私有 argv[0] 当作用户权限。
+- [x] **Step 4：验证 GREEN。**父只接受单份、≤256 KiB、无未知／重复字段、enum 合法且退出语义一致的完整 Report，再 EncodeReport 输出；子 stderr 只作为未公开的失败状态，不转发原文。两层 SIGPIPE 忽略、可恢复 panic 固定失败；取消先终止 DB／工作者，1秒总宽限后 kill＋Wait回收，输出 incomplete，分类全部 null。unsupported 平台正常 help／version，普通读取固定拒绝。P4-27 离线输出仍逐字节一致。
+- [x] **Step 5：提交。**消息 `feat: add isolated readonly import comparison command`。
 
 ### Task 8：固定源码数据库对照、兼容门禁与交付
 
@@ -216,7 +216,7 @@ if result.ExitCode != 0 || decoyConnections.Load() != 0 || !bytes.Equal(result.S
 
 **Interfaces:** `python3 scripts/test-import-compare.py --commit SHA --output DIR`：输出目录必须新建；固定源码归档与来源哈希；manifest 区分 required_gates_passed、full_suite_passed、customer_acceptance=not_executed。脚本 `validate_required_gates(events: list[dict]) -> dict` 返回必需门禁布尔值和具名失败／跳过，正测试数及测试组齐全才允许 true；同目录验证器测试直接调用它。`IM_COMPARE_TEST_BINARY` 仅用于测试实际命令调用；工作者不继承它。
 
-- [ ] **Step 1：写 RED。**`TestComparePGOracle` 对同一个输入＋库存构造追加候选，产品比较与夹具真实 INSERT 的 PK／unique／FK／区间结果对照；图／父区间包含等应用模型规则由具名纯模型测试核对，不能声称 PostgreSQL 原有约束自动拒绝所有这些问题；额外自定义约束证明 known-compatible 不代表真实 INSERT 全部可用。脚本验证器用有 FAIL／SKIP／零测试／错误数量守恒／未清理资源结果验证不能通过必需门禁；异常进程输出只保留固定原因，不保存令牌或凭据。
+- [x] **Step 1：写 RED。**`TestComparePGOracle` 对同一个输入＋库存构造追加候选，产品比较与夹具真实 INSERT 的 PK／unique／FK／区间结果对照；图／父区间包含等应用模型规则由具名纯模型测试核对，不能声称 PostgreSQL 原有约束自动拒绝所有这些问题；额外自定义约束证明 known-compatible 不代表真实 INSERT 全部可用。脚本验证器用有 FAIL／SKIP／零测试／错误数量守恒／未清理资源结果验证不能通过必需门禁；异常进程输出只保留固定原因，不保存令牌或凭据。
 
   代表性测试断言（变量及 mustEncode／runRealBinary 等为该测试文件内的夹具助手）：
 
@@ -226,10 +226,10 @@ assert bad["required_gates_passed"] is False
 assert manifest_with_full_suite_fail["full_suite_passed"] is False
 ```
 
-- [ ] **Step 2：观察失败。**运行 oracle 与验证器 RED；fixture 必须专属，本轮容器、角色、schema 有 owner 标签／清单。不得连接客户或现有业务库，不能删除其他工作树、容器或凭据。
-- [ ] **Step 3：最小编排。**git archive 固定代码提交；宿主构建 macOS arm64／Linux arm64 两命令及测试二进制；缓存 PG16 镜像 network=none、无主机端口、tmpfs；在容器内部配置本轮 CA／服务器证书并实测 verify-full 及错 CA／主机名拒绝，不安装 Go／Node 到运行镜像。Linux测试启动前也清除 PG*／HOME，driver默认凭据实验使用专属合成文件。每阶段独立日志、hash、版本和查询计数，不覆写失败尝试。
-- [ ] **Step 4：验证 GREEN。**必需门禁：纯库／真实进程／真实PG权限与快照／TLS／追加oracle／资源边界；P4-27离线CLI与oracle（原37顶层及对应子用例保持，不机械当作新总数）；P4-28消息回归及完整OIDC包（不排除原失败HTTP ACK用例）；构建／vet及相关host race。另实际运行完整go test ./...，逐名记录缺夹具失败／跳过；新必需门禁要求0FAIL、0SKIP、正测试数，但全仓失败时 full_suite_passed=false，不声称合入就绪。最大允许数据必须在30秒内完整通过或明确incomplete；不可放宽deadline掩盖失败。
-- [ ] **Step 5：评审和交付。**一次整体独立只读代码评审；有实际问题先按 receiving-code-review 验证修正，对受影响代码重新RED／GREEN及最终固定提交门禁。确认新提交以后只有文档改动时产品SHA不变。保存中文验收、角色／schema／容器删除确认、SHA256与失败列表；普通推送独立分支、创建／关联draft PR（base依赖P4-27分支并说明ACK已显式集成），不修改旧PR或自动合并／部署。
+- [x] **Step 2：观察失败。**运行 oracle 与验证器 RED；fixture 必须专属，本轮容器、角色、schema 有 owner 标签／清单。不得连接客户或现有业务库，不能删除其他工作树、容器或凭据。
+- [x] **Step 3：最小编排。**git archive 固定代码提交；宿主构建 macOS arm64／Linux arm64 两命令及测试二进制；缓存 PG16 镜像 network=none、无主机端口、tmpfs；在容器内部配置本轮 CA／服务器证书并实测 verify-full 及错 CA／主机名拒绝，不安装 Go／Node 到运行镜像。Linux测试启动前也清除 PG*／HOME，driver默认凭据实验使用专属合成文件。每阶段独立日志、hash、版本和查询计数，不覆写失败尝试。
+- [x] **Step 4：验证 GREEN。**必需门禁：纯库／真实进程／真实PG权限与快照／TLS／追加oracle／资源边界；P4-27离线CLI与oracle（原37顶层及对应子用例保持，不机械当作新总数）；P4-28消息回归及完整OIDC包（不排除原失败HTTP ACK用例）；构建／vet及相关host race。另实际运行完整go test ./...，逐名记录缺夹具失败／跳过；新必需门禁要求0FAIL、0SKIP、正测试数，但全仓失败时 full_suite_passed=false，不声称合入就绪。最大允许数据必须在30秒内完整通过或明确incomplete；不可放宽deadline掩盖失败。
+- [x] **Step 5：评审和交付。**一次整体独立只读代码评审；有实际问题先按 receiving-code-review 验证修正，对受影响代码重新RED／GREEN及最终固定提交门禁。确认新提交以后只有文档改动时产品SHA不变。保存中文验收、角色／schema／容器删除确认、SHA256与失败列表；普通推送独立分支、创建／关联draft PR（base依赖P4-27分支并说明ACK已显式集成），不修改旧PR或自动合并／部署。
 
 ## 自检与执行交接
 
@@ -238,3 +238,7 @@ assert manifest_with_full_suite_fail["full_suite_passed"] is False
 - 接口来自任务1～3的定义；Reader 类型由任务2首次定义、任务7直接消费；BuildReport显式接收status、完整性，Incomplete显式接收stage。pgx只进入importcompare；旧预检模块不引入DB客户端；所有诊断值来自固定枚举。
 - 本次仅编写及自检计划并更新已确认规格的状态，没有cherry-pick、实现产品、迁移、安装依赖、启动服务或运行门禁。
 - 按writing-plans交接规则，用户审阅本计划后沿用当前助手＋executing-plans逐任务执行；不重新询问执行方式，不把规格确认当作已确认尚未出现的实施计划。
+
+## 2026-10-07 执行完成记录
+
+用户确认后，当前助手依次完成8任务。最终代码与门禁源码367d80a；一次整体独立只读评审的两项Important验收缺口已一轮RED→GREEN补齐，无延期Minor。必需门禁全部0FAIL/0SKIP，完整套件105具名失败/825跳过按名保留。客户/生产验收未执行；只交付草稿、不自动合并。见 [中文验收记录](../../开发增量-P4-29-验收记录.md)。上文计划编写阶段的“未执行”描述保留为历史状态，执行证据以本节及验收为准。
