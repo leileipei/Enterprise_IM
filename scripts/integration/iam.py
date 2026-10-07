@@ -24,6 +24,17 @@ def product_credentials(keys):
     return result
 
 
+def parse_mc_output(command,output):
+    # The pinned mc pipe command writes byte progress even with --json.
+    # Only stat supplies a structured result consumed as evidence here.
+    if command!='stat':return []
+    try:rows=[json.loads(line) for line in output.splitlines() if line.strip()]
+    except ValueError as exc:raise ValueError('iam_stat_output_invalid') from exc
+    if len(rows)!=1 or not isinstance(rows[0],dict) or rows[0].get('status')!='success':
+        raise ValueError('iam_stat_output_invalid')
+    return rows
+
+
 def prepare_iam(bundle,tools,private,deadline):
     private=Path(private).resolve();private.mkdir(mode=0o700,parents=True,exist_ok=True)
     config=private/'mc-config';config.mkdir(mode=0o700)
@@ -40,7 +51,7 @@ def prepare_iam(bundle,tools,private,deadline):
             for secret in sorted(bundle.secrets,key=len,reverse=True):diagnostic=diagnostic.replace(secret,'[REDACTED]')
             _private_file(private/('failure-'+secrets.token_hex(8)+'.json'),diagnostic)
             raise ValueError('iam_command_failed:'+':'.join(args[:3]))
-        return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+        return parse_mc_output(args[0],result.stdout)
     admin=bundle.metadata['minio_admin'];mc(['alias','set','fixture',bundle.environment['IM_TEST_S3_ENDPOINT'],*admin])
     owner=next(iter(bundle.owners));bucket='p426-p431-'+owner;negative=bucket+'-policy'
     for name in (bucket,negative):
