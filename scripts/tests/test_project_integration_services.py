@@ -65,12 +65,15 @@ class ServicePlanTests(unittest.TestCase):
         self.assertIn('/_im_runtime/read-probe/v1',json.dumps(p))
 
 class MCOutputTests(unittest.TestCase):
-    def test_pipe_progress_is_not_json_evidence(self):
+    def test_non_stat_stdout_is_not_evidence_and_stat_is_strict(self):
         import integration.iam as iam
         self.assertTrue(hasattr(iam,'parse_mc_output'),'mc command-specific output parser is missing')
         self.assertEqual(iam.parse_mc_output('pipe','29 B / ?'),[])
         self.assertEqual(iam.parse_mc_output('stat','{"status":"success","versionID":"exact-v1"}\n'),[{'status':'success','versionID':'exact-v1'}])
         with self.assertRaises(ValueError):iam.parse_mc_output('stat','29 B / ?')
+        try:actual=iam.parse_mc_output('stat',json.dumps({'status':'success','versionID':'exact-v1'},indent=2))
+        except ValueError:self.fail('valid JSON formatting was rejected')
+        self.assertEqual(actual,[{'status':'success','versionID':'exact-v1'}])
 
 class ServiceFailureTests(unittest.TestCase):
     def test_failed_preflight_cleans_created_resources(self):

@@ -28,7 +28,7 @@ def parse_mc_output(command,output):
     # Successful provisioning commands do not supply structured gate evidence.
     # Only stat supplies the structured version result consumed here.
     if command!='stat':return []
-    try:rows=[json.loads(line) for line in output.splitlines() if line.strip()]
+    try:rows=[json.loads(output)]
     except ValueError as exc:raise ValueError('iam_stat_output_invalid') from exc
     if len(rows)!=1 or not isinstance(rows[0],dict) or rows[0].get('status')!='success':
         raise ValueError('iam_stat_output_invalid')

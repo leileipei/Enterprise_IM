@@ -221,6 +221,16 @@ class Registry:
                         expected=row['fingerprint']
                         if path.is_symlink() or actual.st_uid!=os.getuid() or (actual.st_dev,actual.st_ino)!=(expected.get('device'),expected.get('inode')):
                             raise ValueError('directory_identity_mismatch')
+                        directories=[]
+                        for parent,children,files in os.walk(path,followlinks=False):
+                            current=Path(parent);stat=current.stat()
+                            if stat.st_uid!=os.getuid() or stat.st_dev!=actual.st_dev:
+                                raise ValueError('directory_member_identity_mismatch')
+                            directories.append(current)
+                            children[:]=[name for name in children if not (current/name).is_symlink()]
+                        # Go module cache directories are readonly; change only verified owned
+                        # directories, never a symlink target or a shared cache.
+                        for directory in directories:directory.chmod(0o700)
                         shutil.rmtree(path)
             except (ValueError,OSError,subprocess.SubprocessError) as exc:
                 failures.append(row['kind']+':'+row['identity']+':'+str(exc))

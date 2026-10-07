@@ -123,6 +123,40 @@ class RegistryTests(unittest.TestCase):
         with patch('integration.registry.subprocess.run',return_value=forbidden),self.assertRaises(ValueError):
             self.registry.docker(['inspect',CID])
 
+    def test_cleanup_owned_readonly_module_cache_does_not_follow_links(self):
+        directory=self.root/OWNER/'owned-cache';directory.mkdir(mode=0o700)
+        module=directory/'module';module.mkdir();(module/'source.go').write_text('package fixture')
+        foreign_tmp=tempfile.TemporaryDirectory();self.addCleanup(foreign_tmp.cleanup)
+        foreign=Path(foreign_tmp.name).resolve();foreign.chmod(0o500)
+        (directory/'outside').symlink_to(foreign,target_is_directory=True)
+        module.chmod(0o500)
+        def unlock():
+            if module.exists():module.chmod(0o700)
+            foreign.chmod(0o700)
+        self.addCleanup(unlock)
+        stat=directory.stat();self.registry.add(self.Ref('directory',OWNER,str(directory),{'device':stat.st_dev,'inode':stat.st_ino}))
+        result=self.registry.cleanup(time.monotonic()+3)
+        self.assertTrue(result.removed,result.failures)
+        self.assertFalse(directory.exists())
+        self.assertTrue(foreign.exists())
+        self.assertEqual(foreign.stat().st_mode&0o777,0o500)
+
+    def test_process_stops_before_owned_workdir_is_removed(self):
+        directory=self.root/OWNER;stat=directory.stat()
+        self.registry.add(self.Ref('directory',OWNER,str(directory),{'device':stat.st_dev,'inode':stat.st_ino}))
+        import shutil
+        executable=directory/'sleep';shutil.copyfile('/bin/sleep',executable);executable.chmod(0o700)
+        proc=subprocess.Popen([str(executable),'30'],cwd=directory,start_new_session=True)
+        def stop():
+            if proc.poll() is None:proc.terminate()
+            proc.wait()
+        self.addCleanup(stop)
+        self.registry.add(self.Ref('process',OWNER,str(proc.pid),self.fingerprint(proc.pid)))
+        result=self.registry.cleanup(time.monotonic()+3)
+        self.assertTrue(result.removed,result.failures)
+        self.assertIsNotNone(proc.poll())
+        self.assertFalse(directory.exists())
+
     def test_registry_rejects_malformed_or_symlinked_state(self):
         with self.registry.path.open('a') as f:f.write('{broken\n')
         self.assertFalse(self.registry.cleanup(time.monotonic()+1).removed)
