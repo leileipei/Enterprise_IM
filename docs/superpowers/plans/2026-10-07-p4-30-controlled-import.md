@@ -167,7 +167,7 @@ if got, ok := requestCtx.Deadline(); !ok || !got.Equal(want) { t.Fatal("deadline
 - 私有 `batchLockKey(tenantID,requestID string)int64`：规范 UUID 字节、固定域 enterprise_im:controlled_append_v1，经 SHA-256 前 8 字节 big-endian int64；GET 与 POST 必须同键。
 - 私有 `insertPlan(ctx context.Context,tx pgx.Tx,schema string,plan Plan)error`：每 new 行一条参数 INSERT、RowsAffected=1；使用 schema 字段描述映射 NULL/bool/time/text，不构造请求 SQL。
 
-- [ ] **Step 1：写 RED。** `TestAppendPGApplyAtomic` 六表新增/一致/任一差异、全相同 applied；`TestAppendPGReplayBinding` 同编号正文/membership/actor变化，GET 可由另一有效管理员查；`TestAppendPGSavepointReject` 中间 CHECK/唯一/区间错误、所有 inserted=0；`TestAppendPGAuditFailure` 主数据与回执均回滚；`TestAppendPGLockCleanup` session unlock 失败连接关闭、碰撞不得回放错误 UUID。
+- [x] **Step 1：写 RED。** `TestAppendPGApplyAtomic` 六表新增/一致/任一差异、全相同 applied；`TestAppendPGReplayBinding` 同编号正文/membership/actor变化，GET 可由另一有效管理员查；`TestAppendPGSavepointReject` 中间 CHECK/唯一/区间错误、所有 inserted=0；`TestAppendPGAuditFailure` 主数据与回执均回滚；`TestAppendPGLockCleanup` session unlock 失败连接关闭、碰撞不得回放错误 UUID。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -177,10 +177,10 @@ if !reflect.DeepEqual(beforeCounts, afterCounts) { t.Fatal("partial business or 
 if applyAuditCount != 0 { t.Fatal("failed audit produced a terminal apply event") }
 ```
 
-- [ ] **Step 2：观察失败。** `go test ./internal/importapply -run '^TestAppendPG(Apply|Replay|Savepoint|Audit|Lock)' -count=1`，产品 SQL 普通角色，夹具管理连接只注入故障。
-- [ ] **Step 3：最小实现。** Preauthorize 由导入 Service 拥有 READ COMMITTED 短事务，传入带共享预算的 tx 调用 Task 3 AuthorizeImport，再结束短事务；Apply/Get 重检不把前置结论缓存为授权。验证 request UUID/可信来源，取连接 session try-lock 后 BEGIN；当前授权后读原回执，未存在再读库存/BuildPlan/保存点 INSERT。23502/23503/23505/23514/23P01 仅在 rollback-to-savepoint 成功后转固定约束 rejected；其他错误全事务回滚。序列值回滚空洞不算主数据残留。
-- [ ] **Step 4：验证 GREEN。** 同命令；编码并核验回执/响应后提交，最终时间授权复核；提交成功后保留原计数，未知 COMMIT 一律 CommitUnknown。GET 先 Preauthorize，短 READ COMMITTED try-xact-lock，再次 AuthorizeImport/查回执，记录固定 action=controlled_import.query、resource_type=import_batch 的 allow 查询审计，不追加 apply 审计。全部清理使用一个额外 1 秒绝对 deadline，不能连续各给 1 秒。
-- [ ] **Step 5：提交。** `feat: apply atomic import batches with idempotent recovery`。
+- [x] **Step 2：观察失败。** `go test ./internal/importapply -run '^TestAppendPG(Apply|Replay|Savepoint|Audit|Lock)' -count=1`，产品 SQL 普通角色，夹具管理连接只注入故障。
+- [x] **Step 3：最小实现。** Preauthorize 由导入 Service 拥有 READ COMMITTED 短事务，传入带共享预算的 tx 调用 Task 3 AuthorizeImport，再结束短事务；Apply/Get 重检不把前置结论缓存为授权。验证 request UUID/可信来源，取连接 session try-lock 后 BEGIN；当前授权后读原回执，未存在再读库存/BuildPlan/保存点 INSERT。23502/23503/23505/23514/23P01 仅在 rollback-to-savepoint 成功后转固定约束 rejected；其他错误全事务回滚。序列值回滚空洞不算主数据残留。
+- [x] **Step 4：验证 GREEN。** 同命令；编码并核验回执/响应后提交，最终时间授权复核；提交成功后保留原计数，未知 COMMIT 一律 CommitUnknown。GET 先 Preauthorize，短 READ COMMITTED try-xact-lock，再次 AuthorizeImport/查回执，记录固定 action=controlled_import.query、resource_type=import_batch 的 allow 查询审计，不追加 apply 审计。全部清理使用一个额外 1 秒绝对 deadline，不能连续各给 1 秒。
+- [x] **Step 5：提交。** `feat: apply atomic import batches with idempotent recovery`。
 
 ### Task 6：受控 HTTP 入口、限额与默认关闭
 
