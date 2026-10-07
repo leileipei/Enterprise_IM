@@ -6,8 +6,7 @@
       "Action": [
         "s3:GetBucketLocation",
         "s3:GetBucketVersioning",
-        "s3:GetBucketPolicy",
-        "s3:GetBucketAcl"
+        "s3:GetBucketPolicy"
       ],
       "Resource": [
         "arn:aws:s3:::{{bucket}}",
@@ -28,6 +27,7 @@
     {
       "Effect": "Allow",
       "Action": [
+        "s3:DeleteObject",
         "s3:DeleteObjectVersion"
       ],
       "Resource": [
@@ -45,6 +45,27 @@
           ]
         }
       }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::{{bucket}}/tenants/*/files/*",
+        "arn:aws:s3:::{{policy_bucket}}/tenants/*/files/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucketVersions"
+      ],
+      "Resource": [
+        "arn:aws:s3:::{{bucket}}",
+        "arn:aws:s3:::{{policy_bucket}}"
+      ]
     }
   ]
 }

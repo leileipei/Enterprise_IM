@@ -43,12 +43,17 @@ class ServicePlanTests(unittest.TestCase):
         allactions=lambda p:{a for s in p['Statement'] for a in s['Action']}
         self.assertNotIn('s3:PutObject',allactions(policies['worker']))
         self.assertNotIn('s3:PutObject',allactions(policies['download']))
-        self.assertNotIn('s3:DeleteObject',allactions(policies['cleanup']))
+        self.assertIn('s3:DeleteObject',allactions(policies['cleanup']))
         self.assertNotIn('s3:ListBucketVersions',allactions(policies['download']))
         self.assertIn('s3:DeleteObjectVersion',allactions(policies['cleanup']))
         statement=next(s for s in policies['cleanup']['Statement'] if 's3:DeleteObjectVersion' in s['Action'])
         self.assertEqual(statement['Condition']['Null']['s3:versionid'],'false')
         self.assertEqual(statement['Condition']['StringNotEquals']['s3:versionid'],['','null'])
+        for s in policies['cleanup']['Statement']:
+            if any(a.startswith('s3:Delete') for a in s['Action']):
+                self.assertEqual(s['Condition'],statement['Condition'])
+        for role,p in policies.items():
+            self.assertNotIn('s3:GetBucketAcl',allactions(p),'locked MinIO rejects this AWS IAM action')
         self.assertNotIn('arn:aws:s3:::*',json.dumps(policies))
 
     def test_probe_version_not_created_by_api(self):
