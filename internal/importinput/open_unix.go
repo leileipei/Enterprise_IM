@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-package main
+package importinput
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ func openError(e error) error {
 	}
 	return p.Failure{Code: "INPUT_READ_FAILED"}
 }
-func verifyOpened(initial os.FileInfo, f *os.File) error {
+func VerifyOpened(initial os.FileInfo, f *os.File) error {
 	opened, e := f.Stat()
 	if e != nil {
 		return p.Failure{Code: "INPUT_READ_FAILED"}
@@ -26,7 +26,7 @@ func verifyOpened(initial os.FileInfo, f *os.File) error {
 	}
 	return nil
 }
-func openRegular(path string) (*os.File, error) {
+func OpenRegular(path string) (*os.File, error) {
 	initial, e := os.Lstat(path)
 	if e != nil {
 		return nil, openError(e)
@@ -64,7 +64,7 @@ func openRegular(path string) (*os.File, error) {
 		return nil, openError(e)
 	}
 	f := os.NewFile(uintptr(fd), "preflight-input")
-	if e = verifyOpened(initial, f); e != nil {
+	if e = VerifyOpened(initial, f); e != nil {
 		f.Close()
 		return nil, e
 	}
