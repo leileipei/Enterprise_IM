@@ -37,6 +37,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -45,6 +46,7 @@ type fileBusinessProcessFixture struct {
 	privateRoot, apiURL, webURL, buildSHA, schema                              string
 	binaries                                                                   map[string]string
 	processes                                                                  map[string]*exec.Cmd
+	integrationProcesses                                                       map[string]*testfixtures.IntegrationProcess
 	pool                                                                       *pgxpool.Pool
 	oidc, proxy                                                                *httptest.Server
 	nodes                                                                      map[string]nodeRuntimeConfig
@@ -451,6 +453,17 @@ func (f *fileBusinessProcessFixture) launch(t *testing.T, name, binary string, e
 		log.Close()
 		t.Fatal("official process failed to start")
 	}
+	registration, registerErr := testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+	if registerErr != nil {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		_ = log.Close()
+		t.Fatal(registerErr)
+	}
+	if f.integrationProcesses == nil {
+		f.integrationProcesses = map[string]*testfixtures.IntegrationProcess{}
+	}
+	f.integrationProcesses[name] = registration
 	f.processes[name] = cmd
 	f.processPIDs[name] = cmd.Process.Pid
 	f.logs[name] = log
@@ -469,6 +482,9 @@ func (f *fileBusinessProcessFixture) await(t *testing.T, name string, timeout ti
 		}
 		b, e := os.ReadFile(f.logs[name].Name())
 		if e == nil && predicate(b) {
+			if err := f.integrationProcesses[name].Ready(); err != nil {
+				t.Fatal(err)
+			}
 			return
 		}
 		time.Sleep(25 * time.Millisecond)
@@ -516,6 +532,13 @@ func (f *fileBusinessProcessFixture) stopProcess(t *testing.T, name string, kill
 	}
 	select {
 	case err := <-f.waits[name]:
+		expected := fmt.Sprintf("exit:%d", f.expectedExitCodes[name])
+		if kill {
+			expected = "signal:killed"
+		}
+		if proofErr := f.integrationProcesses[name].Exited(expected, integrationProcessExit(err)); proofErr != nil {
+			t.Error(proofErr)
+		}
 		if !kill {
 			code := 0
 			if err != nil {
@@ -531,12 +554,16 @@ func (f *fileBusinessProcessFixture) stopProcess(t *testing.T, name string, kill
 		delete(f.expectedExitCodes, name)
 	case <-time.After(22 * time.Second):
 		_ = p.Process.Kill()
-		<-f.waits[name]
+		waitErr := <-f.waits[name]
+		if proofErr := f.integrationProcesses[name].Exited("bounded_shutdown", integrationProcessExit(waitErr)); proofErr != nil {
+			t.Error(proofErr)
+		}
 		t.Error("owned process failed bounded shutdown")
 	}
 	_ = f.logs[name].Close()
 	delete(f.logs, name)
 	delete(f.processes, name)
+	delete(f.integrationProcesses, name)
 	delete(f.waits, name)
 }
 func (f *fileBusinessProcessFixture) restartAPI(t *testing.T, node string, upload, business bool) {
@@ -676,6 +703,9 @@ func (f *fileBusinessProcessFixture) expectStartupFailure(t *testing.T, settings
 	f.launch(t, name, "im-api", settings)
 	select {
 	case e := <-f.waits[name]:
+		if proofErr := f.integrationProcesses[name].Exited("exit:1", integrationProcessExit(e)); proofErr != nil {
+			t.Error(proofErr)
+		}
 		if e == nil {
 			t.Fatal("invalid startup returned success")
 		}
@@ -689,5 +719,6 @@ func (f *fileBusinessProcessFixture) expectStartupFailure(t *testing.T, settings
 	f.logs[name].Close()
 	delete(f.logs, name)
 	delete(f.processes, name)
+	delete(f.integrationProcesses, name)
 	delete(f.waits, name)
 }

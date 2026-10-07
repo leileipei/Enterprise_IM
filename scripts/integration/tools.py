@@ -1,6 +1,7 @@
 """Locked tool discovery; no replacement of a shared installation."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -24,6 +25,17 @@ def verify_digest(path: Path, expected: str) -> None:
     try: actual=file_digest(path)
     except OSError as exc:raise ValueError('tool_missing') from exc
     if actual!=expected:raise ValueError('tool_hash_mismatch')
+
+
+def python_cli() -> Path:
+    # macOS framework launcher re-execs Python.app after Popen returns.
+    # Invoke the current interpreter image directly to bind one stable identity.
+    result=subprocess.run(['/bin/ps','-p',str(os.getpid()),'-o','comm='],
+                          capture_output=True,text=True,timeout=5)
+    path=Path(result.stdout.strip())
+    if result.returncode or not path.is_absolute() or not path.is_file():
+        raise ValueError('python_interpreter_identity_unproven')
+    return path
 
 
 def docker_cli() -> Path:
@@ -68,7 +80,7 @@ def discover_toolchain(snapshot: SourceSnapshot,private: Path) -> Toolchain:
     pins=_lock(snapshot.root/'testdata/file-runtime/versions.lock')
     pins.update(_lock(snapshot.root/'testdata/project-integration/versions.lock'))
     private=Path(private).resolve();private.mkdir(mode=0o700,parents=True,exist_ok=True)
-    paths=dict(go=Path('/opt/homebrew/bin/go'),python=Path(sys.executable),
+    paths=dict(go=Path('/opt/homebrew/bin/go'),python=python_cli(),
                node=RUNTIME/'bin/node',node_modules=RUNTIME/'node_modules',
                chrome=Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
                qpdf=Path('/opt/homebrew/bin/qpdf'),clamd=Path('/opt/homebrew/sbin/clamd'),

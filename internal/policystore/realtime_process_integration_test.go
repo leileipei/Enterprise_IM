@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 	"github.com/leileipei/Enterprise_IM/internal/realtime"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -82,6 +84,19 @@ func processDatabaseURL(t *testing.T, schema string) string {
 	return parsed.String()
 }
 
+func integrationProcessExit(err error) string {
+	if err == nil {
+		return "exit:0"
+	}
+	if exit, ok := err.(*exec.ExitError); ok {
+		if status, ok := exit.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+			return "signal:" + status.Signal().String()
+		}
+		return fmt.Sprintf("exit:%d", exit.ExitCode())
+	}
+	return "wait_error"
+}
+
 func startRealtimeProcess(t *testing.T, cmd *exec.Cmd, ready func() bool) {
 	t.Helper()
 	logFile, err := os.CreateTemp(t.TempDir(), "process-*.log")
@@ -93,14 +108,27 @@ func startRealtimeProcess(t *testing.T, cmd *exec.Cmd, ready func() bool) {
 		logFile.Close()
 		t.Fatal(err)
 	}
+	var registration *testfixtures.IntegrationProcess
 	t.Cleanup(func() {
 		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
+		waitErr := cmd.Wait()
+		if registration != nil {
+			if err := registration.Exited("signal:killed", integrationProcessExit(waitErr)); err != nil {
+				t.Error(err)
+			}
+		}
 		_ = logFile.Close()
 	})
+	registration, err = testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		if ready() {
+			if err := registration.Ready(); err != nil {
+				t.Fatal(err)
+			}
 			return
 		}
 		time.Sleep(50 * time.Millisecond)

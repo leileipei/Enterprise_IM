@@ -111,7 +111,7 @@ assert archive_module_marker == 'committed'
 
 **Interfaces:** `Registry(path:Path,owner:str,commit:str)`；`reserve(child_owner:str)->None`、`add(ref:ResourceRef)->None`、`lifecycle(identity:str,event:str,detail:dict)->None`、`cleanup(deadline:float)->CleanupResult`；`run_command(name:str,kind:str,source_commit:str,argv:List[str],cwd:Path,env:Dict[str,str],log:Path,deadline:float,registry:Registry)->GateEvent`；Go桥 `RegisterIntegrationProcess(cmd *exec.Cmd,gate,test string)(*IntegrationProcess,error)`、`Ready() error`、`Exited(expected,actual string) error`，未配置 `IM_TEST_INTEGRATION_REGISTRY` 时保持旧测试路径。桥只由*_test.go调用。
 
-- [ ] **Step 1：写测试。** `test_cancel_between_create_and_register`、`test_pid_reuse_and_foreign_owner`、`test_auto_remove_in_progress`、`test_deadline_preserves_exit_and_runs_cleanup`、Go `TestIntegrationRegistryProof`。Python测试使用独立短命子进程/合成Docker协议响应，真实Docker证明留任务4；不能用合成协议声称实际资源验收。
+- [x] **Step 1：写测试。** `test_cancel_between_create_and_register`、`test_pid_reuse_and_foreign_owner`、`test_auto_remove_in_progress`、`test_deadline_preserves_exit_and_runs_cleanup`、Go `TestIntegrationRegistryProof`。Python测试使用独立短命子进程/合成Docker协议响应，真实Docker证明留任务4；不能用合成协议声称实际资源验收。
 
 ```python
 assert registry.cleanup(deadline).removed is False  # 外部owner不得被停止
@@ -119,10 +119,10 @@ assert foreign_process_is_alive
 assert verdict_for_pending_auto_remove != 'removed'
 ```
 
-- [ ] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_registry.py' -v`；`go test ./internal/testfixtures -run '^TestIntegrationRegistryProof$' -count=1`。Expected：接口/行为缺失失败。
-- [ ] **Step 3：实现安全生命周期。** 私密JSONL schema_version1，写入用flock、O_APPEND和fsync；reserve先于创建并登记子owner，create后立即记录ID。容器验证实际ID/精确owner标签，进程验证UID/开始时间/程序身份/本轮私密路径，不单凭PID或名称。命令新建本轮进程组、记录开始/退出，deadline与signal停新任务并清理已证明子进程；自动rm等待absence，不能重删删除中容器。Go桥向同一登记写registered/ready/exited，保存两个API子进程实际状态，登记开关为IM_TEST_INTEGRATION_REGISTRY、IM_TEST_INTEGRATION_OWNER、IM_TEST_INTEGRATION_SOURCE_SHA、IM_TEST_INTEGRATION_GATE；启用registry时其他三项缺失/格式错误即拒绝，source校验40位。Ready在实际readiness后、Exited在实际cmd.Wait后记录，不记录argv中的秘密。
-- [ ] **Step 4：验证GREEN。** 上述Python/Go命令全PASS；`go list -deps ./cmd/...`不含internal/testfixtures，关闭登记时旧两个进程测试仍可按原夹具运行；不得新增正式测试hook。
-- [ ] **Step 5：提交。** `feat: track owned integration resources and process lifecycles`。
+- [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_registry.py' -v`；`go test ./internal/testfixtures -run '^TestIntegrationRegistryProof$' -count=1`。Expected：接口/行为缺失失败。
+- [x] **Step 3：实现安全生命周期。** 私密JSONL schema_version1，写入用flock、O_APPEND和fsync；reserve先于创建并登记子owner，create后立即记录ID。容器验证实际ID/精确owner标签，进程验证UID/开始时间/程序身份/本轮私密路径，不单凭PID或名称。命令新建本轮进程组、记录开始/退出，deadline与signal停新任务并清理已证明子进程；自动rm等待absence，不能重删删除中容器。Go桥向同一登记写registered/ready/exited，保存两个API子进程实际状态，登记开关为IM_TEST_INTEGRATION_REGISTRY、IM_TEST_INTEGRATION_OWNER、IM_TEST_INTEGRATION_SOURCE_SHA、IM_TEST_INTEGRATION_GATE；启用registry时其他三项缺失/格式错误即拒绝，source校验40位。Ready在实际readiness后、Exited在实际cmd.Wait后记录，不记录argv中的秘密。
+- [x] **Step 4：验证GREEN。** 上述Python/Go命令全PASS；`go list -deps ./cmd/...`不含internal/testfixtures，关闭登记时Go桥单测证明为no-op；既有两个进程helper本阶段编译检查，真实流程依赖Task4/5夹具，在Task8按既有合同验证。不得新增正式测试hook。
+- [x] **Step 5：提交。** `feat: track owned integration resources and process lifecycles`。
 
 ### Task 4：真实数据服务、TLS和IAM夹具
 
@@ -219,4 +219,4 @@ assert child['source_commit'] == snapshot.commit
 | §12 I01–I11 | I01→2/7；I02→4/5/7；I03→4；I04→5/6/8；I05→3/6/8；I06→6/8；I07→6/8；I08→1/2/7/8；I09→8/9；I10→3/7/9；I11→7/9 |
 | §13交付/执行方式 | Task9、当前助手逐项实现及一次最终评审 |
 
-接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1已按RED→GREEN实现结果判定，Task2实现及18项编排单测通过，真实工具预检因锁定mc缺失待决；其他任务与完整联调尚未完成。
+接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1已按RED→GREEN实现结果判定，Task2实现及18项编排单测通过，真实工具预检因锁定mc缺失待决；Task3已完成本地资源/桥单测与旧helper编译，真实业务联调尚未完成。
