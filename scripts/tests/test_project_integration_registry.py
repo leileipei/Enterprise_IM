@@ -113,6 +113,16 @@ class RegistryTests(unittest.TestCase):
         self.assertFalse(result.removed)
         self.assertIsNone(proc.poll(),'loaded record bypassed process ownership')
 
+    def test_docker_absence_response_is_case_insensitive_and_verified(self):
+        missing=subprocess.CompletedProcess([],1,'[]\n','error: no such object: '+CID+'\n')
+        with patch('integration.registry.subprocess.run',return_value=missing):
+            try:actual=self.registry.docker(['inspect',CID])
+            except ValueError:self.fail('actual Docker absence was reported as cleanup failure')
+        self.assertIsNone(actual)
+        forbidden=subprocess.CompletedProcess([],1,'','permission denied for '+CID)
+        with patch('integration.registry.subprocess.run',return_value=forbidden),self.assertRaises(ValueError):
+            self.registry.docker(['inspect',CID])
+
     def test_registry_rejects_malformed_or_symlinked_state(self):
         with self.registry.path.open('a') as f:f.write('{broken\n')
         self.assertFalse(self.registry.cleanup(time.monotonic()+1).removed)

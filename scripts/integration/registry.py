@@ -131,7 +131,10 @@ class Registry:
             return result.stdout.splitlines()
         if args[0]=='inspect':
             if result.returncode:
-                if 'No such' in result.stderr:return None
+                message=result.stderr.strip().lower()
+                if (result.stdout.strip() in ('','[]') and len(args)==2 and
+                    any(message.endswith(prefix+args[1].lower()) for prefix in
+                        ('no such object: ','no such container: '))):return None
                 raise ValueError('docker_inspect_failed')
             return json.loads(result.stdout)[0]
         if result.returncode:raise ValueError('docker_cleanup_failed')

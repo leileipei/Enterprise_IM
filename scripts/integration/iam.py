@@ -35,7 +35,11 @@ def prepare_iam(bundle,tools,private,deadline):
         for path in config.rglob('*'):
             if path.is_file():path.chmod(0o600)
             elif path.is_dir():path.chmod(0o700)
-        if result.returncode:raise ValueError('iam_command_failed:'+args[0])
+        if result.returncode:
+            diagnostic=result.stdout+result.stderr
+            for secret in sorted(bundle.secrets,key=len,reverse=True):diagnostic=diagnostic.replace(secret,'[REDACTED]')
+            _private_file(private/('failure-'+secrets.token_hex(8)+'.json'),diagnostic)
+            raise ValueError('iam_command_failed:'+':'.join(args[:3]))
         return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
     admin=bundle.metadata['minio_admin'];mc(['alias','set','fixture',bundle.environment['IM_TEST_S3_ENDPOINT'],*admin])
     owner=next(iter(bundle.owners));bucket='p426-p431-'+owner;negative=bucket+'-policy'
