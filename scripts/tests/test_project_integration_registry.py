@@ -157,6 +157,13 @@ class RegistryTests(unittest.TestCase):
         self.assertIsNotNone(proc.poll())
         self.assertFalse(directory.exists())
 
+    def test_process_exits_between_identity_reads(self):
+        proc=self.sleep(self.root/OWNER)
+        with patch('integration.registry.os.getpgid',side_effect=ProcessLookupError(3,'No such process')):
+            try:actual=self.fingerprint(proc.pid)
+            except ProcessLookupError:self.fail('process exit between identity reads was treated as cleanup failure')
+        self.assertIsNone(actual)
+
     def test_registry_rejects_malformed_or_symlinked_state(self):
         with self.registry.path.open('a') as f:f.write('{broken\n')
         self.assertFalse(self.registry.cleanup(time.monotonic()+1).removed)

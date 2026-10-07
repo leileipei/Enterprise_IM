@@ -43,10 +43,12 @@ def process_fingerprint(pid):
     executable=executable.resolve()
     cwd=_cwd(pid)
     if cwd is None:raise ValueError('unproven_process_workdir')
+    try:pgid=os.getpgid(pid)
+    except ProcessLookupError:return None
     return dict(pid=pid,uid=int(parts[0]),start_time=' '.join(parts[1:6]),
                 executable_path=str(executable),
                 executable_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
-                workdir=str(Path(cwd).resolve()),pgid=os.getpgid(pid))
+                workdir=str(Path(cwd).resolve()),pgid=pgid)
 
 
 class Registry:
