@@ -21,10 +21,11 @@ type IntegrationProcess struct {
 	path, owner, source, gate, test, identity string
 	fingerprint                               map[string]any
 	completedExit                             string
+	kind                                      string
 }
 
-func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationProcess, error) {
-	p := &IntegrationProcess{path: os.Getenv("IM_TEST_INTEGRATION_REGISTRY")}
+func integrationRecord(gate, test string) (*IntegrationProcess, error) {
+	p := &IntegrationProcess{path: os.Getenv("IM_TEST_INTEGRATION_REGISTRY"), kind: "process"}
 	if p.path == "" {
 		return p, nil
 	}
@@ -33,7 +34,7 @@ func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationP
 	p.gate = os.Getenv("IM_TEST_INTEGRATION_GATE")
 	p.test = test
 	if !regexp.MustCompile(`^[a-f0-9]{32}$`).MatchString(p.owner) ||
-		!regexp.MustCompile(`^[a-f0-9]{40}$`).MatchString(p.source) || p.gate == "" || p.gate != gate || test == "" || cmd == nil || cmd.Process == nil {
+		!regexp.MustCompile(`^[a-f0-9]{40}$`).MatchString(p.source) || p.gate == "" || p.gate != gate || test == "" {
 		return nil, errors.New("invalid integration registration")
 	}
 	info, err := os.Lstat(p.path)
@@ -77,6 +78,20 @@ func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationP
 	}
 	if !reserved {
 		return nil, errors.New("owner not reserved")
+	}
+	return p, nil
+}
+
+func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationProcess, error) {
+	p, err := integrationRecord(gate, test)
+	if err != nil {
+		return nil, err
+	}
+	if p.path == "" {
+		return p, nil
+	}
+	if cmd == nil || cmd.Process == nil {
+		return nil, errors.New("invalid integration process")
 	}
 	pid := cmd.Process.Pid
 	p.identity = strconv.Itoa(pid)
@@ -151,12 +166,56 @@ func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationP
 	return p, nil
 }
 
+// Validate the reservation before creating a container. These labels allow
+// recovery even if cancellation lands between Docker create and registration.
+func IntegrationContainerLabels(gate, test string) ([]string, error) {
+	p, err := integrationRecord(gate, test)
+	if err != nil {
+		return nil, err
+	}
+	if p.path == "" {
+		return nil, nil
+	}
+	return []string{"--label", "im.integration.owner=" + p.owner, "--label", "im.integration.source=" + p.source}, nil
+}
+
+func RegisterIntegrationContainer(identity, gate, test string) (*IntegrationProcess, error) {
+	p, err := integrationRecord(gate, test)
+	if err != nil {
+		return nil, err
+	}
+	if p.path == "" {
+		return p, nil
+	}
+	if !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(identity) {
+		return nil, errors.New("invalid integration container identity")
+	}
+	raw, err := exec.Command("docker", "inspect", identity).Output()
+	if err != nil {
+		return nil, errors.New("integration container inspect failed")
+	}
+	var actual []struct {
+		ID     string `json:"Id"`
+		Config struct{ Labels map[string]string }
+	}
+	if json.Unmarshal(raw, &actual) != nil || len(actual) != 1 || actual[0].ID != identity || actual[0].Config.Labels["im.integration.owner"] != p.owner || actual[0].Config.Labels["im.integration.source"] != p.source {
+		return nil, errors.New("foreign integration container")
+	}
+	p.kind = "container"
+	p.identity = identity
+	p.fingerprint = map[string]any{"container_id": identity}
+	if err = p.write("registered", nil); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 func (p *IntegrationProcess) write(event string, detail map[string]any) error {
 	if p.path == "" {
 		return nil
 	}
 	row := map[string]any{"schema_version": 1, "owner": p.owner, "source_commit": p.source,
-		"event": event, "identity": p.identity, "kind": "process", "fingerprint": p.fingerprint,
+		"event": event, "identity": p.identity, "kind": p.kind, "fingerprint": p.fingerprint,
 		"detail": map[string]any{"gate": p.gate, "test": p.test}, "time": float64(time.Now().UnixNano()) / 1e9}
 	for k, v := range detail {
 		row["detail"].(map[string]any)[k] = v
