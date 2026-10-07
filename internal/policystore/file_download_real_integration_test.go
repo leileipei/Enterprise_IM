@@ -325,8 +325,7 @@ type tcpEvidence struct {
 	mu                      sync.Mutex
 	first                   chan struct{}
 	once                    sync.Once
-	writeGate               time.Time
-	writeGateOnce           sync.Once
+	authorizeGate           time.Time
 	last, deadline, started time.Time
 	accepted                int64
 	timeout                 bool
@@ -361,15 +360,6 @@ func (c *evidenceConn) SetWriteDeadline(at time.Time) error {
 	return c.Conn.SetWriteDeadline(at)
 }
 func (c *evidenceConn) Write(p []byte) (int, error) {
-	// Hold only the real wire write; object staging and authorization have
-	// already completed. The underlying socket retains its actual deadline.
-	c.e.writeGateOnce.Do(func() {
-		if !c.e.writeGate.IsZero() {
-			timer := time.NewTimer(time.Until(c.e.writeGate))
-			defer timer.Stop()
-			<-timer.C
-		}
-	})
 	start := time.Now()
 	n, e := c.Conn.Write(p)
 	c.e.mu.Lock()
@@ -437,7 +427,7 @@ func testDownloadTokenExpiryBlockedWrite(t *testing.T, preparationDelay time.Dur
 	sign := downloadJWTIssuer(t, f)
 	m := scanDownloadBody(t, f, bytes.Repeat([]byte("x"), 8<<20))
 	expiry := time.Unix(time.Now().Add(4*time.Second).Unix(), 0)
-	evidence := &tcpEvidence{first: make(chan struct{}), writeGate: expiry.Add(-800 * time.Millisecond)}
+	evidence := &tcpEvidence{first: make(chan struct{}), authorizeGate: expiry.Add(-800 * time.Millisecond)}
 	objects := &delayedDownloadPreparationStore{Store: realTransferObjects(t), delay: preparationDelay}
 	base, _, _ := explicitDownload(t, f, objects, evidence)
 	token := sign("admin", expiry)
@@ -679,6 +669,21 @@ func TestFileDownloadProductionClosed(t *testing.T) {
 type observedDownload struct {
 	*filedownload.Service
 	evidence *tcpEvidence
+}
+
+func (o *observedDownload) Authorize(ctx context.Context, id access.TrustedIdentity, p *filedownload.Prepared) error {
+	// Preparation has completed; retain the real authorization and fresh
+	// bearer/database checks after the controlled fixture wait.
+	if !o.evidence.authorizeGate.IsZero() {
+		timer := time.NewTimer(time.Until(o.evidence.authorizeGate))
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+	return o.Service.Authorize(ctx, id, p)
 }
 
 func (o *observedDownload) Check(ctx context.Context, id access.TrustedIdentity, p *filedownload.Prepared) error {
