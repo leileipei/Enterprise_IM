@@ -81,6 +81,7 @@ func TestCompareProcessEnvIsolation(t *testing.T) {
 	f := newCompareFixture(t)
 	path := processInput(t, f.input)
 	code, normal, stderr := processCall(t, f, path, f.tenant, nil)
+	t.Log("COMPARISON_REPORT " + string(normal))
 	if code != 0 || len(stderr) != 0 {
 		t.Fatal("actual process positive path")
 	}

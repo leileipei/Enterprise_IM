@@ -67,6 +67,7 @@ func newCompareFixture(t *testing.T) *compareFixture {
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+		_, _ = owner.Exec(cleanup, "ROLLBACK")
 		if _, e := owner.Exec(cleanup, "DROP SCHEMA "+quote(f.schema)+" CASCADE"); e != nil {
 			t.Error("fixture schema cleanup", e)
 		}

@@ -17,6 +17,7 @@ func TestComparePGSnapshotReadOnly(t *testing.T) {
 	if err != nil || !s.TenantFound || s.SQLCount > 128 {
 		t.Fatal("bounded complete snapshot", err)
 	}
+	t.Logf("SNAPSHOT_SQL_COUNT %d", s.SQLCount)
 	cl, is, err := Compare(context.Background(), f.input, s)
 	if err != nil || *cl["total"].Identical != 66 || is.Total() != 0 {
 		t.Fatal("read snapshot values", err)
