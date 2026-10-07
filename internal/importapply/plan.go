@@ -9,19 +9,6 @@ import (
 	"sort"
 )
 
-type TableCounts struct {
-	Input     int `json:"input"`
-	New       int `json:"new"`
-	Identical int `json:"identical"`
-	Conflict  int `json:"conflict"`
-	Inserted  int `json:"inserted"`
-}
-type Issue struct {
-	Entity p.Entity `json:"entity"`
-	Row    int      `json:"row"`
-	Field  p.Field  `json:"field"`
-	Code   string   `json:"code"`
-}
 type PlannedRow struct {
 	Ref    c.RowRef
 	Record p.Record

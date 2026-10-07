@@ -86,7 +86,7 @@ if plan.Counts["admin_grants"].Inserted != 0 { t.Fatal("protected entity was sel
 - `BatchBinding{TenantID,RequestID,ActorUserID,ActingMembershipID string; ProtocolVersion string; InputSHA256 [32]byte}`；`StoredBatch{Binding BatchBinding; Receipt Receipt}`，两者不可 JSON/日志输出。
 - 私有 `lookupReceipt(ctx context.Context,tx pgx.Tx,schema,tenantID,requestID string)(StoredBatch,bool,error)`、`insertReceipt(ctx context.Context,tx pgx.Tx,schema string,batch StoredBatch)error`；`MatchBinding(a,b BatchBinding)bool` 比较全部绑定值。
 
-- [ ] **Step 1：写 RED。** `TestAppendReceiptContract` 断言 applied 的 inserted=new、rejected inserted=0、只读三表 inserted=0、总量闭合；`TestAppendReceiptStrictDecode` 覆盖 malformed/未知/重复/漏键/超 256 KiB；`TestAppendRawBinding` 空格差异及 membership 改变不匹配；`TestAppendPGMigration` 空白/已有迁移 up/down、非法摘要/state/reason/JSONB/重复 tenant+request 拒绝。
+- [x] **Step 1：写 RED。** `TestAppendReceiptContract` 断言 applied 的 inserted=new、rejected inserted=0、只读三表 inserted=0、总量闭合；`TestAppendReceiptStrictDecode` 覆盖 malformed/未知/重复/漏键/超 256 KiB；`TestAppendRawBinding` 空格差异及 membership 改变不匹配；`TestAppendPGMigration` 空白/已有迁移 up/down、非法摘要/state/reason/JSONB/重复 tenant+request 拒绝。
 
 代表性断言（变量由本任务测试夹具建立）：
 
@@ -98,10 +98,10 @@ for _, counts := range receipt.Counts {
 }
 ```
 
-- [ ] **Step 2：观察失败。** `go test ./internal/importapply -run 'TestAppend(Receipt|RawBinding|PGMigration)' -count=1`；PG 测试必须使用下面专属夹具，不能 SKIP 作为 RED。
-- [ ] **Step 3：最小实现。** 创建不可变终态表及 SELECT/INSERT 存储器，schema 仅受验证的内部配置并用 pgx.Identifier；completed_at 不标为数据库 commit 时间，回执无正文/摘要/actor 来源。
-- [ ] **Step 4：验证 GREEN。** 同命令在 PG16 普通角色运行；检查主键、tenant 外键、digest 长度、JSONB 字节和 state/reason 配对约束。applied 零新增也合法。
-- [ ] **Step 5：提交。** `feat: persist immutable controlled import receipts`。
+- [x] **Step 2：观察失败。** `go test ./internal/importapply -run 'TestAppend(Receipt|RawBinding|PGMigration)' -count=1`；PG 测试必须使用下面专属夹具，不能 SKIP 作为 RED。
+- [x] **Step 3：最小实现。** 创建不可变终态表及 SELECT/INSERT 存储器，schema 仅受验证的内部配置并用 pgx.Identifier；completed_at 不标为数据库 commit 时间，回执无正文/摘要/actor 来源。
+- [x] **Step 4：验证 GREEN。** 同命令在 PG16 普通角色运行；检查主键、tenant 外键、digest 长度、JSONB 字节和 state/reason 配对约束。applied 零新增也合法。
+- [x] **Step 5：提交。** `feat: persist immutable controlled import receipts`。
 
 **专属夹具契约（任务 2 建立，任务 7 接入脚本）：** 测试仅在 `IM_IMPORT_APPLY_TEST_DATABASE_URL` 显式提供时创建自身随机 schema，迁移 000001..000022；普通 writer 角色运行产品代码，管理连接只创建/清理角色与 schema。复用 P4-29 测试库隔离模式，不从 IM_DATABASE_URL 或真实库回退。额外 catalog/DDL 夹具使用 `IM_IMPORT_APPLY_TEST_ADMIN_URL`，缺失应明确 SKIP；最终门禁禁止这些 SKIP。
 
