@@ -13,7 +13,7 @@ chmod 700 "$output"
 log="$output/web-files.jsonl"
 if [[ -L "$log" ]]; then echo 'refuse symlink output' >&2; exit 2; fi
 status=0
-go test -json -timeout=30m ./internal/policystore -run '^TestWebFileReal(Lifecycle|RejectedScan|Settings|ProductionClosed|Search|SearchFinalBoundary|ContextIsolation|UnknownUploadSend|DownloadFaults|Revocation|PolicyConflict)$' -count=1 > "$log" 2>&1 || status=$?
+go test -json -timeout=30m ./internal/policystore -run '^TestWebFileReal(Lifecycle|RejectedScan|Settings|ProductionClosed|Search|SearchFinalBoundary|ContextIsolation|UnknownUploadSend|DownloadFaults|Revocation|PolicyConflict)$' -count=1 > "$log" 2> "$log.stderr" || status=$?
 python3 - "$log" "$status" <<'PY'
 import json,sys
 required={'TestWebFileRealLifecycle','TestWebFileRealRejectedScan','TestWebFileRealSettings','TestWebFileRealProductionClosed','TestWebFileRealSearch','TestWebFileRealSearchFinalBoundary','TestWebFileRealContextIsolation','TestWebFileRealUnknownUploadSend','TestWebFileRealDownloadFaults','TestWebFileRealRevocation','TestWebFileRealPolicyConflict'}

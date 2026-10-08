@@ -20,7 +20,7 @@ log="$output/file-messages.jsonl"
 if [[ -L "$log" ]]; then echo 'refuse symlink output' >&2; exit 2; fi
 umask 077
 status=0
-go test -json ./internal/policystore ./cmd/im-api -run '^TestFileMessage(Real|Production|RetiredHTTP)|^TestFileScanReal(Trusted|Unproven)Runtime$' -count=1 > "$log" 2>&1 || status=$?
+go test -json ./internal/policystore ./cmd/im-api -run '^TestFileMessage(Real|Production|RetiredHTTP)|^TestFileScanReal(Trusted|Unproven)Runtime$' -count=1 > "$log" 2> "$log.stderr" || status=$?
 python3 - "$log" "$status" <<'PY'
 import json,sys
 required={'TestFileMessageRealScanSendPull','TestFileMessageRealRealtime','TestFileMessageRealBrowserLegacy','TestFileMessageProductionClosed','TestFileMessageProductionClosedConfiguration','TestFileMessageRetiredHTTP','TestFileScanRealTrustedRuntime','TestFileScanRealUnprovenRuntime'}

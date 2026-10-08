@@ -9,6 +9,15 @@ class ApplyGateTests(unittest.TestCase):
   rows.extend(dict(name=k,exit_code=0) for k in gates.REQUIRED_COMMANDS)
   rows.append(dict(name='cleanup',removed=True))
   return rows
+ def test_required_only_mode_and_paired_registration(self):
+  args=gates.parse_arguments(['--source-commit','a'*40,'--output-dir','/private/tmp/new','--required-only'])
+  self.assertTrue(args.required_only)
+  fields=gates.full_suite_fields(args,'a'*40)
+  self.assertEqual(fields['full_suite_status'],'not_executed');self.assertFalse(fields['full_suite_passed']);self.assertEqual(fields['full_suite_source_commit'],'')
+  default=gates.parse_arguments(['--source-commit','a'*40,'--output-dir','/private/tmp/new'])
+  self.assertFalse(default.required_only)
+  for extra in [['--required-only','--reuse-full-suite','/tmp/prior'],['--resource-owner','b'*32],['--resource-registry','/tmp/registry'],['--resource-owner','bad','--resource-registry','/tmp/registry']]:
+   with self.assertRaises(SystemExit):gates.parse_arguments(['--source-commit','a'*40,'--output-dir','/tmp/new']+extra)
  def test_positive(self):self.assertTrue(gates.validate_required_gates(self.events())['required_gates_passed'])
  def test_missing_skip_failure_zero_duplicate_and_cleanup(self):
   for case in ['missing','skip','fail','zero','duplicate','cleanup','command']:

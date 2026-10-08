@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,15 +51,16 @@ console.log(JSON.stringify({legacy_placeholder:true,text_send:true,reload_pull:t
 	}
 	cmd := exec.Command(node, script)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Env = append(os.Environ(), "IM_TEST_WEB_URL="+f.web, "IM_TEST_PRIVATE_NAME="+m.OriginalFilename, "IM_TEST_PRIVATE_CAPTION="+caption)
+	cmd.Env = testfixtures.BrowserEnvironment(map[string]string{"IM_TEST_WEB_URL": f.web, "IM_TEST_PRIVATE_NAME": m.OriginalFilename, "IM_TEST_PRIVATE_CAPTION": caption})
 	var output bytes.Buffer
 	cmd.Stdout = &output
 	cmd.Stderr = &output
-	if e := cmd.Start(); e != nil {
-		t.Fatal(e)
+	lifecycle, startErr := testfixtures.StartIntegrationBrowser(cmd, t.Name(), true)
+	if startErr != nil {
+		t.Fatal(startErr)
 	}
 	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
+	go func() { done <- lifecycle.Wait() }()
 	timer := time.NewTimer(90 * time.Second)
 	defer timer.Stop()
 	defer syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)

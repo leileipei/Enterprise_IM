@@ -1,0 +1,197 @@
+import ast,copy,hashlib,importlib.util,json,sys,tempfile,unittest
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from integration.model import SourceSnapshot,Inventory
+
+class GateTests(unittest.TestCase):
+ def setUp(self):
+  try:from integration import gates
+  except ImportError:self.fail('gate adapter interfaces missing')
+  self.g=gates;self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name).resolve()
+  self.snapshot=SourceSnapshot('c'*40,self.root/'readonly-repo',Path(__file__).resolve().parents[2],self.root/'source.tar','d'*64)
+  self.inventory=Inventory(set(),{},set())
+ def specs(self):return {s['name']:s for s in self.g.gate_specs(self.snapshot,self.inventory)}
+ def test_full_suite_budget_covers_observed_cumulative_package_runtime(self):
+  from integration.run import GATE_SECONDS
+  # Actual I completed cases took1768.09s; matching H cases1613.53s,
+  # with total H1709.485s. Preserve room to finish the missing real cases.
+  observed_completion_floor=1768.09+(1709.485-1613.53)
+  for name in ('full_repository','race_repository'):
+   with self.subTest(gate=name):
+    argv=self.specs()[name]['argv']
+    timeout=next(a for a in argv if a.startswith('-timeout='))
+    self.assertTrue(timeout.endswith('m'))
+    seconds=int(timeout[len('-timeout='):-1])*60
+    self.assertGreater(seconds,observed_completion_floor,
+                       'test-framework package budget cannot finish observed real case durations')
+    self.assertLess(seconds,GATE_SECONDS)
+    self.assertEqual(seconds,45*60)
+    self.assertEqual(argv[-1],'./...');self.assertIn('-p',argv)
+    self.assertEqual(argv[argv.index('-p')+1],'1')
+    self.assertIn('-count=1',argv);self.assertNotIn('-run',argv)
+ def test_approved_budget_preserves_specialist_and_outer_deadlines(self):
+  from integration.run import GATE_SECONDS,TOTAL_SECONDS,CLEANUP_SECONDS
+  self.assertIn('-timeout=30m',self.specs()['message_realtime']['argv'])
+  self.assertEqual((GATE_SECONDS,TOTAL_SECONDS,CLEANUP_SECONDS),(3600,21600,60))
+ def test_archive_script_with_readonly_git_root(self):
+  spec=self.specs()['import_append']
+  self.assertEqual(set(spec),{'name','kind','argv','cwd','env_group','required'})
+  self.assertEqual(spec['cwd'],self.snapshot.repository_root)
+  self.assertEqual(Path(spec['argv'][1]),self.snapshot.root/'scripts/test-import-apply.py')
+  self.assertIn('--required-only',spec['argv']);self.assertNotIn('--reuse-full-suite',spec['argv'])
+ def report(self):
+  loader=importlib.util.spec_from_file_location('legacy',self.snapshot.root/'scripts/test-import-apply.py');legacy=importlib.util.module_from_spec(loader);loader.loader.exec_module(legacy)
+  (self.root/'source.tar').write_bytes(b'fixed archive');(self.root/'bin').mkdir(exist_ok=True);(self.root/'bin/probe').write_bytes(b'actual binary fixture')
+  rows=[]
+  for n in legacy.REQUIRED_GATES:
+   log=self.root/(n+'.log');names=set(legacy.REQUIRED_TESTS[n]);names.update(x.split('/')[0] for x in names.copy())
+   events=[{'Action':'start','Package':'fixture/'+n}]
+   for test in sorted(names):events += [{'Action':'run','Package':'fixture/'+n,'Test':test},{'Action':'pass','Package':'fixture/'+n,'Test':test}]
+   events.append({'Action':'pass','Package':'fixture/'+n});log.write_text(''.join(json.dumps(e)+'\n' for e in events))
+   rows.append(dict(name=n,exit_code=0,counts={'top_pass':sum('/' not in x for x in names),'sub_pass':sum('/' in x for x in names),'fail':0,'skip':0},executed_tests=sorted(names),failed_tests=[],skipped_tests=[],log=log.name,log_sha256=hashlib.sha256(log.read_bytes()).hexdigest()))
+  rows.extend(dict(name=n,exit_code=0) for n in legacy.REQUIRED_COMMANDS);rows.append({'name':'cleanup','removed':True})
+  return {'source_commit':self.snapshot.commit,'source_archive_sha256':hashlib.sha256((self.root/'source.tar').read_bytes()).hexdigest(),'events':rows,'bin_sha256':{'probe':hashlib.sha256((self.root/'bin/probe').read_bytes()).hexdigest()},'cleanup':{'removed':True},'full_suite_status':'not_executed','full_suite_source_commit':'','full_suite_passed':False,'required_gates_passed':True}
+ def validate(self,report):
+  path=self.root/'verification.json';path.write_text(json.dumps(report));return self.g.validate_import_child(path,self.snapshot.commit)
+ def test_import_required_only_is_not_full_pass(self):
+  report=self.report();event=self.validate(report);self.assertFalse(event.failures)
+  for change in [{'full_suite_passed':True},{'full_suite_source_commit':self.snapshot.commit},{'full_suite_status':'passed'}]:
+   changed=dict(report,**change);self.assertTrue(self.validate(changed).failures)
+  changed=copy.deepcopy(report);changed['events'].append({'name':'full_suite','exit_code':0});self.assertTrue(self.validate(changed).failures)
+ def test_child_source_and_hash_mismatch(self):
+  report=self.report();report['source_commit']='e'*40;self.assertTrue(self.validate(report).failures)
+  report=self.report();report['source_archive_sha256']='f'*64;self.assertTrue(self.validate(report).failures)
+  report=self.report();(self.root/'unit.log').write_text('changed');self.assertTrue(self.validate(report).failures)
+  report=self.report();(self.root/'bin/probe').write_bytes(b'changed');self.assertTrue(self.validate(report).failures)
+  report=self.report();report['events'][0]['log']='../outside';self.assertTrue(self.validate(report).failures)
+ def test_all_existing_required_names_preserved(self):
+  specs=self.specs()
+  for gate,n in [('file_messages',8),('file_download_retention',16),('web_files',11)]:self.assertEqual(len(specs[gate]['required']),n)
+  for name,script in [('file_messages','test-file-messages.sh'),('file_download_retention','test-file-download-retention.sh'),('web_files','test-web-files.sh')]:
+   import re
+   literal=re.search(r'^required=(\{[^\n]+\})$',(self.snapshot.root/'scripts'/script).read_text(),re.M).group(1)
+   self.assertEqual(specs[name]['required'],ast.literal_eval(literal))
+  self.assertEqual(len(specs['file_business_process']['required']),15)
+  self.assertIn('TestFileBusinessProcessRP08/slow_client_SIGTERM',specs['file_business_process']['required'])
+  self.assertIn('TestRealBrowserLoginRealtimeAndOfflinePull',specs['message_realtime']['required'])
+  self.assertIn('./internal/access',specs['message_realtime']['argv']);self.assertIn('./internal/oidcauth',specs['message_realtime']['argv'])
+ def test_import_process_is_owned_while_git_root_remains_readonly(self):
+  from unittest.mock import patch
+  from integration.model import FixtureBundle,Toolchain,GateEvent
+  from integration.registry import Registry
+  registry=Registry(self.root/'registry.jsonl','b'*32,self.snapshot.commit)
+  tools=Toolchain({'python':Path(sys.executable),'node':Path('/bin/echo'),'chrome':Path('/bin/echo')},{},{},{},'darwin','arm64')
+  bundle=FixtureBundle({},set(),registry.path,{registry.owner},{'source_commit':self.snapshot.commit})
+  calls=[]
+  def command(name,kind,commit,argv,cwd,env,log,deadline,registry):
+   calls.append((argv,cwd));return GateEvent(name,kind,commit,1,log)
+  with patch.object(self.g,'run_command',side_effect=command),patch.object(self.g,'docker_environment',return_value={'DOCKER_HOST':'local','PATH':'/usr/bin'}):
+   self.g.run_stage(self.specs()['import_append'],self.snapshot,tools,bundle,registry,1e12)
+  argv,cwd=calls[0]
+  self.assertEqual(cwd,registry.root/registry.owner)
+  self.assertEqual(argv[argv.index('--repository-root')+1],str(self.snapshot.repository_root))
+
+ def test_component_branch_parses_actual_output_without_realtime_import(self):
+  from unittest.mock import patch
+  from integration.model import FixtureBundle,Toolchain,GateEvent
+  from integration.registry import Registry
+  from support import go_rows
+  registry=Registry(self.root/'registry.jsonl','b'*32,self.snapshot.commit)
+  tools=Toolchain({'python':Path(sys.executable),'go':Path('/opt/homebrew/bin/go'),'node':Path('/bin/echo'),'chrome':Path('/bin/echo')},{},{},{},'darwin','arm64')
+  bundle=FixtureBundle({},set(),registry.path,{registry.owner},{'source_commit':self.snapshot.commit})
+  package='github.com/leileipei/Enterprise_IM/internal/files'
+  inventory=Inventory({package},{package:{'TestFileControlled'}},set())
+  proof_value={'source_sha':self.snapshot.commit,'binary_sha256':{'im-api-linux':'a'*64}}
+  def command(name,kind,commit,argv,cwd,env,log,deadline,registry):
+   import subprocess
+   payload=''.join(json.dumps(r)+'\n' for r in go_rows(package,[('TestFileControlled','pass')]))
+   with (log.parent/'components.json').open('w') as stream:subprocess.run([sys.executable,'-c','import sys;sys.stdout.write('+repr(payload)+')'],stdout=stream,check=True)
+   proof=log.parent/'business-fixtures'/'im-p426-process-123456'/'evidence.json';proof.parent.mkdir(mode=0o700,parents=True,exist_ok=True);proof.write_text(json.dumps(proof_value));proof.chmod(0o600)
+   (log.parent/'assembly.json').write_text('');log.write_text('completed');Path(str(log)+'.stderr').write_text('')
+   return GateEvent(name,kind,commit,0,log)
+  with patch.object(self.g,'run_command',side_effect=command),patch.object(self.g,'collect_inventory',return_value=inventory),patch.object(self.g,'docker_environment',return_value={'DOCKER_HOST':'local','PATH':'/usr/bin'}):
+   event=self.g.run_stage(self.specs()['file_components'],self.snapshot,tools,bundle,registry,1e12)
+   proof_value['environment']={'admin_key':'test-only-management-value'}
+   with self.assertRaisesRegex(ValueError,'unsafe_business_binary_proof'):
+    self.g.run_stage(self.specs()['file_components'],self.snapshot,tools,bundle,registry,1e12)
+  self.assertEqual(event.exit_code,0);self.assertFalse(event.failures);self.assertIn(package+'::TestFileControlled',event.passed)
+  self.assertTrue(any(Path(p).name=='evidence.json' for p in event.related_logs),'source-bound binary evidence was dropped')
+
+ def test_resource_registration_precedes_container_start(self):
+  try:from integration import resource_command
+  except ImportError:self.fail('owned resource launcher missing')
+  from unittest.mock import patch
+  from integration.registry import Registry
+  registry=Registry(self.root/'registry.jsonl','b'*32,self.snapshot.commit)
+  cid='d'*64;calls=[]
+  def docker(args,**kwargs):
+   calls.append(args)
+   if args[0]=='create':return cid+'\n'
+   if args[0]=='inspect':return json.dumps([{'Id':cid,'Config':{'Labels':{'im.integration.owner':'b'*32,'im.integration.source':self.snapshot.commit}},'State':{'Running':False,'ExitCode':0},'HostConfig':{'Memory':536870912,'NanoCpus':1000000000,'Tmpfs':{'/limited':'size=1048576,mode=0700'}}}])
+   if args[0]=='start':
+    self.assertTrue(any(r['identity']==cid and r['event']=='registered' for r in registry.records()))
+    return 'PASS\n'
+   if args[0]=='rm':return ''
+   self.fail(args)
+  binary=self.root/registry.owner/'transfer.test';binary.write_bytes(b'actual protocol fixture')
+  with patch.object(resource_command,'docker',side_effect=docker),patch.object(registry,'_owned_container',return_value=None),patch('sys.stdout'):
+   report=resource_command.launch(['--rm','--memory=512m','--cpus=1','--tmpfs','/limited:size=1048576,mode=0700','alpine@sha256:'+'a'*64,'/fixtures/transfer.test'],registry,self.root/registry.owner/'proof.json',binary)
+  self.assertEqual(report['memory'],536870912);self.assertEqual(report['nano_cpus'],1000000000)
+  self.assertEqual([a[0] for a in calls][:3],['create','inspect','start'])
+
+ def test_linux_resource_names_not_zero_match(self):
+  spec=self.specs()['file_resources'];self.assertIn('TestScannerRealResourceBoundary',spec['required']);self.assertIn('TestFileTransferRealDiskFull',spec['required'])
+  event=self.g.parse_resource_logs(self.root,self.snapshot.commit,0)
+  self.assertTrue(event.failures);self.assertEqual(len(event.passed),0)
+
+
+ def resource_fixture(self, missing=None):
+  binaries=[]
+  for name,package in [('structure.test','filescanner'),('transfer.test','filetransfer')]:
+   path=self.root/name;path.write_bytes(('actual protocol binary '+name).encode())
+   binaries.append(dict(name=name,path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),package='./internal/'+package,
+                        argv=['go','test','-c','-o',str(path),'./internal/'+package]))
+  build=dict(schema_version='file_resource_build_v1',source_commit=self.snapshot.commit,owner='b'*32,
+             goos='linux',goarch='arm64',cgo_enabled='0',go_flags='-mod=readonly -buildvcs=false',go_work='off',binaries=binaries)
+  (self.root/'resource-build.json').write_text(json.dumps(build));(self.root/'resource-build.json').chmod(0o600)
+  groups=[('resource.log','resource-list.log','TestScannerRealResourceBoundary',[]),
+          ('disk-full.log','disk-full-list.log','TestFileTransferRealDiskFull',[
+            'TestFileSpoolCrashRecovery/upload','TestFileSpoolCrashRecovery/scan',
+            'TestFileSpoolStartupSafety/symlink','TestFileSpoolStartupSafety/public_permissions'])]
+  for log,listed,mandatory,subs in groups:
+   tops={mandatory}|{s.split('/')[0] for s in subs}
+   (self.root/listed).write_text('\n'.join(sorted(tops))+'\n')
+   names=sorted(tops)+[s for s in subs if s!=missing]
+   (self.root/log).write_text(''.join('=== RUN   '+s+'\n--- PASS: '+s+' (0.01s)\n' for s in names)+'PASS\n')
+   proof=dict(source_commit=self.snapshot.commit,owner='b'*32,exit_code=0,cleanup=True,
+              memory=536870912,nano_cpus=1000000000,tmpfs={'/limited':'size=1048576,mode=0700'} if log=='disk-full.log' else {})
+   index=0 if log=='resource.log' else 2
+   binary=binaries[0 if log=='resource.log' else 1]
+   for offset,proof_name in enumerate((listed+'.proof.json',log+'.proof.json')):
+    proof.update(container_id=format(index+offset+1,'064x'),image_id='sha256:'+'a'*64,
+                 binary_name=binary['name'],binary_sha256=binary['sha256'],started_at=10.0,ended_at=11.0,seconds=1.0)
+    (self.root/proof_name).write_text(json.dumps(proof));(self.root/proof_name).chmod(0o600)
+   for name in (log,listed):(self.root/name).chmod(0o600)
+
+
+ def test_resource_required_subcase_cannot_disappear(self):
+  for missing in ('TestFileSpoolCrashRecovery/upload','TestFileSpoolCrashRecovery/scan',
+                  'TestFileSpoolStartupSafety/symlink','TestFileSpoolStartupSafety/public_permissions'):
+   with self.subTest(missing=missing):
+    self.resource_fixture(missing)
+    event=self.g.parse_resource_logs(self.root,self.snapshot.commit,0)
+    self.assertTrue(event.failures,'required Linux subcase disappeared but gate passed: '+missing)
+  self.resource_fixture()
+  self.assertFalse(self.g.parse_resource_logs(self.root,self.snapshot.commit,0).failures)
+
+
+ def test_resource_safe_artifacts_and_binary_hashes_retained(self):
+  self.resource_fixture()
+  event=self.g.parse_resource_logs(self.root,self.snapshot.commit,0)
+  expected={'resource.log','disk-full.log','resource-list.log','disk-full-list.log',
+            'resource.log.proof.json','disk-full.log.proof.json','resource-list.log.proof.json','disk-full-list.log.proof.json','resource-build.json'}
+  self.assertTrue(expected <= {Path(p).name for p in getattr(event,'related_logs',[])},'safe Linux proofs/list/logs dropped before cleanup')
+  receipts=getattr(event,'resource_evidence',{})
+  self.assertEqual({b['name'] for b in receipts.get('binaries',[])},{'structure.test','transfer.test'})
+
+if __name__=='__main__':unittest.main()

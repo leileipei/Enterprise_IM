@@ -325,6 +325,7 @@ type tcpEvidence struct {
 	mu                      sync.Mutex
 	first                   chan struct{}
 	once                    sync.Once
+	authorizeGate           time.Time
 	last, deadline, started time.Time
 	accepted                int64
 	timeout                 bool
@@ -376,20 +377,59 @@ func (c *evidenceConn) Write(p []byte) (int, error) {
 	return n, e
 }
 func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
+	testDownloadTokenExpiryBlockedWrite(t, 0)
+}
+
+func TestFileDownloadRealTokenExpiryPreparationBeforeWire(t *testing.T) {
+	testDownloadTokenExpiryBlockedWrite(t, time.Second)
+}
+
+type delayedDownloadPreparationStore struct {
+	objectstore.Store
+	delay time.Duration
+}
+
+func (s *delayedDownloadPreparationStore) ReadVersion(ctx context.Context, v objectstore.VersionRef) (io.ReadCloser, error) {
+	r, err := s.Store.ReadVersion(ctx, v)
+	if err != nil {
+		return nil, err
+	}
+	return &delayedDownloadPreparationReader{ReadCloser: r, ctx: ctx, delay: s.delay}, nil
+}
+
+type delayedDownloadPreparationReader struct {
+	io.ReadCloser
+	ctx   context.Context
+	delay time.Duration
+	once  sync.Once
+	err   error
+}
+
+func (r *delayedDownloadPreparationReader) Read(p []byte) (int, error) {
+	r.once.Do(func() {
+		timer := time.NewTimer(r.delay)
+		defer timer.Stop()
+		select {
+		case <-r.ctx.Done():
+			r.err = r.ctx.Err()
+		case <-timer.C:
+		}
+	})
+	if r.err != nil {
+		return 0, r.err
+	}
+	return r.ReadCloser.Read(p)
+}
+
+func testDownloadTokenExpiryBlockedWrite(t *testing.T, preparationDelay time.Duration) {
 	dedicatedUpload(t)
 	f := realFileMessageFixture(t)
 	sign := downloadJWTIssuer(t, f)
 	m := scanDownloadBody(t, f, bytes.Repeat([]byte("x"), 8<<20))
-	evidence := &tcpEvidence{first: make(chan struct{})}
-	objects := &gatedObjects{Store: realTransferObjects(t), entered: make(chan struct{}), release: make(chan struct{})}
-	base, _, _ := explicitDownload(t, f, objects, evidence)
 	expiry := time.Unix(time.Now().Add(4*time.Second).Unix(), 0)
-	go func() {
-		timer := time.NewTimer(time.Until(expiry.Add(-800 * time.Millisecond)))
-		defer timer.Stop()
-		<-timer.C
-		close(objects.release)
-	}()
+	evidence := &tcpEvidence{first: make(chan struct{}), authorizeGate: expiry.Add(-800 * time.Millisecond)}
+	objects := &delayedDownloadPreparationStore{Store: realTransferObjects(t), delay: preparationDelay}
+	base, _, _ := explicitDownload(t, f, objects, evidence)
 	token := sign("admin", expiry)
 	address := strings.TrimPrefix(base, "http://")
 	conn, e := dialSmallReceiveWindow(address)
@@ -402,6 +442,11 @@ func TestFileDownloadRealTokenExpiryBlockedWrite(t *testing.T) {
 	reader := bufio.NewReaderSize(conn, 1024)
 	line, e := reader.ReadString('\n')
 	if e != nil || !strings.Contains(line, "200") {
+		var phase, reason string
+		queryErr := f.conn.QueryRow(context.Background(), `SELECT phase,COALESCE(reason_code,'') FROM file_download_sessions WHERE file_id=$1`, m.ID).Scan(&phase, &reason)
+		evidence.mu.Lock()
+		t.Logf("initial-header diagnostic phase=%s reason=%s query-ok=%t token-remaining=%s tcp-accepted=%d write-deadline-set=%t", phase, reason, queryErr == nil, time.Until(expiry), evidence.accepted, !evidence.deadline.IsZero())
+		evidence.mu.Unlock()
 		t.Fatal("initial TCP headers", e, line)
 	}
 	for {
@@ -624,6 +669,21 @@ func TestFileDownloadProductionClosed(t *testing.T) {
 type observedDownload struct {
 	*filedownload.Service
 	evidence *tcpEvidence
+}
+
+func (o *observedDownload) Authorize(ctx context.Context, id access.TrustedIdentity, p *filedownload.Prepared) error {
+	// Preparation has completed; retain the real authorization and fresh
+	// bearer/database checks after the controlled fixture wait.
+	if !o.evidence.authorizeGate.IsZero() {
+		timer := time.NewTimer(time.Until(o.evidence.authorizeGate))
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+	return o.Service.Authorize(ctx, id, p)
 }
 
 func (o *observedDownload) Check(ctx context.Context, id access.TrustedIdentity, p *filedownload.Prepared) error {

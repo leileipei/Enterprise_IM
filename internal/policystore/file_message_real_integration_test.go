@@ -17,7 +17,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -171,14 +170,14 @@ func startFileMessageProduction(t *testing.T, binary string, environment []strin
 		t.Fatal(e)
 	}
 	os.Chmod(log.Name(), 0600)
-	cmd := exec.Command(binary)
-	cmd.Env = append(os.Environ(), environment...)
+	cmd := fileProductCommand(binary, environment)
 	cmd.Stdout = log
 	cmd.Stderr = log
 	if e = cmd.Start(); e != nil {
 		t.Fatal(e)
 	}
-	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait(); log.Close() })
+	t.Cleanup(func() { log.Close() })
+	registration := trackFileProductProcess(t, cmd)
 	client := &http.Client{Timeout: time.Second}
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
@@ -188,6 +187,9 @@ func startFileMessageProduction(t *testing.T, binary string, environment []strin
 			if e == nil {
 				res.Body.Close()
 				if res.StatusCode == 200 {
+					if err := registration.Ready(); err != nil {
+						t.Fatal(err)
+					}
 					return "http://" + addr, log.Name()
 				}
 			}
@@ -456,7 +458,7 @@ func TestFileMessageProductionClosed(t *testing.T) {
 			env := append([]string{}, f.apiEnv...)
 			env = append(env, "IM_FILE_MESSAGE_ENABLED=true")
 			if enabled {
-				env = append(env, "IM_FILE_UPLOAD_ENABLED=true", "IM_FILE_S3_ENDPOINT="+os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION=us-east-1", "IM_FILE_S3_BUCKET="+os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_PATH_STYLE=true", "IM_FILE_SPOOL_DIR="+t.TempDir()+"/upload")
+				env = append(env, "IM_FILE_UPLOAD_ENABLED=true", "IM_FILE_S3_ENDPOINT="+os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION=us-east-1", "IM_FILE_S3_BUCKET="+os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_PATH_STYLE=true", "IM_FILE_SPOOL_DIR="+t.TempDir()+"/upload", "IM_FILE_S3_ACCESS_KEY="+os.Getenv("IM_FILE_S3_ACCESS_KEY"), "IM_FILE_S3_SECRET_KEY="+os.Getenv("IM_FILE_S3_SECRET_KEY"))
 			}
 			api, log := startFileMessageProduction(t, f.binary, env)
 			path := "/api/v1/conversations/" + directA + "/messages"

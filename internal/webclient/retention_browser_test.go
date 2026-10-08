@@ -4,6 +4,7 @@ package webclient
 
 import (
 	"context"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"os"
 	"os/exec"
 	"syscall"
@@ -19,8 +20,9 @@ func TestWebRetentionRecordsBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/retention_records.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -38,8 +40,9 @@ func TestWebLegalHoldsBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/legal_holds.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -57,8 +60,9 @@ func TestWebLegalHoldActionsBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/legal_hold_actions.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -76,8 +80,9 @@ func TestWebRetentionPolicyBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/retention_policy.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -95,8 +100,9 @@ func TestWebRetentionHistoryBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/retention_history.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -114,8 +120,9 @@ func TestWebAuditRecordsBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/audit_records.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -133,8 +140,9 @@ func TestWebMessageSearchBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/message_search.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -152,8 +160,9 @@ func TestWebCrossMessageSearchBrowser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, node, "e2e/cross_message_search.cjs")
+	cmd.Env = testfixtures.BrowserEnvironment(nil)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	output, err := cmd.CombinedOutput()
+	output, err := testfixtures.IntegrationBrowserCombinedOutput(cmd, t.Name(), true)
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}

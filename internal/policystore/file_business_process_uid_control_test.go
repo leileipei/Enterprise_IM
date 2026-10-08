@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"net/url"
 	"os"
 	"os/exec"
@@ -53,6 +54,21 @@ func (f *fileBusinessProcessFixture) proveLinuxDownloadUID(t *testing.T) {
 	settings["IM_FILE_DOWNLOAD_OWNER_ID"] = freshFile().ID
 	settings["SSL_CERT_FILE"] = "/fixture/oidc-ca.pem"
 	settings["IM_FILE_DOWNLOAD_SPOOL_DIR"] = "/download"
+	databaseURL, err := url.Parse(settings["IM_DATABASE_URL"])
+	if err != nil {
+		t.Fatal("Linux database fixture URL invalid")
+	}
+	query := databaseURL.Query()
+	if query.Get("sslmode") == "verify-full" {
+		trustedCA, err := os.ReadFile(query.Get("sslrootcert"))
+		if err != nil {
+			t.Fatal("Linux database fixture trusted CA unavailable")
+		}
+		processPrivateFile(t, filepath.Join(f.privateRoot, "postgres-ca.pem"), trustedCA)
+		query.Set("sslrootcert", "/fixture/postgres-ca.pem")
+		databaseURL.RawQuery = query.Encode()
+		settings["IM_DATABASE_URL"] = databaseURL.String()
+	}
 	ports := []string{}
 	for _, s := range []string{f.apiDSN, f.oidc.URL, f.objectGateway.URL} {
 		u, e := url.Parse(s)
@@ -75,7 +91,27 @@ func (f *fileBusinessProcessFixture) proveLinuxDownloadUID(t *testing.T) {
 		processPrivateFile(t, envFile, []byte(text.String()))
 		name := "enterprise-im-p426-uid-" + processRandom(t)[:12]
 		args := []string{"run", "-d", "--name", name, "--label", "enterprise_im.stage=p4-26", "--label", "enterprise_im.case=" + f.schema, "--env-file", envFile, "--tmpfs", "/download:mode=0700,uid=" + uid, "-v", f.privateRoot + ":/fixture:ro", "alpine@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40", "/fixture/relay-linux"}
-		if e := exec.Command("docker", args...).Run(); e != nil {
+		labels, err := testfixtures.IntegrationContainerLabels(os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(labels) > 0 {
+			// Register the immutable ID before start; label-bound recovery owns
+			// a create/register interruption, while the default legacy path stays usable.
+			create := append([]string{"create"}, labels...)
+			create = append(create, args[2:]...)
+			raw, err := exec.Command("docker", create...).Output()
+			if err != nil {
+				t.Fatal("mandatory owned UID container create failed")
+			}
+			identity := strings.TrimSpace(string(raw))
+			if _, err = testfixtures.RegisterIntegrationContainer(identity, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name()); err != nil {
+				t.Fatal(err)
+			}
+			if err = exec.Command("docker", "start", identity).Run(); err != nil {
+				t.Fatal("mandatory owned UID container start failed")
+			}
+		} else if e := exec.Command("docker", args...).Run(); e != nil {
 			t.Fatal("mandatory owned UID container failed to start")
 		}
 		t.Cleanup(func() {
@@ -119,6 +155,21 @@ func (f *fileBusinessProcessFixture) proveLinuxDownloadUID(t *testing.T) {
 		} else if productionAPIAddress(log) != "" {
 			t.Fatal("foreign UID opened listener")
 		}
+	}
+}
+
+// Compile the embedded control program itself: compiling this test package
+// does not validate a Go program stored in a string.
+func TestFileBusinessLinuxRelayBuild(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "relay.go")
+	processPrivateFile(t, source, []byte(linuxProcessRelaySource))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "go", "build", "-o", filepath.Join(root, "relay"), source)
+	cmd.Env = append(os.Environ(), "GOOS=linux", "CGO_ENABLED=0")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("embedded Linux relay compile failed: %s", output)
 	}
 }
 

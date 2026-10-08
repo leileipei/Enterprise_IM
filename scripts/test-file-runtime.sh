@@ -31,8 +31,27 @@ PYJSON
   GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 go test -c -o "$output/structure.test" ./internal/filescanner
   GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 go test -c -o "$output/transfer.test" ./internal/filetransfer
   image='alpine@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40'
-  docker run --rm --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" -e IM_TEST_STRUCTURE_SAMPLES=/fixtures/structure-samples "$image" /fixtures/structure.test -test.run '^TestScannerRealResourceBoundary$' -test.v > "$output/resource.log"
-  docker run --rm --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -e IM_TEST_SPOOL_FULL_DIR=/limited -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.run '^TestFile(TransferRealDiskFull|Spool)' -test.v > "$output/disk-full.log"
+  if [ -n "${IM_TEST_INTEGRATION_REGISTRY:-}" ]; then
+    for key in IM_TEST_INTEGRATION_OWNER IM_TEST_INTEGRATION_SOURCE_SHA; do require "$key"; done
+    python3 - "$output" "$architecture" <<'PYRESOURCE'
+import hashlib,json,os,sys
+from pathlib import Path
+root=Path(sys.argv[1]);rows=[]
+for name,package in [('structure.test','./internal/filescanner'),('transfer.test','./internal/filetransfer')]:
+ path=root/name
+ rows.append(dict(name=name,path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),package=package,argv=['go','test','-c','-o',str(path),package]))
+receipt=dict(schema_version='file_resource_build_v1',source_commit=os.environ['IM_TEST_INTEGRATION_SOURCE_SHA'],owner=os.environ['IM_TEST_INTEGRATION_OWNER'],goos='linux',goarch=sys.argv[2],cgo_enabled='0',go_flags=os.environ['GOFLAGS'],go_work=os.environ['GOWORK'],binaries=rows)
+fd=os.open(root/'resource-build.json',os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600)
+with os.fdopen(fd,'w') as stream:json.dump(receipt,stream,indent=2);stream.write('\n')
+PYRESOURCE
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/resource-list.log.proof.json" --binary "$output/structure.test" -- --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/structure.test -test.list '^TestScannerRealResourceBoundary$' > "$output/resource-list.log"
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/resource.log.proof.json" --binary "$output/structure.test" -- --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" -e IM_TEST_STRUCTURE_SAMPLES=/fixtures/structure-samples "$image" /fixtures/structure.test -test.run '^TestScannerRealResourceBoundary$' -test.v > "$output/resource.log"
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/disk-full-list.log.proof.json" --binary "$output/transfer.test" -- --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.list '^TestFile(TransferRealDiskFull|Spool)' > "$output/disk-full-list.log"
+    PYTHONPATH="$(pwd)/scripts" python3 -m integration.resource_command --proof "$output/disk-full.log.proof.json" --binary "$output/transfer.test" -- --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -e IM_TEST_SPOOL_FULL_DIR=/limited -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.run '^TestFile(TransferRealDiskFull|Spool)' -test.v > "$output/disk-full.log"
+  else
+    docker run --rm --memory=512m --cpus=1 -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" -e IM_TEST_STRUCTURE_SAMPLES=/fixtures/structure-samples "$image" /fixtures/structure.test -test.run '^TestScannerRealResourceBoundary$' -test.v > "$output/resource.log"
+    docker run --rm --memory=512m --cpus=1 --tmpfs /limited:size=1048576,mode=0700 -e IM_TEST_SPOOL_FULL_DIR=/limited -v "$output:/fixtures:ro" -v "$(pwd):/source:ro" "$image" /fixtures/transfer.test -test.run '^TestFile(TransferRealDiskFull|Spool)' -test.v > "$output/disk-full.log"
+  fi
   if rg --quiet -- '--- SKIP:|--- FAIL:' "$output/resource.log" "$output/disk-full.log"; then printf 'Resource gate incomplete\n' >&2; exit 1; fi
   cat "$output/resource.log" "$output/disk-full.log" ;;
  *) printf 'Usage: %s run-s3|run-scan|run-all\n' "$0" >&2; exit 2 ;;

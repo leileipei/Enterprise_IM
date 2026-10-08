@@ -37,35 +37,37 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"github.com/redis/go-redis/v9"
 )
 
 type nodeRuntimeConfig struct{ URL, OwnerID, SpoolDir string }
 type fileBusinessProcessFixture struct {
-	privateRoot, apiURL, webURL, buildSHA, schema                              string
-	binaries                                                                   map[string]string
-	processes                                                                  map[string]*exec.Cmd
-	pool                                                                       *pgxpool.Pool
-	oidc, proxy                                                                *httptest.Server
-	nodes                                                                      map[string]nodeRuntimeConfig
-	conn                                                                       *pgx.Conn
-	waits                                                                      map[string]chan error
-	logs                                                                       map[string]*os.File
-	apiDSN, repairDSN, adminDSN, apiRole, repairRole, ca, probeVersion, stream string
-	key                                                                        *rsa.PrivateKey
-	backend                                                                    atomic.Pointer[httputil.ReverseProxy]
-	dbRelay                                                                    *processDBRelay
-	objectGateway                                                              *httptest.Server
-	objectFault                                                                atomic.Int32
-	objectWrites                                                               atomic.Int64
-	objectRequests                                                             atomic.Int64
-	webFaultCounts                                                             [6]atomic.Int64
-	objectGate                                                                 atomic.Pointer[processObjectGate]
-	client                                                                     *http.Client
-	redis                                                                      *redis.Client
-	browserSubject                                                             atomic.Value
-	expectedExitCodes                                                          map[string]int
-	processPIDs                                                                map[string]int
+	privateRoot, apiURL, webURL, buildSHA, schema                                         string
+	binaries                                                                              map[string]string
+	processes                                                                             map[string]*exec.Cmd
+	integrationProcesses                                                                  map[string]*testfixtures.IntegrationProcess
+	pool                                                                                  *pgxpool.Pool
+	oidc, proxy                                                                           *httptest.Server
+	nodes                                                                                 map[string]nodeRuntimeConfig
+	conn                                                                                  *pgx.Conn
+	waits                                                                                 map[string]chan error
+	logs                                                                                  map[string]*os.File
+	apiDSN, repairDSN, adminDSN, workerDSN, apiRole, repairRole, ca, probeVersion, stream string
+	key                                                                                   *rsa.PrivateKey
+	backend                                                                               atomic.Pointer[httputil.ReverseProxy]
+	dbRelay                                                                               *processDBRelay
+	objectGateway                                                                         *httptest.Server
+	objectFault                                                                           atomic.Int32
+	objectWrites                                                                          atomic.Int64
+	objectRequests                                                                        atomic.Int64
+	webFaultCounts                                                                        [6]atomic.Int64
+	objectGate                                                                            atomic.Pointer[processObjectGate]
+	client                                                                                *http.Client
+	redis                                                                                 *redis.Client
+	browserSubject                                                                        atomic.Value
+	expectedExitCodes                                                                     map[string]int
+	processPIDs                                                                           map[string]int
 }
 
 var fileBusinessBuild struct {
@@ -191,7 +193,7 @@ func newFileBusinessProcessFixture(t *testing.T) *fileBusinessProcessFixture {
 	if _, e = f.conn.PgConn().Exec(context.Background(), string(raw)).ReadAll(); e != nil {
 		t.Fatal(e)
 	}
-	f.adminDSN = processDatabaseURL(t, f.schema)
+	f.adminDSN = fixtureDatabaseURL(t, f.schema)
 	f.apiRole = "p426_api_" + processRandom(t)
 	f.repairRole = "p426_repair_" + processRandom(t)
 	t.Cleanup(func() {
@@ -221,6 +223,7 @@ func newFileBusinessProcessFixture(t *testing.T) *fileBusinessProcessFixture {
 		}
 	})
 	f.apiDSN = f.createRole(t, f.apiRole, false)
+	f.workerDSN = f.apiDSN
 	f.repairDSN = f.createRole(t, f.repairRole, true)
 	cfg, e := pgxpool.ParseConfig(f.adminDSN)
 	if e != nil {
@@ -436,6 +439,10 @@ func (f *fileBusinessProcessFixture) apiEnvironment(upload, business bool, node 
 }
 func (f *fileBusinessProcessFixture) launch(t *testing.T, name, binary string, env map[string]string, args ...string) {
 	t.Helper()
+	f.launchProcess(t, name, binary, env, false, args...)
+}
+func (f *fileBusinessProcessFixture) launchProcess(t *testing.T, name, binary string, env map[string]string, allowCompleted bool, args ...string) {
+	t.Helper()
 	if f.processes[name] != nil {
 		t.Fatal("fixture process already active")
 	}
@@ -451,12 +458,39 @@ func (f *fileBusinessProcessFixture) launch(t *testing.T, name, binary string, e
 		log.Close()
 		t.Fatal("official process failed to start")
 	}
+	registration, registerErr := testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+	done := make(chan error, 1)
+	go func(result chan error) { result <- cmd.Wait(); close(result) }(done)
+	if registerErr != nil && allowCompleted {
+		select {
+		case waitErr := <-done:
+			// Actual Wait proves the fast child has terminated. A terminal record
+			// does not claim a live UID/start/pgid or allow a Ready proof.
+			registration, registerErr = testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+			done = make(chan error, 1)
+			done <- waitErr
+			close(done)
+		case <-time.After(35 * time.Second):
+			_ = cmd.Process.Kill()
+			<-done
+			_ = log.Close()
+			t.Fatal("invalid startup did not terminate after registration failure")
+		}
+	}
+	if registerErr != nil {
+		_ = cmd.Process.Kill()
+		<-done
+		_ = log.Close()
+		t.Fatal(registerErr)
+	}
+	if f.integrationProcesses == nil {
+		f.integrationProcesses = map[string]*testfixtures.IntegrationProcess{}
+	}
+	f.integrationProcesses[name] = registration
 	f.processes[name] = cmd
 	f.processPIDs[name] = cmd.Process.Pid
 	f.logs[name] = log
-	done := make(chan error, 1)
 	f.waits[name] = done
-	go func() { done <- cmd.Wait(); close(done) }()
 }
 func (f *fileBusinessProcessFixture) await(t *testing.T, name string, timeout time.Duration, predicate func([]byte) bool) {
 	t.Helper()
@@ -469,6 +503,9 @@ func (f *fileBusinessProcessFixture) await(t *testing.T, name string, timeout ti
 		}
 		b, e := os.ReadFile(f.logs[name].Name())
 		if e == nil && predicate(b) {
+			if err := f.integrationProcesses[name].Ready(); err != nil {
+				t.Fatal(err)
+			}
 			return
 		}
 		time.Sleep(25 * time.Millisecond)
@@ -516,6 +553,13 @@ func (f *fileBusinessProcessFixture) stopProcess(t *testing.T, name string, kill
 	}
 	select {
 	case err := <-f.waits[name]:
+		expected := fmt.Sprintf("exit:%d", f.expectedExitCodes[name])
+		if kill {
+			expected = "signal:killed"
+		}
+		if proofErr := f.integrationProcesses[name].Exited(expected, integrationProcessExit(err)); proofErr != nil {
+			t.Error(proofErr)
+		}
 		if !kill {
 			code := 0
 			if err != nil {
@@ -531,12 +575,16 @@ func (f *fileBusinessProcessFixture) stopProcess(t *testing.T, name string, kill
 		delete(f.expectedExitCodes, name)
 	case <-time.After(22 * time.Second):
 		_ = p.Process.Kill()
-		<-f.waits[name]
+		waitErr := <-f.waits[name]
+		if proofErr := f.integrationProcesses[name].Exited("bounded_shutdown", integrationProcessExit(waitErr)); proofErr != nil {
+			t.Error(proofErr)
+		}
 		t.Error("owned process failed bounded shutdown")
 	}
 	_ = f.logs[name].Close()
 	delete(f.logs, name)
 	delete(f.processes, name)
+	delete(f.integrationProcesses, name)
 	delete(f.waits, name)
 }
 func (f *fileBusinessProcessFixture) restartAPI(t *testing.T, node string, upload, business bool) {
@@ -547,13 +595,13 @@ func (f *fileBusinessProcessFixture) restartAPI(t *testing.T, node string, uploa
 func (f *fileBusinessProcessFixture) startWorkers(t *testing.T) {
 	t.Helper()
 	if f.processes["outbox"] == nil {
-		f.launch(t, "outbox", "im-outbox-worker", map[string]string{"IM_DATABASE_URL": f.adminDSN, "IM_OUTBOX_REDIS_URL": os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM": f.stream})
+		f.launch(t, "outbox", "im-outbox-worker", map[string]string{"IM_DATABASE_URL": f.workerDSN, "IM_OUTBOX_REDIS_URL": os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM": f.stream})
 		f.await(t, "outbox", 10*time.Second, func([]byte) bool {
 			return f.redis.Exists(context.Background(), outbox.PublisherPresenceKey(f.stream)).Val() == 1
 		})
 	}
 	if f.processes["scanner"] == nil {
-		f.launch(t, "scanner", "im-file-worker", map[string]string{"IM_DATABASE_URL": f.adminDSN, "IM_FILE_WORKER_ENABLED": "true", "IM_FILE_WORKER_ID": freshFile().ID, "IM_FILE_SPOOL_DIR": filepath.Join(f.privateRoot, "scan"), "IM_FILE_S3_ENDPOINT": os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION": "us-east-1", "IM_FILE_S3_BUCKET": os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_PATH_STYLE": "true", "IM_FILE_S3_ACCESS_KEY": os.Getenv("IM_TEST_FILE_WORKER_ACCESS_KEY"), "IM_FILE_S3_SECRET_KEY": os.Getenv("IM_TEST_FILE_WORKER_SECRET_KEY"), "IM_FILE_QPDF_PATH": os.Getenv("IM_TEST_QPDF_PATH"), "IM_FILE_CLAMD_SOCKET": os.Getenv("IM_TEST_CLAMD_SOCKET"), "IM_FILE_SCANNER_MANIFEST": os.Getenv("IM_TEST_SCANNER_MANIFEST")})
+		f.launch(t, "scanner", "im-file-worker", map[string]string{"IM_DATABASE_URL": f.workerDSN, "IM_FILE_WORKER_ENABLED": "true", "IM_FILE_WORKER_ID": freshFile().ID, "IM_FILE_SPOOL_DIR": filepath.Join(f.privateRoot, "scan"), "IM_FILE_S3_ENDPOINT": os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION": "us-east-1", "IM_FILE_S3_BUCKET": os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_PATH_STYLE": "true", "IM_FILE_S3_ACCESS_KEY": os.Getenv("IM_TEST_FILE_WORKER_ACCESS_KEY"), "IM_FILE_S3_SECRET_KEY": os.Getenv("IM_TEST_FILE_WORKER_SECRET_KEY"), "IM_FILE_QPDF_PATH": os.Getenv("IM_TEST_QPDF_PATH"), "IM_FILE_CLAMD_SOCKET": os.Getenv("IM_TEST_CLAMD_SOCKET"), "IM_FILE_SCANNER_MANIFEST": os.Getenv("IM_TEST_SCANNER_MANIFEST")})
 		f.await(t, "scanner", 95*time.Second, func(b []byte) bool { return bytes.Contains(b, []byte("file worker started")) })
 	}
 }
@@ -673,9 +721,12 @@ func (f *fileBusinessProcessFixture) waitState(t *testing.T, node, id, want stri
 func (f *fileBusinessProcessFixture) expectStartupFailure(t *testing.T, settings map[string]string) {
 	t.Helper()
 	name := "negative-" + processRandom(t)
-	f.launch(t, name, "im-api", settings)
+	f.launchProcess(t, name, "im-api", settings, true)
 	select {
 	case e := <-f.waits[name]:
+		if proofErr := f.integrationProcesses[name].Exited("exit:1", integrationProcessExit(e)); proofErr != nil {
+			t.Error(proofErr)
+		}
 		if e == nil {
 			t.Fatal("invalid startup returned success")
 		}
@@ -689,5 +740,6 @@ func (f *fileBusinessProcessFixture) expectStartupFailure(t *testing.T, settings
 	f.logs[name].Close()
 	delete(f.logs, name)
 	delete(f.processes, name)
+	delete(f.integrationProcesses, name)
 	delete(f.waits, name)
 }

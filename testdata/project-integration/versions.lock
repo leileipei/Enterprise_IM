@@ -1,0 +1,13 @@
+# P4-31 local integration pins; not production acceptance.
+# Service/scanner/mc pins are also enforced from testdata/file-runtime/versions.lock.
+go = 1.27.1
+node = 24.19.0
+chrome = 154.0.8037.98
+playwright = 1.62.1
+redis-image = redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+# Approved 2026-10-07: same release source rebuild, Go1.27.1 darwin/arm64.
+# Original file-runtime publisher binary lock remains unchanged.
+mc-test-client = RELEASE.2024-11-05T11-29-45Z
+mc-source-commit = 6ac18619cf881074fe6edcc79ab62c9c85da60b9
+mc-source-sha256 = 9a2d79da5e5de3ea34315ea705d3fb02b5f0eb440663ee381b6de0ae73b93bb3
+mc-test-client-sha256-darwin-arm64 = e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea

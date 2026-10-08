@@ -54,18 +54,14 @@ func startProductionAPI(t *testing.T, binary string, environment []string) strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(binary)
-	cmd.Env = append(os.Environ(), environment...)
+	cmd := fileProductCommand(binary, environment)
 	cmd.Stdout, cmd.Stderr = logFile, logFile
 	if err := cmd.Start(); err != nil {
 		logFile.Close()
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-		_ = logFile.Close()
-	})
+	t.Cleanup(func() { logFile.Close() })
+	registration := trackFileProductProcess(t, cmd)
 	client := &http.Client{Timeout: time.Second}
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
@@ -77,6 +73,9 @@ func startProductionAPI(t *testing.T, binary string, environment []string) strin
 			if err == nil {
 				res.Body.Close()
 				if res.StatusCode == http.StatusOK {
+					if err := registration.Ready(); err != nil {
+						t.Fatal(err)
+					}
 					return url
 				}
 			}
@@ -205,9 +204,8 @@ func TestProductionAPIWithOIDCAndRealtimeProcesses(t *testing.T) {
 			t.Errorf("clean Redis test keys: %v", err)
 		}
 	})
-	worker := exec.Command(productionTestBinary(t, "im-outbox-worker"))
-	worker.Env = append(os.Environ(), "IM_DATABASE_URL="+databaseURL,
-		"IM_OUTBOX_REDIS_URL="+os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM="+stream)
+	worker := fileProductCommand(productionTestBinary(t, "im-outbox-worker"), []string{"IM_DATABASE_URL=" + databaseURL,
+		"IM_OUTBOX_REDIS_URL=" + os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM=" + stream})
 	startRealtimeProcess(t, worker, func() bool {
 		return client.Exists(context.Background(), outbox.PublisherPresenceKey(stream)).Val() == 1
 	})

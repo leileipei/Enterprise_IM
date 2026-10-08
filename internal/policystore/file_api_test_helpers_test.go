@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/leileipei/Enterprise_IM/internal/testfixtures"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -60,7 +62,7 @@ func fileRuntimeEnv(t *testing.T, dsn, dir string) []string {
 			t.Skip("controlled file dependencies required; run-all checks environment")
 		}
 	}
-	return []string{"IM_DATABASE_URL=" + dsn, "IM_FILE_SPOOL_DIR=" + dir, "IM_FILE_S3_ENDPOINT=" + os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION=us-east-1", "IM_FILE_S3_BUCKET=" + os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_CREDENTIAL_SOURCE=environment", "IM_FILE_S3_PATH_STYLE=true"}
+	return []string{"IM_DATABASE_URL=" + dsn, "IM_FILE_SPOOL_DIR=" + dir, "IM_FILE_S3_ENDPOINT=" + os.Getenv("IM_TEST_S3_ENDPOINT"), "IM_FILE_S3_REGION=us-east-1", "IM_FILE_S3_BUCKET=" + os.Getenv("IM_TEST_S3_BUCKET"), "IM_FILE_S3_CREDENTIAL_SOURCE=environment", "IM_FILE_S3_PATH_STYLE=true", "IM_FILE_S3_ACCESS_KEY=" + os.Getenv("IM_FILE_S3_ACCESS_KEY"), "IM_FILE_S3_SECRET_KEY=" + os.Getenv("IM_FILE_S3_SECRET_KEY")}
 }
 func startFileWorkerProcess(t *testing.T, binary string, env []string) *exec.Cmd {
 	t.Helper()
@@ -68,18 +70,21 @@ func startFileWorkerProcess(t *testing.T, binary string, env []string) *exec.Cmd
 	if e != nil {
 		t.Fatal(e)
 	}
-	cmd := exec.Command(binary)
-	cmd.Env = append(os.Environ(), env...)
+	cmd := fileProductCommand(binary, env)
 	cmd.Stdout = log
 	cmd.Stderr = log
 	if e = cmd.Start(); e != nil {
 		t.Fatal(e)
 	}
-	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait(); log.Close() })
+	t.Cleanup(func() { log.Close() })
+	registration := trackFileProductProcess(t, cmd)
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		b, _ := os.ReadFile(log.Name())
 		if strings.Contains(string(b), "file worker started") {
+			if err := registration.Ready(); err != nil {
+				t.Fatal(err)
+			}
 			return cmd
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -126,4 +131,54 @@ func filePublicRequest(t *testing.T, method, base, path, token, membership strin
 		}
 	}
 	return out
+}
+
+// This constructor is shared by official product process fixtures.
+func fileProductCommand(binary string, configuration []string) *exec.Cmd {
+	cmd := exec.Command(binary)
+	values := map[string]string{}
+	for _, item := range configuration {
+		key, value, ok := strings.Cut(item, "=")
+		if !ok || key == "" {
+			panic("invalid explicit product configuration")
+		}
+		values[key] = value
+	}
+	cmd.Env = processChildEnv(values)
+	return cmd
+}
+
+// Track actual product fixture children, including externally Waited workers.
+func trackFileProductProcess(t *testing.T, cmd *exec.Cmd) *testfixtures.IntegrationProcess {
+	t.Helper()
+	var registration *testfixtures.IntegrationProcess
+	t.Cleanup(func() {
+		expected := "signal:killed"
+		alreadyWaited := cmd.ProcessState != nil && cmd.ProcessState.Exited()
+		if !alreadyWaited {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}
+		actual := "wait_error"
+		if state := cmd.ProcessState; state != nil {
+			actual = fmt.Sprintf("exit:%d", state.ExitCode())
+			if status, ok := state.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+				actual = "signal:" + status.Signal().String()
+			}
+		}
+		if alreadyWaited && actual != "signal:killed" {
+			expected = "exit:0"
+		}
+		if registration != nil {
+			if err := registration.Exited(expected, actual); err != nil {
+				t.Error(err)
+			}
+		}
+	})
+	var err error
+	registration, err = testfixtures.RegisterIntegrationProcess(cmd, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return registration
 }

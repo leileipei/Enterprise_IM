@@ -43,6 +43,6 @@ PY
 log="$IM_TEST_FILE_BUSINESS_OUTPUT_DIR/business-runtime.jsonl"
 if [[ -e "$log" || -L "$log" ]]; then echo 'fresh evidence path required' >&2; exit 2; fi
 status=0
-go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(0[1-9]|1[0-4])$' -count=1 > "$log" 2>&1 || status=$?
+go test -json -timeout=30m ./internal/policystore -run '^TestFileBusinessProcessRP(0[1-9]|1[0-4])$' -count=1 > "$log" 2> "$log.stderr" || status=$?
 python3 scripts/check-file-business-runtime.py "$log" "$status"
 printf 'private evidence: %s\n' "$log"

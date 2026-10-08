@@ -10,7 +10,7 @@ if [[ -n "${IM_TEST_FILE_DOWNLOAD_OUTPUT_DIR:-}" ]];then output="$IM_TEST_FILE_D
 chmod 700 "$output";umask 077
 log="$output/file-download-retention.jsonl";[[ ! -L "$log" ]]||{ echo 'refuse symlink output' >&2;exit 2;}
 status=0
-go test -json ./internal/policystore ./cmd/im-api ./cmd/im-file-cleaner -run '^TestFileDownload(Real|Production)|^TestFileDeleteReal|^TestFileCleanerDefaultClosed$|^TestFileScanReal(Trusted|Unproven)Runtime$' -count=1 > "$log" 2>&1||status=$?
+go test -json ./internal/policystore ./cmd/im-api ./cmd/im-file-cleaner -run '^TestFileDownload(Real|Production)|^TestFileDeleteReal|^TestFileCleanerDefaultClosed$|^TestFileScanReal(Trusted|Unproven)Runtime$' -count=1 > "$log" 2> "$log.stderr"||status=$?
 python3 - "$log" "$status" <<'PY'
 import json,sys
 required={'TestFileDownloadRealOIDCScan','TestFileDownloadRealTokenExpiryBlockedWrite','TestFileDownloadRealRevocation','TestFileDownloadRealAuditRepair','TestFileDownloadRealBrowserLegacy','TestFileDeleteRealVersionsIAM','TestFileDeleteRealUnknownDelete','TestFileDeleteRealHoldOrdering','TestFileDeleteRealOrphanQuarantine','TestFileDownloadProductionClosed','TestFileDownloadRealTCPRevocation','TestFileDownloadRealTotalDeadline','TestFileDeleteRealMarker403','TestFileCleanerDefaultClosed','TestFileScanRealTrustedRuntime','TestFileScanRealUnprovenRuntime'}

@@ -6,3 +6,7 @@ bin/
 .env
 .env.*
 !.env.example
+
+# Python verification caches
+__pycache__/
+*.py[cod]

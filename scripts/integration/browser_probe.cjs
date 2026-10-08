@@ -1,0 +1,30 @@
+'use strict';
+const readline = require('node:readline');
+const fs = require('node:fs');
+const path = require('node:path');
+const {chromium} = require('playwright');
+const input = readline.createInterface({input: process.stdin});
+const lines = input[Symbol.asyncIterator]();
+let server, browser, profile;
+(async () => {
+  const config = JSON.parse((await lines.next()).value);
+  if (require('playwright/package.json').version !== config.playwright || process.env.HOME !== path.join(config.private,'browser-home')) throw new Error('environment');
+  server = await chromium.launchServer({executablePath:config.executable,headless:true,host:'127.0.0.1',timeout:30000});
+  const child = server.process();
+  process.stdout.write(JSON.stringify({event:'browser_launched',pid:child.pid})+'\n');
+  if ((await lines.next()).value !== 'registered') throw new Error('registration');
+  browser = await chromium.connect(server.wsEndpoint());
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('data:text/html,<title>integration preflight</title>');
+  if (await page.title() !== 'integration preflight' || browser.version() !== config.chrome) throw new Error('probe');
+  process.stdout.write(JSON.stringify({event:'browser_ready',version:browser.version()})+'\n');
+  await context.close();await browser.close();browser=undefined;
+  await server.close();server=undefined;
+  process.stdout.write(JSON.stringify({event:'browser_closed',pid:child.pid,exit_code:child.exitCode})+'\n');
+  input.close();
+})().catch(async () => {
+  if (browser) await browser.close().catch(()=>{});
+  if (server) await server.close().catch(()=>{});
+  input.close();process.stderr.write('browser_probe_failed\n');process.exitCode=1;
+});

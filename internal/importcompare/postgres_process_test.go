@@ -261,7 +261,7 @@ func TestCompareProcessTLS(t *testing.T) {
 	for k, v := range f.reader.Config.connection {
 		settings[k] = v
 	}
-	settings["host"], settings["port"], settings["sslmode"], settings["sslrootcert"] = "127.0.0.1", "5432", "verify-full", root
+	settings["host"], settings["sslmode"], settings["sslrootcert"] = "127.0.0.1", "verify-full", root
 	f.reader.Config.connection = settings
 	for _, name := range []string{"verify_full_home_traps", "wrong_ca", "wrong_hostname", "downgrade"} {
 		t.Run(name, func(t *testing.T) {

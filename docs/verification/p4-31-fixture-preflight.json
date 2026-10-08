@@ -1,0 +1,49 @@
+{
+  "source_commit": "4fb6623a0013f1400e6d727103fa4d576ad6e3e2",
+  "source_archive_sha256": "288d3f6e885ddaa67ec323bf2f0abf383f87a2716ec15cc0245d684b7040a588",
+  "accepted": true,
+  "failure": null,
+  "exit_code": 0,
+  "passed": [
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/anonymous_denied",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/buckets_versioned_and_probe_fixed",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/cleanup_exact_version_only",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/cleanup_rejects_nil_empty_null_versions",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/download_read_only",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/postgres_tls_and_wrong_ca",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/upload_allowed_and_versioned",
+    "github.com/leileipei/Enterprise_IM/internal/testfixtures::TestIntegrationFixtureIAM/worker_read_only"
+  ],
+  "failures": [],
+  "skips": [],
+  "container_ids": {
+    "postgres": "ecf42ee01504fc3995a80175097a100bbab4eeac43694ed43971e1fbeaf9eb19",
+    "redis": "e072b442c6957e2f83a54f51844ed957eeaa885109101cba8150bfc64b7e5cae",
+    "minio": "ba53d99090b669deed3497d685ac71eca425525e7c1684a14108dd5063d83406"
+  },
+  "ports": {
+    "postgres": 34811,
+    "redis": 34812,
+    "minio": 34813
+  },
+  "cleanup": {
+    "removed": true,
+    "failures": []
+  },
+  "log_sha256": {
+    "iam-go.json": "691804250dccdca3b010acd9c7e83799d83ef7cdd95c07212c28fe3936666cc5",
+    "iam-go-stderr.log": "0f5c5ace739c1513c03dcabd0593990fddd68ae6a02fa89537017bebc623b750"
+  },
+  "schema_version": "p4_31_fixture_preflight_v1",
+  "scope": "Task4 local service and IAM preflight only",
+  "python_contract_tests": 45,
+  "private_credential_directory_removed": true,
+  "full_suite_status": "not_executed",
+  "race_suite_status": "not_executed",
+  "required_gates_passed": false,
+  "full_suite_passed": false,
+  "race_suite_passed": false,
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed"
+}

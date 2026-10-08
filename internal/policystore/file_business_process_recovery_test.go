@@ -120,10 +120,14 @@ func (f *fileBusinessProcessFixture) restartRepair(t *testing.T, once bool) {
 	if once {
 		args = append(args, "--once")
 	}
-	f.launch(t, "repair", "im-file-cleaner", map[string]string{"IM_DATABASE_URL": f.repairDSN}, args...)
+	f.launchProcess(t, "repair", "im-file-cleaner", map[string]string{"IM_DATABASE_URL": f.repairDSN}, once, args...)
 	if once {
 		select {
 		case e := <-f.waits["repair"]:
+			if err := f.integrationProcesses["repair"].Exited("exit:0", integrationProcessExit(e)); err != nil {
+				t.Error(err)
+			}
+			delete(f.integrationProcesses, "repair")
 			if e != nil {
 				t.Fatal("official repair-only failed")
 			}
