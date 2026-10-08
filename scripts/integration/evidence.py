@@ -172,7 +172,7 @@ def validate_delivery(source_commit,report,repository_root):
     def git(args):return subprocess.check_output(['/usr/bin/git','-C',str(repository_root),*args],env=env,stderr=subprocess.DEVNULL)
     if git(['rev-parse','--verify',source_commit+'^{commit}']).decode().strip()!=source_commit:raise ValueError('delivery_commit_missing')
     if hashlib.sha256(git(['show',source_commit+':scripts/test-project-integration.py'])).hexdigest()!=data['orchestrator_sha256']:raise ValueError('delivery_entry_hash_mismatch')
-    changed=git(['diff','--name-only',source_commit,'HEAD']).decode().splitlines()
+    changed=[p for p in git(['diff','--name-only','-z',source_commit,'HEAD']).decode().split('\0') if p]
     if any(not(p.startswith('docs/') or p.startswith('testdata/project-integration/README')) for p in changed):raise ValueError('delivery_product_changed_after_verification')
     for key,value in data['tools']['hashes'].items():
         path=Path(data['tools']['paths']['node_modules'])/'playwright/package.json' if key=='playwright_package' else Path(data['tools']['paths'][key])

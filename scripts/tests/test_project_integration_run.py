@@ -147,6 +147,23 @@ class RunTests(unittest.TestCase):
   report.write_text(json.dumps(baseline))
   self.evidence.validate_delivery(self.snapshot.commit,report,self.snapshot.repository_root)
 
+ def commit_change(self,relative):
+  repo=self.snapshot.repository_root;path=repo/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('controlled path fixture\n')
+  env={'PATH':'/usr/bin:/bin','GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':os.devnull}
+  for argv in (['add','--',relative],['-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-qm','path fixture']):
+   subprocess.run(['/usr/bin/git',*argv],cwd=repo,env=env,check=True,capture_output=True)
+ def test_chinese_document_change_accepts_real_git_quoted_path(self):
+  events,inventory=self.green_events();self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
+  relative='docs/中文验收记录.md';self.commit_change(relative)
+  raw=subprocess.check_output(['/usr/bin/git','-c','core.quotePath=true','diff','--name-only',self.snapshot.commit,'HEAD'],cwd=self.snapshot.repository_root)
+  self.assertIn(b'"docs/',raw);self.assertNotIn(relative.encode(),raw)
+  self.evidence.validate_delivery(self.snapshot.commit,self.output/'verification.json',self.snapshot.repository_root)
+ def test_chinese_product_change_still_rejected(self):
+  events,inventory=self.green_events();self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
+  self.commit_change('internal/中文源码.go')
+  with self.assertRaisesRegex(ValueError,'delivery_product_changed_after_verification'):
+   self.evidence.validate_delivery(self.snapshot.commit,self.output/'verification.json',self.snapshot.repository_root)
+
  def test_changed_hash_and_false_cleanup_override_green(self):
   events,inventory=self.green_events();verdict=self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
   self.assertTrue(verdict.required_gates_passed,'synthetic all-gate protocol fixture only')

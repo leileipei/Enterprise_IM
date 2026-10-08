@@ -21,3 +21,6 @@ python3 scripts/test-project-integration.py --source-commit <40位已提交SHA> 
 导入子门禁采用required-only，显式报告完整套件未执行。全仓库与race由统一父入口独立执行；只有两者通过、17项必需门禁通过且清理确认为true，才可算本阶段本地验收通过。浏览器工具预检与实际IM浏览器门禁分别记录。
 
 最终验收源码为`72b967e91a0fe0f19639b2e8d11f651827b870ce`。完整中文记录见`docs/P4-31-本机完整联调验收-20261008.md`，原评审、3项Important修正与2项Minor deferred见`docs/verification/p4-31-review-rulings.md`。真实业务Node/Chrome均登记实际生命周期；Linux9份安全产物、2个二进制摘要和实际限额收据由最新交付校验重新核对。
+
+
+后续状态（2026-10-08）：上述J为历史运行通过记录。文档提交后发现Git中文路径转义校验缺陷，R006已修正并完成92项编排回归；新的固定源码全轮复验及独立Draft交付尚待完成。扫描定义继续严格执行24小时新鲜度。

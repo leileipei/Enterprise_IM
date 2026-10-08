@@ -20286,5 +20286,14 @@
     "C的两项精确版本删除历史失败内部原因未确立；后续通过不构成已修复产品根因证据。",
     "race覆盖Go测试及进程内代码；部分正式子程序是通常构建，不能称所有生产二进制race审计。",
     "客户身份源、生产IAM/TLS、HA/容量、备份DR及客户数据导入未执行。"
-  ]
+  ],
+  "delivery_state": "historical_J_runtime_passed_post_docs_unicode_validator_rejected_R006_full_rerun_pending",
+  "acceptance_for_current_source": false,
+  "post_document_validation": {
+    "commit": "18022d0",
+    "result": "rejected_delivery_product_changed_after_verification",
+    "cause": "git_default_quoted_unicode_paths",
+    "r006_contract_tests_passed": 92,
+    "new_fixed_source_full_rerun": "pending"
+  }
 }
