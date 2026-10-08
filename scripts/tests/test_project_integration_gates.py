@@ -11,6 +11,28 @@ class GateTests(unittest.TestCase):
   self.snapshot=SourceSnapshot('c'*40,self.root/'readonly-repo',Path(__file__).resolve().parents[2],self.root/'source.tar','d'*64)
   self.inventory=Inventory(set(),{},set())
  def specs(self):return {s['name']:s for s in self.g.gate_specs(self.snapshot,self.inventory)}
+ def test_full_suite_budget_covers_observed_cumulative_package_runtime(self):
+  from integration.run import GATE_SECONDS
+  # Actual I completed cases took1768.09s; matching H cases1613.53s,
+  # with total H1709.485s. Preserve room to finish the missing real cases.
+  observed_completion_floor=1768.09+(1709.485-1613.53)
+  for name in ('full_repository','race_repository'):
+   with self.subTest(gate=name):
+    argv=self.specs()[name]['argv']
+    timeout=next(a for a in argv if a.startswith('-timeout='))
+    self.assertTrue(timeout.endswith('m'))
+    seconds=int(timeout[len('-timeout='):-1])*60
+    self.assertGreater(seconds,observed_completion_floor,
+                       'test-framework package budget cannot finish observed real case durations')
+    self.assertLess(seconds,GATE_SECONDS)
+    self.assertEqual(seconds,45*60)
+    self.assertEqual(argv[-1],'./...');self.assertIn('-p',argv)
+    self.assertEqual(argv[argv.index('-p')+1],'1')
+    self.assertIn('-count=1',argv);self.assertNotIn('-run',argv)
+ def test_approved_budget_preserves_specialist_and_outer_deadlines(self):
+  from integration.run import GATE_SECONDS,TOTAL_SECONDS,CLEANUP_SECONDS
+  self.assertIn('-timeout=30m',self.specs()['message_realtime']['argv'])
+  self.assertEqual((GATE_SECONDS,TOTAL_SECONDS,CLEANUP_SECONDS),(3600,21600,60))
  def test_archive_script_with_readonly_git_root(self):
   spec=self.specs()['import_append']
   self.assertEqual(set(spec),{'name','kind','argv','cwd','env_group','required'})

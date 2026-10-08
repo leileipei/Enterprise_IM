@@ -22,7 +22,7 @@
 - 管理连接只准备/注入/清理；API、repair、导入writer为普通角色；比较工具实际只读profile仍保留。四个不同IAM主体上传/扫描/下载/精确版本清理，另管理/引导主体；正式子进程不接收管理凭据。
 - 私密根0700、秘密文件0600、scanner manifest/config0400。父测试环境不继承 `PG*`、`HOME`、`USERPROFILE`、子进程开关或其他未知变量；用白名单明确传递，不改比较驱动守卫。
 - 本轮原生正/负向clamd各自PID/socket/config/manifest；定义真实签名/构建时间，产品24小时新鲜度规则不变。正向stream26214400、child0、global262144000、recursion16、files10000；负向保留原子文件限制反例；Linux512MiB/1CPU与1MiB tmpfs资源门禁实际运行。
-- Go测试包 `-p 1`，服务内部真实并发不减；单包30分钟、单门禁外层60分钟、每轮含准备清理6小时；等待工具单次不超过60秒，工作期间持续进展。无自动SQL/业务重试，失败尝试保留后使用新目录。
+- Go测试包 `-p 1`，服务内部真实并发不减；全仓普通／竞态每包45分钟、消息专项每包30分钟、单门禁外层60分钟、每轮含准备清理6小时；等待工具单次不超过60秒，工作期间持续进展。无自动SQL/业务重试，失败尝试保留后使用新目录。
 - 规格17门禁固定名见任务7；测试门禁具名PASS>0、FAIL=0、普通SKIP=0、必要名/子例齐全。full/race只能例外记录精确 `internal/policystore::TestRealtimeAPIChild`，对应调用方PASS且两个真实子进程证据成立；原始skip仍显示。
 - 同一最终SHA重跑全部必需门禁及full/race；不复用历史完整套件。四字段 required_gates_passed/full_suite_passed/race_suite_passed/cleanup.removed 均true才总体成功；缺包/测试、日志破损、竞争报告、来源/哈希或清理失败均非零。
 - 只修复本轮实际复现的夹具、工具或既有产品缺陷；契约变更另行确认。所有修正保留失败证据、最小改动及回归，不移除测试或放宽正式规则。
@@ -175,7 +175,7 @@ assert child['source_commit'] == snapshot.commit
 
 - [x] **Step 1：写测试。** `test_missing_fixture_and_partial_green_never_success`、`test_cancelled_setup_preserves_report_and_cleanup`、`test_full_inventory_early_child_exit`、`test_signal_stops_new_gates`、`test_raw_secret_is_not_published_or_retained`、`test_changed_hash_and_false_cleanup_override_green`。通过受控短命命令产生真实exit/signal/截断JSON，不伪造实际业务集成结果。
 - [x] **Step 2：验证RED。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_run.py' -v`。Expected：尚缺统一状态或指定拒绝行为失败。
-- [x] **Step 3：实现统一执行。** bootstrap→orchestrator_contract（固定源 `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_*.py' -v`，合并stdout/stderr以parse_unittest核对具名结果）→toolchain→专属资源/预检→build/vet→各stage→full/race→hash校验→finally清理→最终判断。full/race分别在同源完整白名单环境执行 `go test -json -p 1 -timeout=30m -count=1 ./...` 与 `go test -race -json -p 1 -timeout=30m -count=1 ./...`；开始前记录各自清单，终态核对所有包/顶层，helper仅在真实caller与两个实际生命周期符合时豁免普通SKIP。每gate有60分钟期限，全轮6小时，收到取消停止新gate。分享JSON记录源码、工具/平台/argv模板、原始/普通/helper计数和完整名字、hash、耗时及customer/production未执行；原日志保持0600，分享副本精确秘密替换并检查token/私钥格式，不能安全发布则不发布且报告处置，正常收尾不保留可用凭据。validate_delivery校验17门禁、四成功字段、源/程序/存留分享日志哈希、入口一致和当前HEAD产品差异；被处置原日志只能通过原始哈希及脱敏/删除记录追溯，不能谎称再次读取验证。
+- [x] **Step 3：实现统一执行。** bootstrap→orchestrator_contract（固定源 `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_*.py' -v`，合并stdout/stderr以parse_unittest核对具名结果）→toolchain→专属资源/预检→build/vet→各stage→full/race→hash校验→finally清理→最终判断。full/race分别在同源完整白名单环境执行 `go test -json -p 1 -timeout=45m -count=1 ./...` 与 `go test -race -json -p 1 -timeout=45m -count=1 ./...`；开始前记录各自清单，终态核对所有包/顶层，helper仅在真实caller与两个实际生命周期符合时豁免普通SKIP。每gate有60分钟期限，全轮6小时，收到取消停止新gate。分享JSON记录源码、工具/平台/argv模板、原始/普通/helper计数和完整名字、hash、耗时及customer/production未执行；原日志保持0600，分享副本精确秘密替换并检查token/私钥格式，不能安全发布则不发布且报告处置，正常收尾不保留可用凭据。validate_delivery校验17门禁、四成功字段、源/程序/存留分享日志哈希、入口一致和当前HEAD产品差异；被处置原日志只能通过原始哈希及脱敏/删除记录追溯，不能谎称再次读取验证。
 - [x] **Step 4：验证GREEN与CLI契约。** `python3 -m unittest discover -s scripts/tests -p 'test_project_integration_*.py' -v`全PASS；临时已提交小型Git测试源通过入口路径证明加载的是归档runner，缺source/out/工具错误非零且不泄密。只将此叫编排契约验证，不叫完整联调；真实17项在Task8执行。
 - [x] **Step 5：提交。** `feat: run fixed-source integration with complete evidence and cleanup`。后续验证只能采用包含此入口的完整提交，不用未提交源码。
 
@@ -220,3 +220,8 @@ assert child['source_commit'] == snapshot.commit
 | §13交付/执行方式 | Task9、当前助手逐项实现及一次最终评审 |
 
 接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1–4已完成各自阶段验证。Task2工具/镜像预检通过；Task4固定源4fb6623实际TLS/IAM顶层1项+子例8项PASS、0FAIL/0SKIP、容器及凭据清理成功。Task5定义准备已开始，17门禁及完整/race联调尚未完成。
+
+
+### 2026-10-08 已批准测试框架预算修订
+
+用户回复“确认”，批准仅将 full_repository／race_repository 的 Go 每包预算由30分钟调整为45分钟。I轮真实退出1：全仓普通通过，竞态在 internal/policystore 累计1800.523秒触发框架超时；当时子例仅执行8秒。原失败证据保留。专项30分钟、单门禁3600秒、整轮21600秒、清理60秒及业务断言不变；固定新源码从新目录执行全部17门禁，不复用旧通过结果。

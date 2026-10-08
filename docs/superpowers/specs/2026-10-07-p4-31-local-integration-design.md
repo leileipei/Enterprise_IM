@@ -131,8 +131,8 @@ OIDC 发行者仍为本轮 TLS 测试身份源；真实签名验证、本地身�
 | web_files | `scripts/test-web-files.sh run-all` 全部十一项必要名 |
 | file_business_process | `scripts/test-file-business-runtime.sh run-all` 的 RP01–RP14 及 slow_client_SIGTERM |
 | import_append | `scripts/test-import-apply.py` 当前固定源的十四必需门禁，包括完整 ACK/OIDC、旧预检/只读/TLS/进程及所有最终修正场景 |
-| full_repository | 新完整环境 `go test -json -p 1 -timeout=30m -count=1 ./...`，全包、全用例 |
-| race_repository | 同源完整环境 `go test -race -json -p 1 -timeout=30m -count=1 ./...`，不缩减为选取通过的测试 |
+| full_repository | 新完整环境 `go test -json -p 1 -timeout=45m -count=1 ./...`，全包、全用例 |
+| race_repository | 同源完整环境 `go test -race -json -p 1 -timeout=45m -count=1 ./...`，不缩减为选取通过的测试 |
 | evidence_integrity | 源码/二进制/日志哈希、门禁唯一性、必要场景、来源和文件权限核对 |
 | resource_cleanup | 本轮资源停止/删除确认和私密根清理；失败覆盖总体成功判定 |
 
@@ -152,7 +152,7 @@ message_realtime 至少要求以下已有调用方实际通过：`TestTwoDeviceR
 
 编排工具自身需要先失败后通过的判定测试，覆盖：缺夹具、空匹配、必要子例缺失、Go 非零退出但日志含 PASS、截断/损坏 JSON、重复门禁、不同源码或哈希、普通 SKIP、辅助入口缺调用方/进程证据、清理失败、取消、错误资源归属、自动删除未完成，以及凭据不进入分享产物。合法的辅助入口条件有正向测试，其余均有反例。单纯检查自己刚写的字段值不作为充分测试。
 
-长命令异步执行并持续给用户简短进展；不让单次阻塞等待超过60秒。Go 单包超时30分钟，单门禁外层期限60分钟，全轮含准备与清理总期限6小时；任一期限到达标为失败/取消，不自动重试 SQL 或生产请求。公共依赖获取失败保留该尝试，下一次使用新证据目录，不覆盖失败日志。
+长命令异步执行并持续给用户简短进展；不让单次阻塞等待超过60秒。Go 全仓普通／竞态每包超时45分钟，消息专项每包30分钟，单门禁外层期限60分钟，全轮含准备与清理总期限6小时；任一期限到达标为失败/取消，不自动重试 SQL 或生产请求。公共依赖获取失败保留该尝试，下一次使用新证据目录，不覆盖失败日志。
 
 ## 9. 故障处理和修正闭环
 
@@ -216,3 +216,8 @@ message_realtime 至少要求以下已有调用方实际通过：`TestTwoDeviceR
 - 现有 file-runtime/messages/download-retention/web-files/business-runtime 脚本，以及 test-import-apply.py 的十四门禁为被复用的事实基线；链接中的旧源 PASS 仍为历史证据。
 
 规格自检：已明确目标、允许修改、源码固定、资源/角色隔离、运行绑定、环境守卫、门禁与唯一辅助例外、计数、失败修正、清理及交付；没有未决业务参数或以目录存在替代健康证明。当前Task1–4阶段验证已完成；mc重建、工具/镜像预检、真实TLS/IAM矩阵与清理通过。Task5定义准备已开始，统一编排、17门禁及完整/race联调尚未完成。
+
+
+### 2026-10-08 参数修订批准
+
+用户回复“确认”，批准全仓普通／竞态测试框架的每包预算由30分钟改为45分钟。依据为 I 轮真实累计框架超时证据；不改变业务期限、专项30分钟、单门禁3600秒、整轮21600秒、清理60秒或通过条件。新源码必须重新执行全部17门禁及完整普通／竞态测试。
