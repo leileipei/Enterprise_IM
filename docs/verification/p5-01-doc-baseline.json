@@ -1,0 +1,25 @@
+{
+  "scope": "既有源码5个定向基线测试；不包含本期新功能或全仓验收",
+  "source_commit": "b3b706c96a3f99e853163f88545437558fe4709a",
+  "command": [
+    "/opt/homebrew/bin/go",
+    "test",
+    "-json",
+    "-count=1",
+    "-timeout=2m",
+    "./internal/policy",
+    "./internal/httpserver",
+    "-run",
+    "^(TestSameOrganizationAllowedByDefault|TestHistoryHardDenyIgnoresOrdinaryRulesAndRevokesEitherDirection|TestCrossTenantDeniedBeforeRules|TestMessageRouteUsesVerifiedActorAndReturnsCommittedACK|TestMessagePullRouteStrictCursorIdentityAndRedaction)$"
+  ],
+  "actual_exit_code": 0,
+  "top_tests_passed": [
+    "TestSameOrganizationAllowedByDefault",
+    "TestHistoryHardDenyIgnoresOrdinaryRulesAndRevokesEitherDirection",
+    "TestCrossTenantDeniedBeforeRules",
+    "TestMessageRouteUsesVerifiedActorAndReturnsCommittedACK",
+    "TestMessagePullRouteStrictCursorIdentityAndRedaction"
+  ],
+  "skips": [],
+  "cache_cleanup": true
+}

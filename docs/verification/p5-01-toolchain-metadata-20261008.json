@@ -1,0 +1,306 @@
+{
+  "date": "2026-10-08",
+  "scope": "公开版本元数据；未安装依赖，未验证构建兼容性",
+  "sdk": {
+    "macos": {
+      "url": "https://storage.googleapis.com/flutter_infra_release/flutter/releases/releases_macos.json",
+      "error": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "windows": {
+      "url": "https://storage.googleapis.com/flutter_infra_release/flutter/releases/releases_windows.json",
+      "error": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "source_tag": {
+      "url": "https://api.github.com/repos/flutter/flutter/git/ref/tags/3.47.3",
+      "error": "HTTPError: HTTP Error 403: rate limit exceeded"
+    },
+    "verified_git_tag": {
+      "repository": "https://github.com/flutter/flutter.git",
+      "ref": "refs/tags/3.47.3",
+      "commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+      "method": "git ls-remote",
+      "actual_exit_code": 0,
+      "binary_archive_sha256_verified": false
+    }
+  },
+  "packages": {
+    "sqlite3": {
+      "url": "https://pub.dev/api/packages/sqlite3",
+      "version": "3.7.0",
+      "environment": {
+        "sdk": ">=3.10.0 <4.0.0"
+      },
+      "dependencies": {
+        "collection": "^1.15.0",
+        "ffi": "^2.1.0",
+        "meta": "^1.3.0",
+        "path": "^1.8.0",
+        "web": "^1.1.0",
+        "typed_data": "^1.3.2",
+        "hooks": "^2.2.0",
+        "code_assets": ">=1.0.0 <3.0.0",
+        "native_toolchain_c": ">=0.17.5 <0.20.0",
+        "crypto": "^3.0.6"
+      },
+      "platforms": {},
+      "archive_sha256": "cc62d72dbf16bb1f6ae8954b238016de1473e53df060ed0c332eed0a41dd1848"
+    },
+    "cryptography": {
+      "url": "https://pub.dev/api/packages/cryptography",
+      "version": "2.9.0",
+      "environment": {
+        "sdk": ">=3.3.0 <4.0.0"
+      },
+      "dependencies": {
+        "collection": "^1.17.0",
+        "crypto": "^3.0.3",
+        "ffi": "^2.1.0",
+        "meta": "^1.8.0",
+        "typed_data": "^1.3.0"
+      },
+      "platforms": {},
+      "archive_sha256": "3eda3029d34ec9095a27a198ac9785630fe525c0eb6a49f3d575272f8e792ef0"
+    },
+    "flutter_secure_storage": {
+      "url": "https://pub.dev/api/packages/flutter_secure_storage",
+      "version": "11.2.0",
+      "environment": {
+        "sdk": ">=3.8.0 <4.0.0",
+        "flutter": ">=3.19.0"
+      },
+      "dependencies": {
+        "flutter": {
+          "sdk": "flutter"
+        },
+        "flutter_secure_storage_darwin": "^0.4.0",
+        "flutter_secure_storage_linux": ">=3.0.1 <5.0.0",
+        "flutter_secure_storage_platform_interface": "^2.1.0",
+        "flutter_secure_storage_web": "^2.1.1",
+        "flutter_secure_storage_windows": "^4.2.2",
+        "meta": "^1.16.0"
+      },
+      "platforms": {
+        "android": {
+          "package": "com.it_nomads.fluttersecurestorage",
+          "pluginClass": "FlutterSecureStoragePlugin"
+        },
+        "ios": {
+          "default_package": "flutter_secure_storage_darwin"
+        },
+        "macos": {
+          "default_package": "flutter_secure_storage_darwin"
+        },
+        "linux": {
+          "default_package": "flutter_secure_storage_linux"
+        },
+        "web": {
+          "default_package": "flutter_secure_storage_web"
+        },
+        "windows": {
+          "default_package": "flutter_secure_storage_windows"
+        }
+      },
+      "archive_sha256": "d4e1fb6b2cb524868929e78dc0282fa000554b22060fb53789dc481c9fc95bb8"
+    },
+    "app_links": {
+      "url": "https://pub.dev/api/packages/app_links",
+      "version": "7.2.2",
+      "environment": {
+        "sdk": "^3.12.0",
+        "flutter": ">=3.44.0"
+      },
+      "dependencies": {
+        "flutter": {
+          "sdk": "flutter"
+        },
+        "app_links_linux": "^1.0.4",
+        "app_links_platform_interface": "^2.0.4",
+        "app_links_web": "^1.0.5"
+      },
+      "platforms": {
+        "android": {
+          "package": "com.llfbandit.app_links",
+          "pluginClass": "AppLinksPlugin"
+        },
+        "ios": {
+          "pluginClass": "AppLinksIosPlugin"
+        },
+        "linux": {
+          "default_package": "app_links_linux"
+        },
+        "macos": {
+          "pluginClass": "AppLinksMacosPlugin"
+        },
+        "web": {
+          "default_package": "app_links_web"
+        },
+        "windows": {
+          "pluginClass": "AppLinksPluginCApi"
+        }
+      },
+      "archive_sha256": "08ba88bf19d9edea33130cb71c8ced2cb982b4e00b82efef4a434d1357bc69c3"
+    },
+    "path_provider": {
+      "url": "https://pub.dev/api/packages/path_provider",
+      "version": "2.1.6",
+      "environment": {
+        "sdk": "^3.10.0",
+        "flutter": ">=3.38.0"
+      },
+      "dependencies": {
+        "flutter": {
+          "sdk": "flutter"
+        },
+        "path_provider_android": "^2.2.5",
+        "path_provider_foundation": "^2.3.2",
+        "path_provider_linux": "^2.2.0",
+        "path_provider_platform_interface": "^2.1.0",
+        "path_provider_windows": "^2.2.0"
+      },
+      "platforms": {
+        "android": {
+          "default_package": "path_provider_android"
+        },
+        "ios": {
+          "default_package": "path_provider_foundation"
+        },
+        "linux": {
+          "default_package": "path_provider_linux"
+        },
+        "macos": {
+          "default_package": "path_provider_foundation"
+        },
+        "windows": {
+          "default_package": "path_provider_windows"
+        }
+      },
+      "archive_sha256": "a7f4874f987173da295a61c181b8ee71dab59b332a486b391babf26a1b884825"
+    },
+    "url_launcher": {
+      "url": "https://pub.dev/api/packages/url_launcher",
+      "version": "6.3.3",
+      "environment": {
+        "sdk": "^3.11.0",
+        "flutter": ">=3.41.0"
+      },
+      "dependencies": {
+        "flutter": {
+          "sdk": "flutter"
+        },
+        "url_launcher_android": "^6.3.0",
+        "url_launcher_ios": "^6.2.4",
+        "url_launcher_linux": "^3.1.0",
+        "url_launcher_macos": "^3.1.0",
+        "url_launcher_platform_interface": "^2.3.0",
+        "url_launcher_web": "^2.2.0",
+        "url_launcher_windows": "^3.1.0"
+      },
+      "platforms": {
+        "android": {
+          "default_package": "url_launcher_android"
+        },
+        "ios": {
+          "default_package": "url_launcher_ios"
+        },
+        "linux": {
+          "default_package": "url_launcher_linux"
+        },
+        "macos": {
+          "default_package": "url_launcher_macos"
+        },
+        "web": {
+          "default_package": "url_launcher_web"
+        },
+        "windows": {
+          "default_package": "url_launcher_windows"
+        }
+      },
+      "archive_sha256": "e8cc955c97e06df9879140a1fe301f3d493f01b7c62dec7f46834be31d7e9fda"
+    },
+    "file_selector": {
+      "url": "https://pub.dev/api/packages/file_selector",
+      "version": "1.1.0",
+      "environment": {
+        "sdk": "^3.9.0",
+        "flutter": ">=3.35.0"
+      },
+      "dependencies": {
+        "file_selector_android": "^0.5.0",
+        "file_selector_ios": "^0.5.0",
+        "file_selector_linux": "^0.9.4",
+        "file_selector_macos": "^0.9.5",
+        "file_selector_platform_interface": "^2.7.0",
+        "file_selector_web": "^0.9.1",
+        "file_selector_windows": "^0.9.3",
+        "flutter": {
+          "sdk": "flutter"
+        }
+      },
+      "platforms": {
+        "android": {
+          "default_package": "file_selector_android"
+        },
+        "ios": {
+          "default_package": "file_selector_ios"
+        },
+        "linux": {
+          "default_package": "file_selector_linux"
+        },
+        "macos": {
+          "default_package": "file_selector_macos"
+        },
+        "web": {
+          "default_package": "file_selector_web"
+        },
+        "windows": {
+          "default_package": "file_selector_windows"
+        }
+      },
+      "archive_sha256": "bd15e43e9268db636b53eeaca9f56324d1622af30e5c34d6e267649758c84d9a"
+    },
+    "flutter_local_notifications": {
+      "url": "https://pub.dev/api/packages/flutter_local_notifications",
+      "version": "22.3.1",
+      "environment": {
+        "sdk": "^3.10.0",
+        "flutter": ">=3.38.1"
+      },
+      "dependencies": {
+        "clock": "^1.1.0",
+        "flutter": {
+          "sdk": "flutter"
+        },
+        "flutter_local_notifications_linux": "^8.0.1",
+        "flutter_local_notifications_windows": "^3.1.1",
+        "flutter_local_notifications_web": "^1.0.0",
+        "flutter_local_notifications_platform_interface": "^12.2.0",
+        "timezone": "^0.11.0"
+      },
+      "platforms": {
+        "android": {
+          "package": "com.dexterous.flutterlocalnotifications",
+          "pluginClass": "FlutterLocalNotificationsPlugin",
+          "dartPluginClass": "AndroidFlutterLocalNotificationsPlugin"
+        },
+        "ios": {
+          "pluginClass": "FlutterLocalNotificationsPlugin",
+          "dartPluginClass": "IOSFlutterLocalNotificationsPlugin"
+        },
+        "macos": {
+          "pluginClass": "FlutterLocalNotificationsPlugin",
+          "dartPluginClass": "MacOSFlutterLocalNotificationsPlugin"
+        },
+        "linux": {
+          "default_package": "flutter_local_notifications_linux"
+        },
+        "windows": {
+          "default_package": "flutter_local_notifications_windows"
+        },
+        "web": {
+          "default_package": "flutter_local_notifications_web"
+        }
+      },
+      "archive_sha256": "357be7ff996dc272e2037c69c1bdd5d1bd21172219d55f8bd2e11aeea602e6d3"
+    }
+  }
+}
