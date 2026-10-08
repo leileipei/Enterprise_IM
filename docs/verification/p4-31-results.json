@@ -20396,6 +20396,6 @@
     "baseRefName": "codex/p4-30-controlled-import-design",
     "headRefName": "codex/p4-31-local-integration-design",
     "creation_head_commit": "af1c0ce52592b968dbc5e7bd7ed57d69ae4959fa",
-    "final_head_observation": "durable_evidence_root/ledger/task-9-pr.json"
+    "final_head_observation": "durable_evidence_root/ledger/task-9-pr-final.json"
   }
 }

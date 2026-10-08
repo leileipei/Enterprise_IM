@@ -228,7 +228,7 @@ assert child['source_commit'] == snapshot.commit
 
 ## J执行结果（历史，2026-10-08）
 
-Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005，固定J源`72b967e91a0fe0f19639b2e8d11f651827b870ce`重新执行17门禁/full/race，exit0、四成功字段true；文档提交前validate_delivery通过，18022d0文档提交后因中文路径转义误拒绝，随后实施R006。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；独立Draft以P4-30为base交付收尾待完成，客户/生产未执行。
+Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005，固定J源`72b967e91a0fe0f19639b2e8d11f651827b870ce`重新执行17门禁/full/race，exit0、四成功字段true；文档提交前validate_delivery通过，18022d0文档提交后因中文路径转义误拒绝，随后实施R006。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；当时独立Draft交付待完成，客户/生产未执行。
 
 
 ### Task9 R006执行记录（2026-10-08）
@@ -237,7 +237,7 @@ J完整运行/清理/独立证据核实通过后，18022d0纯文档提交触发�
 
 ## 最终执行结果（2026-10-08）
 
-Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005/R006，固定K源`cd6e4fc6adb025a1634e4952f9382a962b7b389e`重新执行17门禁/full/race，exit0、四成功字段true及最新validate_delivery通过。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；独立Draft以P4-30为base交付收尾待完成，客户/生产未执行。
+Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005/R006，固定K源`cd6e4fc6adb025a1634e4952f9382a962b7b389e`重新执行17门禁/full/race，exit0、四成功字段true及最新validate_delivery通过。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；独立[Draft PR #80](https://github.com/leileipei/Enterprise_IM/pull/80)已以P4-30为base交付，客户/生产未执行。
 
 ### Draft交付（2026-10-08）
 
