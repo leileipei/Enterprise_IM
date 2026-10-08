@@ -1,7 +1,7 @@
 {
   "schema_version": "p431_delivery_summary_v1",
   "acceptance_for_current_source": true,
-  "delivery_state": "verified_K_pending_draft",
+  "delivery_state": "draft_pr_verified",
   "generated_at": "2026-10-08T08:28:55.856177+00:00",
   "cli_observation": {
     "source_commit": "cd6e4fc6adb025a1634e4952f9382a962b7b389e",
@@ -20387,5 +20387,15 @@
     "C的两项精确版本删除历史失败内部原因未确立；后续通过不构成已修复产品根因证据。",
     "race覆盖Go测试及进程内代码；部分正式子程序是通常构建，不能称所有生产二进制race审计。",
     "客户身份源、生产IAM/TLS、HA/容量、备份DR及客户数据导入未执行。"
-  ]
+  ],
+  "pull_request": {
+    "number": 80,
+    "url": "https://github.com/leileipei/Enterprise_IM/pull/80",
+    "state": "OPEN",
+    "isDraft": true,
+    "baseRefName": "codex/p4-30-controlled-import-design",
+    "headRefName": "codex/p4-31-local-integration-design",
+    "creation_head_commit": "af1c0ce52592b968dbc5e7bd7ed57d69ae4959fa",
+    "final_head_observation": "durable_evidence_root/ledger/task-9-pr.json"
+  }
 }

@@ -6,7 +6,7 @@
 
 macOS Unix socket路径必须短于104字节，实际运行根使用/private/tmp中的新短英文目录。Chrome通过锁定Node/Playwright启动，私有HOME与临时profile仅作用于浏览器子进程，并登记真实PID、版本和退出。该检查只证明浏览器工具可启动；IM浏览器业务由后续门禁验收。
 
-Task1–8完成，Task9评审修正及最终验证完成，独立Draft交付收尾待完成；最终固定源K的17门禁、完整仓库、race与清理均通过。统一入口如下。本机结果不构成生产部署或客户验收。失败尝试保留原始失败记录，清理恢复另存证据，不改写失败结果。
+Task1–8完成，Task9评审修正及最终验证完成，独立[Draft PR #80](https://github.com/leileipei/Enterprise_IM/pull/80)已交付；最终固定源K的17门禁、完整仓库、race与清理均通过。统一入口如下。本机结果不构成生产部署或客户验收。失败尝试保留原始失败记录，清理恢复另存证据，不改写失败结果。
 
 ## 统一入口
 
@@ -23,4 +23,4 @@ python3 scripts/test-project-integration.py --source-commit <40位已提交SHA> 
 最终验收源码为`cd6e4fc6adb025a1634e4952f9382a962b7b389e`。完整中文记录见`docs/P4-31-本机完整联调验收-20261008.md`，原评审、3项Important修正与2项Minor deferred见`docs/verification/p4-31-review-rulings.md`。真实业务Node/Chrome均登记实际生命周期；Linux9份安全产物、2个二进制摘要和实际限额收据由最新交付校验重新核对。
 
 
-最终状态（2026-10-08）：J文档校验阻断由R006的NUL路径协议修正；92项编排回归与K同源完整复验通过。新签名库按原24小时规则检查，独立Draft交付收尾待完成。
+最终状态（2026-10-08）：J文档校验阻断由R006的NUL路径协议修正；92项编排回归与K同源完整复验通过。新签名库按原24小时规则检查，独立[Draft PR #80](https://github.com/leileipei/Enterprise_IM/pull/80)已交付。

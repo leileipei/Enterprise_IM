@@ -1,6 +1,6 @@
 # P4-31 固定源码完整联调验收设计
 
-日期：2026-10-07。状态：Task1–9实施与本机验收完成，最终K同源17门禁/full/race及清理通过，独立Draft交付收尾待完成；2Minor deferred，客户/生产未执行。
+日期：2026-10-07。状态：Task1–9实施与本机验收完成，最终K同源17门禁/full/race及清理通过，独立[Draft PR #80](https://github.com/leileipei/Enterprise_IM/pull/80)已交付；2Minor deferred，客户/生产未执行。
 
 分类：跨数据库、消息、文件、扫描与浏览器运行环境的架构级验证工作，依照 brainstorming 路径先确认书面规格，再编写实施计划。
 
@@ -215,7 +215,7 @@ message_realtime 至少要求以下已有调用方实际通过：`TestTwoDeviceR
 - [正式附件进程夹具](../../../testdata/file-runtime/business-runtime.md)
 - 现有 file-runtime/messages/download-retention/web-files/business-runtime 脚本，以及 test-import-apply.py 的十四门禁为被复用的事实基线；链接中的旧源 PASS 仍为历史证据。
 
-规格自检：已明确目标、允许修改、源码固定、资源/角色隔离、运行绑定、环境守卫、门禁与唯一辅助例外、计数、失败修正、清理及交付；没有未决业务参数或以目录存在替代健康证明。Task1–8完成，Task9唯一整体评审修正后的K同源17门禁、完整/race及清理通过；2Minor deferred见验收记录，独立Draft交付收尾待完成。客户/生产验收未执行。
+规格自检：已明确目标、允许修改、源码固定、资源/角色隔离、运行绑定、环境守卫、门禁与唯一辅助例外、计数、失败修正、清理及交付；没有未决业务参数或以目录存在替代健康证明。Task1–8完成，Task9唯一整体评审修正后的K同源17门禁、完整/race及清理通过；2Minor deferred见验收记录，独立[Draft PR #80](https://github.com/leileipei/Enterprise_IM/pull/80)已交付。客户/生产验收未执行。
 
 
 ### 2026-10-08 参数修订批准
@@ -225,4 +225,4 @@ message_realtime 至少要求以下已有调用方实际通过：`TestTwoDeviceR
 
 ### Task9 R006复验状态（2026-10-08）
 
-J运行全部通过，但文档提交后的校验器因Git中文路径转义误拒绝纯文档。改用NUL分隔路径，真实Git RED后92项回归GREEN；新K源码已重新运行17门禁/full/race。当时官方daily28146剩余新鲜度不足，等待新签名库后已在K完成完整复验；24小时规则、原冻结种子缓存及所有业务期限保持。独立Draft交付未完成。
+J运行全部通过，但文档提交后的校验器因Git中文路径转义误拒绝纯文档。改用NUL分隔路径，真实Git RED后92项回归GREEN；新K源码已重新运行17门禁/full/race。当时官方daily28146剩余新鲜度不足，等待新签名库后已在K完成完整复验；24小时规则、原冻结种子缓存及所有业务期限保持。独立[Draft PR #80](https://github.com/leileipei/Enterprise_IM/pull/80)已创建并核实。
