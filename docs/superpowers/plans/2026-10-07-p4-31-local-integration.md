@@ -199,8 +199,8 @@ assert child['source_commit'] == snapshot.commit
 
 - [x] **Step 1：准备唯一整体只读评审包。** Task8全部绿色后，对整个分支源码差异评审，提供本规格、计划、RF1–RF5和真实非秘密证据；不派实现代理或逐任务review。评审安排在本任务最终完成前，避免交付依赖评审的循环；除非用户改变执行方式，只派这一位最终reviewer。
 - [x] **Step 2：逐项核实并集中修正。** 作者按实际用户影响复核severity；Critical/Important一次集中修正，先有效RED后GREEN；产品/工具变化重新固定SHA并重跑全部17门禁/full/race，不派第二次评审。Minor明确记为deferred，所有不采纳项作裁决并写代价，不顺带扩展未批准范围。
-- [ ] **Step 3：整理验收材料。** 记录固定源/归档/工具/平台/程序/日志hash、完整包/顶层/子测试和helper原始计数、各门禁及实际耗时、失败尝试、资源清理、原评审与修正及所有裁决；明确客户/生产未执行。本期成功须Task8/评审修正后的完整条件成立，不冒称生产可用。
-- [ ] **Step 4：提交并核对文档差异。** `docs: deliver P4-31 local integration acceptance`；`git diff <固定最终源> HEAD -- cmd internal scripts db go.mod go.sum testdata ':(exclude)testdata/project-integration/README.md'`为空（唯一例外是本期纯README说明，裁决见review-rulings）（否则重新验证新源）。运行validate_delivery并确认原工作区及旧PR提交不变、专属树干净；文档提交后不重复无变化的6小时门禁，但要校验固定证据和产品差异。
+- [x] **Step 3：整理验收材料。** 记录固定源/归档/工具/平台/程序/日志hash、完整包/顶层/子测试和helper原始计数、各门禁及实际耗时、失败尝试、资源清理、原评审与修正及所有裁决；明确客户/生产未执行。本期成功须Task8/评审修正后的完整条件成立，不冒称生产可用。
+- [x] **Step 4：提交并核对文档差异。** `docs: deliver P4-31 local integration acceptance`；`git diff <固定最终源> HEAD -- cmd internal scripts db go.mod go.sum testdata ':(exclude)testdata/project-integration/README.md'`为空（唯一例外是本期纯README说明，裁决见review-rulings）（否则重新验证新源）。运行validate_delivery并确认原工作区及旧PR提交不变、专属树干净；文档提交后不重复无变化的6小时门禁，但要校验固定证据和产品差异。
 - [ ] **Step 5：交付独立draft。** 按批准方式只推送P4-31分支、创建以P4-30为base的新draft并立即attach_artifact；核对远端head、旧PR不变。不merge/部署。task-done保存最终检查；备份全部非秘密证据后仅清理本计划scratch，保留worktree和失败尝试目录。网络/授权阻断时如实交付本地状态，不声称PR已创建。
 
 ## 自检和规格覆盖
@@ -219,18 +219,22 @@ assert child['source_commit'] == snapshot.commit
 | §12 I01–I11 | I01→2/7；I02→4/5/7；I03→4；I04→5/6/8；I05→3/6/8；I06→6/8；I07→6/8；I08→1/2/7/8；I09→8/9；I10→3/7/9；I11→7/9 |
 | §13交付/执行方式 | Task9、当前助手逐项实现及一次最终评审 |
 
-接口自检：来源、工具、门禁和证据接口已实际同源执行；最终J完整通过，2Minor deferred见裁决。独立Draft与备份清理为最后交付步骤。
+接口自检：来源、工具、门禁和证据接口已实际同源执行；最终K完整通过，2Minor deferred见裁决。独立Draft与备份清理为最后交付步骤。
 
 
 ### 2026-10-08 已批准测试框架预算修订
 
 用户回复“确认”，批准仅将 full_repository／race_repository 的 Go 每包预算由30分钟调整为45分钟。I轮真实退出1：全仓普通通过，竞态在 internal/policystore 累计1800.523秒触发框架超时；当时子例仅执行8秒。原失败证据保留。专项30分钟、单门禁3600秒、整轮21600秒、清理60秒及业务断言不变；固定新源码从新目录执行全部17门禁，不复用旧通过结果。
 
-## 最终执行结果（2026-10-08）
+## J执行结果（历史，2026-10-08）
 
-Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005，固定J源`72b967e91a0fe0f19639b2e8d11f651827b870ce`重新执行17门禁/full/race，exit0、四成功字段true及最新validate_delivery通过。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；独立Draft以P4-30为base交付收尾待完成，客户/生产未执行。
+Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005，固定J源`72b967e91a0fe0f19639b2e8d11f651827b870ce`重新执行17门禁/full/race，exit0、四成功字段true；文档提交前validate_delivery通过，18022d0文档提交后因中文路径转义误拒绝，随后实施R006。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；独立Draft以P4-30为base交付收尾待完成，客户/生产未执行。
 
 
 ### Task9 R006执行记录（2026-10-08）
 
-J完整运行/清理/独立证据核实通过后，18022d0纯文档提交触发校验器Git中文路径误拒绝。R006仅修正evidence.py的NUL分隔路径解析并补真实Git反例；19项RED与92项GREEN、真实J收据定向校验GREEN均保留。默认扫描库路径修订已撤回：旧冻结种子28144已过期，入口本就只在本轮目录更新。官方最新28146剩余新鲜度不足完成整轮；等待新签名库后固定新源码重跑全部17/full/race/清理，再更新最终文档和Draft。未新增reviewer，未改业务规则。
+J完整运行/清理/独立证据核实通过后，18022d0纯文档提交触发校验器Git中文路径误拒绝。R006仅修正evidence.py的NUL分隔路径解析并补真实Git反例；19项RED与92项GREEN、真实J收据定向校验GREEN均保留。默认扫描库路径修订已撤回：旧冻结种子28144已过期，入口本就只在本轮目录更新。官方最新28146剩余新鲜度不足完成整轮；等待新签名库后已固定K源码完成全部17/full/race/清理；最终文档已更新，Draft交付待完成。未新增reviewer，未改业务规则。
+
+## 最终执行结果（2026-10-08）
+
+Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005/R006，固定K源`cd6e4fc6adb025a1634e4952f9382a962b7b389e`重新执行17门禁/full/race，exit0、四成功字段true及最新validate_delivery通过。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；独立Draft以P4-30为base交付收尾待完成，客户/生产未执行。
