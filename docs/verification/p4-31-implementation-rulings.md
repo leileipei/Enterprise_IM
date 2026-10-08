@@ -1,0 +1,39 @@
+# P4-31 实施裁决完整账本
+
+以下按发生顺序保留本计划所有裁决及代价；A023首次等待socket Write的裁决后来经实际失败修正，不能当作最终方案。最后唯一整体评审的逐项裁决和延期项见 [评审裁决](p4-31-review-rulings.md)。
+
+1. Task 1: Ruling: GateEvent adds explicit passed/package_status/started/inventory fields — a count and set of executed names cannot prove per-package terminal state, pass status, or independently discovered coverage; inventory is required for test verdicts — cost if wrong: adapters must propagate these fields rather than infer coverage from logs.
+
+2. Task 1: Ruling: full Go suite runs in Task8 after complete dedicated fixtures — spec requires fixed source/full environment; unprepared runs cannot satisfy that contract — cost if wrong: product defects are discovered later, never claimed green here.
+
+3. Task 2: Ruling: clamd version uses --help — --version parses missing shared default config first; --help identifies the exact daemon without starting it — cost if wrong: failure remains toolchain preflight rather than mutating shared config.
+
+4. Task 2: Ruling: save verified implementation as an intermediate commit and continue independent Task3 while tool-lock decision is pending — task-done remains absent until actual discovery/inventory succeeds — cost if wrong: source prep cannot be marked complete and end-to-end stays blocked.
+
+5. Task 3: Ruling: command supervisor normalizes only current Python launcher to actual interpreter image; tool discovery records that image — avoids legitimate re-exec identity drift without accepting PID-only ownership — cost if wrong: unsupported interpreter identity rejects preflight.
+
+6. Task 3: Ruling: existing process fixtures are compiled here and exercised with real services in Task8 — their actual dependency environment is supplied by Tasks4/5; no-test compile result is never counted as a business PASS — cost if wrong: lifecycle integration defects wait for mandatory full same-source run.
+
+7. Task 2: Ruling: approved mc acquisition uses fixed official source archive, exact Go compiler version, readonly module sums, fixed upstream release metadata and new binary digest only in project-integration lock; historical file-runtime lock unchanged — official publisher artifact is unavailable and user approved this fallback — cost if wrong: a fresh source build fails toolchain rather than accepting a different artifact.
+
+8. Task 4: Ruling: bind all service/discovery/cleanup Docker commands to verified local OrbStack Unix socket with explicit minimal environment — ambient remote context could create or remove resources outside approved local scope; RED endpoint inheritance regression proves the gap — cost if wrong: another local Docker backend fails preflight until explicitly configured, never falls back to remote.
+
+9. Task 4: Ruling: pinned MinIO IAM metadata uses GetBucketLocation instead of unsupported GetBucketAcl; exact cleanup permits DeleteObject together with DeleteObjectVersion only under nonempty/non-null s3:versionid condition — live server rejects GetBucketAcl and official locked auth-handler verifies DeleteObject first; existing P4-26 design already documents these provider rules — cost if wrong: actual nil/empty/null or exact-version matrix fails and fixtures cannot pass, no blanket delete authorization.
+
+10. Task 5: Ruling: use new short ASCII attempt directory under /private/tmp for native Unix sockets, keeping all resources inside that attempt registry root — Darwin sockaddr path limit is104 bytes; worktree scratch is too long — cost if wrong: path preflight rejects before daemon creation; no shared daemon or relaxed binding fallback.
+
+11. Task 6: Ruling: resource gate consumes the same run-all attempt logs as file_components, with separate compiled Linux binary list and live inspected limits — spec explicitly makes them independent verdicts from the same existing script, not duplicate execution — cost if wrong: incomplete runtime outcome/log/list rejects resources; no historical logs accepted.
+
+12. Task 6: Ruling: import command is launched in reserved private cwd; add explicit --repository-root for read-only Git archive reads — plan cwd repository root conflicts with strict owned create/register-gap proof, and spec requires both ownership and immutable read-only Git access; actual failing cwd regression proves it — cost if wrong: child rejects mismatched root/entry rather than weakening registry containment.
+
+13. Task 7: Ruling: preserve approved mc executable under output/tools after hash validation, delete owned source-build caches with secret root — validate_delivery must re-read retained tool hashes after cleanup, while public mc binary contains no runtime credentials — cost if wrong: copy or hash mismatch rejects before service creation.
+
+14. Task 7: Ruling: hash/redact logs before stopping/removing the private root, then finalize same in-memory event evidence with actual cleanup disposition — deleting first would destroy verifiable logs; no historical receipt reuse — cost if wrong: missing or changed originals/share hashes reject; normal cleanup still executes if publication fails.
+
+15. Task 8 A023 effective real RED source537a500: baseline blocked-writer1PASS, adversarial preparation-delay1FAIL,cleanupTrue. Safe diagnostic shows interrupted/timeout,token already expired,tcpAccepted0,writeDeadlineUnset: object staging consumed the last800ms before the writer was exercised. Ruling: gate the first real socket Write after preparation, rather than object Read; keep4s JWT, real8MiB objects/small TCP window, expiry deadline equality, before-expiry blocking and300ms last-write bound/accepted-byte assertions unchanged. Rename new regression under TestFileDownloadReal prefix so download gate independently discovers and executes it. Cost if wrong: actual deadline/phase assertions still fail, no product or timeout retry changed.
+
+16. Task 8 A023 first correction source4b8799f FAILED6top under race,cleanupTrue. Actual safe diagnostic authorized/tokenRemaining~795ms/tcp0/deadlineSet; product intentionally bounds each write to min(expiry,lastValid+1s). Holding net.Conn.Write after fresh checks invalidates that shorter bound. Ruling: delay observedDownload.Authorize only after actual Service.Prepare and before actual Service.Authorize/first bearer+DB checks; underlying Service calls and existing TCP/expiry assertions unchanged. Also reject count3 protocol duplicate terminals: repeat three independent count1 commands/logs rather than relax strict parser. Pre-edit remains same fixture file; original E retained pending final cleanup.
+
+17. Task9 Ruling: interrupted H cannot be recovered as successful acceptance without original supervisor/race exit; publish an explicitly recovery-only failed receipt and verified owned cleanup, then rerun same source all17 in I. Cost: full execution time; no synthetic success or source/test relaxation.
+
+18. Task9 R005 effective RED observed actual exit1,12tests with two budget subtests failing1800<=1864.045s; outer-deadline guard already PASS. After approved two-line full/race45m implementation all90integration Python tests actual exit0,22.745s. Ruling: accept approved framework-only budget adjustment; cost: permit each full-suite package up to45m while preserving60m gate/6h total/60s cleanup, all business assertions and unfiltered full/race. No second reviewer. Fixed new source must rerun all17/full/race before acceptance.

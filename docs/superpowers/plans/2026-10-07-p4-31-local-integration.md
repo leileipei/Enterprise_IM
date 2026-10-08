@@ -1,6 +1,6 @@
 # P4-31 固定源码完整联调验收实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 交付可重复执行的本机联调入口，用同一固定源码完成既有消息、文件、浏览器、导入门禁及完整/race套件，并提供可核对证据和资源清理结果。
 
@@ -185,11 +185,11 @@ assert child['source_commit'] == snapshot.commit
 
 **Interfaces:** 正式入口为Task7 `main`；失败记录每项 `case_id/source_commit/gate/package_test/kind/reproduction_command/safe_error/evidence_hash`，kind=fixture/tool/product/contract。这一任务不预造未知产品缺陷；实际复现后才能确定对应文件及测试。
 
-- [ ] **Step 1：确定固定源和新目录。** 提交前七任务后记录完整SHA；用 `python3 scripts/test-project-integration.py --source-commit <该完整SHA> --output-dir <新绝对目录>`。所有本轮真实资源自动准备，源外工具获取只按锁定值，失败保留。Expected：进入实际门禁或给出具体非零原因，不能空跑PASS。
-- [ ] **Step 2：读取全部输出并归类。** 检查源、17门禁、每包/测试清单、完整/race普通FAIL/SKIP、helper子进程证据、扫描/IAM实测及cleanup；结合历史125失败/48SKIP排查但以本轮为准。Expected：真实状态和全部未通过名字齐全；readiness/定义/权限不得简单归为环境已解决。
-- [ ] **Step 3：对已复现问题执行TDD。** 每个case先固定复现命令和对应失败断言；夹具只修本轮准备、工具补反例、产品只按既有合同最小修正。观看有效RED→GREEN及相关套件，再逐项提交最小修正（有实改才用 `fix: resolve verified integration failures`）；初次即PASS的补证明确为覆盖，不假称产品修正。契约类输出证据等待范围确认，不擅改。
-- [ ] **Step 4：最终同源重跑。** 任一代码/工具改动均新提交、新证据目录，重跑准确正式入口、全部17门禁/full/race；不使用reuse参数、不拼接尝试。Expected：exit0，四成功字段true，所有必需名/清单/hashes一致，普通FAIL/SKIP0、唯一helper有两实际进程证据、race无报告、cleanup成功。若无法满足，任务未完成，仅交付事实与剩余问题。
-- [ ] **Step 5：核对验收收据。** 使用Task7的validate_delivery核对Step4实际报告和固定SHA；本步不再修改已验证产品/工具。task-done引用最后绿色入口命令及收据校验，日志按当次目录保存；没有缺陷只保存证明，不为凑commit改代码。
+- [x] **Step 1：确定固定源和新目录。** 提交前七任务后记录完整SHA；用 `python3 scripts/test-project-integration.py --source-commit <该完整SHA> --output-dir <新绝对目录>`。所有本轮真实资源自动准备，源外工具获取只按锁定值，失败保留。Expected：进入实际门禁或给出具体非零原因，不能空跑PASS。
+- [x] **Step 2：读取全部输出并归类。** 检查源、17门禁、每包/测试清单、完整/race普通FAIL/SKIP、helper子进程证据、扫描/IAM实测及cleanup；结合历史125失败/48SKIP排查但以本轮为准。Expected：真实状态和全部未通过名字齐全；readiness/定义/权限不得简单归为环境已解决。
+- [x] **Step 3：对已复现问题执行TDD。** 每个case先固定复现命令和对应失败断言；夹具只修本轮准备、工具补反例、产品只按既有合同最小修正。观看有效RED→GREEN及相关套件，再逐项提交最小修正（有实改才用 `fix: resolve verified integration failures`）；初次即PASS的补证明确为覆盖，不假称产品修正。契约类输出证据等待范围确认，不擅改。
+- [x] **Step 4：最终同源重跑。** 任一代码/工具改动均新提交、新证据目录，重跑准确正式入口、全部17门禁/full/race；不使用reuse参数、不拼接尝试。Expected：exit0，四成功字段true，所有必需名/清单/hashes一致，普通FAIL/SKIP0、唯一helper有两实际进程证据、race无报告、cleanup成功。若无法满足，任务未完成，仅交付事实与剩余问题。
+- [x] **Step 5：核对验收收据。** 使用Task7的validate_delivery核对Step4实际报告和固定SHA；本步不再修改已验证产品/工具。task-done引用最后绿色入口命令及收据校验，日志按当次目录保存；没有缺陷只保存证明，不为凑commit改代码。
 
 ### Task 9：唯一整体评审、交付记录和远端核对
 
@@ -197,10 +197,10 @@ assert child['source_commit'] == snapshot.commit
 
 **Interfaces:** 来源为Task8最终完整验证报告；产品差异范围 `3c786f09c50248a10e780c0e7d86a38803409431..<最终源>`；独立draft base=`codex/p4-30-controlled-import-design`。完成检查使用 Task7的 `validate_delivery(source_commit:str,report:Path,repository_root:Path)->None` 核对存留产物hash、已处置日志的追溯记录、入口一致、产品diff为空及清理结果。
 
-- [ ] **Step 1：准备唯一整体只读评审包。** Task8全部绿色后，对整个分支源码差异评审，提供本规格、计划、RF1–RF5和真实非秘密证据；不派实现代理或逐任务review。评审安排在本任务最终完成前，避免交付依赖评审的循环；除非用户改变执行方式，只派这一位最终reviewer。
-- [ ] **Step 2：逐项核实并集中修正。** 作者按实际用户影响复核severity；Critical/Important一次集中修正，先有效RED后GREEN；产品/工具变化重新固定SHA并重跑全部17门禁/full/race，不派第二次评审。Minor明确记为deferred，所有不采纳项作裁决并写代价，不顺带扩展未批准范围。
-- [ ] **Step 3：整理验收材料。** 记录固定源/归档/工具/平台/程序/日志hash、完整包/顶层/子测试和helper原始计数、各门禁及实际耗时、失败尝试、资源清理、原评审与修正及所有裁决；明确客户/生产未执行。本期成功须Task8/评审修正后的完整条件成立，不冒称生产可用。
-- [ ] **Step 4：提交并核对文档差异。** `docs: deliver P4-31 local integration acceptance`；`git diff <固定最终源> HEAD -- cmd internal scripts db go.mod go.sum testdata`为空（否则重新验证新源）。运行validate_delivery并确认原工作区及旧PR提交不变、专属树干净；文档提交后不重复无变化的6小时门禁，但要校验固定证据和产品差异。
+- [x] **Step 1：准备唯一整体只读评审包。** Task8全部绿色后，对整个分支源码差异评审，提供本规格、计划、RF1–RF5和真实非秘密证据；不派实现代理或逐任务review。评审安排在本任务最终完成前，避免交付依赖评审的循环；除非用户改变执行方式，只派这一位最终reviewer。
+- [x] **Step 2：逐项核实并集中修正。** 作者按实际用户影响复核severity；Critical/Important一次集中修正，先有效RED后GREEN；产品/工具变化重新固定SHA并重跑全部17门禁/full/race，不派第二次评审。Minor明确记为deferred，所有不采纳项作裁决并写代价，不顺带扩展未批准范围。
+- [x] **Step 3：整理验收材料。** 记录固定源/归档/工具/平台/程序/日志hash、完整包/顶层/子测试和helper原始计数、各门禁及实际耗时、失败尝试、资源清理、原评审与修正及所有裁决；明确客户/生产未执行。本期成功须Task8/评审修正后的完整条件成立，不冒称生产可用。
+- [x] **Step 4：提交并核对文档差异。** `docs: deliver P4-31 local integration acceptance`；`git diff <固定最终源> HEAD -- cmd internal scripts db go.mod go.sum testdata ':(exclude)testdata/project-integration/README.md'`为空（唯一例外是本期纯README说明，裁决见review-rulings）（否则重新验证新源）。运行validate_delivery并确认原工作区及旧PR提交不变、专属树干净；文档提交后不重复无变化的6小时门禁，但要校验固定证据和产品差异。
 - [ ] **Step 5：交付独立draft。** 按批准方式只推送P4-31分支、创建以P4-30为base的新draft并立即attach_artifact；核对远端head、旧PR不变。不merge/部署。task-done保存最终检查；备份全部非秘密证据后仅清理本计划scratch，保留worktree和失败尝试目录。网络/授权阻断时如实交付本地状态，不声称PR已创建。
 
 ## 自检和规格覆盖
@@ -219,9 +219,13 @@ assert child['source_commit'] == snapshot.commit
 | §12 I01–I11 | I01→2/7；I02→4/5/7；I03→4；I04→5/6/8；I05→3/6/8；I06→6/8；I07→6/8；I08→1/2/7/8；I09→8/9；I10→3/7/9；I11→7/9 |
 | §13交付/执行方式 | Task9、当前助手逐项实现及一次最终评审 |
 
-接口自检：SourceSnapshot/Toolchain/Inventory/FixtureBundle/Registry/GateEvent/Verdict在生产者与调用方一致；修正先提交后固定源重跑，收据校验由Task7提供并由Task8/9消费；17名称和唯一helper例外一致；每项均有独立验收命令、RED/GREEN或真实执行条件；未知产品修正由真实case绑定，不假定已知问题。用户已确认计划；Task1–4已完成各自阶段验证。Task2工具/镜像预检通过；Task4固定源4fb6623实际TLS/IAM顶层1项+子例8项PASS、0FAIL/0SKIP、容器及凭据清理成功。Task5定义准备已开始，17门禁及完整/race联调尚未完成。
+接口自检：来源、工具、门禁和证据接口已实际同源执行；最终J完整通过，2Minor deferred见裁决。独立Draft与备份清理为最后交付步骤。
 
 
 ### 2026-10-08 已批准测试框架预算修订
 
 用户回复“确认”，批准仅将 full_repository／race_repository 的 Go 每包预算由30分钟调整为45分钟。I轮真实退出1：全仓普通通过，竞态在 internal/policystore 累计1800.523秒触发框架超时；当时子例仅执行8秒。原失败证据保留。专项30分钟、单门禁3600秒、整轮21600秒、清理60秒及业务断言不变；固定新源码从新目录执行全部17门禁，不复用旧通过结果。
+
+## 最终执行结果（2026-10-08）
+
+Task8固定F通过后，仅一次整体review；Task9集中修正3Important及作者R004/R005，固定J源`72b967e91a0fe0f19639b2e8d11f651827b870ce`重新执行17门禁/full/race，exit0、四成功字段true及最新validate_delivery通过。2Minor deferred并记录代价。文档/README例外不改变产品或验证源码；独立Draft以P4-30为base交付收尾待完成，客户/生产未执行。
