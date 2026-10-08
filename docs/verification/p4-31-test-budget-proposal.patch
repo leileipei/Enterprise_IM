@@ -1,0 +1,13 @@
+--- a/scripts/integration/gates.py
++++ b/scripts/integration/gates.py
+@@ -48,8 +48,8 @@
+         ('file_business_process','test-file-business-runtime.sh',BUSINESS,None)]:
+         rows.append(spec(name,['bash',str(root/'scripts'/script),'run-all'] if script else ['resource-evidence'],required,group=group))
+     rows.append(spec('import_append',['python',str(root/'scripts/test-import-apply.py'),'--source-commit',snapshot.commit,'--required-only'],legacy.REQUIRED_GATES,cwd=snapshot.repository_root))
+-    rows += [spec('full_repository',['go','test','-json','-p','1','-timeout=30m','-count=1','./...']),
+-             spec('race_repository',['go','test','-race','-json','-p','1','-timeout=30m','-count=1','./...'])]
++    rows += [spec('full_repository',['go','test','-json','-p','1','-timeout=45m','-count=1','./...']),
++             spec('race_repository',['go','test','-race','-json','-p','1','-timeout=45m','-count=1','./...'])]
+     return rows
+ 
+ 

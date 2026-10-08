@@ -1,0 +1,107 @@
+{
+  "source_commit": "4bd39947effbcbedfafc96f5c04e7fe051828e09",
+  "actual_cli_exit_code": 1,
+  "verification_sha256": "34db46093127e8a573a4d24a3b6ec04e885532abd891c606ab6e5e0a8cdca78e",
+  "source_archive_sha256": "5e7ee7b9d370c3bbbe124d148f624cc35a290df5500583913b628809d8a95349",
+  "event_count": 17,
+  "log_disposition_count": 309,
+  "log_hashes_verified": true,
+  "source_archive_export_verified": true,
+  "locked_tool_hashes_verified": true,
+  "linux_resource_receipts_verified": true,
+  "full_suite_passed": true,
+  "race_suite_passed": false,
+  "required_gates_passed": false,
+  "cleanup": {
+    "removed": true,
+    "failures": []
+  },
+  "independent_owned_absence_verified": true,
+  "delivery_validator": "rejected_delivery_not_successful",
+  "failures": [
+    "race_repository:package_failed:github.com/leileipei/Enterprise_IM/internal/policystore",
+    "race_repository:command_exit_nonzero",
+    "race_repository:missing_test_terminal",
+    "race_repository:missing_successful_package_terminal:github.com/leileipei/Enterprise_IM/internal/policystore",
+    "race_repository:missing_required_pass:github.com/leileipei/Enterprise_IM/internal/policystore::TestWebFileRealPolicyConflict",
+    "race_repository:missing_required_pass:github.com/leileipei/Enterprise_IM/internal/policystore::TestWebFileRealRevocation"
+  ],
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "full_repository": {
+    "exit_code": 0,
+    "counts": {
+      "top_skip": 1,
+      "top_fail": 0,
+      "top_pass": 1047,
+      "sub_skip": 0,
+      "sub_fail": 0,
+      "sub_pass": 1150,
+      "package_skip": 0,
+      "package_fail": 0,
+      "package_pass": 28,
+      "ordinary_skip": 0,
+      "helper_skip": 1
+    },
+    "helper_proof_count": 2,
+    "helper_proofs_valid": true
+  },
+  "race_repository": {
+    "exit_code": 1,
+    "counts": {
+      "top_skip": 1,
+      "top_fail": 0,
+      "top_pass": 1045,
+      "sub_skip": 0,
+      "sub_fail": 0,
+      "sub_pass": 1130,
+      "package_skip": 0,
+      "package_fail": 1,
+      "package_pass": 27,
+      "ordinary_skip": 0,
+      "helper_skip": 1
+    },
+    "helper_proof_count": 2,
+    "helper_proofs_valid": true
+  },
+  "race_timeout": {
+    "package": "github.com/leileipei/Enterprise_IM/internal/policystore",
+    "elapsed_seconds": 1800.523,
+    "panic": "test timed out after 30m0s",
+    "active_case": "TestWebFileRealRevocation/actual_policy_requester_uploader_TTL_revocation/audit-fault",
+    "active_case_seconds": 8,
+    "completed_top_case_seconds_sum": 1768.09,
+    "same_source_previous_package_pass_seconds": 1709.485,
+    "missing_required_top": [
+      "TestWebFileRealPolicyConflict",
+      "TestWebFileRealRevocation"
+    ],
+    "data_race_reports": 0
+  },
+  "gate_results": {
+    "orchestrator_contract": [],
+    "toolchain": [],
+    "fixture_preflight": [],
+    "build_all": [],
+    "vet_all": [],
+    "message_realtime": [],
+    "file_components": [],
+    "file_resources": [],
+    "file_messages": [],
+    "file_download_retention": [],
+    "web_files": [],
+    "file_business_process": [],
+    "import_append": [],
+    "full_repository": [],
+    "race_repository": [
+      "package_failed:github.com/leileipei/Enterprise_IM/internal/policystore",
+      "command_exit_nonzero",
+      "missing_test_terminal",
+      "missing_successful_package_terminal:github.com/leileipei/Enterprise_IM/internal/policystore",
+      "missing_required_pass:github.com/leileipei/Enterprise_IM/internal/policystore::TestWebFileRealPolicyConflict",
+      "missing_required_pass:github.com/leileipei/Enterprise_IM/internal/policystore::TestWebFileRealRevocation"
+    ],
+    "evidence_integrity": [],
+    "resource_cleanup": []
+  }
+}
