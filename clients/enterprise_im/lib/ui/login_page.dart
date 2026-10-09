@@ -1,4 +1,10 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../core/auth/client_session.dart';
+import '../core/auth/account_reference.dart';
+import '../core/auth/session_store.dart';
+import '../core/storage/secure_vault.dart';
 import 'package:flutter/material.dart';
 import '../core/auth/native_auth.dart';
 import '../core/protocol/api_client.dart';
@@ -9,11 +15,17 @@ class LoginPage extends StatefulWidget {
   final String platform;
   final LoginCallback Function(String, String) callbackFactory;
   final bool platformReady;
+  final ApiClient Function(Uri)? apiFactory;
+  final BrowserLauncher? browser;
+  final Future<SessionStore> Function()? storeFactory;
   const LoginPage({
     super.key,
     required this.platform,
     required this.callbackFactory,
     this.platformReady = true,
+    this.apiFactory,
+    this.browser,
+    this.storeFactory,
   });
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -24,6 +36,9 @@ class _LoginPageState extends State<LoginPage> {
   NativeAuth? _auth;
   ApiClient? _api;
   AuthSession? _session;
+  ClientSession? _client;
+  AccountReference? _account;
+  bool _hasSavedRefresh = false;
   Timer? _expiry;
   bool _busy = false;
   String? _notice;
@@ -37,19 +52,37 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       final origin = ApiClient.validateOrigin(Uri.parse(_address.text.trim()));
+      await _client?.logout();
       await _auth?.cancel();
+      _account = null;
+      _hasSavedRefresh = false;
       _api?.close();
       if (!mounted || generation != _generation) return;
-      final api = ApiClient(origin, HttpApiTransport());
+      final api =
+          widget.apiFactory?.call(origin) ??
+          ApiClient(origin, HttpApiTransport());
       _api = api;
       final auth = NativeAuth(
         api,
         callbackFactory: widget.callbackFactory,
-        browser: ExternalBrowserLauncher(),
+        browser: widget.browser ?? ExternalBrowserLauncher(),
       );
       _auth = auth;
-      final session = await auth.signIn(widget.platform);
-      _showSession(session, generation);
+      final sessions = await (widget.storeFactory?.call() ?? _defaultStore());
+      if (!mounted || generation != _generation) {
+        await sessions.close();
+        return;
+      }
+      final client = ClientSession(auth, sessions, platform: widget.platform);
+      _client = client;
+      final admitted = await client.signIn();
+      _showSession(admitted.session, generation);
+    } on VaultFailure {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = null;
+          _notice = '系统安全存储不可用，登录未完成。请检查系统配置后重试。';
+        });
     } on FormatException {
       if (mounted && generation == _generation)
         setState(
@@ -58,7 +91,7 @@ class _LoginPageState extends State<LoginPage> {
     } on AuthFailure catch (error) {
       if (mounted && generation == _generation)
         setState(() {
-          _session = _auth?.session;
+          _session = _client?.current?.session;
           _notice = _message(error.code);
         });
     } catch (_) {
@@ -74,32 +107,54 @@ class _LoginPageState extends State<LoginPage> {
     _expiry?.cancel();
     setState(() {
       _session = session;
+      _account = AccountReference.fromSession(session);
+      _hasSavedRefresh = _auth?.canRefresh == true;
       _notice = null;
     });
     _expiry = Timer(session.remaining, () {
-      if (mounted && generation == _generation)
+      if (mounted && generation == _generation) {
+        unawaited(
+          (_client?.close() ?? Future<void>.value()).catchError(_reportClose),
+        );
         setState(() {
           _session = null;
           _notice = '登录已到期，请恢复登录或重新登录。';
         });
+      }
     });
   }
 
   Future<void> _refresh() async {
-    final auth = _auth;
-    if (_busy || auth == null) return;
+    final auth = _auth, client = _client, account = _account;
+    if (_busy || auth == null || client == null || account == null) return;
     final generation = ++_generation;
     setState(() {
       _busy = true;
       _notice = null;
     });
     try {
-      _showSession(await auth.refresh(), generation);
+      final admitted = await (auth.canRefresh
+          ? client.refresh()
+          : client.restore(account));
+      _showSession(admitted.session, generation);
+    } on VaultFailure {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = null;
+          _notice = '系统安全存储不可用，登录未完成。请检查系统配置后重试。';
+        });
     } on AuthFailure catch (error) {
       if (mounted && generation == _generation)
         setState(() {
-          _session = _auth?.session;
+          _session = _client?.current?.session;
+          if (error.code == 'reauthenticate') _hasSavedRefresh = false;
           _notice = _message(error.code);
+        });
+    } catch (_) {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = null;
+          _notice = '登录暂时不可用，请稍后重试。';
         });
     } finally {
       if (mounted && generation == _generation) setState(() => _busy = false);
@@ -114,8 +169,26 @@ class _LoginPageState extends State<LoginPage> {
       _session = null;
       _notice = '已取消登录。';
     });
+    _account = null;
+    _hasSavedRefresh = false;
+    await _client?.logout();
     await _auth?.cancel();
   }
+
+  static Future<SessionStore> _defaultStore() async {
+    final support = await getApplicationSupportDirectory();
+    final directory = Directory('${support.path}/accounts');
+    await directory.create(recursive: true);
+    return SessionStore(OsSecureVault(), directory: directory);
+  }
+
+  static void _reportClose(Object error) => FlutterError.reportError(
+    FlutterErrorDetails(
+      exception: error,
+      library: 'enterprise_im',
+      context: ErrorDescription('closing authenticated client'),
+    ),
+  );
 
   static String _message(String code) => switch (code) {
     'cancelled' => '已取消登录。',
@@ -131,7 +204,11 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _generation++;
     _expiry?.cancel();
-    unawaited(_auth?.cancel() ?? Future<void>.value());
+    unawaited(
+      (_client?.close() ?? _auth?.cancel() ?? Future<void>.value()).catchError(
+        _reportClose,
+      ),
+    );
     _api?.close();
     _address.dispose();
     super.dispose();
@@ -191,7 +268,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 if (_busy)
                   TextButton(onPressed: _cancel, child: const Text('取消登录')),
-                if (_auth?.canRefresh == true)
+                if (_hasSavedRefresh && _account != null)
                   TextButton(
                     onPressed: _busy ? null : _refresh,
                     child: const Text('恢复登录'),

@@ -1,0 +1,109 @@
+{
+  "status": "shared_authentication_handoff_checkpoint_passed",
+  "source_base_commit": "8bb4b3273a9b92118720ab6b83758abda2d7cf67",
+  "source_scope": "working-tree checkpoint bound by exact source hashes, not whole-branch or installed-native acceptance",
+  "shared_suite": {
+    "passed": 86,
+    "failed": 0,
+    "actual_exit": 0,
+    "log": "task-3-auth-handoff-final.log"
+  },
+  "targeted_suite": {
+    "passed": 12,
+    "actual_exit": 0,
+    "log": "task-3-ui-handoff-retry.log"
+  },
+  "ui_cleanup_suite": {
+    "passed": 2,
+    "actual_exit": 0,
+    "log": "task-3-ui-cleanup-retry.log"
+  },
+  "analysis": {
+    "issues": 0,
+    "actual_exit": 0,
+    "log": "task-3-auth-handoff-analysis-final.log"
+  },
+  "behavior_red": {
+    "actual_exit": 1,
+    "log": "task-3-invalid-refresh-red.log",
+    "failure": "invalid refresh retained saved credential"
+  },
+  "checks": [
+    "account reference never represents authenticated session",
+    "saved refresh loading does not open database or generate a key",
+    "restore validates current native configuration and exact fresh me principal",
+    "credential rotation finishes in same-account vault bundle before UI admission",
+    "vault failure prevents authenticated client publication",
+    "logout revokes admission before late credential write and removes bundle/database",
+    "close preserves credentials but subsequent owner must freshly authenticate",
+    "invalid refresh removes only refresh credential without opening SQLite",
+    "UI never displays successful login before safe credential handoff"
+  ],
+  "interrupted_runs": [
+    {
+      "log": "task-3-ui-handoff-green.log",
+      "observed_runner_exit": 0,
+      "accepted_as_pass": false,
+      "reason": "fixture blocked Flutter fake-async pumping; verified owned runner interrupted; retained credential failure also present"
+    },
+    {
+      "log": "task-3-auth-handoff-full.log",
+      "observed_runner_exit": 0,
+      "accepted_as_pass": false,
+      "reason": "teardown awaited fake-zone serial work inside runAsync; verified owned runner interrupted"
+    }
+  ],
+  "fixture_cleanup": {
+    "interrupted_runner_pids": [
+      15451,
+      18690
+    ],
+    "interrupted_tester_pids": [
+      15503,
+      18789
+    ],
+    "confirmed_absent": true,
+    "abandoned_directories_removed": 2,
+    "remaining_login_fixture_directories": 0
+  },
+  "task2_complete": false,
+  "task3_complete": false,
+  "task4_complete": false,
+  "native_vault_acceptance": "not_executed",
+  "four_platform_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "remaining": [
+    "OS-vault saved account selector and cold-start UI restore",
+    "membership/device admission and product message UI",
+    "actual platform secure storage write/restart/read/delete",
+    "iOS minimum version decision and Apple SDK license readiness",
+    "immutable final branch acceptance and final review"
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/auth/account_reference.dart": "8013ab7cc5e185ba6ec626925228e7b315f61d7d1529cb45242b2d0d29fbf22f",
+    "clients/enterprise_im/lib/core/auth/client_session.dart": "432f6831d5e300401bdc3cb4bf4656dc379302b97c957b6ac033115e8d269d11",
+    "clients/enterprise_im/lib/core/auth/native_auth.dart": "106040dbdb1009a04d4a1dc55d22abdd0ca24773f81aebe0ec0cc11b32adec3e",
+    "clients/enterprise_im/lib/core/auth/session_store.dart": "0fde3e73d16bd6b6ac039082492bfb5ee061bc38caf4f6d12dbb0478a9ab1677",
+    "clients/enterprise_im/lib/ui/login_page.dart": "bc26f34811f91be8b1445f6b12cd3640d2156fbb5eee9efe93f181f1e5f1b8f7",
+    "clients/enterprise_im/test/session_bootstrap_test.dart": "321427f7db58bd52ab12c037911a0be1228e2c5e956249cf0b1530ea0316947a",
+    "clients/enterprise_im/test/client_session_test.dart": "55da6c0fc9af136ea713968020f2a3bdff73a876edc860f347f89c84eaec146d",
+    "clients/enterprise_im/test/login_session_test.dart": "a9753381de53c814a3378d9606917302c2f96e740bb26b83dd2fc66ff6d5b912",
+    "clients/enterprise_im/test/session_store_test.dart": "96a590d41b8be39965138d5f5b29ed08fe96fa12115c264f20d2d521b391de1e"
+  },
+  "log_sha256": {
+    "task-3-bootstrap-missing-red.log": "81d6eefb3c0a108dd9116873d5f69019faf0c99851d04526805b0a1790c034a0",
+    "task-3-bootstrap-green.log": "4d6a2083b3b1f3e6e7c61378749cb82f6aae5ee242bc16220bac12cf78c68f4f",
+    "task-3-client-session-red.log": "0ab4497c0b86a45a3ce5cde477b8e9564b3c0472131838368c30f8b8ff68784e",
+    "task-3-client-session-green.log": "65feeb54710393b08d565cbf780fae1516fd4f5dce288eee7e7df090866bcf65",
+    "task-3-login-handoff-red.log": "b7ff781031a0a12ca74d88cfa1bd896363ff887972ca489553f032f547c0e79d",
+    "task-3-invalid-refresh-red.log": "f05b893376171d5df42b2af6bebc6640c00b602797411a19678bb84c2498ff4a",
+    "task-3-ui-handoff-green.log": "2bb03ddd80c3012da2834e71bf3f44bde0c4cb9d0fe24bd7bc0fdfe4c41b69e0",
+    "task-3-ui-handoff-retry.log": "5b06c33b2b00b6cffa5d327a443b6cb73c3d8d7628811480206744f764d36107",
+    "task-3-ui-cleanup-retry.log": "5ad955d0af9c4995a6680d88fac3e828152c3281bc00d909d2e013c4c936b55f",
+    "task-3-auth-handoff-full.log": "b8a3b0f4edef6b4bb8089df42e29eae5c9e2a3441412aec8a5847e8360d6ff86",
+    "task-3-auth-handoff-final.log": "e8aaddb0998e4746a8d032abdfd728e0712eb681dc105b7ff16eae100302017c",
+    "task-3-auth-handoff-analysis.log": "4554d0e56626e45785f9c2761e2661914428179fab6bdccb853730175d66ddfa",
+    "task-3-auth-handoff-analysis-final.log": "65c874a438d7c2b217f2f3fc40c2d7e905b2a2cc353d0071f8e38b5918e1fc7d"
+  }
+}

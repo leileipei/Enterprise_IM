@@ -25,7 +25,7 @@ AuthSession authenticated({
 
 final class MemoryVault implements SecureVault {
   final values = <String, String>{};
-  bool unavailable = false;
+  bool unavailable = false, failWrites = false;
   int reads = 0;
   Completer<void>? writeGate;
   Completer<void>? entered;
@@ -38,8 +38,8 @@ final class MemoryVault implements SecureVault {
 
   @override
   Future<void> write(String ns, String key, String value) async {
-    if (unavailable) throw const VaultFailure();
-    entered?.complete();
+    if (unavailable || failWrites) throw const VaultFailure();
+    if (entered?.isCompleted == false) entered?.complete();
     await writeGate?.future;
     values['$ns/$key'] = value;
   }

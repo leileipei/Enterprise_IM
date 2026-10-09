@@ -5,6 +5,7 @@ import '../../platform/browser_launcher.dart';
 import '../../platform/login_callback.dart';
 import 'auth_session.dart';
 import 'pkce.dart';
+import 'account_reference.dart';
 export 'auth_session.dart';
 
 final class NativeAuth {
@@ -27,6 +28,7 @@ final class NativeAuth {
     this.loginTimeout = const Duration(seconds: 120),
   });
   bool get canRefresh => _refreshEnabled && _refreshToken != null;
+  String? get refreshCredential => _refreshEnabled ? _refreshToken : null;
   AuthSession? get session => _session?.isExpired == false ? _session : null;
   void _check(int generation) {
     if (generation != _generation || _cancel?.isCancelled == true)
@@ -63,21 +65,11 @@ final class NativeAuth {
       final template = desktop
           ? 'http://127.0.0.1/oauth/callback'
           : 'com.enterpriseim.client:/oauth/callback';
-      if (stringField(config, 'platform', max: 16) != platform ||
-          boolField(config, 'loopback') != desktop ||
-          stringField(config, 'redirect_uri', max: 256) != template)
-        throw const AuthFailure('invalid_configuration');
-      final issuer = _httpsEndpoint(stringField(config, 'issuer', max: 2048));
-      final authorize = _httpsEndpoint(
-        stringField(config, 'authorization_url', max: 2048),
-      );
-      if (issuer.host.isEmpty) throw const AuthFailure('invalid_configuration');
-      final client = stringField(config, 'client_id', max: 256);
-      final scope = stringField(config, 'scope', max: 512);
-      if (!scope.split(RegExp(r'\s+')).contains('openid'))
-        throw const AuthFailure('invalid_configuration');
-      final refreshEnabled = boolField(config, 'refresh_enabled');
-      wireTime(config['server_time']);
+      final configuration = _configuration(config, platform);
+      final authorize = configuration.authorize;
+      final client = configuration.client;
+      final scope = configuration.scope;
+      final refreshEnabled = configuration.refreshEnabled;
       final pkce = await PKCE.generate().timeout(_remaining(overall));
       _check(generation);
       callback = callbackFactory(platform, pkce.state);
@@ -215,21 +207,56 @@ final class NativeAuth {
   }
 
   Future<AuthSession> refresh() async {
-    if (_busy) throw const AuthFailure('login_in_progress');
-    final previous = _session;
-    final token = _refreshToken;
-    final platform = _platform;
+    final previous = _session, token = _refreshToken, platform = _platform;
     if (previous == null ||
         token == null ||
         platform == null ||
         !_refreshEnabled)
       throw const AuthFailure('reauthenticate');
+    return _refreshAccount(
+      AccountReference.fromSession(previous),
+      platform,
+      token,
+      restoring: false,
+    );
+  }
+
+  Future<AuthSession> restore(
+    AccountReference account,
+    String platform,
+    String refreshToken,
+  ) => _refreshAccount(account, platform, refreshToken, restoring: true);
+
+  Future<AuthSession> _refreshAccount(
+    AccountReference account,
+    String platform,
+    String token, {
+    required bool restoring,
+  }) async {
+    if (_busy) throw const AuthFailure('login_in_progress');
+    if (account.origin != api.origin ||
+        !const ['macos', 'windows', 'ios', 'android'].contains(platform) ||
+        token.isEmpty ||
+        token.length > 4096 ||
+        RegExp(r'[\x00-\x20\x7f]').hasMatch(token))
+      throw const AuthFailure('reauthenticate');
     _busy = true;
-    final generation = _generation;
+    if (restoring) _clear();
+    final generation = restoring ? ++_generation : _generation;
     final cancellation = Cancellation();
     _cancel = cancellation;
-    final clock = Stopwatch()..start();
     try {
+      if (restoring) {
+        final raw = await api.json(
+          'GET',
+          '/api/v1/native/config?platform=$platform',
+          cancellation: cancellation,
+        );
+        _check(generation);
+        if (!_configuration(raw, platform).refreshEnabled)
+          throw const AuthFailure('reauthenticate');
+      }
+      final clock = Stopwatch()..start();
       final tokens = await api.json(
         'POST',
         '/api/v1/native/oauth/refresh',
@@ -249,8 +276,8 @@ final class NativeAuth {
         cancellation: cancellation,
       );
       _check(generation);
-      if (uuidField(identity, 'tenant_id') != previous.tenantId ||
-          uuidField(identity, 'user_id') != previous.userId)
+      if (uuidField(identity, 'tenant_id') != account.tenantId ||
+          uuidField(identity, 'user_id') != account.userId)
         throw const AuthFailure('identity_changed');
       final budget = expiry.difference(server) - clock.elapsed;
       if (budget <= Duration.zero) throw const AuthFailure('expired');
@@ -259,8 +286,8 @@ final class NativeAuth {
           : token;
       final result = AuthSession(
         origin: api.origin,
-        tenantId: previous.tenantId,
-        userId: previous.userId,
+        tenantId: account.tenantId,
+        userId: account.userId,
         accessToken: access,
         expiresAt: expiry,
         generation: generation,
@@ -269,11 +296,13 @@ final class NativeAuth {
       );
       _session = result;
       _refreshToken = rotated;
+      _platform = platform;
+      _refreshEnabled = true;
       return result;
     } on ApiFailure catch (e) {
       if (cancellation.isCancelled || generation != _generation)
         throw const AuthCancelled();
-      if (e.status == 401) _clear();
+      if (restoring || e.status == 401) _clear();
       throw AuthFailure(e.status == 401 ? 'reauthenticate' : e.code);
     } on AuthFailure {
       if (generation != _generation) throw const AuthCancelled();
@@ -290,6 +319,34 @@ final class NativeAuth {
         _busy = false;
       }
     }
+  }
+
+  static ({Uri authorize, String client, String scope, bool refreshEnabled})
+  _configuration(Map<String, Object?> config, String platform) {
+    final desktop = platform == 'macos' || platform == 'windows';
+    final template = desktop
+        ? 'http://127.0.0.1/oauth/callback'
+        : 'com.enterpriseim.client:/oauth/callback';
+    if (stringField(config, 'platform', max: 16) != platform ||
+        boolField(config, 'loopback') != desktop ||
+        stringField(config, 'redirect_uri', max: 256) != template)
+      throw const AuthFailure('invalid_configuration');
+    _httpsEndpoint(stringField(config, 'issuer', max: 2048));
+    final authorize = _httpsEndpoint(
+      stringField(config, 'authorization_url', max: 2048),
+    );
+    final client = stringField(config, 'client_id', max: 256);
+    final scope = stringField(config, 'scope', max: 512);
+    if (!scope.split(RegExp(r'\s+')).contains('openid'))
+      throw const AuthFailure('invalid_configuration');
+    final refreshEnabled = boolField(config, 'refresh_enabled');
+    wireTime(config['server_time']);
+    return (
+      authorize: authorize,
+      client: client,
+      scope: scope,
+      refreshEnabled: refreshEnabled,
+    );
   }
 
   Future<void> cancel() async {

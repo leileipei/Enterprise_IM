@@ -6,6 +6,7 @@ import '../protocol/models.dart';
 import '../storage/encrypted_store.dart';
 import '../storage/secure_vault.dart';
 import 'auth_session.dart';
+import 'account_reference.dart';
 
 // Only a session verified by NativeAuth (including /me) may be admitted here.
 // Access tokens remain in AuthSession memory. One OS-vault bundle atomically
@@ -62,10 +63,14 @@ final class SessionStore {
               null,
               null,
             );
-            await vault.write(ns, 'session', bundle.encode(session));
+            await vault.write(
+              ns,
+              'session',
+              bundle.encode(AccountReference.fromSession(session)),
+            );
             _check(session, epoch);
           } else {
-            bundle = _Bundle.decode(raw, session);
+            bundle = _Bundle.decode(raw, AccountReference.fromSession(session));
           }
           final store = await EncryptedStore.open(
             ns,
@@ -94,6 +99,57 @@ final class SessionStore {
     }
   }
 
+  // Only read an OS-vault credential here. Do not create/open SQLite, create
+  // a replacement key, or manufacture an AuthSession from account metadata.
+  Future<String?> loadRefresh(AccountReference account) {
+    final epoch = _epoch;
+    return _serial(() async {
+      if (epoch != _epoch) throw const AuthCancelled();
+      final ns = await accountNamespace(
+        account.origin,
+        account.tenantId,
+        account.userId,
+      );
+      if (epoch != _epoch) throw const AuthCancelled();
+      final raw = await vault.read(ns, 'session');
+      if (epoch != _epoch) throw const AuthCancelled();
+      if (raw == null) return null;
+      final bundle = _Bundle.decode(raw, account);
+      try {
+        return bundle.refresh;
+      } finally {
+        bundle.destroy();
+      }
+    });
+  }
+
+  // Invalid-grant handling removes the refresh credential without opening
+  // SQLite or deleting the still-owned key/pending-send data.
+  Future<void> forgetRefresh(AccountReference account) {
+    final epoch = _epoch;
+    return _serial(() async {
+      if (epoch != _epoch) throw const AuthCancelled();
+      final ns = await accountNamespace(
+        account.origin,
+        account.tenantId,
+        account.userId,
+      );
+      if (epoch != _epoch) throw const AuthCancelled();
+      final raw = await vault.read(ns, 'session');
+      if (epoch != _epoch) throw const AuthCancelled();
+      if (raw == null) return;
+      final bundle = _Bundle.decode(raw, account);
+      final changed = _Bundle(bundle.key, null, bundle.device);
+      try {
+        await vault.write(ns, 'session', changed.encode(account));
+        if (epoch != _epoch) throw const AuthCancelled();
+      } finally {
+        changed.destroy();
+        bundle.destroy();
+      }
+    });
+  }
+
   // Caller verifies fresh rotated tokens and the same principal before saving.
   Future<void> saveCredentials(
     AuthSession session, {
@@ -120,7 +176,11 @@ final class SessionStore {
       }
       final changed = _Bundle(bundle.key, refreshToken, device);
       try {
-        await vault.write(ns, 'session', changed.encode(session));
+        await vault.write(
+          ns,
+          'session',
+          changed.encode(AccountReference.fromSession(session)),
+        );
         _check(session, epoch);
         bundle.destroy();
         _bundle = changed;
@@ -179,7 +239,7 @@ final class _Bundle {
   final DeviceGrant? device;
   _Bundle(List<int> key, this.refresh, this.device) : key = List<int>.from(key);
   void destroy() => key.fillRange(0, key.length, 0);
-  String encode(AuthSession session) => jsonEncode({
+  String encode(AccountReference session) => jsonEncode({
     'version': 1,
     'origin': session.origin.origin,
     'tenant_id': session.tenantId,
@@ -195,7 +255,7 @@ final class _Bundle {
             'server_time': device!.serverTime.toIso8601String(),
           },
   });
-  factory _Bundle.decode(String raw, AuthSession session) {
+  factory _Bundle.decode(String raw, AccountReference session) {
     try {
       if (utf8.encode(raw).length > 65536) throw const FormatException();
       final value = objectMap(jsonDecode(raw));
