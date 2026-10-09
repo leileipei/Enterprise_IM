@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'store_worker.dart';
+import 'records.dart';
+import '../protocol/models.dart';
+import '../protocol/seq.dart';
 
 final class StoreFailure implements Exception {
   const StoreFailure();
@@ -21,6 +24,8 @@ final class EncryptedStore {
   static final _activePaths = <String>{};
   static final _owners = <String, Object>{};
   final Map<int, Completer<Object?>> _waiting = {};
+  final _readingGrants = <String, LeaseClock>{};
+  int _grantEpoch = 0;
   int _requestId = 0;
   bool _closed = false;
   Future<void>? _closing;
@@ -56,25 +61,7 @@ final class EncryptedStore {
         generation < 0) {
       throw const StoreFailure();
     }
-    // Refuse links before opening any account database. Platform adapters supply
-    // the private application support directory, not a user-selected location.
-    final root = directory.absolute;
-    for (Directory? part = root; part != null;) {
-      if (await FileSystemEntity.type(part.path, followLinks: false) ==
-          FileSystemEntityType.link) {
-        throw const StoreFailure();
-      }
-      final parent = part.parent;
-      part = parent.path == part.path ? null : parent;
-    }
-    await root.create(recursive: true);
-    final path = '${root.path}/$namespace.sqlite';
-    for (final suffix in ['', '-wal', '-shm']) {
-      if (await FileSystemEntity.type('$path$suffix', followLinks: false) ==
-          FileSystemEntityType.link) {
-        throw const StoreFailure();
-      }
-    }
+    final path = await _accountPath(namespace, directory);
     if (!_activePaths.add(path)) throw const StoreFailure();
     final owner = Object();
     _owners[path] = owner;
@@ -120,6 +107,50 @@ final class EncryptedStore {
     }
   }
 
+  static Future<String> _accountPath(
+    String namespace,
+    Directory directory,
+  ) async {
+    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(namespace))
+      throw const StoreFailure();
+    final root = directory.absolute;
+    for (Directory? part = root; part != null;) {
+      if (await FileSystemEntity.type(part.path, followLinks: false) ==
+          FileSystemEntityType.link) {
+        throw const StoreFailure();
+      }
+      final parent = part.parent;
+      part = parent.path == part.path ? null : parent;
+    }
+    await root.create(recursive: true);
+    final path = '${root.path}/$namespace.sqlite';
+    for (final suffix in ['', '-wal', '-shm']) {
+      if (await FileSystemEntity.type('$path$suffix', followLinks: false) ==
+          FileSystemEntityType.link) {
+        throw const StoreFailure();
+      }
+    }
+    return path;
+  }
+
+  // Missing secure key is different from an unavailable vault. Call only after
+  // fresh authentication and a successful vault read returning no bundle.
+  static Future<void> eraseUnavailableKey(
+    String namespace, {
+    required Directory directory,
+  }) async {
+    final path = await _accountPath(namespace, directory);
+    if (!_activePaths.add(path)) throw const StoreFailure();
+    try {
+      for (final suffix in ['', '-wal', '-shm']) {
+        final file = File('$path$suffix');
+        if (await file.exists()) await file.delete();
+      }
+    } finally {
+      _activePaths.remove(path);
+    }
+  }
+
   Future<Object?> _request(
     String operation,
     Object? payload, {
@@ -135,21 +166,149 @@ final class EncryptedStore {
     return result;
   }
 
-  Future<void> putPendingSend(Map<String, Object?> value) async {
-    if (value['generation'] != generation ||
-        value['client_msg_id'] is! String ||
-        (value['client_msg_id']! as String).isEmpty ||
-        value['text'] is! String) {
-      throw const StoreFailure();
-    }
-    await _request('put_pending', Map<String, Object?>.from(value));
+  Future<void> putPendingSend(PendingSend value) async {
+    if (value.generation != generation) throw const StoreFailure();
+    await _request('put_pending', value.toJson());
   }
 
-  Future<List<Map<String, Object?>>> pendingSends() async {
-    final rows = await _request('pending', null) as List<Object?>;
-    return rows
-        .map((row) => Map<String, Object?>.from(row! as Map))
-        .toList(growable: false);
+  Future<List<PendingSend>> pendingSends() async {
+    try {
+      final rows = await _request('pending', null) as List<Object?>;
+      return List.unmodifiable(
+        rows.map(
+          (row) => PendingSend.fromJson(Map<String, Object?>.from(row! as Map)),
+        ),
+      );
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<void> commitPage(
+    SyncPage page,
+    PendingReceipt pending, {
+    required String actingMembershipId,
+    required LeaseClock clock,
+  }) async {
+    try {
+      uuidField({'id': actingMembershipId}, 'id');
+      if (pending.generation != generation ||
+          pending.conversationId != page.conversationId ||
+          pending.nextAfterSeq != page.nextAfterSeq ||
+          pending.syncProof != page.syncProof ||
+          pending.proofExpiresAt != page.proofExpiresAt ||
+          clock.serverTime != page.serverTime) {
+        throw const StoreFailure();
+      }
+      final epoch = _grantEpoch;
+      final rows = <Map<String, Object?>>[];
+      for (final message in page.messages) {
+        final readable =
+            !message.redacted &&
+            clock.remainingFor(message.cacheUntil!) > Duration.zero &&
+            clock.remainingFor(message.contentExpiresAt!) > Duration.zero;
+        // A fresh denial must revoke memory authority even if disk rollback preserves old ciphertext.
+        _readingGrants.remove('${page.conversationId}/${message.seq}');
+        rows.add({
+          'seq': message.seq.toString(),
+          'value': readable
+              ? {
+                  'conversation_id': page.conversationId,
+                  'acting_membership_id': actingMembershipId,
+                  'generation': generation,
+                  'authorization_server_time': page.serverTime
+                      .toIso8601String(),
+                  'content': messageContent(message),
+                }
+              : null,
+        });
+      }
+      await _request('commit_page', {
+        'conversation_id': page.conversationId,
+        'acting_membership_id': actingMembershipId,
+        'generation': generation,
+        'next_after_seq': page.nextAfterSeq.toString(),
+        'after_seq':
+            (page.nextAfterSeq.value - BigInt.from(page.messages.length))
+                .toString(),
+        'receipt_revision': page.receiptRevision.toString(),
+        'messages': rows,
+        'receipt': pending.toJson(),
+      });
+      if (epoch != _grantEpoch) return;
+      for (final row in rows) {
+        final id = '${page.conversationId}/${row['seq']}';
+        if (row['value'] == null) {
+          _readingGrants.remove(id);
+        } else {
+          _readingGrants[id] = clock;
+        }
+      }
+    } on StoreFailure {
+      rethrow;
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<Seq?> committedCursor(String conversationId) async {
+    try {
+      uuidField({'id': conversationId}, 'id');
+      final value = await _request('cursor', conversationId);
+      return value == null ? null : Seq.fromWire(value);
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<List<PendingReceipt>> pendingReceipts() async {
+    try {
+      final rows = await _request('receipts', null) as List<Object?>;
+      final values = rows
+          .map(
+            (row) =>
+                PendingReceipt.fromJson(Map<String, Object?>.from(row! as Map)),
+          )
+          .toList();
+      values.sort((a, b) => a.nextAfterSeq.compareTo(b.nextAfterSeq));
+      return List.unmodifiable(values);
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<List<StoredMessage>> readAuthorizedMessages(LeaseClock clock) async {
+    if (!_readingGrants.values.any((value) => identical(value, clock)) ||
+        clock.remaining == Duration.zero)
+      return [];
+    try {
+      final rows = await _request('messages', null) as List<Object?>;
+      final values = <StoredMessage>[];
+      for (final row in rows) {
+        final value = StoredMessage.fromJson(
+          Map<String, Object?>.from(row! as Map),
+        );
+        final grant = _readingGrants['${value.conversationId}/${value.seq}'];
+        if (value.generation == generation &&
+            grant != null &&
+            grant.serverTime == value.authorizationServerTime &&
+            grant.remainingFor(value.message.cacheUntil!) > Duration.zero &&
+            grant.remainingFor(value.message.contentExpiresAt!) > Duration.zero)
+          values.add(value);
+      }
+      values.sort((a, b) => a.seq.compareTo(b.seq));
+      return List.unmodifiable(values);
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  void invalidateReading() {
+    _grantEpoch++;
+    for (final clock in _readingGrants.values) {
+      clock.invalidate();
+    }
+    _readingGrants.clear();
   }
 
   Future<void> close() => _finish(false);
@@ -171,6 +330,7 @@ final class EncryptedStore {
         }
       }();
     }
+    invalidateReading();
     _closed = true;
     return _closing = () async {
       try {

@@ -1,0 +1,64 @@
+{
+  "schema_version": "p502_task3_page_session_local_v1",
+  "status": "in_progress",
+  "source_base_commit": "758480d333fd49f79c88cd798b55d05c429dd06e",
+  "source_state": "working_tree_checkpoint_not_final_immutable_acceptance",
+  "shared_tests": {
+    "actual_exit": 0,
+    "passed": 38,
+    "command": "flutter test --timeout 30s"
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0,
+    "same_source_alias": "/private/tmp/p502-client-analysis-c90359e"
+  },
+  "behavior": {
+    "page_body_cursor_proof_atomic": true,
+    "multiple_page_proofs_retained": true,
+    "reading_grant_memory_only": true,
+    "restart_requires_fresh_auth_and_sync": true,
+    "zero_cache_body_not_persisted": true,
+    "redacted_transaction_failure_revokes_memory_reading": true,
+    "pending_send_typed_uuidv7_immutable": true,
+    "missing_key_erases_unreadable_database": true,
+    "unavailable_vault_preserves_existing_database": true,
+    "access_token_not_persisted": true,
+    "refresh_device_key_one_account_bundle": true,
+    "logout_immediate_database_result_block": true
+  },
+  "native_platform": "not_executed",
+  "ui_and_native_auth_storage_wiring": "not_implemented",
+  "delivered_read_engine": "not_implemented",
+  "task3_complete": false,
+  "limitations": [
+    "OS vault is simulated in shared tests; actual platform probe remains required",
+    "SessionStore requires freshly authenticated AuthSession; automatic refresh on app launch is not wired",
+    "Store worker unexpected exit supervision remains to be completed",
+    "Pending sends/proofs retain prior generation after restart; engine must reauthorize before retry",
+    "No native fixed-source full acceptance or customer/production acceptance"
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/storage/encrypted_store.dart": "68398c5f09b666df51dd28724d61aae6d3b49ee56066de7651f8c2c1478cd37c",
+    "clients/enterprise_im/lib/core/storage/records.dart": "5759a78ea37d61a18a85fe3e57a18f939422dccf7eda26dc96c2c4d0d485a3d5",
+    "clients/enterprise_im/lib/core/storage/store_worker.dart": "397fa66824329d49f336ab6b7eed59a19ebc30f595f84feaaaba139afa3e6966",
+    "clients/enterprise_im/lib/core/auth/session_store.dart": "935aad295298ce95a92651061c54a6b3cdd59f7fee0995fa647bec1a6b4d8d2e",
+    "clients/enterprise_im/test/storage_test.dart": "7a1df8ab679173e15380aa3417b92d4942bebe288278d040a0620c95550f2549",
+    "clients/enterprise_im/test/page_transaction_test.dart": "7aee9afecc67c819f9dba2a176715d48a95ff8abc195c898e1702a0c8ab89e7f",
+    "clients/enterprise_im/test/pending_send_test.dart": "e3b55bf44f2b325f9462483d9f3b66a34ddf6ee5c570e5131d7c37007bba22f9",
+    "clients/enterprise_im/test/session_store_test.dart": "170712c4681cf191d47636ba303f9d31e722c692c840aaa29a44c309e70c2467"
+  },
+  "log_sha256": {
+    "task-3-page-red.log": "44ebc74ac9fa25eb5a59de2cd064ac13ac22e820e9b022424ad8f3f708e87d36",
+    "task-3-page-green.log": "60375b7e18b7cd0a370aff2bc3f5e09f71d4d635132f1f0190d98e790e35c0ea",
+    "task-3-page-revoke-red.log": "b934469639858bee5d026c45b1e656300f257c1a9516c5a957a86784ee98f307",
+    "task-3-page-all-green.log": "5c22d0869fa52200e8a8f83e628a82e9fafa651dba18b4b563ba80fb80f16d0b",
+    "task-3-page-all-green-b.log": "8e1278549aeb2c602f27ce6048b641d7770a977ba0873096f6cf46b46f108fb1",
+    "task-3-session-red.log": "d70148d9b0b274b2ec9e956a99df747b8128fcbd804288d78809843ef8560c94",
+    "task-3-session-green.log": "38572348bbfef41935c8cb87d2f8ec263fb40d2efe034f624ec9466e7163b915",
+    "task-3-session-logout-red.log": "1772225ffab730d7cfc6c2c331381153a7c38d108a4e044fb8f3172c636dd05a",
+    "task-3-session-all-green.log": "821eeeeb2f0d2586d84c9670c13600927e1c06985da35e4358128bba6fff8abf",
+    "task-3-page-session-final-test.log": "f89638928debd8b4f36714efcccbf6d08fe3533193d4174a9a9200296e6f7a16",
+    "task-3-page-session-analyze.log": "2b8ad4b5e9d9e2eb1a8423ce9536b65743752047d5fdf282e7edbabb84c5ce81"
+  }
+}

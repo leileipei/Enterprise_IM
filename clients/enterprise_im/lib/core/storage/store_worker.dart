@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import 'package:sqlite3/sqlite3.dart';
+import '../protocol/seq.dart';
 
 Object? canonical(Object? value) {
   if (value is Map<String, Object?>) {
@@ -116,6 +117,115 @@ Future<void> storeWorkerMain(List<Object?> args) async {
           final values = <Map<String, Object?>>[];
           for (final row in db.select(
             "SELECT * FROM records WHERE kind='pending_send' ORDER BY opaque_key",
+          )) {
+            values.add(await decrypt(row));
+          }
+          result = values;
+        } else if (operation == 'commit_page') {
+          final payload = Map<String, Object?>.from(request[2]! as Map);
+          final conversation = payload['conversation_id']! as String;
+          final cursorKey = await opaque('cursor', conversation);
+          final currentRows = db.select(
+            'SELECT * FROM records WHERE opaque_key=?',
+            [cursorKey],
+          );
+          final after = Seq.fromWire(payload['after_seq']);
+          final next = Seq.fromWire(payload['next_after_seq']);
+          var retainedNext = next;
+          if (currentRows.isEmpty) {
+            if (after.value != BigInt.zero) throw StateError('gap');
+          } else {
+            final current = await decrypt(currentRows.single);
+            final old = Seq.fromWire(current['next_after_seq']);
+            if (current['acting_membership_id'] !=
+                    payload['acting_membership_id'] ||
+                Seq.fromWire(
+                      payload['receipt_revision'],
+                    ).compareTo(Seq.fromWire(current['receipt_revision'])) <
+                    0 ||
+                after.compareTo(old) > 0 ||
+                (after != old && next.compareTo(old) > 0))
+              throw StateError('gap or scope');
+            if (old.compareTo(next) > 0) retainedNext = old;
+          }
+          final writes = <List<Object?>>[];
+          final deletes = <String>[];
+          Future<void> prepare(
+            String kind,
+            String logical,
+            Map<String, Object?> value,
+          ) async {
+            final recordKey = await opaque(kind, logical);
+            final box = await aes.encrypt(
+              utf8.encode(jsonEncode(value)),
+              secretKey: key,
+              nonce: aes.newNonce(),
+              aad: aad(kind, recordKey),
+            );
+            writes.add([
+              recordKey,
+              kind,
+              Uint8List.fromList(box.nonce),
+              Uint8List.fromList(box.cipherText),
+              Uint8List.fromList(box.mac.bytes),
+            ]);
+          }
+
+          for (final rawRow in payload['messages']! as List) {
+            final row = Map<String, Object?>.from(rawRow as Map);
+            final logical = '$conversation/${row['seq']}';
+            if (row['value'] == null) {
+              deletes.add(await opaque('message', logical));
+            } else {
+              await prepare(
+                'message',
+                logical,
+                Map<String, Object?>.from(row['value']! as Map),
+              );
+            }
+          }
+          await prepare('cursor', conversation, {
+            'conversation_id': conversation,
+            'acting_membership_id': payload['acting_membership_id'],
+            'generation': generation,
+            'next_after_seq': retainedNext.toString(),
+            'receipt_revision': payload['receipt_revision'],
+          });
+          await prepare(
+            'receipt',
+            '$conversation/$next',
+            Map<String, Object?>.from(payload['receipt']! as Map),
+          );
+          db.execute('BEGIN IMMEDIATE');
+          try {
+            for (final recordKey in deletes) {
+              db.execute('DELETE FROM records WHERE opaque_key=?', [recordKey]);
+            }
+            for (final row in writes) {
+              db.execute(
+                'INSERT OR REPLACE INTO records VALUES(?,?,?,?,?)',
+                row,
+              );
+            }
+            db.execute('COMMIT');
+          } catch (_) {
+            db.execute('ROLLBACK');
+            rethrow;
+          }
+        } else if (operation == 'cursor') {
+          final recordKey = await opaque('cursor', request[2]! as String);
+          final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [
+            recordKey,
+          ]);
+          result = rows.isEmpty
+              ? null
+              : (await decrypt(rows.single))['next_after_seq'];
+        } else if (operation == 'receipts' || operation == 'messages') {
+          final kind = operation == 'receipts' ? 'receipt' : 'message';
+          final values = <Map<String, Object?>>[];
+          for (final row in db.select(
+            'SELECT * FROM records WHERE kind=? ORDER BY opaque_key',
+            [kind],
           )) {
             values.add(await decrypt(row));
           }
