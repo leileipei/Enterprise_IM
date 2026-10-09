@@ -91,7 +91,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ClientID         string `json:"client_id"`
 			RedirectURL      string `json:"redirect_url"`
 			Scope            string `json:"scope"`
-		}{h.config.Issuer, h.config.AuthorizationURL, h.config.ClientID, h.config.RedirectURL, h.config.Scope})
+			ReceiptsEnabled  bool   `json:"receipts_enabled"`
+		}{h.config.Issuer, h.config.AuthorizationURL, h.config.ClientID, h.config.RedirectURL, h.config.Scope, h.config.ReceiptsEnabled})
 		return
 	}
 	var filename, contentType string

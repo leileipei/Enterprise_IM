@@ -262,3 +262,22 @@ func TestTokenExchangeDoesNotFollowIdPRedirect(t *testing.T) {
 		t.Fatalf("redirect followed: %d forwarded=%d", response.Code, forwarded)
 	}
 }
+
+func TestWebReceiptConfigurationNoSecrets(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		cfg := webConfig("https://sso.example.test/group/token")
+		cfg.ReceiptsEnabled = enabled
+		h, e := NewHandler(http.NotFoundHandler(), verifierFunc(func(context.Context, string) (httpserver.VerifiedIdentity, error) {
+			return httpserver.VerifiedIdentity{}, nil
+		}), cfg, nil)
+		if e != nil {
+			t.Fatal(e)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/web/config", nil))
+		var b map[string]any
+		if e = json.Unmarshal(w.Body.Bytes(), &b); e != nil || b["receipts_enabled"] != enabled || b["token_url"] != nil || b["device_token"] != nil {
+			t.Fatal("receipt configuration", w.Code)
+		}
+	}
+}

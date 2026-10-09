@@ -65,7 +65,7 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 	}
 	closers = append(closers, func() error { pool.Close(); return nil })
 	handler := httpserver.Handler(pool)
-	enabled, authConfig, err := adminConfigFromEnv(os.Getenv)
+	enabled, authConfig, err := adminConfigFromEnv(getenv)
 	if err != nil {
 		logger.Error("invalid OIDC configuration")
 		return errors.New("api startup unavailable")
@@ -86,6 +86,21 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 		logger.Error("invalid file business configuration")
 		return errors.New("api startup unavailable")
 	}
+	receiptConfig, err := loadReceiptRuntime(getenv, enabled)
+	if err != nil {
+		logger.Error("invalid receipt configuration")
+		return errors.New("api startup unavailable")
+	}
+	receiptService := policystore.Service{DB: pool, DeviceRegistrationsPerHour: receiptConfig.DeviceRegistrationsPerHour, ReceiptWriteRatePerSecond: receiptConfig.WriteRatePerSecond}
+	if receiptConfig.Enabled {
+		checkCtx, checkCancel := context.WithTimeout(ctx, 10*time.Second)
+		err = receiptService.CheckReceiptRuntime(checkCtx)
+		checkCancel()
+		if err != nil {
+			logger.Error("receipt runtime unavailable")
+			return errors.New("api startup unavailable")
+		}
+	}
 	fileRuntime, err := startFileRuntime(ctx, pool, getenv, fileEnabled, fileConfig, fileSpool, fileBusiness)
 	if err != nil {
 		logger.Error("file runtime unavailable")
@@ -93,11 +108,15 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 	}
 	closers = append(closers, fileRuntime.Close)
 	readyChecks := []httpserver.Pinger{pool, apiPinger(fileRuntime.CheckHealth)}
+	if receiptConfig.Enabled {
+		readyChecks = append(readyChecks, apiPinger(receiptService.CheckReceiptRuntime))
+	}
 	webEnabled, webConfig, err := webConfigFromEnv(getenv, enabled, authConfig)
 	if err != nil {
 		logger.Error("invalid Web login configuration")
 		return errors.New("api startup unavailable")
 	}
+	webConfig.ReceiptsEnabled = receiptConfig.Enabled
 	realtimeOptions, err := realtimeRedisOptionsFromEnv(getenv, enabled)
 	if err != nil {
 		logger.Error("invalid realtime configuration")
@@ -109,7 +128,7 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 		return errors.New("api startup unavailable")
 	}
 	if enabled {
-		messageRate, err := messageRateFromEnv(os.Getenv)
+		messageRate, err := messageRateFromEnv(getenv)
 		if err != nil {
 			logger.Error("invalid message rate configuration")
 			return errors.New("api startup unavailable")
@@ -210,6 +229,18 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 			}
 			logger.Info("realtime notifications enabled", "stream", realtimeStream)
 		}
+		handler, err = assembleDeviceRoutes(handler, authenticator, receiptService, receiptConfig)
+		if err != nil {
+			logger.Error("device API unavailable")
+			return errors.New("api startup unavailable")
+		}
+		if receiptConfig.Enabled {
+			handler, err = httpserver.HandlerWithReceiptWriteLimit(handler, authenticator, receiptService)
+			if err != nil {
+				logger.Error("receipt write limiter unavailable")
+				return errors.New("api startup unavailable")
+			}
+		}
 		if webEnabled {
 			handler, err = webclient.NewHandler(handler, authenticator, webConfig, nil)
 			if err != nil {
@@ -221,6 +252,7 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 	}
 
 	if !enabled {
+		handler = httpserver.HandlerWithClosedReceipts(handler)
 		handler = httpserver.HandlerWithFileContentModes(handler, false, false)
 	}
 	handler, err = httpserver.HandlerWithRuntimeReady(handler, readyChecks...)

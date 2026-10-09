@@ -24,6 +24,7 @@ type Service struct {
 	Now                        func() time.Time
 	MessageRatePerSecond       int
 	DeviceRegistrationsPerHour int
+	ReceiptWriteRatePerSecond  int
 }
 
 func (s Service) now() time.Time {

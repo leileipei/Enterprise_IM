@@ -13,6 +13,7 @@ type Config struct {
 	TokenURL         string
 	ClientID         string
 	RedirectURL      string
+	ReceiptsEnabled  bool
 	Scope            string
 }
 
