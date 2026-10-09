@@ -3,8 +3,12 @@
   "status": "in_progress",
   "overall_passed": false,
   "web_implementation_commit": "99aced555d226bbbd1494aa58d56de565a1cf8ea",
-  "fixed_source_final_acceptance": "not_executed",
+  "fixed_source_final_acceptance": "current_attempt_failed_full_repository_race_cleanup_pending",
   "native_four_platform_acceptance": "not_executed",
   "customer_acceptance": "not_executed",
-  "production_acceptance": "not_executed"
+  "production_acceptance": "not_executed",
+  "current_attempt_source_commit": "3558f25b01a595b757975f724d456a140db1b6be",
+  "current_attempt_runner_actual_exit": null,
+  "current_attempt_cleanup": "pending",
+  "targeted_legacy_browser_fixture_actual_exit": 0
 }

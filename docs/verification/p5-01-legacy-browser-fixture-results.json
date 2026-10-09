@@ -1,0 +1,18 @@
+{
+  "schema_version": "p501_legacy_browser_fixture_local_v1",
+  "status": "targeted_pass_only",
+  "source_base_commit": "3558f25b01a595b757975f724d456a140db1b6be",
+  "test_actual_exit": 0,
+  "required_tests": 6,
+  "ordinary_skip": 0,
+  "full_fixed_source_acceptance": "not_passed",
+  "source_sha256": {
+    "internal/webclient/e2e/retention_records.cjs": "31bd289d7e15e3eefda2e972434076e769e6b1efa5ea0bfce85f951588bb0d4c",
+    "internal/webclient/e2e/legal_holds.cjs": "947b4bc93adc2467022cc7e31a17c5ac616c7130c000a61e986987206e910884",
+    "internal/webclient/e2e/legal_hold_actions.cjs": "efd96fa92a48c035d3f83bcfb79cef15d1cf4223ca8bd89c0f3ffb5675f3f902",
+    "internal/webclient/e2e/retention_policy.cjs": "5961e2b72df2d30fce11c9212c09f8c461652fdf6947e6893e6bcc1159998723",
+    "internal/webclient/e2e/retention_history.cjs": "69a6ccab73b3d39c93962bc0478ba1b949d4cb3b7439890d536a0e8f30c99c2e",
+    "internal/webclient/e2e/audit_records.cjs": "e6021eb9ae696befda38601e12b980e57c48b64a502c87b1cb9b81baf4759330"
+  },
+  "log_sha256": "334d594865b758230d4eaa62b991075d1cf69d214c39f341534642fb858cca10"
+}
