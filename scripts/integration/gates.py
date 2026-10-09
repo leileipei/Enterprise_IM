@@ -178,6 +178,9 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
         values['IM_FILE_S3_ACCESS_KEY']=values['IM_TEST_FILE_UPLOAD_ACCESS_KEY'];values['IM_FILE_S3_SECRET_KEY']=values['IM_TEST_FILE_UPLOAD_SECRET_KEY']
     output_keys={'file_components':'IM_TEST_FILE_RUNTIME_OUTPUT_DIR','file_messages':'IM_TEST_FILE_MESSAGE_OUTPUT_DIR','file_download_retention':'IM_TEST_FILE_DOWNLOAD_OUTPUT_DIR','web_files':'IM_TEST_WEB_FILE_OUTPUT_DIR','file_business_process':'IM_TEST_FILE_BUSINESS_OUTPUT_DIR'}
     if name in output_keys:values[output_keys[name]]=str(root)
+    receipt_artifacts=root/'receipt-fixtures';receipt_artifacts.mkdir(mode=0o700,exist_ok=True)
+    values['IM_TEST_INTEGRATION_PRIVATE_ROOT']=str(registry.root/registry.owner)
+    values['IM_TEST_RECEIPT_ARTIFACT_PREFIX']=str(receipt_artifacts/'run')
     values['IM_TEST_FILE_BUSINESS_BUILD_SHA']=snapshot.commit
     if 'IM_TEST_FILE_BUSINESS_OUTPUT_DIR' not in values:
         business_root=root/'business-fixtures';business_root.mkdir(mode=0o700,exist_ok=True)
@@ -263,5 +266,8 @@ def run_stage(spec,snapshot,tools,bundle,registry,deadline):
                 if not re.fullmatch(r'query-[0-9]+\.json',path.name) or not isinstance(proof,dict) or set(proof)!=allowed or proof['path_class']!='filename_search':raise ValueError('unsafe_business_query_proof')
                 if not isinstance(proof['has_more'],bool) or any(type(proof[k]) is not int or proof[k]<0 for k in allowed-{'path_class','has_more'}):raise ValueError('invalid_business_query_counts')
             event.related_logs.append(path)
+    for label in ('api-1','api-2','worker-crash','worker-recovered'):
+        receipt_log=receipt_artifacts/('run-'+label+'.log')
+        if receipt_log.is_file():event.related_logs.append(receipt_log)
     event.argv_template=getattr(outer,'argv_template',argv)
     event.failures.extend(outer.failures);return event

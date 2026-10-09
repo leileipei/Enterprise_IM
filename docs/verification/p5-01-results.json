@@ -1,0 +1,10 @@
+{
+  "schema_version": "p501_delivery_summary_v1",
+  "status": "in_progress",
+  "overall_passed": false,
+  "web_implementation_commit": "99aced555d226bbbd1494aa58d56de565a1cf8ea",
+  "fixed_source_final_acceptance": "not_executed",
+  "native_four_platform_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed"
+}

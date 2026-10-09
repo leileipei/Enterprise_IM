@@ -61,7 +61,7 @@ def _generate_tls(tools,private,deadline):
         _openssl(tools,args,deadline)
     _openssl(tools,['req','-newkey','rsa:2048','-nodes','-subj','/CN=127.0.0.1',
                     '-keyout',str(tls/'server.key'),'-out',str(tls/'server.csr')],deadline)
-    _private_file(tls/'extensions','subjectAltName=IP:127.0.0.1\nextendedKeyUsage=serverAuth\n')
+    _private_file(tls/'extensions','subjectAltName=IP:127.0.0.1,DNS:host.docker.internal\nextendedKeyUsage=serverAuth\n')
     _openssl(tools,['x509','-req','-in',str(tls/'server.csr'),'-CA',str(tls/'ca.crt'),
                     '-CAkey',str(tls/'ca.key'),'-CAserial',str(tls/'ca.srl'),'-CAcreateserial','-days','2',
                     '-extfile',str(tls/'extensions'),'-out',str(tls/'server.crt')],deadline)

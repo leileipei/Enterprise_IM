@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"github.com/coder/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
@@ -80,7 +81,10 @@ func startReceiptChild(t *testing.T, dir, name, binary, ca string, env map[strin
 	}
 	args := []string{"create", "--label", "im.integration.owner=" + owner, "--label", "im.integration.source=" + source, "--env-file", ef, "--mount", "type=bind,source=" + binary + ",target=/run/product,readonly"}
 	if ca != "" {
-		args = append(args, "--mount", "type=bind,source="+ca+",target=/run/ca.pem,readonly", "--publish", "127.0.0.1::8080")
+		args = append(args, "--mount", "type=bind,source="+ca+",target=/run/ca.pem,readonly")
+	}
+	if strings.HasPrefix(name, "api-") {
+		args = append(args, "--publish", "127.0.0.1::8080")
 	}
 	args = append(args, "alpine:3.22", "/run/product")
 	id := strings.TrimSpace(string(receiptDocker(t, args...)))
@@ -262,7 +266,11 @@ func TestReceiptWorkerCrashReplayTwoAPIProcesses(t *testing.T) {
 	if e = c.QueryRow(ctx, "SELECT current_schema()").Scan(&schema); e != nil {
 		t.Fatal(e)
 	}
-	databaseURL, e := url.Parse(os.Getenv("IM_TEST_DATABASE_URL"))
+	mappedDatabase, e := receiptContainerDatabaseURL(os.Getenv("IM_TEST_DATABASE_URL"), root, ca)
+	if e != nil {
+		t.Fatal(e)
+	}
+	databaseURL, e := url.Parse(mappedDatabase)
 	if e != nil {
 		t.Fatal("invalid process database fixture")
 	}
@@ -354,7 +362,7 @@ func TestReceiptWorkerCrashReplayTwoAPIProcesses(t *testing.T) {
 	run(t, c, `CREATE FUNCTION fail_receipt_publication() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected publication rollback'; END $$`)
 	run(t, c, `CREATE TRIGGER fail_receipt_publication BEFORE UPDATE ON receipt_outbox_events FOR EACH ROW EXECUTE FUNCTION fail_receipt_publication()`)
 	workerEnv := map[string]string{"IM_DATABASE_URL": databaseURL.String(), "IM_RECEIPT_REDIS_URL": redisURL.String(), "IM_RECEIPT_STREAM": receiptStream}
-	worker := startReceiptChild(t, dir, "worker-crash", workerBinary, "", workerEnv)
+	worker := startReceiptChild(t, dir, "worker-crash", workerBinary, ca, workerEnv)
 	readSignal := func(ws *websocket.Conn) {
 		readCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 		defer cancel()
@@ -373,7 +381,7 @@ func TestReceiptWorkerCrashReplayTwoAPIProcesses(t *testing.T) {
 	worker.stop(137)
 	run(t, c, "DROP TRIGGER fail_receipt_publication ON receipt_outbox_events")
 	run(t, c, "DROP FUNCTION fail_receipt_publication()")
-	recovered := startReceiptChild(t, dir, "worker-recovered", workerBinary, "", workerEnv)
+	recovered := startReceiptChild(t, dir, "worker-recovered", workerBinary, ca, workerEnv)
 	deadline := time.Now().Add(8 * time.Second)
 	for time.Now().Before(deadline) {
 		if e = c.QueryRow(ctx, "SELECT status FROM receipt_outbox_events").Scan(&status); e != nil {
@@ -411,4 +419,93 @@ func TestReceiptWorkerCrashReplayTwoAPIProcesses(t *testing.T) {
 	first.stop(0)
 	second.stop(0)
 	recovered.stop(0)
+}
+
+func TestReceiptContainerDatabaseTLSMapping(t *testing.T) {
+	root, rootError := filepath.EvalSymlinks(t.TempDir())
+	if rootError != nil {
+		t.Fatal(rootError)
+	}
+	server := httptest.NewTLSServer(http.NotFoundHandler())
+	defer server.Close()
+	source := filepath.Join(root, "pg-ca.pem")
+	target := filepath.Join(root, "child-ca.pem")
+	certificate := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
+	if e := os.WriteFile(source, certificate, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(target, certificate, 0600); e != nil {
+		t.Fatal(e)
+	}
+	raw := "postgresql://fixture:fixture@127.0.0.1:5432/fixture?sslmode=verify-full&sslrootcert=" + url.QueryEscape(source)
+	mapped, e := receiptContainerDatabaseURL(raw, root, target)
+	if e != nil {
+		t.Fatal(e)
+	}
+	u, _ := url.Parse(mapped)
+	if u.Host != "host.docker.internal:5432" || u.Query().Get("sslmode") != "verify-full" || u.Query().Get("sslrootcert") != "/run/ca.pem" {
+		t.Fatal("container TLS mapping changed authority")
+	}
+	bad := url.Values{"sslmode": {"verify-full"}, "sslrootcert": {filepath.Join(filepath.Dir(root), "outside.pem")}}
+	u, _ = url.Parse(raw)
+	u.RawQuery = bad.Encode()
+	if _, e = receiptContainerDatabaseURL(u.String(), root, target); e == nil {
+		t.Fatal("foreign CA accepted")
+	}
+	if e = os.Chmod(source, 0644); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = receiptContainerDatabaseURL(raw, root, target); e == nil {
+		t.Fatal("public fixture CA accepted")
+	}
+}
+
+func receiptContainerDatabaseURL(raw, root, ca string) (string, error) {
+	invalid := errors.New("invalid owned container database TLS fixture")
+	parsed, e := url.Parse(raw)
+	if e != nil || parsed.Scheme != "postgresql" || parsed.Hostname() != "127.0.0.1" || parsed.Port() == "" {
+		return "", invalid
+	}
+	params := parsed.Query()
+	mode := params.Get("sslmode")
+	if mode != "disable" && mode != "verify-full" {
+		return "", invalid
+	}
+	if mode == "verify-full" {
+		source := params.Get("sslrootcert")
+		if !filepath.IsAbs(source) {
+			return "", invalid
+		}
+		realRoot, e := filepath.EvalSymlinks(root)
+		if e != nil {
+			return "", invalid
+		}
+		real, e := filepath.EvalSymlinks(source)
+		if e != nil || real != source {
+			return "", invalid
+		}
+		relative, e := filepath.Rel(realRoot, real)
+		if e != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			return "", invalid
+		}
+		info, e := os.Stat(real)
+		if e != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
+			return "", invalid
+		}
+		content, e := os.ReadFile(real)
+		if e != nil || len(content) > 1048576 || !x509.NewCertPool().AppendCertsFromPEM(content) {
+			return "", invalid
+		}
+		destination, e := os.ReadFile(ca)
+		if e != nil {
+			return "", invalid
+		}
+		if e = os.WriteFile(ca, append(append(destination, '\n'), content...), 0600); e != nil {
+			return "", invalid
+		}
+		params.Set("sslrootcert", "/run/ca.pem")
+	}
+	parsed.Host = "host.docker.internal:" + parsed.Port()
+	parsed.RawQuery = params.Encode()
+	return parsed.String(), nil
 }

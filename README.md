@@ -336,3 +336,24 @@ go vet ./...
 集成测试为每个用例创建独立 schema 并清理；未提供 `IM_TEST_DATABASE_URL` 或 `IM_TEST_REDIS_URL` 时分别跳过 PostgreSQL 或 Redis 集成测试。两个变量都配置时，`TestTwoDeviceRealtimeFromCommittedMessageThroughRedisAndReconnect` 会使用真实 PostgreSQL、显式调用的 Outbox Worker、Redis Stream、同一测试进程中的两个独立 API/WebSocket 服务实例和 HTTP 补拉。`TestMultiProcessRealtimeWorkerFanoutAndReconnect` 会编译并启动生产 Worker 可执行文件，另启两个独立进程运行生产 HTTP/WebSocket 处理器，验证持续发布、双节点通知和断线补拉。`TestProductionAPIWithOIDCAndRealtimeProcesses` 进一步启动两个生产 `im-api` 进程和生产 Worker，使用本地 TLS JWKS、签名访问令牌及数据库身份绑定验证 OIDC 验签、错误签名与未绑定身份拒绝、双节点通知和断线补拉。本地身份源和测试证书仅供验收；客户 IdP 和实际部署环境仍需联调。测试开始前可先在临时库创建 `btree_gist` 扩展，避免并行用例同时创建它。`000022` 在存在任何导入回执时拒绝回滚，保护原编号去重与恢复证据。回滚时按 `000022` 至 `000001` 的逆序执行 Down 脚本，只对可丢弃的开发或测试数据库执行回滚。`000021` 在有下载会话、删除承诺、删除任务、文件策略历史或相关运行证据时，`000020` 在有文件消息或附件关联时，`000019` 在有上传、扫描、文件 Worker 审计或上传策略历史时，`000018` 在有文件对象或生命周期事件时会拒绝回滚；`000017` 仅删除本次新增的消息检索索引。`000016` 在有摘要退役或批次证据时、`000015` 在有清理行或批次证据时、`000014` 在有保全历史时、`000013` 在租户保留期曾修改时、`000011` 在有邀请请求记录时、`000010` 在有建群请求记录时、`000009` 在有群会话时会拒绝回滚。不应为绕过回滚保护而删除业务证据；应按数据保护和恢复方案处理。
 
 真实浏览器集成测试在 macOS/Linux 上运行，需额外设置 `IM_TEST_BROWSER_NODE`（Node 可执行文件）、`NODE_PATH`（包含 Playwright 的 `node_modules`）；使用外部安装的 Chrome/Chromium 时设置 `CHROMIUM_EXECUTABLE`，再运行 `go test ./internal/policystore -run '^TestRealBrowserLoginRealtimeAndOfflinePull$' -count=1`。未设置 `IM_TEST_BROWSER_NODE` 时该用例跳过；需同时设置上述 PostgreSQL 与 Redis 测试 URL。
+
+
+## P5-01 设备送达、已读与 Web 接入
+
+`IM_RECEIPTS_ENABLED` 默认关闭；显式 `true` 时要求 OIDC 与迁移 `000023`～`000025` 完整。Web 根据 `/web/config` 和本人客户端能力接入，关闭时继续使用既有消息接口。
+
+- 本人设备：`POST /api/v1/devices`、`GET /api/v1/devices`、`DELETE /api/v1/devices/{id}`、`POST /api/v1/devices/{id}/renew`。登记凭据只返回一次并只保存在 Web 页面内存；登出主动撤销，刷新登录登记新设备。额度满时手动管理本人旧设备。
+- 同步：`GET /api/v1/conversations/{id}/sync?after_seq=0&limit=100&message_format=typed_v1`；返回字符串序号及短期同步证明。整页验证和状态提交后，用 `PUT .../delivered` 提交 `{"sync_proof":"<证明>"}`。接口同时支持单聊和群聊。
+- 已读：`PUT /api/v1/conversations/{id}/read`，提交 `{"seqs":["1","3"]}`，升序且最多500条。仅允许本设备已送达、当前可见的收件消息；最高游标不代表中间消息已读。
+- 请求需现有 Bearer 和 `X-Acting-Membership-ID`，并携带 `X-IM-Device-ID`、`X-IM-Device-Token`。序号、游标、修订号使用规范十进制字符串，客户端以 BigInt 处理；未读数量为有界整数。
+- `GET .../receipts?seqs=1,3` 查询本人发送消息的状态；群回执受当前角色、任职和通讯录策略约束。`GET .../unread` 的 `exact=false` 是已证明的下界，不能当作精确数量。
+- Web 前台消息至少50%可见连续500ms后，按300ms窗口合批已读。后台同步只确认送达；切换账号、任职或会话丢弃旧响应。缓存期限到达时先清除正文，再重新核对授权。
+- 启动 `cmd/im-receipt-worker` 时配置 `IM_DATABASE_URL`、`IM_RECEIPT_REDIS_URL`；API 仍使用 `IM_REALTIME_REDIS_URL`。可通过 `IM_RECEIPT_STREAM` 指定独立回执 Stream，默认 `enterprise-im:receipt-changed:v1`，不得复用旧消息 Stream。回执 Worker 缺失时 Web 使用 HTTP 补拉，旧消息通知保持独立。
+
+固定源本地验收入口：
+
+```sh
+python3 scripts/test-client-receipts.py --commit <完整40位提交> --output-root /private/tmp/im-p501-<本轮唯一目录>
+```
+
+入口从 Git archive 执行，复用完整历史门禁，核对普通全仓、race、工具哈希、真实进程退出及资源清理。详见 [P5-01 验收记录](docs/P5-01-设备送达与已读验收.md)。本阶段是服务端和 Web 能力；Flutter 四平台客户端按 P5-02 单独实施、验收。
