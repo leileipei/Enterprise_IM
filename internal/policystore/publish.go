@@ -20,9 +20,10 @@ var (
 )
 
 type Service struct {
-	DB                   access.Beginner
-	Now                  func() time.Time
-	MessageRatePerSecond int
+	DB                         access.Beginner
+	Now                        func() time.Time
+	MessageRatePerSecond       int
+	DeviceRegistrationsPerHour int
 }
 
 func (s Service) now() time.Time {
