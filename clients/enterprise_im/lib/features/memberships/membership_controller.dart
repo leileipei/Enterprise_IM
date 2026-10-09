@@ -123,6 +123,8 @@ final class MembershipController {
     final epoch = ++_epoch, cancel = Cancellation();
     _cancel = cancel;
     try {
+      if (await client.store.pendingDeviceRevocation() != null)
+        throw const AuthFailure('device_revocation_unconfirmed');
       final sends = await client.store.pendingSends();
       final action = await client.store.pendingAction();
       final saved = owner.sessions.device;
@@ -219,6 +221,25 @@ final class MembershipController {
         _busy = false;
       }
     }
+  }
+
+  void withdrawDevice() {
+    _epoch++;
+    _cancel?.cancel();
+    _cancel = null;
+    _current = null;
+    _busy = false;
+    owner.current?.store.invalidateReading();
+  }
+
+  Future<WorkspaceAdmission> renew() {
+    final ready = current;
+    if (ready == null ||
+        _busy ||
+        owner.sessions.device?.deviceId != ready.device.deviceId)
+      throw const AuthFailure('invalid_device');
+    withdrawDevice();
+    return select(ready.membership.id);
   }
 
   void close() {

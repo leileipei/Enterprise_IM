@@ -8,6 +8,7 @@ import '../features/conversations/conversation_view.dart';
 import 'message_page.dart';
 import 'directory_page.dart';
 import 'group_page.dart';
+import '../features/devices/device_page.dart';
 import '../core/auth/auth_session.dart';
 import '../core/protocol/api_client.dart';
 import '../core/protocol/models.dart';
@@ -45,7 +46,7 @@ class _ClientShellState extends State<ClientShell> {
   Map<String, String> _statuses = const {};
   bool _busy = true, _expired = false, _logoutFailed = false;
   String _kind = 'direct';
-  String? _notice, _cursor;
+  String? _notice, _cursor, _attemptedMembership;
   Timer? _expiry;
   int _epoch = 0;
   @override
@@ -101,6 +102,7 @@ class _ClientShellState extends State<ClientShell> {
   }
 
   Future<void> _select(String id) async {
+    _attemptedMembership = id;
     final epoch = ++_epoch;
     setState(() {
       _busy = true;
@@ -286,6 +288,42 @@ class _ClientShellState extends State<ClientShell> {
     }
   }
 
+  Future<void> _devices() async {
+    if (_busy || _opening || _expired || widget.owner.current == null) return;
+    _opening = true;
+    try {
+      await _closeDetail();
+      if (!mounted || _expired || widget.owner.current == null) return;
+      final stopped = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DevicePage(
+            owner: widget.owner,
+            memberships: _memberships,
+            actingMembershipId: _ready?.membership.id ?? _attemptedMembership,
+            onRetryLogoutCleanup: widget.onLogout,
+          ),
+        ),
+      );
+      if (!mounted) return;
+      if (stopped == true) {
+        await _logout();
+        return;
+      }
+      setState(() {
+        _ready = _memberships.current;
+        if (_ready == null) {
+          _items = const [];
+          _cursor = null;
+        }
+      });
+      if (_ready != null) await _loadList();
+    } finally {
+      _opening = false;
+      if (mounted) setState(() {});
+    }
+  }
+
   Future<void> _switchMembership() async {
     if (_busy || _opening || _expired) return;
     final epoch = ++_epoch;
@@ -390,6 +428,7 @@ class _ClientShellState extends State<ClientShell> {
       'send_unconfirmed' => '请先重试或明确放弃原消息，再切换任职。',
       'operation_unconfirmed' => '请先重试或明确放弃原操作，再切换任职。',
       'registration_unconfirmed' => '请先完成原设备登记。',
+      'device_revocation_unconfirmed' => '设备撤销尚未确认，请进入设备管理重试原撤销。',
       'device_quota' => '设备额度已满，请先在设备管理中撤销不用的设备。',
       'registration_exists' => '该登记已被服务端处理，凭据未保存。请在设备管理中撤销该设备后重新登记。',
       'registration_context_mismatch' => '有另一任职的设备登记尚未确认，请选择原任职重试。',
@@ -427,6 +466,11 @@ class _ClientShellState extends State<ClientShell> {
     appBar: AppBar(
       title: const Text('集团工作空间'),
       actions: [
+        if (!_expired && !_logoutFailed)
+          TextButton(
+            onPressed: _busy || _opening ? null : _devices,
+            child: const Text('设备管理'),
+          ),
         TextButton(
           onPressed: _busy ? null : _logout,
           child: Text(_logoutFailed ? '重试退出清理' : '退出登录'),

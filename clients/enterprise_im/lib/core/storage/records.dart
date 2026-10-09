@@ -397,3 +397,33 @@ final class PendingAction {
     );
   }
 }
+
+// Recovery record contains identifiers only, never bearer/device credentials.
+final class PendingDeviceRevocation {
+  final String deviceId;
+  final String? registrationId;
+  final bool wasCurrent;
+  PendingDeviceRevocation({
+    required this.deviceId,
+    required this.wasCurrent,
+    this.registrationId,
+  }) {
+    uuidField({'id': deviceId}, 'id');
+    if (registrationId != null) uuidField({'id': registrationId}, 'id');
+    if (wasCurrent && registrationId != null)
+      throw const FormatException('当前设备不作为孤立登记处理');
+  }
+  Map<String, Object?> toJson() => {
+    'device_id': deviceId,
+    'was_current': wasCurrent,
+    if (registrationId != null) 'registration_id': registrationId,
+  };
+  factory PendingDeviceRevocation.fromJson(Map<String, Object?> d) =>
+      PendingDeviceRevocation(
+        deviceId: uuidField(d, 'device_id'),
+        wasCurrent: boolField(d, 'was_current'),
+        registrationId: d.containsKey('registration_id')
+            ? uuidField(d, 'registration_id')
+            : null,
+      );
+}

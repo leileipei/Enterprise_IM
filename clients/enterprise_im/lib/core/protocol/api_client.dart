@@ -123,6 +123,7 @@ final class ApiClient {
     DeviceGrant? device,
     Cancellation? cancellation,
     Duration timeout = const Duration(seconds: 15),
+    bool expectNoContent = false,
   }) async {
     final relative = Uri.parse(path);
     if (relative.hasScheme ||
@@ -188,6 +189,11 @@ final class ApiClient {
         throw const ApiFailure('response_too_large');
       if (response.status >= 300 && response.status < 400)
         throw const ApiFailure('redirect_rejected');
+      if (expectNoContent && response.status >= 200 && response.status < 300) {
+        if (response.status != 204 || response.body.isNotEmpty)
+          throw const ApiFailure('invalid_response');
+        return const {};
+      }
       Object? decoded;
       try {
         decoded = jsonDecode(utf8.decode(response.body));

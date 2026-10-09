@@ -56,6 +56,8 @@ final class ClientSession {
     _busy = true;
     _current = null;
     try {
+      if (await previous.store.pendingDeviceRevocation() != null)
+        throw const AuthFailure('device_revocation_unconfirmed');
       if ((await previous.store.pendingSends()).isNotEmpty)
         throw const AuthFailure('send_unconfirmed');
       if (await previous.store.pendingAction() != null)

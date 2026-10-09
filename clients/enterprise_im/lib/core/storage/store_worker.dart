@@ -79,7 +79,42 @@ Future<void> storeWorkerMain(List<Object?> args) async {
       try {
         if (request[3] != generation) throw StateError('stale');
         Object? result;
-        if (operation == 'put_action' ||
+        if (operation == 'put_device_revocation' ||
+            operation == 'device_revocation' ||
+            operation == 'finish_device_revocation') {
+          final recordKey = await opaque('device_revocation', 'current');
+          final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [
+            recordKey,
+          ]);
+          final previous = rows.isEmpty ? null : await decrypt(rows.single);
+          if (operation == 'device_revocation')
+            result = previous;
+          else {
+            final payload = Map<String, Object?>.from(request[2]! as Map);
+            if (previous != null &&
+                jsonEncode(canonical(previous)) !=
+                    jsonEncode(canonical(payload)))
+              throw StateError('conflict');
+            if (operation == 'finish_device_revocation') {
+              if (previous == null) throw StateError('conflict');
+              db.execute('DELETE FROM records WHERE opaque_key=?', [recordKey]);
+            } else if (previous == null) {
+              final box = await aes.encrypt(
+                utf8.encode(jsonEncode(payload)),
+                secretKey: key,
+                nonce: aes.newNonce(),
+                aad: aad('device_revocation', recordKey),
+              );
+              db.execute('INSERT INTO records VALUES(?,?,?,?,?)', [
+                recordKey,
+                'device_revocation',
+                Uint8List.fromList(box.nonce),
+                Uint8List.fromList(box.cipherText),
+                Uint8List.fromList(box.mac.bytes),
+              ]);
+            }
+          }
+        } else if (operation == 'put_action' ||
             operation == 'action' ||
             operation == 'finish_action') {
           final recordKey = await opaque('action', 'current');
