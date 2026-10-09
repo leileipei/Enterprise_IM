@@ -37,6 +37,23 @@ REQUIRED_COMMANDS=['build_all','vet_all','provenance','fixture_cleanup','gate_te
 BASE='7f5868aa11a3d4d8b758f0e332813502efe7eb6e'
 ACK='^TestMessageACKUsesPersistedTime$|^TestSendTextMessage|^TestSendGroupTextMessage|^TestFileMessageDirect|^TestFileMessageGroup|^TestTextSend|^TestTextReplay|^TestFileMessageHistory|^TestFileMessageIdempotency|^TestValidateClientMessageIDWindowAndVersion$|^TestMessageContentBounds$|^TestFileMessageDigestCanonical$'
 
+# Frozen approved migrations: P4-30 import22 and P5-01 additions23..25.
+# required-only integration may add those complete pairs; standalone import
+# acceptance continues to permit only22. No historical/unknown mutation passes.
+APPROVED_MIGRATION_SHA256 = {'db/migrations/000022_import_batches.down.sql': 'a35d05a03dc7e9cafc740f708bd72ad0259457d3413fe7f71598e360932286b2', 'db/migrations/000022_import_batches.up.sql': 'c19edf084705a7e9362aaf4ad02b4b6b04c8466a90dff4bd738fea1162c9831a', 'db/migrations/000023_devices.down.sql': 'ef86e6c491073bb5f3be70e2f92c209cf2d50c0131145adc40b33a0a1c994afe', 'db/migrations/000023_devices.up.sql': '1d6ff3519601daed12c74e1049ad5e2b389cdcc23bf5c69a863a4299249e60eb', 'db/migrations/000024_message_receipts.down.sql': '5e7e0e4dc841626c9a11a1c7fc275403b7effa99103903881370c65070f294f9', 'db/migrations/000024_message_receipts.up.sql': 'f3824cbe1383e6dba64d5b6db052c54f928aac0692d49c17d88009d4fa88a509', 'db/migrations/000025_receipt_write_rate.down.sql': '7c654a3af1134b8c6be46409ff8bea39bd4f61c6f0a77a951ba77c68dad4e64a', 'db/migrations/000025_receipt_write_rate.up.sql': '0a4c45682cf3f13624293b7f44c8b2a0c97ad89cba96fc276deb06cf849a08eb'}
+
+def validate_migration_provenance(migrations, actual_hashes, *, required_only):
+ names=set(migrations)
+ import_pair={'db/migrations/000022_import_batches.up.sql','db/migrations/000022_import_batches.down.sql'}
+ if len(names)!=len(migrations) or not import_pair<=names:raise ValueError('unexpected production migration changes')
+ allowed=set(APPROVED_MIGRATION_SHA256) if required_only else import_pair
+ if not names<=allowed:raise ValueError('unexpected production migration changes')
+ for name in names:
+  if actual_hashes.get(name)!=APPROVED_MIGRATION_SHA256[name]:raise ValueError('approved production migration hash changed')
+  counterpart=name.replace('.up.sql','.down.sql') if name.endswith('.up.sql') else name.replace('.down.sql','.up.sql')
+  if counterpart not in names:raise ValueError('incomplete production migration pair')
+ return sorted(names)
+
 def validate_required_gates(events):
  groups={};duplicate=False
  for e in events:
@@ -222,7 +239,7 @@ def main():
    previous=subprocess.check_output(['/usr/bin/git','show',BASE+':'+locked],cwd=repo,env=git_env)
    if sha(source/locked)!=hashlib.sha256(previous).hexdigest():raise RuntimeError('dependency lock changed')
   migrations=checked(['/usr/bin/git','diff','--name-only',BASE,commit,'--','db/migrations'],repo,env=git_env).splitlines()
-  if set(migrations)!={'db/migrations/000022_import_batches.up.sql','db/migrations/000022_import_batches.down.sql'}:raise RuntimeError('unexpected production migration changes')
+  migrations=validate_migration_provenance(migrations,{name:sha(source/name) for name in migrations if (source/name).is_file()},required_only=args.required_only)
   events.append(dict(name='provenance',exit_code=0,migration_changes=migrations,locks_unchanged=True))
   result['bin_sha256']={p.name:sha(p) for p in bins.iterdir()}
   if args.required_only:

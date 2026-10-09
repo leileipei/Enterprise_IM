@@ -1,8 +1,13 @@
+import hashlib
 import importlib.util
 import unittest
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('apply_gates',Path(__file__).with_name('test-import-apply.py'))
 gates=importlib.util.module_from_spec(spec);spec.loader.exec_module(gates)
+def hashlib_sha(name):
+ p=Path(name)
+ if not p.is_absolute():p=Path(__file__).resolve().parents[1]/p
+ return hashlib.sha256(p.read_bytes()).hexdigest()
 class ApplyGateTests(unittest.TestCase):
  def events(self):
   rows=[dict(name=k,exit_code=0,counts=dict(top_pass=1,sub_pass=1,fail=0,skip=0),executed_tests=gates.REQUIRED_TESTS[k]) for k in gates.REQUIRED_GATES]
@@ -18,6 +23,21 @@ class ApplyGateTests(unittest.TestCase):
   self.assertFalse(default.required_only)
   for extra in [['--required-only','--reuse-full-suite','/tmp/prior'],['--resource-owner','b'*32],['--resource-registry','/tmp/registry'],['--resource-owner','bad','--resource-registry','/tmp/registry']]:
    with self.assertRaises(SystemExit):gates.parse_arguments(['--source-commit','a'*40,'--output-dir','/tmp/new']+extra)
+ def test_provenance_accepts_p5_additions_but_keeps_import_and_history_frozen(self):
+  names=['db/migrations/000022_import_batches.'+direction+'.sql' for direction in ['up','down']]
+  actual={name:hashlib_sha(name) for name in names}
+  extra={str(p.relative_to(Path(__file__).resolve().parents[1])):hashlib_sha(str(p)) for p in Path(__file__).resolve().parents[1].joinpath('db/migrations').glob('00002[345]*.sql')}
+  self.assertTrue(extra)
+  result=gates.validate_migration_provenance(names+list(extra),{**actual,**extra},required_only=True)
+  self.assertEqual(set(result),set(names+list(extra)))
+  for changed in [{**actual,**extra,names[0]:'0'*64},{**actual,**extra,next(iter(extra)):'0'*64}]:
+   with self.assertRaises(ValueError):gates.validate_migration_provenance(names+list(extra),changed,required_only=True)
+  with self.assertRaises(ValueError):gates.validate_migration_provenance(names+list(extra),{**actual,**extra},required_only=False)
+  with self.assertRaises(ValueError):gates.validate_migration_provenance(names+['db/migrations/000001_group_foundation.up.sql'],actual,required_only=True)
+  with self.assertRaises(ValueError):gates.validate_migration_provenance(names+['db/migrations/000026_future.up.sql'],actual,required_only=True)
+  one_extra=next(iter(extra))
+  with self.assertRaises(ValueError):gates.validate_migration_provenance(names+[one_extra],{**actual,**extra},required_only=True)
+  self.assertEqual(set(gates.validate_migration_provenance(names,actual,required_only=False)),set(names))
  def test_positive(self):self.assertTrue(gates.validate_required_gates(self.events())['required_gates_passed'])
  def test_missing_skip_failure_zero_duplicate_and_cleanup(self):
   for case in ['missing','skip','fail','zero','duplicate','cleanup','command']:
