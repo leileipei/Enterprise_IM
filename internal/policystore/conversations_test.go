@@ -67,6 +67,7 @@ func TestConversationSchemaRejectsIncompleteGroupRow(t *testing.T) {
 
 func TestDirectConversationMigrationRollsBackAndReapplies(t *testing.T) {
 	conn := db(t)
+	receiptMigration(t, conn, "down")
 	ctx := context.Background()
 	for _, path := range []string{
 		"../../db/migrations/000021_file_download_retention.down.sql",

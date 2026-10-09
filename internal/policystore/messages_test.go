@@ -70,6 +70,7 @@ func TestMessageSchemaEnforcesTenantSequenceAndOutboxAssociation(t *testing.T) {
 
 func TestMessageMigrationRollsBackAndReapplies(t *testing.T) {
 	conn := db(t)
+	receiptMigration(t, conn, "down")
 	if err := fileMessageMigration(t, conn, "down"); err != nil {
 		t.Fatal(err)
 	}

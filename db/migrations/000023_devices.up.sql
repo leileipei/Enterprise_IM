@@ -24,7 +24,7 @@ CREATE TABLE user_devices (
     registration_id uuid NOT NULL,
     platform text NOT NULL CHECK (platform IN ('web','windows','macos','android','ios')),
     name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80
-        AND name = btrim(name, E' \t\n\r\f\v' || U&'\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000')
+        AND name = btrim(name, E' \t\n\r\f' || U&'\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000')
         AND name !~ '[[:cntrl:]]'),
     credential_digest bytea NOT NULL CHECK (octet_length(credential_digest) = 32),
     created_at timestamptz NOT NULL DEFAULT clock_timestamp(),

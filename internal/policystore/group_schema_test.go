@@ -122,6 +122,7 @@ func TestGroupSchemaMembershipIntervalsAndIsolation(t *testing.T) {
 
 func TestGroupSchemaDownRefusesDataAndReapplies(t *testing.T) {
 	conn := db(t)
+	receiptMigration(t, conn, "down")
 	seed(t, conn)
 	insertGroup(t, conn)
 	transferDown, err := os.ReadFile("../../db/migrations/000012_group_owner_transfer.down.sql")

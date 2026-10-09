@@ -34,6 +34,7 @@ func TestDeviceMigrationTenantBoundariesAndLifecycle(t *testing.T) {
 			reject(t, conn, insert, "00000000-0000-4000-8000-000000000252", tc.tenant, tc.user, tc.registration, tc.platform, tc.label, tc.digest, at, at.AddDate(0, 0, 30))
 		})
 	}
+	run(t, conn, "UPDATE user_devices SET name='v' WHERE id=$1", migrationDeviceID)
 	for _, column := range []string{"tenant_id", "user_id", "id", "registration_id", "platform", "credential_digest", "created_at"} {
 		values := map[string]any{"tenant_id": tenantB, "user_id": adminA, "id": "00000000-0000-4000-8000-000000000253", "registration_id": "019a13c0-0000-7000-8000-000000000253", "platform": "ios", "credential_digest": make([]byte, 32), "created_at": at.AddDate(0, 0, -1)}
 		if column == "credential_digest" {
@@ -61,6 +62,7 @@ func TestDeviceMigrationTenantBoundariesAndLifecycle(t *testing.T) {
 
 func TestDeviceMigrationEmptyRollbackAndReapply(t *testing.T) {
 	conn := db(t)
+	receiptMigration(t, conn, "down")
 	for _, direction := range []string{"down", "up"} {
 		sql, err := os.ReadFile("../../db/migrations/000023_devices." + direction + ".sql")
 		if err != nil {
@@ -77,6 +79,7 @@ func TestDeviceMigrationEmptyRollbackAndReapply(t *testing.T) {
 			t.Fatalf("table after %s: %v", direction, exists)
 		}
 	}
+	receiptMigration(t, conn, "up")
 	seed(t, conn)
 	run(t, conn, `INSERT INTO user_devices(id,tenant_id,user_id,registration_id,platform,name,credential_digest,created_at,expires_at) VALUES($1,$2,$3,$4,'web','浏览器',$5,$6,$7)`, migrationDeviceID, tenantA, personA, migrationRegistrationID, make([]byte, 32), at, at.AddDate(0, 0, 30))
 }
