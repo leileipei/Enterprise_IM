@@ -21,6 +21,7 @@ REQUIRED_TESTS={
  'TestTwoRealBrowsersDeliveryReadAndRecovery','TestReceiptContainerDatabaseTLSMapping','TestFileRuntimeDeviceOwnerAuditCompatibility','TestReceiptDeniedOperationsAreAudited','TestReceiptDeniedAuditFailureIsUnavailable','TestSyncZeroCacheHasBoundedOnlineGrant')}
 REQUIRED_TESTS.update(PREFIX+'internal/webclient::'+n for n in ('TestWebReceiptPageAndVisibility','TestWebDeviceMemoryAndQuota','TestWebReceiptAppLeaseAndDeviceInvalidation'))
 REQUIRED_TESTS.update(PREFIX+'internal/httpserver::'+n for n in ('TestReceiptHTTPUsesApprovedPUTContract','TestReceiptSyncProofAndExpiryAreDistinct','TestReceiptOnlineLeaseIsClampedToJWT'))
+REQUIRED_TESTS.add(PREFIX+'cmd/im-api::TestReceiptRuntimeQueryAssembly')
 PROCESS_TESTS={'TestReceiptWorkerCrashReplayTwoAPIProcesses','TestTwoRealBrowsersDeliveryReadAndRecovery'}
 
 
