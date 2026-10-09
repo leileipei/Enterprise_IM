@@ -55,7 +55,7 @@ func lockOwnReceiptFactsTx(ctx context.Context, tx pgx.Tx, id access.TrustedIden
 	return nil
 }
 
-func (s Service) ConfirmRead(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, seqs []int64) (ReceiptState, error) {
+func (s Service) confirmRead(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, seqs []int64) (ReceiptState, error) {
 	if !validReceiptSeqs(seqs, 500) {
 		return ReceiptState{}, ErrInvalidReceiptRequest
 	}

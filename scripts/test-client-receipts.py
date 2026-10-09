@@ -18,9 +18,9 @@ REQUIRED_TESTS={
  'TestReadFiveHundredAndInt64Sequences','TestGroupReceiptSummaryVisibilityAndDedup',
  'TestUnreadUsesVisibleFactsAndBoundedLowerCount','TestUnreadSQLBudgetReturnsOnlyProvedLowerBound',
  'TestReceiptWorkerCrashReplayTwoAPIProcesses','TestExpiredProofCleanupPreservesReceipts',
- 'TestTwoRealBrowsersDeliveryReadAndRecovery','TestReceiptContainerDatabaseTLSMapping')}
-REQUIRED_TESTS.update(PREFIX+'internal/webclient::'+n for n in ('TestWebReceiptPageAndVisibility','TestWebDeviceMemoryAndQuota'))
-REQUIRED_TESTS.update(PREFIX+'internal/httpserver::'+n for n in ('TestReceiptHTTPUsesApprovedPUTContract','TestReceiptSyncProofAndExpiryAreDistinct'))
+ 'TestTwoRealBrowsersDeliveryReadAndRecovery','TestReceiptContainerDatabaseTLSMapping','TestFileRuntimeDeviceOwnerAuditCompatibility','TestReceiptDeniedOperationsAreAudited','TestReceiptDeniedAuditFailureIsUnavailable','TestSyncZeroCacheHasBoundedOnlineGrant')}
+REQUIRED_TESTS.update(PREFIX+'internal/webclient::'+n for n in ('TestWebReceiptPageAndVisibility','TestWebDeviceMemoryAndQuota','TestWebReceiptAppLeaseAndDeviceInvalidation'))
+REQUIRED_TESTS.update(PREFIX+'internal/httpserver::'+n for n in ('TestReceiptHTTPUsesApprovedPUTContract','TestReceiptSyncProofAndExpiryAreDistinct','TestReceiptOnlineLeaseIsClampedToJWT'))
 PROCESS_TESTS={'TestReceiptWorkerCrashReplayTwoAPIProcesses','TestTwoRealBrowsersDeliveryReadAndRecovery'}
 
 

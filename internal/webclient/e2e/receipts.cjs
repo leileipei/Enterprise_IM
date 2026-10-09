@@ -4,7 +4,9 @@ let now=0,id=0,timers=new Map();const clock={setTimeout:(f,d)=>{timers.set(++id,
 async function tick(ms){const end=now+ms;while(true){let next=[...timers].filter(([,v])=>v.t<=end).sort((a,b)=>a[1].t-b[1].t)[0];if(!next)break;now=next[1].t;timers.delete(next[0]);next[1].f();for(let i=0;i<8;i++)await Promise.resolve();}now=end;}
 class Observer{static latest;constructor(f){this.f=f;Observer.latest=this;}observe(e){this.e=e;}disconnect(){}unobserve(){}emit(e,ratio){this.f([{target:e,intersectionRatio:ratio,isIntersecting:ratio>0}]);}}
 const doc={visibilityState:"visible",hasFocus:()=>focused,addEventListener(){},removeEventListener(){}},win={addEventListener(){},removeEventListener(){}};let focused=true;
-const scope={window:win,document:doc,IntersectionObserver:Observer,AbortController,Error,Date,BigInt,...clock};vm.createContext(scope);vm.runInContext(fs.readFileSync(process.env.FILE_UNIT_SOURCE || path.join(__dirname,"../assets/receipts.js"),"utf8"),scope);
+class Mutation{static latest;constructor(f){this.f=f;Mutation.latest=this;}observe(){}disconnect(){}emit(){this.f([{attributeName:"open"}]);}}
+doc.body={};
+const scope={window:win,document:doc,MutationObserver:Mutation,IntersectionObserver:Observer,AbortController,Error,Date,BigInt,...clock};vm.createContext(scope);vm.runInContext(fs.readFileSync(process.env.FILE_UNIT_SOURCE || path.join(__dirname,"../assets/receipts.js"),"utf8"),scope);
 (async()=>{
  let context={accountKey:"A",identityKey:"A:m",conversation:"chat",conversationEpoch:1,userID:"me",kind:"direct"},calls=[],commits=0,hold=null;
  const base=()=>({conversation_id:"chat",messages:[{seq:"1",sender_user_id:"peer",text:"hi",redacted:false}],next_after_seq:"1",has_more:false,sync_proof:"A".repeat(43),proof_expires_at:new Date(Date.now()+300000).toISOString(),server_time:new Date().toISOString(),receipt_revision:"0"});
@@ -23,5 +25,8 @@ const scope={window:win,document:doc,IntersectionObserver:Observer,AbortControll
  active=true;const observer=Observer.latest;for(const seq of ["501","9007199254740993"])batch.confirmVisible([seq],context);await tick(1000);assert.equal(batchCalls.length,1);
  // Re-emit the geometric visibility after activating the conversation.
  for(let i=0;i<500;i++){const el={isConnected:true};batch.observe(el,String(i+1),context);observer.emit(el,.5);}await tick(800);assert.equal(batchCalls.length,2);const seqs=JSON.parse(batchCalls[1].o.body).seqs;assert.equal(seqs.length,500);assert.equal(seqs[0],"1");assert.equal(seqs[499],"500");batch.dispose();
+ // Dialog visibility interrupts the continuous exposure, without geometry/focus events.
+ let modalActive=true,modalCalls=[];const modal=new win.Receipts({apiCall:async(p,o)=>{modalCalls.push(p);return {scanned_seq:"1",delivered_seq:"1",read_seq:"1",receipt_revision:"1",duplicate:false};},identityContext:()=>context,commitMessagePage:()=>{},validateMessage:()=>{},isConversationActive:()=>modalActive,showReceiptState:()=>{}});
+ await modal.acceptPage(base(),context);const modalElement={isConnected:true};modal.observe(modalElement,"1",context);Observer.latest.emit(modalElement,.5);await tick(200);modalActive=false;Mutation.latest?.emit();await tick(200);modalActive=true;Mutation.latest?.emit();await tick(400);assert.equal(modalCalls.length,1,"dialog interrupted continuous500ms exposure");await tick(400);assert.equal(modalCalls.length,2,"closing dialog restarts exposure");modal.dispose();
  console.log("page validation, background delivery, 50 percent / 500 ms / 300 ms, canonical int64, and late responses PASS");
 })().catch(e=>{console.error(e);process.exitCode=1;});

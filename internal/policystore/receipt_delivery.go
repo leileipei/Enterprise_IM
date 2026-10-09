@@ -97,7 +97,7 @@ func insertedReceiptSeqs(ctx context.Context, tx pgx.Tx, query string, args ...a
 	return seqs, rows.Err()
 }
 
-func (s Service) ConfirmDelivered(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid, token string) (ReceiptState, error) {
+func (s Service) confirmDelivered(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid, token string) (ReceiptState, error) {
 	id, device, cid, e := normalizeReceiptRequest(id, device, cid)
 	if e != nil || s.DB == nil {
 		if e == nil {

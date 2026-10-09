@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-08-p5-02-flutter-clients-design.md`，依赖P5-01规格／计划。
 
-**Status:** 待用户联合评审后实施；SDK已核对来源，尚未安装、resolve或构建。
+**Status:** 细化规格与实施计划已获用户确认，P5-01 完成后逐项实施；SDK已核对来源，尚未安装、resolve或构建。
 
 ## Global Constraints
 
@@ -56,7 +56,7 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 
 **Files:** Create `clients/enterprise_im/{pubspec.yaml,pubspec.lock,analysis_options.yaml,lib/main.dart}`、`lib/core/protocol/{seq.dart,api_error.dart,api_client.dart,models.dart}`、`lib/core/auth/{native_auth.dart,auth_session.dart,pkce.dart}`、`lib/platform/{browser_launcher.dart,login_callback.dart}`、`lib/ui/login_page.dart`、`test/{protocol_test.dart,auth_test.dart}`；生成四平台runner，冻结测试bundle标识com.enterpriseim.client；Create `scripts/prepare-client-toolchain.py`、`docs/verification/p5-02-toolchain-lock.json`。
 
-**Interfaces:** `Seq.parse(String canonical)`/`toString()`封装BigInt，0～2^63-1；`ApiClient(origin,transport)`返回严格DTO且拒绝跨源重定向；`AuthSession{origin,tenantId,userId,accessToken,expiresAt,generation}`；`NativeAuth.signIn(String platform)`与`refresh()`返回Future<AuthSession>，`cancel()`返回Future<void>。`LoginCallback.start()`返回本次redirectUri和callback Future；`close()`退出listener/subscription。Task1为token broker。Dart DTO在models.dart定义：`DeviceGrant{String deviceId,deviceToken;DateTime expiresAt}`、`SyncPage{String conversationId;List<MessageDTO> messages;Seq nextAfterSeq,receiptRevision;bool hasMore;String? syncProof;DateTime? proofExpiresAt;DateTime serverTime}`、`MessageDTO{Seq seq;bool redacted;String? messageId,senderUserId,messageType,text;Map<String,Object?>? attachment;DateTime? contentExpiresAt,cacheUntil}`。`MessageACK{String messageId,conversationId;Seq seq;DateTime serverTime;bool duplicate}`；`ConversationSummary{String id,kind,name;Seq lastSeq}`；P5-01其它DTO按细化规格JSON字段强类型定义。
+**Interfaces:** `Seq.parse(String canonical)`/`toString()`封装BigInt，0～2^63-1；`ApiClient(origin,transport)`返回严格DTO且拒绝跨源重定向；`AuthSession{origin,tenantId,userId,accessToken,expiresAt,generation}`；`NativeAuth.signIn(String platform)`与`refresh()`返回Future<AuthSession>，`cancel()`返回Future<void>。`LoginCallback.start()`返回本次redirectUri和callback Future；`close()`退出listener/subscription。Task1为token broker。Dart DTO在models.dart定义：`DeviceGrant{String deviceId,deviceToken;DateTime expiresAt}`、`SyncPage{String conversationId;List<MessageDTO> messages;Seq nextAfterSeq,receiptRevision;bool hasMore;String? syncProof;DateTime? proofExpiresAt;DateTime serverTime}`、`MessageDTO{Seq seq;bool redacted;String? messageId,senderUserId,messageType,text;Map<String,Object?>? attachment;DateTime? contentExpiresAt,cacheUntil,onlineUntil}`。`MessageACK{String messageId,conversationId;Seq seq;DateTime serverTime;bool duplicate}`；`ConversationSummary{String id,kind,name;Seq lastSeq}`；P5-01其它DTO按细化规格JSON字段强类型定义。
 
 - [ ] 先准备并验证固定源SDK/附带Dart及隔离工具环境，验证失败停止下载/生成；保存SDK/engine锁定记录。下一步生成项目后设置精确pubspec，运行pub get核对归档hash并生成pubspec.lock；解析不兼容先保存证据，不静默升级。
 - [ ] `flutter create --no-pub --org com.enterpriseim --project-name enterprise_im --platforms windows,macos,android,ios .`，仅生成本期客户端并设置测试标识；删除模板默认cupertino_icons/flutter_lints，仅保留Flutter、flutter_test、integration_test SDK依赖与规格8个精确包；定义本地analysis规则，pub get冻结lock后写 `testProtocolInt64AndBadDTO`、`testAuthStateNonceCallbackAndCancellation`，运行 `flutter test test/protocol_test.dart test/auth_test.dart`确认方法缺失FAIL。

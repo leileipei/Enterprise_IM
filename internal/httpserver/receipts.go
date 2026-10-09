@@ -319,6 +319,7 @@ type syncMessageDTO struct {
 	Seq              string `json:"seq"`
 	ContentExpiresAt string `json:"content_expires_at,omitempty"`
 	CacheUntil       string `json:"cache_until,omitempty"`
+	OnlineUntil      string `json:"online_until,omitempty"`
 }
 
 func deviceSyncDTO(p policystore.DeviceSyncPage, jwtExpiry time.Time) (any, error) {
@@ -337,6 +338,19 @@ func deviceSyncDTO(p policystore.DeviceSyncPage, jwtExpiry time.Time) (any, erro
 			}
 			item.ContentExpiresAt = lease.ContentExpiresAt.UTC().Format(time.RFC3339Nano)
 			item.CacheUntil = cacheUntil.UTC().Format(time.RFC3339Nano)
+			if !lease.OnlineUntil.IsZero() {
+				onlineUntil := lease.OnlineUntil
+				if !lease.CacheUntil.Equal(p.ServerTime) || !onlineUntil.After(p.ServerTime) || onlineUntil.After(p.ServerTime.Add(5*time.Second)) || onlineUntil.After(lease.ContentExpiresAt) {
+					return nil, errors.New("online content lease unavailable")
+				}
+				if jwtExpiry.Before(onlineUntil) {
+					onlineUntil = jwtExpiry
+				}
+				if !onlineUntil.After(p.ServerTime) {
+					return nil, errors.New("online content lease expired")
+				}
+				item.OnlineUntil = onlineUntil.UTC().Format(time.RFC3339Nano)
+			}
 		}
 		items = append(items, item)
 	}

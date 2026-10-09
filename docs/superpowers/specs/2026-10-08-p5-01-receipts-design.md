@@ -32,7 +32,7 @@
 
 配置版本和proof等新增协议整型范围与序号相同，HTTP以规范十进制字符串编码；小范围count/limit为JSON整数。同步证明有效期固定300秒；每页默认100、最大500；read每批1～500个去重seq；状态批查最多100条；设备列表默认20、最大100；群明细默认20、最大50。写入请求体最大64KiB；设备登记／续期最大2KiB；写入接口每用户每秒默认10请求，运行时配置1～10000，超限429。每设备最多20份未过期证明，达到上限429；可先确认、过期或明确放弃，不自动删除其它在用证明。
 
-offline_cache_seconds 是本地阅读授权上限；取其与JWT剩余有效期、设备剩余期限、内容保留期中的最小值。配置0只允许在线授权阅读。法务保全不延长普通用户的正文可读期限。
+offline_cache_seconds 是本地阅读授权上限；取其与JWT剩余有效期、设备剩余期限、内容保留期中的最小值。配置0只允许在线授权阅读：cache_until保持server_time，另签发可选online_until，最多5秒且不超过设备、JWT和内容期限；在线展示不写持久缓存，失去网络／窗口活动状态或请求授权失败立即清正文，到期先清正文再有界重新授权。法务保全不延长普通用户的正文可读期限。
 
 ## 4. 数据模型：新迁移000023和000024
 
@@ -75,7 +75,7 @@ Web凭据只在页面内存；每次登录新登记，登出主动撤销，异�
 
 新增 `GET /api/v1/conversations/{id}/sync?after_seq=0&limit=100` 同时处理单聊与群；旧接口保持原序号JSON。新增协议的所有seq、revision与游标用规范十进制字符串传输，范围0～9223372036854775807，避免JS超过2^53的精度问题。
 
-返回 `{conversation_id,messages,next_after_seq,has_more,sync_proof,proof_expires_at,server_time,receipt_revision}`。messages使用typed_v1内容字段，seq为字符串；未遮蔽内容另有 `content_expires_at`、`cache_until`。完全空页返回null证明；占位页可返回证明以推进扫描。服务器不要求客户端从0重新开始已有扫描；允许重拉已扫描页，但不可确认跳过尚未扫描的缺口。
+返回 `{conversation_id,messages,next_after_seq,has_more,sync_proof,proof_expires_at,server_time,receipt_revision}`。messages使用typed_v1内容字段，seq为字符串；未遮蔽内容另有 `content_expires_at`、`cache_until`，配置0时另带可选`online_until`。完全空页返回null证明；占位页可返回证明以推进扫描。服务器不要求客户端从0重新开始已有扫描；允许重拉已扫描页，但不可确认跳过尚未扫描的缺口。
 
 服务端同期生成页面和proof：复用history_read_tx中的最终授权，锁身份与当前policy版本并在完成前再次检查时限，证明的items与最终返回页完全一致。当前读取审计在同事务提交，失败不返回proof。
 

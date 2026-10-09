@@ -7,13 +7,20 @@
   const same=(a,b)=>a?.accountKey===b?.accountKey && a?.identityKey===b?.identityKey && a?.conversation===b?.conversation && a?.conversationEpoch===b?.conversationEpoch && a?.receiptEpoch===b?.receiptEpoch;
   const stale=()=>Object.assign(new Error("回执上下文已变化"),{stale:true});
   class Receipts {
-    #api;#context;#commit;#validate;#active;#show;#generation=0;#controllers=new Set();#after="0";#delivered=new Set();#read=new Set();#pending=new Set();#observed=new Map();#observer;#batchTimer=null;#reading=false;#readRetryDelay=1000;#onActivity;
+    #api;#context;#commit;#validate;#active;#show;#generation=0;#controllers=new Set();#after="0";#delivered=new Set();#read=new Set();#pending=new Set();#observed=new Map();#observer;#dialogObserver;#batchTimer=null;#reading=false;#readRetryDelay=1000;#onActivity;
     static parseSeq=parseSeq;
     get afterSeq(){return this.#after;}
     constructor({apiCall,identityContext,commitMessagePage,validateMessage,isConversationActive,showReceiptState}) {
       this.#api=apiCall;this.#context=identityContext;this.#commit=commitMessagePage;this.#validate=validateMessage;this.#active=isConversationActive;this.#show=showReceiptState;
       this.#observer=new IntersectionObserver(entries=>{for(const entry of entries){const record=this.#observed.get(entry.target);if(!record)continue;record.ratio=entry.intersectionRatio;this.#arm(record);}}, {threshold:[0,.5,1]});
       this.#onActivity=()=>{for(const record of this.#observed.values())this.#arm(record);};
+      this.#dialogObserver=new MutationObserver(()=>{
+        // Modal transitions interrupt continuous exposure even when geometry,
+        // document visibility and window focus have not changed.
+        for(const record of this.#observed.values()){clearTimeout(record.timer);record.timer=null;record.qualified=false;this.#pending.delete(record.seq);}
+        this.#onActivity();
+      });
+      this.#dialogObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:["open"]});
       document.addEventListener("visibilitychange",this.#onActivity);window.addEventListener("blur",this.#onActivity);window.addEventListener("focus",this.#onActivity);
     }
     #check(context,generation){if(generation!==this.#generation || !same(context,this.#context()))throw stale();}
@@ -77,7 +84,7 @@
       for(const r of this.#observed.values())clearTimeout(r.timer);this.#observer.disconnect();this.#observed.clear();clearTimeout(this.#batchTimer);this.#batchTimer=null;
       this.#after="0";this.#delivered.clear();this.#read.clear();this.#pending.clear();this.#reading=false;
     }
-    dispose(){this.contextChanged();document.removeEventListener("visibilitychange",this.#onActivity);window.removeEventListener("blur",this.#onActivity);window.removeEventListener("focus",this.#onActivity);}
+    dispose(){this.contextChanged();this.#dialogObserver.disconnect();document.removeEventListener("visibilitychange",this.#onActivity);window.removeEventListener("blur",this.#onActivity);window.removeEventListener("focus",this.#onActivity);}
   }
   window.Receipts=Receipts;
 })();

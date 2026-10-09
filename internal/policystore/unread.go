@@ -13,7 +13,7 @@ import (
 
 // High-water marks are deliberately absent from this count. Retained batches
 // are re-filtered at the final clock so expiry cannot inflate even a lower bound.
-func (s Service) GetUnread(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string) (UnreadState, error) {
+func (s Service) getUnread(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string) (UnreadState, error) {
 	wallStart := time.Now()
 	clockStart := s.now()
 	q, e := s.beginReceiptQuery(ctx, id, device, cid)

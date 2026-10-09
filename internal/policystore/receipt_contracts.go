@@ -6,7 +6,7 @@ type ReceiptState struct {
 	ScannedSeq, DeliveredSeq, ReadSeq, ReceiptRevision int64
 	Duplicate                                          bool
 }
-type ContentLease struct{ ContentExpiresAt, CacheUntil time.Time }
+type ContentLease struct{ ContentExpiresAt, CacheUntil, OnlineUntil time.Time }
 type DeviceSyncPage struct {
 	Page                       MessagePage
 	SyncProof                  string

@@ -177,7 +177,7 @@ async function openFileSearchConversation(id,kind){
  await syncMessages();
 }
 const devicesDialog=element("devices-dialog");
-let loginGeneration=0,receiptSync=null,receiptSyncController=null,receiptSyncAgain=false,receiptRefreshGeneration=0,receiptSessionEpoch=0,deviceListCursor="";
+let loginGeneration=0,receiptSync=null,receiptSyncController=null,receiptSyncAgain=false,receiptRefreshGeneration=0,receiptSessionEpoch=0,receiptOnlineOnly=false,deviceListCursor="";
 const receiptLeaseTimers=new Set();
 function identityContext() {
  return Object.freeze({accountKey:self && accessToken ? `${self.tenant_id}:${self.user_id}:${loginGeneration}` : "",identityKey:`${identityEpoch}:${actingMembership}`,membershipId:actingMembership,userID:self?.user_id,conversation:activeConversation,conversationEpoch,receiptEpoch:receiptSessionEpoch,kind:activeConversationKind,accessToken,tokenExpiresAt});
@@ -190,12 +190,15 @@ async function apiCall(path,options={},context=identityContext(),needsMembership
  const credential=deviceSession.credential(context);
  if(path.startsWith("/api/v1/conversations/")){if(!credential)throw new Error("当前设备未登记");headers.set("X-IM-Device-ID",credential.id);headers.set("X-IM-Device-Token",credential.token);}
  const {detached:_,...fetchOptions}=options;
- const response=await fetch(path,{...fetchOptions,headers,cache:"no-store",credentials:"omit",redirect:"error"});
+ let response;
+ try {response=await fetch(path,{...fetchOptions,headers,cache:"no-store",credentials:"omit",redirect:"error"});}
+ catch(error){if(!detached && receiptOnlineOnly && isReceiptContext(context))receiptContextChanged();throw error;}
  const check=()=>{if(!detached && (context.accountKey!==identityContext().accountKey || (needsMembership && context.identityKey!==identityContext().identityKey)))throw Object.assign(new Error("身份已变化"),{stale:true});};check();
  if(!response.ok) {
   let body={};try{body=await response.json();}catch(_){}check();
   if(!detached && response.status===401){if(body.error_code==="invalid_device"){deviceSession.invalidate();receiptContextChanged();}else logout("登录已过期，请重新登录。");}
   if(!detached && response.status===403 && body.error_code==="invalid_identity")selectMembership("");
+  if(!detached && receiptOnlineOnly && isReceiptContext(context))receiptContextChanged();
   const e=new Error(body.error_code==="device_quota" ? "设备数量已达上限，请打开“我的设备”手动撤销旧设备。" : body.error_code==="rate_limited" && path==="/api/v1/devices" ? "本小时设备登记次数已达上限，请稍后重试。" : response.status===429 ? "操作太频繁，请稍后重试。" : response.status===404 ? "当前消息不可用或无权限。" : "回执操作未完成，请稍后重试。");
   e.status=response.status;e.code=body.error_code;if(body.error_code==="registration_exists")e.deviceID=body.device_id;throw e;
  }
@@ -209,6 +212,8 @@ function validateReceiptMessage(message) {
 }
 function commitMessagePage(page,context) {
  if(!isReceiptContext(context))throw Object.assign(new Error("消息上下文已变化"),{stale:true});
+ const serverTime=Date.parse(page.server_time);
+ for(const message of page.messages)if(message.online_until!==undefined){const until=Date.parse(message.online_until);if(typeof message.online_until!=="string" || !Number.isFinite(until) || Date.parse(message.cache_until)!==serverTime || until<=serverTime || until>serverTime+5000 || until>Date.parse(message.content_expires_at))throw new Error("在线阅读授权无效");}
  const fragment=document.createDocumentFragment(),staged=[];
  for(const message of page.messages) {
   const existing=[...messages.querySelectorAll("[data-receipt-seq]")].find(e=>e.dataset.receiptSeq===message.seq);
@@ -223,8 +228,13 @@ function commitMessagePage(page,context) {
  for(const {item,message} of staged) {
   if(!message.redacted && message.sender_user_id!==self.user_id)receipts.observe(item,message.seq,context);
   if(!message.redacted) {
-   const duration=Math.max(0,Math.min(Date.parse(message.content_expires_at),Date.parse(message.cache_until))-Date.parse(page.server_time));
-   const timer=setTimeout(()=>{receiptLeaseTimers.delete(timer);if(!isReceiptContext(context))return;receipts.forget(item);item.classList.add("redacted");item.querySelector(".message-bubble").replaceChildren(document.createTextNode("消息缓存已到期，正在重新核对…"));item.querySelector(".receipt-state")?.remove();refreshReceiptHistory(context);},Math.min(Math.max(0,duration-(Date.now()-page.localRequestStarted)),2147483647));receiptLeaseTimers.add(timer);
+   const server=Date.parse(page.server_time),cache=Date.parse(message.cache_until),online=message.online_until===undefined?null:Date.parse(message.online_until);
+   if(online!==null)receiptOnlineOnly=true;
+   const deadline=Math.min(Date.parse(message.content_expires_at),online===null?cache:online),remaining=deadline-server-(performance.now()-page.localRequestStarted);
+   const erase=()=>{receipts.forget(item);item.classList.add("redacted");item.querySelector(".message-bubble").replaceChildren(document.createTextNode("消息阅读授权已到期，正在重新核对…"));item.querySelector(".receipt-state")?.remove();};
+   if(remaining<=0 || (online!==null && (!navigator.onLine || document.visibilityState!=="visible" || !document.hasFocus())))erase();
+   // Expired responses never create an immediate recursive sync loop.
+   const timer=setTimeout(()=>{receiptLeaseTimers.delete(timer);if(!isReceiptContext(context))return;erase();refreshReceiptHistory(context);},Math.min(remaining>0?remaining:5000,2147483647));receiptLeaseTimers.add(timer);
   }
  }
 }
@@ -235,8 +245,15 @@ function refreshReceiptHistory(context) {
 }
 const receipts=new window.Receipts({apiCall,identityContext,commitMessagePage,validateMessage:validateReceiptMessage,isConversationActive:context=>isReceiptContext(context)&&!!activeConversation&&!document.querySelector("dialog[open]"),showReceiptState:(_,context)=>{refreshReceiptState(context).catch(()=>{});}});
 function receiptContextChanged() {
+ if(config?.receipts_enabled)messages.replaceChildren();
  receiptSessionEpoch++;receipts.contextChanged();receiptSyncController?.abort();receiptSyncController=null;receiptSync=null;receiptSyncAgain=false;receiptRefreshGeneration++;for(const timer of receiptLeaseTimers)clearTimeout(timer);receiptLeaseTimers.clear();element("receipt-unread").classList.add("hidden");
 }
+function receiptActivityChanged() {
+ if(!config?.receipts_enabled || !receiptOnlineOnly)return;
+ if(!navigator.onLine || document.visibilityState!=="visible" || !document.hasFocus()){receiptContextChanged();return;}
+ if(activeConversation && actingMembership)syncMessages().catch(report);
+}
+window.addEventListener("offline",receiptActivityChanged);window.addEventListener("online",receiptActivityChanged);window.addEventListener("blur",receiptActivityChanged);window.addEventListener("focus",receiptActivityChanged);document.addEventListener("visibilitychange",receiptActivityChanged);
 async function refreshReceiptState(context) {
  if(!config?.receipts_enabled || !isReceiptContext(context) || !deviceSession.credential(context))return;
  const generation=++receiptRefreshGeneration;
@@ -260,15 +277,18 @@ async function refreshReceiptState(context) {
 }
 async function syncReceiptMessages() {
  if(!activeConversation || !actingMembership)return;
+ if(receiptOnlineOnly && (!navigator.onLine || document.visibilityState!=="visible" || !document.hasFocus()))return;
  if(receiptSync){receiptSyncAgain=true;return receiptSync;}
  const context=identityContext(),controller=new AbortController();receiptSyncController=controller;
  const promise=(async()=>{
   const capabilities=await apiCall("/api/v1/me/client-capabilities",{signal:controller.signal},context);if(!isReceiptContext(context))return;
   if(capabilities.receipts_enabled!==true)throw new Error("设备回执暂不可用");
+  const onlineOnly=capabilities.offline_cache_seconds===0;
+  if(onlineOnly!==receiptOnlineOnly){receiptOnlineOnly=onlineOnly;receiptContextChanged();scheduleSyncRetry(context.conversation,context.membershipId,identityEpoch,context.conversationEpoch);return;}
   await deviceSession.ensure(context);if(!isReceiptContext(context))return;
   do {receiptSyncAgain=false;let more=true;
    while(more && isReceiptContext(context)) {
-    const started=Date.now();const page=await apiCall(`/api/v1/conversations/${context.conversation}/sync?after_seq=${receipts.afterSeq}&limit=100&message_format=typed_v1`,{signal:controller.signal},context);page.localRequestStarted=started;
+    const started=performance.now();const page=await apiCall(`/api/v1/conversations/${context.conversation}/sync?after_seq=${receipts.afterSeq}&limit=100&message_format=typed_v1`,{signal:controller.signal},context);page.localRequestStarted=started;
     if(!isReceiptContext(context))return;more=await receipts.acceptPage(page,context);
    }
   }while(receiptSyncAgain && isReceiptContext(context));

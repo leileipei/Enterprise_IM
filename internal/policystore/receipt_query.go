@@ -205,7 +205,7 @@ func visibleReceiptCandidates(q receiptQueryContext, candidates []receiptCandida
 	}
 	return out
 }
-func (s Service) QueryReceipts(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, seqs []int64) ([]ReceiptSummary, error) {
+func (s Service) queryReceipts(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, seqs []int64) ([]ReceiptSummary, error) {
 	if !validReceiptSeqs(seqs, 100) {
 		return nil, ErrInvalidReceiptRequest
 	}
@@ -297,7 +297,7 @@ func decodeReceiptUserCursor(raw string) (string, error) {
 	}
 	return string(b), nil
 }
-func (s Service) ListReceiptUsers(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, seq int64, cursor string, limit int) (ReceiptUserPage, error) {
+func (s Service) listReceiptUsers(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, seq int64, cursor string, limit int) (ReceiptUserPage, error) {
 	if seq < 1 || limit < 1 || limit > 50 {
 		return ReceiptUserPage{}, ErrInvalidReceiptRequest
 	}

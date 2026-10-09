@@ -348,6 +348,8 @@ go vet ./...
 - 请求需现有 Bearer 和 `X-Acting-Membership-ID`，并携带 `X-IM-Device-ID`、`X-IM-Device-Token`。序号、游标、修订号使用规范十进制字符串，客户端以 BigInt 处理；未读数量为有界整数。
 - `GET .../receipts?seqs=1,3` 查询本人发送消息的状态；群回执受当前角色、任职和通讯录策略约束。`GET .../unread` 的 `exact=false` 是已证明的下界，不能当作精确数量。
 - Web 前台消息至少50%可见连续500ms后，按300ms窗口合批已读。后台同步只确认送达；切换账号、任职或会话丢弃旧响应。缓存期限到达时先清除正文，再重新核对授权。
+- 离线缓存配置0时，`cache_until`仍为服务端当前时间；可选`online_until`只授权最多5秒的当前在线展示，并受设备、JWT及正文期限限制。Web用单调时钟计时，离线、隐藏、失焦或授权请求失败立即清正文，在线授权到期后重新补拉；不能把该字段用作持久缓存期限。
+- 已鉴权回执业务拒绝保存闭集deny审计；原事务全部回滚后再写拒绝记录，审计失败返回503。
 - 启动 `cmd/im-receipt-worker` 时配置 `IM_DATABASE_URL`、`IM_RECEIPT_REDIS_URL`；API 仍使用 `IM_REALTIME_REDIS_URL`。可通过 `IM_RECEIPT_STREAM` 指定独立回执 Stream，默认 `enterprise-im:receipt-changed:v1`，不得复用旧消息 Stream。回执 Worker 缺失时 Web 使用 HTTP 补拉，旧消息通知保持独立。
 
 固定源本地验收入口：

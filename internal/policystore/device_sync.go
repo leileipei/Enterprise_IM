@@ -11,7 +11,7 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/access"
 )
 
-func (s Service) SyncDeviceMessages(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, after int64, limit int) (DeviceSyncPage, error) {
+func (s Service) syncDeviceMessages(ctx context.Context, id access.TrustedIdentity, device DeviceCredential, cid string, after int64, limit int) (DeviceSyncPage, error) {
 	if after < 0 || limit < 1 || limit > 500 {
 		return DeviceSyncPage{}, ErrInvalidReceiptRequest
 	}
@@ -136,7 +136,17 @@ func (s Service) SyncDeviceMessages(ctx context.Context, id access.TrustedIdenti
 		if contentExpiry.Before(cacheUntil) {
 			cacheUntil = contentExpiry
 		}
-		result.ContentLeases[m.Seq] = ContentLease{ContentExpiresAt: contentExpiry, CacheUntil: cacheUntil}
+		lease := ContentLease{ContentExpiresAt: contentExpiry, CacheUntil: cacheUntil}
+		if config.OfflineCacheSeconds == 0 {
+			lease.OnlineUntil = finalAt.Add(5 * time.Second)
+			if expiry.Before(lease.OnlineUntil) {
+				lease.OnlineUntil = expiry
+			}
+			if contentExpiry.Before(lease.OnlineUntil) {
+				lease.OnlineUntil = contentExpiry
+			}
+		}
+		result.ContentLeases[m.Seq] = lease
 	}
 	result.ServerTime = finalAt
 	if e = tx.Commit(ctx); e != nil {

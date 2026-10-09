@@ -198,3 +198,37 @@ func TestReceiptSyncProofAndExpiryAreDistinct(t *testing.T) {
 		t.Fatal("proof DTO aliased expiry", len(result.Proof), len(result.Expiry))
 	}
 }
+
+func TestReceiptOnlineLeaseIsClampedToJWT(t *testing.T) {
+	now := time.Now().UTC()
+	p := policystore.DeviceSyncPage{ServerTime: now, Page: policystore.MessagePage{ConversationID: targetUserID, Messages: []policystore.PulledMessage{{Seq: 1, MessageType: "text", Text: "live", ServerTime: now}}}, ContentLeases: map[int64]policystore.ContentLease{1: {ContentExpiresAt: now.Add(time.Hour), CacheUntil: now, OnlineUntil: now.Add(5 * time.Second)}}}
+	dto, e := deviceSyncDTO(p, now.Add(2*time.Second))
+	if e != nil {
+		t.Fatal(e)
+	}
+	b, e := json.Marshal(dto)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var body struct {
+		Messages []struct {
+			OnlineUntil string `json:"online_until"`
+			CacheUntil  string `json:"cache_until"`
+		}
+	}
+	if e = json.Unmarshal(b, &body); e != nil {
+		t.Fatal(e)
+	}
+	if len(body.Messages) != 1 || body.Messages[0].OnlineUntil != now.Add(2*time.Second).Format(time.RFC3339Nano) || body.Messages[0].CacheUntil != now.Format(time.RFC3339Nano) {
+		t.Fatal("live grant lost or enlarged")
+	}
+	if _, e = deviceSyncDTO(p, now); e == nil {
+		t.Fatal("expired JWT granted online display")
+	}
+	lease := p.ContentLeases[1]
+	lease.OnlineUntil = now.Add(6 * time.Second)
+	p.ContentLeases[1] = lease
+	if _, e = deviceSyncDTO(p, now.Add(time.Hour)); e == nil {
+		t.Fatal("oversized online grant accepted")
+	}
+}

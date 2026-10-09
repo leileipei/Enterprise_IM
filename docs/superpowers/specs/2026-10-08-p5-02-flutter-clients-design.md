@@ -1,6 +1,6 @@
 # P5-02 四平台 Flutter 客户端规格
 
-日期：2026-10-08。状态：Windows＋macOS＋Android＋iOS／Flutter总体方案已确认，细化规格及实施计划待联合评审。
+日期：2026-10-08。状态：Windows＋macOS＋Android＋iOS／Flutter细化规格与实施计划已获用户确认，待P5-01完成后实施。
 
 ## 1. 目标与依赖
 
@@ -92,3 +92,7 @@ Windows安装包及URI/file路径不得把秘密放命令行；macOS启用网络
 ## 9. 官方核对来源
 
 SDK：[Flutter安装](https://docs.flutter.dev/install/manual)、[SDK归档](https://docs.flutter.dev/install/archive)。OAuth：[RFC8252](https://datatracker.ietf.org/doc/html/rfc8252)。依赖：[安全存储](https://pub.dev/packages/flutter_secure_storage)、[app_links](https://pub.dev/packages/app_links)、[SQLite](https://pub.dev/packages/sqlite3)、[cryptography](https://pub.dev/packages/cryptography)、[path_provider](https://pub.dev/packages/path_provider)、[url_launcher](https://pub.dev/packages/url_launcher)、[file_selector](https://pub.dev/packages/file_selector)、[本地通知](https://pub.dev/packages/flutter_local_notifications)。版本及archive_sha256的公开读取记录保存在本期metadata JSON；还未运行pub resolve或平台构建。
+
+## P5-01评审后的协议补充
+
+配置离线缓存0时，sync正文带可选online_until（最多5秒并受设备／JWT／内容期限约束），cache_until仍是server_time。Native只在内存展示该实时授权，不将online_until作为本地持久阅读租约；离线、挂起、失焦或授权失败立即清除正文。在线到期先清正文，再重新同步授权；页游标与待确认证明仍依本地事务规则提交。

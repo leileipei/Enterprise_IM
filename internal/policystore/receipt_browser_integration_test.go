@@ -265,8 +265,8 @@ func TestTwoRealBrowsersDeliveryReadAndRecovery(t *testing.T) {
 		t.Fatal("actual PKCE flows incomplete", authorizations.Load(), exchanges.Load())
 	}
 	var devices, users int
-	if err := conn.QueryRow(ctx, "SELECT count(*) FROM message_device_receipts WHERE tenant_id=$1 AND conversation_id=$2 AND seq=1 AND user_id=$3 AND read_at IS NOT NULL", tenantA, directA, personA).Scan(&devices); err != nil || devices != 2 {
-		t.Fatal("two Bob device read facts", devices, err)
+	if err := conn.QueryRow(ctx, "SELECT count(*) FROM message_device_receipts WHERE tenant_id=$1 AND conversation_id=$2 AND seq=1 AND user_id=$3 AND read_at IS NOT NULL", tenantA, directA, personA).Scan(&devices); err != nil || devices != 3 {
+		t.Fatal("three actual Bob device read facts including modal recovery", devices, err)
 	}
 	if err := conn.QueryRow(ctx, "SELECT count(*) FROM message_user_receipts WHERE tenant_id=$1 AND conversation_id=$2 AND seq=1 AND user_id=$3 AND read_at IS NOT NULL", tenantA, directA, personA).Scan(&users); err != nil || users != 1 {
 		t.Fatal("one Bob user read fact", users, err)
@@ -274,6 +274,10 @@ func TestTwoRealBrowsersDeliveryReadAndRecovery(t *testing.T) {
 	var groupRead bool
 	if err := conn.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM message_user_receipts WHERE tenant_id=$1 AND conversation_id=$2 AND user_id=$3 AND read_at IS NOT NULL)", tenantA, cross.ID, personA).Scan(&groupRead); err != nil || !groupRead {
 		t.Fatal("cross-org group read", groupRead, err)
+	}
+	var onlineRead int
+	if e := conn.QueryRow(ctx, "SELECT count(*) FROM message_user_receipts WHERE tenant_id=$1 AND conversation_id=$2 AND seq=2 AND user_id=$3 AND read_at IS NOT NULL", tenantA, cross.ID, personA).Scan(&onlineRead); e != nil || onlineRead != 1 {
+		t.Fatal("zero-cache real user read", onlineRead, e)
 	}
 	t.Log("actual OIDC/PG/Redis browsers:", output.String())
 }
