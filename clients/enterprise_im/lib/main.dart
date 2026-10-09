@@ -2,9 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'platform/login_callback.dart';
 import 'ui/login_page.dart';
+import 'platform/app_activity.dart';
+import 'platform/native_activity.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final nativeActivity = NativeActivityAdapter();
   AppLinksSource? mobile;
   bool ready = true;
   if (Platform.isAndroid || Platform.isIOS) {
@@ -27,6 +30,7 @@ Future<void> main() async {
   runApp(
     EnterpriseIMApp(
       platform: platform,
+      activity: nativeActivity.activity,
       mobile: mobile,
       platformReady: ready && platform != 'unsupported',
     ),
@@ -35,11 +39,13 @@ Future<void> main() async {
 
 class EnterpriseIMApp extends StatelessWidget {
   final String platform;
+  final AppActivity? activity;
   final AppLinksSource? mobile;
   final bool platformReady;
   const EnterpriseIMApp({
     super.key,
     required this.platform,
+    this.activity,
     this.mobile,
     this.platformReady = true,
   });
@@ -53,6 +59,7 @@ class EnterpriseIMApp extends StatelessWidget {
     ),
     home: LoginPage(
       platform: platform,
+      activity: activity,
       platformReady: platformReady,
       callbackFactory: (name, state) {
         if (name == 'windows' || name == 'macos')

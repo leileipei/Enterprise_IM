@@ -1,6 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/auth/client_session.dart';
+import '../platform/app_activity.dart';
+import '../platform/native_activity.dart';
+import '../core/sync/client_context.dart';
+import '../features/conversations/conversation_view.dart';
+import 'message_page.dart';
 import '../core/auth/auth_session.dart';
 import '../core/protocol/api_client.dart';
 import '../core/protocol/models.dart';
@@ -11,7 +16,13 @@ import '../features/conversations/conversation_list.dart';
 class ClientShell extends StatefulWidget {
   final ClientSession owner;
   final Future<bool> Function() onLogout;
-  const ClientShell({super.key, required this.owner, required this.onLogout});
+  final AppActivity? activity;
+  const ClientShell({
+    super.key,
+    required this.owner,
+    required this.onLogout,
+    this.activity,
+  });
   @override
   State<ClientShell> createState() => _ClientShellState();
 }
@@ -20,6 +31,11 @@ class _ClientShellState extends State<ClientShell> {
   late final MembershipController _memberships;
   late final ConversationList _lists;
   WorkspaceAdmission? _ready;
+  NativeActivityAdapter? _native;
+  late final AppActivity _activity;
+  ConversationView? _view;
+  ConversationSummary? _detail;
+  bool _opening = false;
   List<Membership> _roles = const [];
   List<ConversationSummary> _items = const [];
   Map<String, String> _statuses = const {};
@@ -31,6 +47,8 @@ class _ClientShellState extends State<ClientShell> {
   @override
   void initState() {
     super.initState();
+    if (widget.activity == null) _native = NativeActivityAdapter();
+    _activity = widget.activity ?? _native!.activity;
     _memberships = MembershipController(widget.owner);
     _lists = ConversationList(_memberships);
     _armExpiry();
@@ -45,6 +63,7 @@ class _ClientShellState extends State<ClientShell> {
       return;
     }
     _expiry = Timer(session.remaining, () {
+      unawaited(_closeDetail());
       _memberships.close();
       _lists.close();
       _epoch++;
@@ -141,9 +160,85 @@ class _ClientShellState extends State<ClientShell> {
     }
   }
 
+  Future<void> _closeDetail() async {
+    final view = _view;
+    _view = null;
+    _detail = null;
+    if (mounted) setState(() {});
+    _activity.update(
+      foreground: _activity.foreground,
+      focused: _activity.focused,
+      activeConversation: null,
+      blocked: _activity.blocked,
+    );
+    if (view != null) await view.close();
+  }
+
+  Future<void> _open(ConversationSummary conversation, bool desktop) async {
+    final ready = _memberships.current;
+    if (_opening || _expired || ready == null) return;
+    _opening = true;
+    try {
+      final pending = await ready.client.store.pendingSends();
+      if (!mounted || _expired || !identical(_memberships.current, ready))
+        return;
+      if (_view?.sending == true ||
+          pending.any(
+            (p) =>
+                p.conversationId != conversation.id ||
+                p.actingMembershipId != ready.membership.id,
+          )) {
+        setState(() => _notice = '请先重试或明确放弃原消息，再切换会话。');
+        return;
+      }
+      await _closeDetail();
+      if (!mounted || _expired || !identical(_memberships.current, ready))
+        return;
+      final view = ConversationView(
+        _memberships,
+        _activity,
+        sendAllowed: _statuses[conversation.id] != 'policy_blocked',
+      );
+      _view = view;
+      final client = ClientContext(
+        session: ready.client.session,
+        actingMembershipId: ready.membership.id,
+        device: ready.device,
+        generation: ready.client.session.generation,
+        conversationId: conversation.id,
+      );
+      unawaited(
+        view.select(client, conversation).catchError((Object error) {
+          if (mounted && identical(_view, view))
+            setState(() => _notice = _message(error));
+        }),
+      );
+      if (desktop)
+        setState(() => _detail = conversation);
+      else {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (context) => MessagePage(
+              view: view,
+              conversation: conversation,
+              onBack: () => Navigator.of(context).pop(),
+            ),
+          ),
+        );
+        if (identical(_view, view)) await _closeDetail();
+      }
+    } catch (error) {
+      await _closeDetail();
+      if (mounted) setState(() => _notice = _message(error));
+    } finally {
+      _opening = false;
+    }
+  }
+
   Future<void> _logout() async {
     if (_busy) return;
     final epoch = ++_epoch;
+    await _closeDetail();
     _expiry?.cancel();
     _memberships.close();
     _lists.close();
@@ -197,6 +292,15 @@ class _ClientShellState extends State<ClientShell> {
   void dispose() {
     _epoch++;
     _expiry?.cancel();
+    final view = _view;
+    if (view != null) unawaited(view.close());
+    _activity.update(
+      foreground: _activity.foreground,
+      focused: _activity.focused,
+      activeConversation: null,
+      blocked: _activity.blocked,
+    );
+    _native?.dispose();
     _lists.close();
     _memberships.close();
     super.dispose();
@@ -297,40 +401,58 @@ class _ClientShellState extends State<ClientShell> {
             ),
             Expanded(
               child: LayoutBuilder(
-                builder: (context, size) => Align(
-                  alignment: Alignment.topLeft,
-                  child: SizedBox(
-                    width: size.maxWidth >= 800 ? 360 : size.maxWidth,
-                    child: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        for (final item in _items)
-                          Card(
-                            child: ListTile(
-                              leading: Icon(
-                                item.kind == 'group'
-                                    ? Icons.groups
-                                    : Icons.chat_bubble_outline,
-                              ),
-                              title: Text(item.name),
-                              subtitle: Text(
-                                _statuses[item.id] == 'policy_blocked'
-                                    ? '通信策略已阻断'
-                                    : '${item.kind == 'group' ? '群聊' : '单聊'}',
+                builder: (context, size) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: size.maxWidth >= 800 ? 360 : size.maxWidth,
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          for (final item in _items)
+                            Card(
+                              child: ListTile(
+                                onTap: _busy || _opening
+                                    ? null
+                                    : () => _open(item, size.maxWidth >= 800),
+                                leading: Icon(
+                                  item.kind == 'group'
+                                      ? Icons.groups
+                                      : Icons.chat_bubble_outline,
+                                ),
+                                title: Text(item.name),
+                                subtitle: Text(
+                                  _statuses[item.id] == 'policy_blocked'
+                                      ? '通信策略已阻断'
+                                      : '${item.kind == 'group' ? '群聊' : '单聊'}',
+                                ),
                               ),
                             ),
-                          ),
-                        if (_items.isEmpty && !_busy) const Text('暂无会话'),
-                        if (_cursor != null)
-                          TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () => _loadList(more: true),
-                            child: const Text('加载更多'),
-                          ),
-                      ],
+                          if (_items.isEmpty && !_busy) const Text('暂无会话'),
+                          if (_cursor != null)
+                            TextButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () => _loadList(more: true),
+                              child: const Text('加载更多'),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
+                    if (size.maxWidth >= 800) ...[
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        child: _detail == null || _view == null
+                            ? const Center(child: Text('选择会话开始沟通'))
+                            : MessagePage(
+                                key: ValueKey(_view),
+                                view: _view!,
+                                conversation: _detail!,
+                                onBack: () => unawaited(_closeDetail()),
+                              ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),

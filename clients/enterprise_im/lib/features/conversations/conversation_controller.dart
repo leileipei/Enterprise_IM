@@ -32,6 +32,7 @@ final class ConversationController {
     ConversationSummary conversation,
   ) async {
     _stop();
+    final epoch = _epoch;
     final ready = memberships.current;
     if (_closed ||
         ready == null ||
@@ -42,6 +43,15 @@ final class ConversationController {
         context.device.deviceToken != ready.device.deviceToken ||
         context.generation != ready.client.store.generation)
       throw const ApiFailure('invalid_context');
+    final pending = await ready.client.store.pendingSends();
+    if (_closed || epoch != _epoch || !identical(memberships.current, ready))
+      throw const ApiFailure('cancelled');
+    if (pending.any(
+      (p) =>
+          p.conversationId != context.conversationId ||
+          p.actingMembershipId != context.actingMembershipId,
+    ))
+      throw const ApiFailure('send_unconfirmed');
     _admission = ready;
     _context = context;
     _conversation = conversation;

@@ -53,6 +53,50 @@ Future<ConversationController> controller(
 
 void main() {
   test(
+    'unresolved send blocks another conversation even after reopening controller',
+    () async {
+      var requests = 0;
+      final owner = await nav.owner((r, _) async {
+        requests++;
+        throw const ApiFailure('timeout');
+      });
+      addTearDown(owner.logout);
+      final (roles, context) = await admission(owner);
+      addTearDown(roles.close);
+      final first = await controller(roles, context);
+      await expectLater(first.sendText('未确认原正文'), throwsA(isA<ApiFailure>()));
+      first.close();
+      final reopened = ConversationController(roles);
+      addTearDown(reopened.close);
+      final other = ClientContext(
+        session: context.session,
+        actingMembershipId: context.actingMembershipId,
+        device: context.device,
+        generation: context.generation,
+        conversationId: nav.group,
+      );
+      await expectLater(
+        reopened.select(
+          other,
+          ConversationSummary.fromJson({...nav.direct(), 'id': nav.group}),
+        ),
+        throwsA(
+          isA<ApiFailure>().having((e) => e.code, 'code', 'send_unconfirmed'),
+        ),
+      );
+      expect(requests, 1);
+      expect(
+        (await owner.current!.store.pendingSends()).single.conversationId,
+        nav.dm,
+      );
+      await reopened.select(
+        context,
+        ConversationSummary.fromJson(nav.direct()),
+      );
+    },
+  );
+
+  test(
     'failed new attempt cannot expose the previous message ACK as success',
     () async {
       var deny = false;

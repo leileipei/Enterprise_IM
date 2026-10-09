@@ -12,9 +12,11 @@ import '../core/protocol/api_client.dart';
 import '../platform/browser_launcher.dart';
 import '../platform/login_callback.dart';
 import 'client_shell.dart';
+import '../platform/app_activity.dart';
 
 class LoginPage extends StatefulWidget {
   final String platform;
+  final AppActivity? activity;
   final LoginCallback Function(String, String) callbackFactory;
   final bool platformReady;
   final ApiClient Function(Uri)? apiFactory;
@@ -25,6 +27,7 @@ class LoginPage extends StatefulWidget {
     required this.platform,
     required this.callbackFactory,
     this.platformReady = true,
+    this.activity,
     this.apiFactory,
     this.browser,
     this.storeFactory,
@@ -375,6 +378,7 @@ class _LoginPageState extends State<LoginPage> {
                             MaterialPageRoute(
                               builder: (_) => ClientShell(
                                 owner: _client!,
+                                activity: widget.activity,
                                 onLogout: _cancel,
                               ),
                             ),

@@ -46,6 +46,28 @@ final class SyncResult {
     return result;
   }
 
+  // Consumer UI must repaint at the earliest effective body deadline, even
+  // when there is no socket hint or poll. This never extends the page lease.
+  Duration? get contentAuthorizationRemaining {
+    Duration? result;
+    for (final message in _page.messages) {
+      if (message.redacted) continue;
+      final until = message.cacheUntil == _page.serverTime
+          ? message.onlineUntil
+          : message.cacheUntil;
+      var remaining = _active() && until != null
+          ? _clock.remainingFor(until)
+          : Duration.zero;
+      final content = _clock.remainingFor(message.contentExpiresAt!);
+      if (content < remaining) remaining = content;
+      if (_context.session.remaining < remaining)
+        remaining = _context.session.remaining;
+      if (remaining <= Duration.zero) continue;
+      if (result == null || remaining < result) result = remaining;
+    }
+    return result;
+  }
+
   void invalidateReading() => _clock.invalidate();
   bool matchesContext(ClientContext context) =>
       _active() && _context.sameScope(context);
