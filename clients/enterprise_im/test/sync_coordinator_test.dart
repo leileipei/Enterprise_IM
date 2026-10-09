@@ -364,4 +364,76 @@ void main() {
     expect(channel.connected, isTrue);
     expect(scheduler.has(const Duration(seconds: 35)), isTrue);
   });
+  test(
+    'foreground restores cached body only through a fresh full page',
+    () async {
+      final (_, store) = await fixture.storage();
+      final transport = fixture.ScriptedTransport((request) {
+        if (request.uri.path.endsWith('/tickets'))
+          return fixture.response({
+            'ticket': realtime.ticket,
+            'expires_in_seconds': 30,
+          });
+        return fixture.response(
+          request.method == 'GET'
+              ? fixture.syncPage(
+                  empty: request.uri.queryParameters['after_seq'] != '0',
+                )
+              : fixture.state(),
+        );
+      });
+      final api = ApiClient(Uri.parse('https://im.example'), transport);
+      final engine = SyncEngine(api, store);
+      final activity = AppActivity()
+        ..update(
+          foreground: true,
+          focused: true,
+          activeConversation: fixture.conversation,
+        );
+      final queue = ReceiptQueue(api, activity);
+      final channel = RealtimeChannel(api, realtime.DialFixture());
+      final results = <SyncResult>[];
+      final resumed = Completer<SyncResult>();
+      final coordinator = SyncCoordinator(
+        engine,
+        channel,
+        queue,
+        activity,
+        onResult: (r) {
+          results.add(r);
+          if (results.length == 2) resumed.complete(r);
+        },
+        schedule: ManualScheduler().create,
+      );
+      addTearDown(() async {
+        await coordinator.dispose();
+        queue.dispose();
+        activity.dispose();
+        await channel.dispose();
+      });
+      await coordinator.start(fixture.context());
+      activity.update(
+        foreground: false,
+        focused: false,
+        activeConversation: fixture.conversation,
+      );
+      expect(results.first.messages.single.redacted, isTrue);
+      activity.update(
+        foreground: true,
+        focused: true,
+        activeConversation: fixture.conversation,
+      );
+      final refreshed = await resumed.future;
+      expect(refreshed.messages.length, 1);
+      expect(refreshed.messages.single.redacted, isFalse);
+      expect(
+        transport.requests
+            .where((r) => r.method == 'GET')
+            .last
+            .uri
+            .queryParameters['after_seq'],
+        '0',
+      );
+    },
+  );
 }

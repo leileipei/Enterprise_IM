@@ -1,0 +1,53 @@
+{
+  "schema_version": "p502_task4_foreground_local_v1",
+  "status": "in_progress",
+  "source_base_commit": "0e5829d38d5ca2f9fd507361c3c900d6b1569598",
+  "source_kind": "working_tree_shared_core_checkpoint",
+  "shared_tests": {
+    "actual_exit": 0,
+    "passed": 70,
+    "command": "flutter test --timeout 30s"
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0
+  },
+  "verified_behavior": [
+    "foreground does not reopen any old result grant",
+    "reauthorizeConversation requests fresh full history pages starting at0",
+    "earlier authorization replay preserves maximum committed cursor",
+    "fresh page still commits before delivered and only then qualifies read",
+    "queued received-state cleanup precedes fresh authorization"
+  ],
+  "evidence_boundary": "real SQLite and core timers with injected API/activity/scheduler; no actual Go API or installed platform acceptance",
+  "task3_complete": false,
+  "task4_complete": false,
+  "native_four_platform_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "remaining": [
+    "actual Go API sender/Bob/two-device protocol integration",
+    "UnreadState/summary HTTP and UI wiring",
+    "visible zero-cache online lease renewal scheduling",
+    "native read retry/terminal errors handed off to session owner",
+    "actual lifecycle/window adapters and OS secure storage",
+    "four-platform builds/install/signing",
+    "iOS baseline decision; macOS Apple SDK license"
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/sync/sync_engine.dart": "f34c2db4f04cef3372286d50511f5def73414521e66546a832e03940acd316ba",
+    "clients/enterprise_im/lib/core/sync/sync_coordinator.dart": "14c115ddf4439d134ae01eb244335c32817bf8ab0695c4b8b7aac69f6bf75d88",
+    "clients/enterprise_im/test/recovery_test.dart": "6bb9d45faf0f842ebbc036cc306e829b67f333024febc7dd38849bfad816b5de",
+    "clients/enterprise_im/test/sync_coordinator_test.dart": "03383f7b6e41e4bf04ed29066b53d6c5c18e76b1021998327151b917a694a2ce"
+  },
+  "log_sha256": {
+    "task-4-foreground-red.log": "7a27979f99155422968248e0dcf4eb236ca280baa3e020f36d0c22891bd1f2b5",
+    "task-4-foreground-behavior-red.log": "cfe1258b450120791093ae408d5511689dc935bb666fd8bde006d2d964f4fc18",
+    "task-4-foreground-final-shared.log": "f62865bcdd986cea02b70cf45702742cb9764be5b39a7b61b65709b864fa7bd8",
+    "task-4-foreground-analysis.log": "7817f3559f99032e0f9f347cf036a34a337ae0ff1af9d7d9029b9ab14d0497f6"
+  },
+  "temporary_fixture_cleanup": {
+    "owned_tls_fixture_directories_remaining": 0,
+    "owned_sync_fixture_directories_remaining": 0
+  }
+}

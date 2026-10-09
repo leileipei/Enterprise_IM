@@ -24,6 +24,7 @@ final class SyncCoordinator {
   ClientContext? _context;
   Timer? _poll, _reconnect, _syncRetry, _purge;
   Future<void>? _refreshFlight, _connectFlight, _reset;
+  bool _reauthorize = false;
   bool _dirty = false, _suspended = true, _disposed = false, _purging = false;
   int _epoch = 0, _syncAttempt = 0, _connectAttempt = 0;
   SyncCoordinator(
@@ -83,6 +84,7 @@ final class SyncCoordinator {
   Future<void> _activate() async {
     if (_disposed || _context == null || !_foreground) return;
     _suspended = false;
+    _reauthorize = true;
     _armPoll();
     _armPurge();
     await Future.wait([_refresh(), _connect()]);
@@ -129,7 +131,11 @@ final class SyncCoordinator {
       do {
         _dirty = false;
         final context = _context!;
-        final result = await engine.syncConversation(context);
+        final reauthorize = _reauthorize;
+        _reauthorize = false;
+        final result = await (reauthorize
+            ? engine.reauthorizeConversation(context)
+            : engine.syncConversation(context));
         if (!_active(epoch)) return;
         receipts.acceptDelivered(result, context);
         _syncAttempt = 0;

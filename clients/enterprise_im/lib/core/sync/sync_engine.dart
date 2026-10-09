@@ -238,11 +238,19 @@ final class SyncEngine {
 
   Future<void> purgeExpiredContent() => store.purgeUnauthorizedMessages();
 
+  // Reauthorize historical bodies with fresh complete pages. The store retains
+  // its maximum committed cursor; an earlier after value is authorization
+  // replay, never a cursor rollback or reuse of a previous display grant.
+  Future<SyncResult> reauthorizeConversation(ClientContext context) {
+    stop();
+    _after = Seq.parse('0');
+    return syncConversation(context);
+  }
+
   Future<void> resume() async {
     final context = _context;
     if (context == null) throw const ApiFailure('invalid_context');
-    stop();
-    await syncConversation(context);
+    await reauthorizeConversation(context);
   }
 
   void stop() {

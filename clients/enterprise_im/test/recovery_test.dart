@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:enterprise_im/core/protocol/api_client.dart';
+import 'package:enterprise_im/core/protocol/seq.dart';
 import 'package:enterprise_im/core/sync/sync_engine.dart';
 import 'sync_test.dart' as fixture;
 
@@ -101,4 +102,32 @@ void main() {
     expect(puts, 1);
     expect(await store.pendingReceipts(), isEmpty);
   });
+  test(
+    'resume reauthorizes cached history without lowering committed cursor',
+    () async {
+      final (_, store) = await fixture.storage();
+      final transport = fixture.ScriptedTransport(
+        (request) => fixture.response(
+          request.method == 'GET'
+              ? fixture.syncPage(
+                  empty: request.uri.queryParameters['after_seq'] != '0',
+                )
+              : fixture.state(),
+        ),
+      );
+      final engine = SyncEngine(
+        ApiClient(Uri.parse('https://im.example'), transport),
+        store,
+      );
+      addTearDown(engine.stop);
+      final old = await engine.syncConversation(fixture.context());
+      expect(old.messages.single.redacted, isFalse);
+      await engine.resume();
+      final get = transport.requests.where((r) => r.method == 'GET').last;
+      expect(get.uri.queryParameters['after_seq'], '0');
+      expect(await store.committedCursor(fixture.conversation), Seq.parse('1'));
+      expect(transport.requests.where((r) => r.method == 'PUT').length, 2);
+      expect(old.messages.single.redacted, isTrue);
+    },
+  );
 }
