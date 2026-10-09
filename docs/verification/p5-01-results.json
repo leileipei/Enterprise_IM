@@ -1,19 +1,287 @@
 {
   "schema_version": "p501_delivery_summary_v1",
-  "status": "in_progress",
-  "overall_passed": false,
+  "status": "fixed_source_acceptance_passed",
+  "overall_passed": true,
   "web_implementation_commit": "99aced555d226bbbd1494aa58d56de565a1cf8ea",
-  "fixed_source_final_acceptance": "last_attempt_failed_new_fixed_source_required",
+  "fixed_source_final_acceptance": "passed",
   "native_four_platform_acceptance": "not_executed",
   "customer_acceptance": "not_executed",
   "production_acceptance": "not_executed",
-  "current_attempt_source_commit": "3558f25b01a595b757975f724d456a140db1b6be",
-  "current_attempt_runner_actual_exit": 1,
+  "current_attempt_source_commit": "b20d01679b38f704f42ea9daaad111f0188362eb",
+  "current_attempt_runner_actual_exit": 0,
   "current_attempt_cleanup": {
     "removed": true,
     "failures": []
   },
   "targeted_legacy_browser_fixture_actual_exit": 0,
   "last_failed_receipt_summary_sha256": "e48133886cc3d814b86efa6f43f667b31a9d58b5e4900d2e80d368873795ebf7",
-  "last_failed_verification_sha256": "b6cf583a4f1e392576a02d1392465bd0a49e1d9f8aa417da8b2c1e80e1335441"
+  "last_failed_verification_sha256": "b6cf583a4f1e392576a02d1392465bd0a49e1d9f8aa417da8b2c1e80e1335441",
+  "source_archive_sha256": "2df651d88848b21012c2f17bb1bf1568bbde04971ef5a6c49422dda98fa50608",
+  "acceptance_evidence_sha256": {
+    "receipt-results.json": "bec7d0313f1864388699ce6812676692f0c43760fed785e4036fbd47c419509d",
+    "verification.json": "ca15a1e909ff4e0d58e46d31a1cf9e7b0731f7f87a92831ac032c47959e2757b",
+    "resource_cleanup-9e3cd919.json": "06df6a1b3c90cb171ac6d7dba5aa1d5ff2afd34c1159214cf0da6446834c33b0",
+    "registry.jsonl": "0291fb429ab2cb729eb0892a93763657334998011161558bf86b93fa5c2de19c"
+  },
+  "gates": [
+    {
+      "name": "orchestrator_contract",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 99,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 0,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 1,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791534827.520926,
+      "ended_at": 1791534853.8868911
+    },
+    {
+      "name": "toolchain",
+      "exit_code": 0,
+      "counts": {},
+      "started_at": 1791534853.8869271,
+      "ended_at": 1791534873.891263
+    },
+    {
+      "name": "fixture_preflight",
+      "exit_code": 0,
+      "counts": {},
+      "started_at": 1791534873.89127,
+      "ended_at": 1791534910.2460532
+    },
+    {
+      "name": "build_all",
+      "exit_code": 0,
+      "counts": {},
+      "started_at": 1791534938.494605,
+      "ended_at": 1791534939.6659489
+    },
+    {
+      "name": "vet_all",
+      "exit_code": 0,
+      "counts": {},
+      "started_at": 1791534941.353844,
+      "ended_at": 1791534943.105951
+    },
+    {
+      "name": "message_realtime",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 156,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 143,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 3,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791534944.825676,
+      "ended_at": 1791535025.658674
+    },
+    {
+      "name": "file_components",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 327,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 629,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 8,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791535027.526478,
+      "ended_at": 1791536025.511301
+    },
+    {
+      "name": "file_resources",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 7,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 4,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 2,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791536027.474758,
+      "ended_at": 1791536027.48722
+    },
+    {
+      "name": "file_messages",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 8,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 6,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 2,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791536029.517828,
+      "ended_at": 1791536087.2641752
+    },
+    {
+      "name": "file_download_retention",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 18,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 13,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 3,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791536089.089306,
+      "ended_at": 1791536305.870448
+    },
+    {
+      "name": "web_files",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 11,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 40,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 1,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791536307.577759,
+      "ended_at": 1791536819.0927732
+    },
+    {
+      "name": "file_business_process",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 14,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 38,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 1,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791536821.0887449,
+      "ended_at": 1791537350.8003929
+    },
+    {
+      "name": "import_append",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 365,
+        "top_skip": 0,
+        "sub_fail": 0,
+        "sub_pass": 419,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 26,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "started_at": 1791537352.798198,
+      "ended_at": 1791537557.665021
+    },
+    {
+      "name": "full_repository",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 1133,
+        "top_skip": 1,
+        "sub_fail": 0,
+        "sub_pass": 1192,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 30,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 1
+      },
+      "started_at": 1791537559.579753,
+      "ended_at": 1791539806.585587
+    },
+    {
+      "name": "race_repository",
+      "exit_code": 0,
+      "counts": {
+        "top_fail": 0,
+        "top_pass": 1133,
+        "top_skip": 1,
+        "sub_fail": 0,
+        "sub_pass": 1192,
+        "sub_skip": 0,
+        "package_fail": 0,
+        "package_pass": 30,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 1
+      },
+      "started_at": 1791539808.6709828,
+      "ended_at": 1791542563.546936
+    },
+    {
+      "name": "evidence_integrity",
+      "exit_code": 0,
+      "counts": {},
+      "started_at": null,
+      "ended_at": null
+    },
+    {
+      "name": "resource_cleanup",
+      "exit_code": 0,
+      "counts": {},
+      "started_at": null,
+      "ended_at": null
+    }
+  ],
+  "required_receipt_test_count": 25,
+  "required_receipt_tests_passed_in_full_and_race": true,
+  "resource_cleanup_checks": [
+    "owned_resources_absent",
+    "private_directory_removed"
+  ],
+  "whole_branch_final_review": "pending",
+  "evidence_directory": "/private/tmp/p501-b20d016-complete-a"
 }
