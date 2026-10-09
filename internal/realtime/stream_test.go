@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/leileipei/Enterprise_IM/internal/receiptoutbox"
+	"maps"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -270,5 +273,111 @@ func TestStreamFanoutDetectsPublisherLossInsideSlowBatch(t *testing.T) {
 	case <-fanout.Done():
 	case <-time.After(3 * time.Second):
 		t.Fatal("publisher loss remained hidden during slow batch")
+	}
+}
+
+type receiptResolverFunc func(context.Context, string, string, string, int64) ([]string, error)
+
+func (f receiptResolverFunc) ResolveReceiptEvent(ctx context.Context, tenant, cid, event string, revision int64) ([]string, error) {
+	return f(ctx, tenant, cid, event, revision)
+}
+func TestReceiptPublisherMissingFallsBack(t *testing.T) {
+	client := redisDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	oldStream := fmt.Sprintf("im:test:receipt-legacy:%d", time.Now().UnixNano())
+	receiptStream := oldStream + ":receipts"
+	t.Cleanup(func() {
+		client.Del(context.Background(), oldStream, receiptStream, receiptoutbox.PublisherPresenceKey(receiptStream))
+	})
+	markPublisher(t, client, oldStream)
+	f, e := realtime.StartStreamFanout(ctx, client, oldStream, recipientsStub{users: []string{identity.UserID}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	present, e := f.AttachReceiptStream(ctx, client, receiptStream, receiptResolverFunc(func(context.Context, string, string, string, int64) ([]string, error) {
+		return []string{identity.UserID}, nil
+	}))
+	if e != nil || present {
+		t.Fatal("missing receipt producer should degrade", present, e)
+	}
+	signals, unsub := f.Subscribe(identity)
+	defer unsub()
+	publishStreamEvent(t, client, oldStream, "00000000-0000-4000-8000-000000000811", identity.TenantID, 1)
+	waitSignal(t, signals)
+	select {
+	case <-f.Done():
+		t.Fatal("receipt publisher loss killed message stream")
+	default:
+	}
+	if e = receiptoutbox.RefreshPublisherPresence(ctx, client, receiptStream); e != nil {
+		t.Fatal(e)
+	}
+	if e = (receiptoutbox.RedisPublisher{Client: client, Stream: receiptStream}).Publish(ctx, receiptoutbox.Event{ID: "00000000-0000-4000-8000-000000000812", TenantID: identity.TenantID, ConversationID: streamConversation, Revision: 1}); e != nil {
+		t.Fatal(e)
+	}
+	waitSignal(t, signals)
+}
+func TestReceiptRealtimeCanonicalPayloadAndReplay(t *testing.T) {
+	client := redisDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	oldStream := fmt.Sprintf("im:test:receipt-replay:%d", time.Now().UnixNano())
+	receiptStream := oldStream + ":receipts"
+	t.Cleanup(func() {
+		client.Del(context.Background(), oldStream, receiptStream, receiptoutbox.PublisherPresenceKey(receiptStream))
+	})
+	markPublisher(t, client, oldStream)
+	if e := receiptoutbox.RefreshPublisherPresence(ctx, client, receiptStream); e != nil {
+		t.Fatal(e)
+	}
+	calls := atomic.Int32{}
+	resolver := receiptResolverFunc(func(_ context.Context, tenant, cid, event string, revision int64) ([]string, error) {
+		calls.Add(1)
+		if tenant != identity.TenantID || cid != streamConversation || revision != 9007199254740993 {
+			return nil, nil
+		}
+		return []string{identity.UserID}, nil
+	})
+	f, e := realtime.StartStreamFanout(ctx, client, oldStream, recipientsStub{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if present, e := f.AttachReceiptStream(ctx, client, receiptStream, resolver); e != nil || !present {
+		t.Fatal(present, e)
+	}
+	signals, unsub := f.Subscribe(identity)
+	defer unsub()
+	foreign, unsub2 := f.Subscribe(access.TrustedIdentity{TenantID: identity.TenantID, UserID: "00000000-0000-4000-8000-000000000999"})
+	defer unsub2()
+	values := map[string]any{"event_id": "00000000-0000-4000-8000-000000000821", "event_type": "receipt_changed", "tenant_id": identity.TenantID, "conversation_id": streamConversation, "revision": "9007199254740993"}
+	for _, bad := range []string{"01", "+1", "0", "9223372036854775808"} {
+		v := maps.Clone(values)
+		v["revision"] = bad
+		if e := client.XAdd(ctx, &redis.XAddArgs{Stream: receiptStream, Values: v}).Err(); e != nil {
+			t.Fatal(e)
+		}
+	}
+	extra := maps.Clone(values)
+	extra["target_user_id"] = identity.UserID
+	if e := client.XAdd(ctx, &redis.XAddArgs{Stream: receiptStream, Values: extra}).Err(); e != nil {
+		t.Fatal(e)
+	}
+	if e := client.XAdd(ctx, &redis.XAddArgs{Stream: receiptStream, Values: values}).Err(); e != nil {
+		t.Fatal(e)
+	}
+	waitSignal(t, signals)
+	if e := client.XAdd(ctx, &redis.XAddArgs{Stream: receiptStream, Values: values}).Err(); e != nil {
+		t.Fatal(e)
+	}
+	select {
+	case <-signals:
+		t.Fatal("duplicate receipt signalled twice")
+	case <-foreign:
+		t.Fatal("non-target notified")
+	case <-time.After(250 * time.Millisecond):
+	}
+	if calls.Load() != 1 {
+		t.Fatal("invalid payloads reached resolver", calls.Load())
 	}
 }

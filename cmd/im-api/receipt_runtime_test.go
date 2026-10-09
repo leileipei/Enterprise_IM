@@ -110,3 +110,30 @@ func TestReceiptRuntimeQueryAssembly(t *testing.T) {
 		t.Fatal("off route open", w.Code)
 	}
 }
+func TestReceiptRuntimeIndependentStream(t *testing.T) {
+	cfg, e := loadReceiptRuntime(func(k string) string {
+		if k == "IM_RECEIPTS_ENABLED" {
+			return "true"
+		}
+		return ""
+	}, true)
+	if e != nil || cfg.Stream != "enterprise-im:receipt-changed:v1" {
+		t.Fatal(cfg, e)
+	}
+	for _, s := range []string{" bad ", "enterprise-im:message-created:v1", "same"} {
+		_, e = loadReceiptRuntime(func(k string) string {
+			switch k {
+			case "IM_RECEIPTS_ENABLED":
+				return "true"
+			case "IM_RECEIPT_STREAM":
+				return s
+			case "IM_REALTIME_STREAM":
+				return "same"
+			}
+			return ""
+		}, true)
+		if e == nil {
+			t.Fatal("unsafe receipt stream", s)
+		}
+	}
+}

@@ -210,6 +210,12 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 				logger.Error("realtime Stream unavailable at startup")
 				return errors.New("api startup unavailable")
 			}
+			if receiptConfig.Enabled {
+				present, receiptErr := fanout.AttachReceiptStream(ctx, redisClient, receiptConfig.Stream, receiptService)
+				if receiptErr != nil || !present {
+					logger.Warn("receipt notifications degraded; HTTP polling remains available", "error_code", "receipt_publisher_unavailable")
+				}
+			}
 			readyChecks = append(readyChecks, apiPinger(func(checkCtx context.Context) error {
 				if redisClient.Ping(checkCtx).Err() != nil {
 					return errors.New("realtime unavailable")

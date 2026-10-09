@@ -32,10 +32,11 @@ type streamEvent struct {
 // Fanout is local to one API process. Every process reads the Redis Stream
 // independently and sends a coalesced signal to its own connected devices.
 type Fanout struct {
-	mu          sync.Mutex
-	subscribers map[string]map[chan struct{}]struct{}
-	done        chan struct{}
-	stopOnce    sync.Once
+	mu              sync.Mutex
+	subscribers     map[string]map[chan struct{}]struct{}
+	done            chan struct{}
+	stopOnce        sync.Once
+	receiptAttached bool
 }
 
 func (f *Fanout) Done() <-chan struct{} { return f.done }

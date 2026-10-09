@@ -2,14 +2,18 @@ package main
 
 import (
 	"errors"
+	"github.com/leileipei/Enterprise_IM/internal/receiptoutbox"
 	"net/http"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
 )
 
 type ReceiptRuntimeConfig struct {
 	Enabled                                        bool
+	Stream                                         string
 	DeviceRegistrationsPerHour, WriteRatePerSecond int
 }
 
@@ -25,6 +29,13 @@ func loadReceiptRuntime(getenv func(string) string, oidcEnabled bool) (ReceiptRu
 	}
 	if !oidcEnabled {
 		return ReceiptRuntimeConfig{}, errors.New("receipts require OIDC")
+	}
+	cfg.Stream = getenv("IM_RECEIPT_STREAM")
+	if cfg.Stream == "" {
+		cfg.Stream = receiptoutbox.DefaultStream
+	}
+	if len(cfg.Stream) > 128 || strings.IndexFunc(cfg.Stream, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 || cfg.Stream == "enterprise-im:message-created:v1" || (getenv("IM_REALTIME_STREAM") != "" && cfg.Stream == getenv("IM_REALTIME_STREAM")) {
+		return ReceiptRuntimeConfig{}, errors.New("invalid independent receipt stream")
 	}
 	var e error
 	cfg.DeviceRegistrationsPerHour, e = receiptLimit(getenv("IM_DEVICE_REGISTRATIONS_PER_HOUR"), 10, 1000)
