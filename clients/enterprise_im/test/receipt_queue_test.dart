@@ -194,4 +194,61 @@ void main() {
     await read.future.timeout(const Duration(seconds: 2));
     expect(reads, 1);
   });
+  test('501 visible messages use exact sorted batches capped at500', () async {
+    final (_, store) = await fixture.storage();
+    var head = 0;
+    final batches = <List<Object?>>[];
+    final finished = Completer<void>();
+    final transport = fixture.ScriptedTransport((request) {
+      if (request.uri.path.endsWith('/read')) {
+        batches.add(
+          (fixture.requestBody(request)['seqs'] as List<Object?>).toList(),
+        );
+        return fixture.response(fixture.state(scanned: 501, read: 501));
+      }
+      if (request.method == 'PUT')
+        return fixture.response(fixture.state(scanned: head));
+      final after = int.parse(request.uri.queryParameters['after_seq']!);
+      head = (after + 100).clamp(0, 501);
+      final page = fixture.syncPage(seq: head);
+      final one =
+          (page['messages'] as List<Object?>).single as Map<String, Object?>;
+      page['messages'] = [
+        for (var seq = after + 1; seq <= head; seq++) {...one, 'seq': '$seq'},
+      ];
+      page['has_more'] = head < 501;
+      return fixture.response(page);
+    });
+    final api = ApiClient(Uri.parse('https://im.example'), transport);
+    final engine = SyncEngine(api, store);
+    final activity = AppActivity()
+      ..update(
+        foreground: true,
+        focused: true,
+        activeConversation: fixture.conversation,
+      );
+    final queue = ReceiptQueue(
+      api,
+      activity,
+      onState: (_) {
+        if (batches.length == 2 && !finished.isCompleted) finished.complete();
+      },
+    );
+    addTearDown(engine.stop);
+    addTearDown(queue.dispose);
+    addTearDown(activity.dispose);
+    final ctx = fixture.context();
+    for (var i = 0; i < 6; i++) {
+      queue.acceptDelivered(await engine.syncConversation(ctx), ctx);
+    }
+    for (var i = 501; i > 0; i--) {
+      queue.observe(Seq.parse('$i'), 1, ctx);
+    }
+    await finished.future.timeout(const Duration(seconds: 4));
+    expect(batches.map((batch) => batch.length).toList(), [500, 1]);
+    expect(batches.expand((batch) => batch).toList(), [
+      for (var seq = 1; seq <= 501; seq++) '$seq',
+    ]);
+    expect(queue.locallyReadSeqs.length, 501);
+  });
 }

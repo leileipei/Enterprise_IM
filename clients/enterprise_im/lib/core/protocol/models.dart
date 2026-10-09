@@ -344,3 +344,95 @@ final class ReceiptState {
     );
   }
 }
+
+int _receiptCount(Map<String, Object?> data, String key) {
+  final value = data[key];
+  if (value is! int || value < 0 || BigInt.from(value) > Seq.maximum) {
+    throw const FormatException('回执数量无效');
+  }
+  return value;
+}
+
+final class UnreadState {
+  final int count;
+  final bool exact;
+  final Seq headSeq, receiptRevision, policyVersion;
+  UnreadState._(
+    this.count,
+    this.exact,
+    this.headSeq,
+    this.receiptRevision,
+    this.policyVersion,
+  );
+  factory UnreadState.fromJson(Map<String, Object?> data) {
+    final count = _receiptCount(data, 'unread_count');
+    final head = Seq.fromWire(data['head_seq']);
+    if (BigInt.from(count) > head.value) throw const FormatException('未读数量越界');
+    return UnreadState._(
+      count,
+      boolField(data, 'exact'),
+      head,
+      Seq.fromWire(data['receipt_revision']),
+      Seq.fromWire(data['policy_version']),
+    );
+  }
+}
+
+final class ReceiptSummary {
+  final Seq seq;
+  final String status;
+  final bool summaryAvailable;
+  final int visibleRecipientCount, visibleDeliveredCount, visibleReadCount;
+  final DateTime? deliveredAt, readAt;
+  ReceiptSummary._(
+    this.seq,
+    this.status,
+    this.summaryAvailable,
+    this.visibleRecipientCount,
+    this.visibleDeliveredCount,
+    this.visibleReadCount,
+    this.deliveredAt,
+    this.readAt,
+  );
+  factory ReceiptSummary.fromJson(Map<String, Object?> data) {
+    final seq = Seq.fromWire(data['seq']);
+    final status = stringField(data, 'status', max: 9);
+    final available = boolField(data, 'summary_available');
+    final recipients = _receiptCount(data, 'visible_recipient_count');
+    final delivered = _receiptCount(data, 'visible_delivered_count');
+    final read = _receiptCount(data, 'visible_read_count');
+    final deliveredAt = data['delivered_at'] == null
+        ? null
+        : wireTime(data['delivered_at']);
+    final readAt = data['read_at'] == null ? null : wireTime(data['read_at']);
+    final expected = recipients > 0 && read == recipients
+        ? 'read'
+        : recipients > 0 && delivered == recipients
+        ? 'delivered'
+        : 'sent';
+    if (seq.value == BigInt.zero ||
+        read > delivered ||
+        delivered > recipients ||
+        status != expected ||
+        (!available &&
+            (recipients != 0 || deliveredAt != null || readAt != null)) ||
+        (deliveredAt != null && delivered == 0) ||
+        (readAt != null && read == 0) ||
+        (readAt != null && deliveredAt == null) ||
+        (readAt != null &&
+            deliveredAt != null &&
+            readAt.isBefore(deliveredAt))) {
+      throw const FormatException('回执摘要无效');
+    }
+    return ReceiptSummary._(
+      seq,
+      status,
+      available,
+      recipients,
+      delivered,
+      read,
+      deliveredAt,
+      readAt,
+    );
+  }
+}

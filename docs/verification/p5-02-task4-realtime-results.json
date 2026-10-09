@@ -1,0 +1,77 @@
+{
+  "schema_version": "p502_task4_realtime_local_v1",
+  "status": "in_progress",
+  "source_base_commit": "624761a4a55f6ff32c718eb4fdcf583925c30a2d",
+  "source_kind": "working_tree_shared_core_checkpoint",
+  "shared_tests": {
+    "actual_exit": 0,
+    "passed": 68,
+    "command": "flutter test --timeout 30s"
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0
+  },
+  "verified_behavior": [
+    "ticket only in same-origin WSS subprotocol",
+    "actual local TLS chain and WS upgrade; redirect destination receives no request",
+    "cancelled ticket cannot reconnect old scope",
+    "strict ready and sync_required notice frames",
+    "notification burst coalesces authorized page refresh",
+    "disconnected5s and connected30to40s fallback timers",
+    "503 bounded ticket reconnect and429RetryAfter not bypassed by polling",
+    "background stops old page/delivery/read authority",
+    "received-state reset fenced before new authorization; delayed old socket close cannot erase new rows",
+    "expired body sweep scheduled with nonce compare-and-delete",
+    "unread exact/lower-bound flag and visible receipt count DTOs",
+    "501 locally persisted authorized messages read in exact sorted500plus1 batches"
+  ],
+  "evidence_boundary": "real local TLS/SDK WebSocket/SQLite/isolate/timers; injected API transport and scheduler for scope/retry tests; not actual Go backend or installed four-platform application",
+  "task3_complete": false,
+  "task4_complete": false,
+  "native_four_platform_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "macos": {
+    "xcode_version": "27.0",
+    "xcode_build": "27A266a",
+    "version_probe_actual_exit": 0,
+    "actual_debug_build_exit": 69,
+    "blocker": "Apple SDK license not accepted",
+    "secure_storage_probe": "not_executed"
+  },
+  "remaining": [
+    "real Go API sender/Bob/two-device native protocol integration",
+    "UnreadState/summary HTTP and UI wiring",
+    "foreground cached history reauthorization and actual platform lifecycle adapters",
+    "native read RetryAfter/terminal-error handoff to session owner",
+    "actual OS secure-storage/platform build/install gates",
+    "iOS13 versus fixed SDK minimum15 requires user decision"
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/protocol/models.dart": "50228db5279bc16e4cf3bf29b3bfbc617e4cc7f509b025c8e348877958a49e79",
+    "clients/enterprise_im/lib/core/sync/realtime_channel.dart": "1e4f9bf5c0ab27645227bf0f75d4aaf2fe26bc0e2d455b54f8b589d0d39c7f24",
+    "clients/enterprise_im/lib/core/sync/sync_coordinator.dart": "de25c1993590d1642d17bc38a256ea39dd02402755cc4e15aceded4551934403",
+    "clients/enterprise_im/test/realtime_channel_test.dart": "ceaa9914fa5ed8c5fa6ed221ce40b2594b02b50c28516fbfea2299c12917e3ff",
+    "clients/enterprise_im/test/realtime_transport_test.dart": "626bd41203092f63ba20b9abe0d5bbbe14514771c5a7dc9c31eb748118d8b54d",
+    "clients/enterprise_im/test/sync_coordinator_test.dart": "e63eb6d5d3396c28d18ac1e390d66366e3815bb60b8bebc39db890c272dd8adf",
+    "clients/enterprise_im/test/receipt_query_models_test.dart": "d1c431100f9e7d100a453dc98fab8631b576dcd7d8a384389a3b090b7bc54ed7",
+    "clients/enterprise_im/test/receipt_queue_test.dart": "52ecb248e166861621e08a2ff3d8f1b9327841b469a9e55c8ac47570e3f2826b"
+  },
+  "log_sha256": {
+    "task-4-realtime-red.log": "299febf3871f5f71601d7d0c8480de4027f7296712716acdd4a1b0fc777e4c28",
+    "task-4-realtime-first.log": "c3e61e2d957c3b3c0b0f7f5d3d6c702e866e044173e1eae47a0c445d6df54535",
+    "task-4-realtime-tls-certificate-diagnostic.log": "6686b73659b1d6b12a68c0e495a6291f0fa677c16fb211d7d926f9540c137418",
+    "task-4-realtime-tls-ca.log": "f7dfdbf41282d4c1a8be90367ce54a1ee8d840f6fd25064018ac33f0b63d1236",
+    "task-4-coordinator-red.log": "60b789948eae488e9356684f1cb5af805477ea9831867df200eccda0f4df6788",
+    "task-4-coordinator-cleanup-red.log": "b30894e9edc7f83cc89b1e98be4366babaa2fe29adec0dceea41e0fc11ce3cda",
+    "task-4-realtime-coordinator-green.log": "fcbf401967535a2e1e1ed2a2a40cb3cebc183b34af037893a785b2e72322ccfe",
+    "task-4-query-dto-red.log": "9b42ce354231ae1a1d02c48ec9a78698c5871454627e23c615dcdd242f5f7096",
+    "task-4-query-batch-green.log": "a1952d1c804e4d59b8faa0b227e70bc50e2c8e5b80fa949d292ebe759af7d303",
+    "task-4-shared-realtime-final.log": "5aa31b5ea0738d7a7c7c90bf4ee2933442437aa6547a2b035bffd15b50acdfe3",
+    "task-4-realtime-final-shared.log": "126565a4c5106844b7ea7aa4542b8bcdf95b57a29da11f456966d0cb5a41837f",
+    "task-4-realtime-analysis-green.log": "e0bdc4794dfe1437c4b29b585241ecf5a4d870ab6c45d61a13f51f21fe40301a",
+    "task-2-macos-build-xcode27.log": "a2dd5c9d86c01c76858aad3c994907bed2a6c4eeac3606efb5c240ba5bc9f4a1",
+    "task-4-xcode-status.log": "694b44731d0b415c5b11d844151e466d7f5e200a95627efda377f232f1a6ab77"
+  }
+}
