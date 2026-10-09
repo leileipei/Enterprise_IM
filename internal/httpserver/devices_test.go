@@ -224,3 +224,37 @@ func TestDeviceHTTPWriteLimiterUsesVerifiedOwner(t *testing.T) {
 		t.Fatal("rate bypass")
 	}
 }
+
+func TestDeviceListTimesAreCanonicalUTC(t *testing.T) {
+	local := time.Date(2026, 10, 10, 9, 2, 3, 123456000, time.FixedZone("fixture +08", 8*3600))
+	seen, revoked := local.Add(time.Minute), local.Add(2*time.Minute)
+	s := deviceStub{list: func(policystore.DeviceOwner, string, int) (policystore.DevicePage, error) {
+		return policystore.DevicePage{Devices: []policystore.Device{
+			{ID: targetUserID, CreatedAt: local, ExpiresAt: local.Add(time.Hour), LastSeenAt: &seen, RevokedAt: &revoked},
+			{ID: actorID, CreatedAt: local, ExpiresAt: local.Add(time.Hour)},
+		}}, nil
+	}}
+	h, err := HandlerWithDevices(http.NotFoundHandler(), authFunc(verified), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, deviceRequest("GET", "/api/v1/devices", "", false))
+	var page struct {
+		Devices []map[string]any `json:"devices"`
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &page) != nil || len(page.Devices) != 2 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	for key, want := range map[string]time.Time{"created_at": local, "expires_at": local.Add(time.Hour), "last_seen_at": seen, "revoked_at": revoked} {
+		if page.Devices[0][key] != want.UTC().Format(time.RFC3339Nano) {
+			t.Fatalf("%s should preserve instant in UTC: %v", key, page.Devices[0][key])
+		}
+	}
+	if _, ok := page.Devices[1]["revoked_at"]; ok {
+		t.Fatal("absent revoke serialized")
+	}
+	if _, ok := page.Devices[1]["last_seen_at"]; ok {
+		t.Fatal("absent last seen serialized")
+	}
+}

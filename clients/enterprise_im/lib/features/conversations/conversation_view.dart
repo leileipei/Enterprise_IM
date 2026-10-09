@@ -411,7 +411,7 @@ final class ConversationView extends ChangeNotifier {
     if (!_active ||
         !activity.foreground ||
         !messages.any((m) => identical(m, message)) ||
-        message.attachment?['download_available'] != true)
+        message.attachment?['available'] != true)
       return Duration.zero;
     return _results[message.seq]?.contentAuthorizationRemaining ??
         Duration.zero;

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:enterprise_im/features/files/file_message_card.dart';
 import 'package:enterprise_im/core/protocol/api_client.dart';
 import 'package:enterprise_im/core/protocol/models.dart';
 import 'package:enterprise_im/features/files/file_download.dart';
@@ -9,6 +11,7 @@ import 'package:enterprise_im/platform/file_export.dart';
 import 'auth_test.dart' as oidc;
 import 'navigation_test.dart' as nav;
 import 'message_send_test.dart' as sending;
+import 'membership_admission_test.dart' as fixture;
 import 'file_transfer_test.dart' show fileID;
 
 MessageDTO message() => MessageDTO.fromJson({
@@ -23,7 +26,7 @@ MessageDTO message() => MessageDTO.fromJson({
   'attachment': {
     'file_id': fileID,
     'available': true,
-    'download_available': true,
+    'download_available': false,
     'original_filename': '说明.txt',
     'detected_media_type': 'text/plain',
     'actual_size_bytes': '3',
@@ -75,7 +78,141 @@ class ExportSink implements FileExporter {
   }
 }
 
+Map<String, Object?> capabilities({bool enabled = true}) => {
+  'upload_enabled': true,
+  'message_send_enabled': true,
+  'download_enabled': enabled,
+  'filename_search_enabled': true,
+};
+
 void main() {
+  for (final caps in [capabilities(enabled: false), <String, Object?>{}]) {
+    test(
+      'disabled or malformed assembly capability never requests contents $caps',
+      () async {
+        final root = await Directory.systemTemp.createTemp(
+          'im-file-download-test-',
+        );
+        addTearDown(() => root.delete(recursive: true));
+        var checked = 0;
+        final owner = await nav.owner((r, _) async {
+          expect(r.uri.path, '/api/v1/file-capabilities');
+          expect(r.headers['X-Acting-Membership-ID'], fixture.role);
+          expect(r.headers['X-IM-Device-ID'], isNotEmpty);
+          checked++;
+          return oidc.response(caps);
+        });
+        addTearDown(owner.logout);
+        final (roles, ctx) = await sending.admission(owner);
+        addTearDown(roles.close);
+        final wire = DownloadWire(
+          (c) async => response(Stream.value([97, 98, 99])),
+        );
+        final download = FileDownload(
+          roles,
+          wire: wire,
+          exporter: ExportSink(),
+          privateRoot: root,
+        );
+        addTearDown(download.close);
+        await expectLater(
+          download.downloadAuthorized(
+            ctx,
+            message(),
+            authorizationRemaining: () => const Duration(minutes: 5),
+          ),
+          throwsA(
+            isA<ApiFailure>().having(
+              (e) => e.code,
+              'capability denial',
+              caps.isEmpty ? 'invalid_response' : 'file_download_disabled',
+            ),
+          ),
+        );
+        expect(checked, 1);
+        expect(wire.downloads, 0);
+        expect(root.listSync(recursive: true), isEmpty);
+      },
+    );
+  }
+  test(
+    'export rechecks assembly capability after destination selection',
+    () async {
+      var enabled = true, checked = 0;
+      final owner = await nav.owner((r, _) async {
+        checked++;
+        return oidc.response(capabilities(enabled: enabled));
+      });
+      addTearDown(owner.logout);
+      final (roles, ctx) = await sending.admission(owner);
+      addTearDown(roles.close);
+      final wire = DownloadWire(
+        (c) async => response(Stream.value([97, 98, 99])),
+      );
+      final sink = ExportSink()
+        ..beforeCopy = () async {
+          enabled = false;
+        };
+      final download = FileDownload(roles, wire: wire, exporter: sink);
+      addTearDown(download.close);
+      final artifact = await download.downloadAuthorized(
+        ctx,
+        message(),
+        authorizationRemaining: () => const Duration(minutes: 5),
+      );
+      await expectLater(
+        download.exportPrivateFile(ctx, artifact),
+        throwsA(
+          isA<ApiFailure>().having(
+            (e) => e.code,
+            'fresh capability',
+            'file_download_disabled',
+          ),
+        ),
+      );
+      expect(checked, 2);
+      expect(wire.downloads, 1);
+      expect(sink.bytes, isEmpty);
+    },
+  );
+  testWidgets(
+    'visible leased file with advisory false flag offers a download request',
+    (tester) async {
+      final owner = await tester.runAsync(
+        () => nav.owner(
+          (r, _) async => oidc.response(capabilities(enabled: false)),
+        ),
+      );
+      addTearDown(() => tester.runAsync(owner!.logout));
+      final (roles, ctx) = (await tester.runAsync(
+        () => sending.admission(owner!),
+      ))!;
+      addTearDown(roles.close);
+      final wire = DownloadWire(
+        (c) async => response(Stream.value([97, 98, 99])),
+      );
+      final download = FileDownload(roles, wire: wire, exporter: ExportSink());
+      addTearDown(() => tester.runAsync(download.close));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: FileMessageCard(
+              message: message(),
+              context: ctx,
+              download: download,
+              authorizationRemaining: () => const Duration(minutes: 5),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('请求下载附件'), findsOneWidget);
+      await tester.tap(find.text('请求下载附件'));
+      await tester.pumpAndSettle();
+      expect(find.text('文件操作未完成或授权已失效，请刷新消息后重试。'), findsOneWidget);
+      expect(wire.downloads, 0);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
   test(
     'complete authorized download exports only a fresh stream and close removes private artifact',
     () async {
@@ -83,7 +220,9 @@ void main() {
         'im-file-download-test-',
       );
       addTearDown(() => root.delete(recursive: true));
-      final owner = await nav.owner((r, _) async => oidc.response({}));
+      final owner = await nav.owner(
+        (r, _) async => oidc.response(capabilities()),
+      );
       addTearDown(owner.logout);
       final (roles, ctx) = await sending.admission(owner);
       addTearDown(roles.close);
@@ -137,7 +276,9 @@ void main() {
           'im-file-download-test-',
         );
         addTearDown(() => root.delete(recursive: true));
-        final owner = await nav.owner((r, _) async => oidc.response({}));
+        final owner = await nav.owner(
+          (r, _) async => oidc.response(capabilities()),
+        );
         addTearDown(owner.logout);
         final (roles, ctx) = await sending.admission(owner);
         addTearDown(roles.close);
@@ -168,7 +309,9 @@ void main() {
       onCancel: () => cancelled = true,
     );
     addTearDown(stream.close);
-    final owner = await nav.owner((r, _) async => oidc.response({}));
+    final owner = await nav.owner(
+      (r, _) async => oidc.response(capabilities()),
+    );
     addTearDown(owner.logout);
     final (roles, ctx) = await sending.admission(owner);
     addTearDown(roles.close);
@@ -199,7 +342,9 @@ void main() {
     'logout ends an export still awaiting the destination chooser',
     () async {
       final entered = Completer<void>(), release = Completer<void>();
-      final owner = await nav.owner((r, _) async => oidc.response({}));
+      final owner = await nav.owner(
+        (r, _) async => oidc.response(capabilities()),
+      );
       addTearDown(owner.logout);
       final (roles, ctx) = await sending.admission(owner);
       addTearDown(roles.close);
@@ -240,7 +385,9 @@ void main() {
       'im-file-download-test-',
     );
     addTearDown(() => root.delete(recursive: true));
-    final owner = await nav.owner((r, _) async => oidc.response({}));
+    final owner = await nav.owner(
+      (r, _) async => oidc.response(capabilities()),
+    );
     addTearDown(owner.logout);
     final (roles, ctx) = await sending.admission(owner);
     addTearDown(roles.close);
@@ -272,7 +419,9 @@ void main() {
       'im-file-download-test-',
     );
     addTearDown(() => root.delete(recursive: true));
-    final owner = await nav.owner((r, _) async => oidc.response({}));
+    final owner = await nav.owner(
+      (r, _) async => oidc.response(capabilities()),
+    );
     addTearDown(owner.logout);
     final (roles, ctx) = await sending.admission(owner);
     addTearDown(roles.close);
@@ -308,7 +457,9 @@ void main() {
         'im-file-download-test-',
       );
       addTearDown(() => root.delete(recursive: true));
-      final owner = await nav.owner((r, _) async => oidc.response({}));
+      final owner = await nav.owner(
+        (r, _) async => oidc.response(capabilities()),
+      );
       addTearDown(owner.logout);
       final (roles, ctx) = await sending.admission(owner);
       addTearDown(roles.close);
@@ -350,7 +501,9 @@ void main() {
         await c.whenCancelled;
         throw const ApiFailure('cancelled');
       });
-      final owner = await nav.owner((r, _) async => oidc.response({}));
+      final owner = await nav.owner(
+        (r, _) async => oidc.response(capabilities()),
+      );
       addTearDown(owner.logout);
       final (roles, ctx) = await sending.admission(owner);
       addTearDown(roles.close);

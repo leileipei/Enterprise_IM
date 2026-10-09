@@ -35,7 +35,7 @@ final class FileStatus {
         expiry = wireTime(d['upload_expires_at']);
     if (size < BigInt.one ||
         size > BigInt.from(25 * 1024 * 1024) ||
-        version.value < BigInt.one ||
+        (version.value == BigInt.zero && state != 'allocated') ||
         !const [
           'allocated',
           'uploaded',

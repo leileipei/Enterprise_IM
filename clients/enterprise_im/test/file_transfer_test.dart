@@ -24,10 +24,10 @@ Map<String, Object?> status(String state) => {
   'declared_size_bytes': '3',
   'state': state,
   'state_version': state == 'allocated'
-      ? '1'
+      ? '0'
       : state == 'uploaded'
-      ? '2'
-      : '4',
+      ? '1'
+      : '3',
   'created_at': '2026-10-09T00:00:00Z',
   'upload_expires_at': '2027-10-09T00:10:00Z',
 };
@@ -68,6 +68,23 @@ class UploadWire implements FileWireTransport {
 }
 
 void main() {
+  test(
+    'a fresh server reservation starts at version zero, later states cannot',
+    () {
+      expect(
+        FileStatus.fromJson({
+          ...status('allocated'),
+          'state_version': '0',
+        }).version.toString(),
+        '0',
+      );
+      expect(
+        () =>
+            FileStatus.fromJson({...status('uploaded'), 'state_version': '0'}),
+        throwsFormatException,
+      );
+    },
+  );
   test(
     'cancelled local file read releases its original stream subscription',
     () async {

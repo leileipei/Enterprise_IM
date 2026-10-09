@@ -105,8 +105,7 @@ final class FileDownload {
     final card = message.attachment;
     if (message.redacted ||
         message.messageType != 'file' ||
-        card?['available'] != true ||
-        card?['download_available'] != true)
+        card?['available'] != true)
       throw const ApiFailure('file_not_available');
     final id = uuidField(card!, 'file_id'),
         name = stringField(card, 'original_filename', max: 255),
@@ -137,6 +136,28 @@ final class FileDownload {
     RandomAccessFile? output;
     bool keep = false;
     try {
+      // Assembly capability is advisory, never a grant for this file. The
+      // content GET below reauthorizes against current policy and device state.
+      final caps = await memberships.owner.auth.api.json(
+        'GET',
+        '/api/v1/file-capabilities',
+        bearer: ctx.session.accessToken,
+        actingMembershipId: ctx.actingMembershipId,
+        device: ctx.device,
+        cancellation: cancel,
+      );
+      _check(ctx, remaining, deadline: deadline);
+      cancel.check();
+      const keys = [
+        'upload_enabled',
+        'message_send_enabled',
+        'download_enabled',
+        'filename_search_enabled',
+      ];
+      if (caps.length != keys.length || keys.any((k) => caps[k] is! bool))
+        throw const ApiFailure('invalid_response');
+      if (caps['download_enabled'] != true)
+        throw const ApiFailure('file_download_disabled');
       final ns = await accountNamespace(
         ctx.session.origin,
         ctx.session.tenantId,

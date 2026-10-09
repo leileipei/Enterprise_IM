@@ -70,9 +70,7 @@ class _FileMessageCardState extends State<FileMessageCard> {
     final card = widget.message.attachment!,
         available = card['available'] == true;
     final allowed =
-        available &&
-        card['download_available'] == true &&
-        widget.authorizationRemaining() > Duration.zero;
+        available && widget.authorizationRemaining() > Duration.zero;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -89,7 +87,7 @@ class _FileMessageCardState extends State<FileMessageCard> {
             children: [
               TextButton(
                 onPressed: _busy ? null : () => _get(),
-                child: const Text('下载附件'),
+                child: const Text('请求下载附件'),
               ),
               TextButton(
                 onPressed: _busy ? null : () => _get(export: true),

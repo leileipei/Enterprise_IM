@@ -335,8 +335,15 @@ func serveDeviceList(w http.ResponseWriter, r *http.Request, owner policystore.D
 		HasMore    bool        `json:"has_more"`
 		NextCursor string      `json:"next_cursor,omitempty"`
 	}{Devices: make([]deviceDTO, 0, len(page.Devices)), HasMore: page.HasMore, NextCursor: page.NextCursor}
+	utc := func(value *time.Time) *time.Time {
+		if value == nil {
+			return nil
+		}
+		at := value.UTC()
+		return &at
+	}
 	for _, d := range page.Devices {
-		result.Devices = append(result.Devices, deviceDTO{ID: d.ID, RegistrationID: d.RegistrationID, Platform: d.Platform, Name: d.Name, Status: d.Status, CreatedAt: d.CreatedAt, ExpiresAt: d.ExpiresAt, RevokedAt: d.RevokedAt, LastSeenAt: d.LastSeenAt})
+		result.Devices = append(result.Devices, deviceDTO{ID: d.ID, RegistrationID: d.RegistrationID, Platform: d.Platform, Name: d.Name, Status: d.Status, CreatedAt: d.CreatedAt.UTC(), ExpiresAt: d.ExpiresAt.UTC(), RevokedAt: utc(d.RevokedAt), LastSeenAt: utc(d.LastSeenAt)})
 	}
 	writeAdminJSON(w, 200, result)
 }
