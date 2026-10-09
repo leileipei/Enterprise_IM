@@ -16,6 +16,7 @@ import (
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
+	"github.com/leileipei/Enterprise_IM/internal/nativeauth"
 	"golang.org/x/time/rate"
 )
 
@@ -160,6 +161,10 @@ type accessClaims struct {
 }
 
 func (a *Authenticator) Authenticate(ctx context.Context, raw string) (httpserver.VerifiedIdentity, error) {
+	return a.authenticateAccess(ctx, raw, "")
+}
+
+func (a *Authenticator) authenticateAccess(ctx context.Context, raw, requiredClient string) (httpserver.VerifiedIdentity, error) {
 	if a == nil || len(raw) == 0 || len(raw) > 8192 {
 		return httpserver.VerifiedIdentity{}, ErrInvalidToken
 	}
@@ -191,7 +196,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, raw string) (httpserve
 	if typ != "at+jwt" && typ != "application/at+jwt" {
 		return httpserver.VerifiedIdentity{}, ErrInvalidToken
 	}
-	if claims.Subject == "" || claims.IssuedAt == nil || claims.ID == "" || !a.clients[claims.ClientID] {
+	if claims.Subject == "" || claims.IssuedAt == nil || claims.ID == "" || !a.clients[claims.ClientID] || (requiredClient != "" && claims.ClientID != requiredClient) {
 		return httpserver.VerifiedIdentity{}, ErrInvalidToken
 	}
 	id, err := a.store.Lookup(ctx, a.config.Issuer, claims.Subject)
@@ -205,4 +210,62 @@ func (a *Authenticator) Authenticate(ctx context.Context, raw string) (httpserve
 	id.Issuer = a.config.Issuer
 	id.Subject = claims.Subject
 	return id, nil
+}
+
+type nativeIDClaims struct {
+	jwt.RegisteredClaims
+	Nonce           string `json:"nonce"`
+	AuthorizedParty string `json:"azp"`
+}
+
+// VerifyNativeTokens shares the configured JWKS provider, while keeping API
+// access and ID token types/audiences distinct. Existing Authenticate calls
+// retain their original API audience/client validation and local mapping.
+func (a *Authenticator) VerifyNativeTokens(ctx context.Context, accessRaw, idRaw, client, nonce string, requireID bool) (time.Time, error) {
+	if a == nil || !a.clients[client] || client == "" || (requireID && (idRaw == "" || nonce == "")) {
+		return time.Time{}, nativeauth.ErrInvalidGrant
+	}
+	var subject string
+	if idRaw != "" {
+		if len(idRaw) > 8192 {
+			return time.Time{}, nativeauth.ErrInvalidGrant
+		}
+		claims := &nativeIDClaims{}
+		keys := a.keyfunc(ctx)
+		token, e := jwt.ParseWithClaims(idRaw, claims, func(token *jwt.Token) (any, error) {
+			kid, ok := token.Header["kid"].(string)
+			if !ok || kid == "" {
+				return nil, ErrInvalidToken
+			}
+			return keys(token)
+		}, jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}), jwt.WithIssuer(a.config.Issuer), jwt.WithAudience(client), jwt.WithExpirationRequired(), jwt.WithIssuedAt())
+		if e != nil {
+			if a.jwksDegraded != nil && a.jwksDegraded.Load() && (errors.Is(e, jwkset.ErrKeyNotFound) || errors.Is(e, keyfunc.ErrKeyfunc) || errors.Is(e, context.DeadlineExceeded)) {
+				return time.Time{}, nativeauth.ErrUnavailable
+			}
+			return time.Time{}, nativeauth.ErrInvalidGrant
+		}
+		if token == nil || !token.Valid || claims.Subject == "" || claims.IssuedAt == nil {
+			return time.Time{}, nativeauth.ErrInvalidGrant
+		}
+		typ, ok := token.Header["typ"].(string)
+		if token.Header["typ"] != nil && (!ok || (typ != "JWT" && typ != "application/jwt")) {
+			return time.Time{}, nativeauth.ErrInvalidGrant
+		}
+		if (len(claims.Audience) > 1 && claims.AuthorizedParty != client) || (claims.AuthorizedParty != "" && claims.AuthorizedParty != client) || (requireID && claims.Nonce != nonce) {
+			return time.Time{}, nativeauth.ErrInvalidGrant
+		}
+		subject = claims.Subject
+	}
+	id, e := a.authenticateAccess(ctx, accessRaw, client)
+	if e != nil {
+		if errors.Is(e, httpserver.ErrAuthUnavailable) {
+			return time.Time{}, nativeauth.ErrUnavailable
+		}
+		return time.Time{}, nativeauth.ErrInvalidGrant
+	}
+	if subject != "" && subject != id.Subject {
+		return time.Time{}, nativeauth.ErrInvalidGrant
+	}
+	return id.ExpiresAt, nil
 }

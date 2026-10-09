@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/httpserver"
+	"github.com/leileipei/Enterprise_IM/internal/nativeauth"
 	"github.com/leileipei/Enterprise_IM/internal/objectstore"
 	"github.com/leileipei/Enterprise_IM/internal/oidcauth"
 	"github.com/leileipei/Enterprise_IM/internal/outbox"
@@ -91,6 +92,12 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 		logger.Error("invalid receipt configuration")
 		return errors.New("api startup unavailable")
 	}
+	nativeConfig, err := loadNativeRuntime(getenv, enabled, receiptConfig.Enabled, authConfig)
+	if err != nil {
+		logger.Error("invalid native authentication configuration")
+		return errors.New("api startup unavailable")
+	}
+	var nativeBroker *nativeauth.Broker
 	receiptService := policystore.Service{DB: pool, DeviceRegistrationsPerHour: receiptConfig.DeviceRegistrationsPerHour, ReceiptWriteRatePerSecond: receiptConfig.WriteRatePerSecond}
 	if receiptConfig.Enabled {
 		checkCtx, checkCancel := context.WithTimeout(ctx, 10*time.Second)
@@ -98,6 +105,15 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 		checkCancel()
 		if err != nil {
 			logger.Error("receipt runtime unavailable")
+			return errors.New("api startup unavailable")
+		}
+	}
+	if nativeConfig.Enabled {
+		checkCtx, checkCancel := context.WithTimeout(ctx, 10*time.Second)
+		err = receiptService.CheckNativeAuthRuntime(checkCtx)
+		checkCancel()
+		if err != nil {
+			logger.Error("native authentication runtime unavailable")
 			return errors.New("api startup unavailable")
 		}
 	}
@@ -110,6 +126,9 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 	readyChecks := []httpserver.Pinger{pool, apiPinger(fileRuntime.CheckHealth)}
 	if receiptConfig.Enabled {
 		readyChecks = append(readyChecks, apiPinger(receiptService.CheckReceiptRuntime))
+	}
+	if nativeConfig.Enabled {
+		readyChecks = append(readyChecks, apiPinger(receiptService.CheckNativeAuthRuntime))
 	}
 	webEnabled, webConfig, err := webConfigFromEnv(getenv, enabled, authConfig)
 	if err != nil {
@@ -137,6 +156,13 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 		if err != nil {
 			logger.Error("OIDC authentication unavailable")
 			return errors.New("api startup unavailable")
+		}
+		if nativeConfig.Enabled {
+			nativeBroker, err = nativeauth.NewBroker(nativeConfig.Config, authenticator.VerifyNativeTokens, nil, receiptService.AllowNativeOAuthRequest)
+			if err != nil {
+				logger.Error("native authentication broker unavailable")
+				return errors.New("api startup unavailable")
+			}
 		}
 		importAuthenticator = authenticator
 		handler, err = httpserver.HandlerWithAdmin(pool, authenticator, access.Service{DB: pool})
@@ -286,6 +312,15 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 	if err != nil {
 		logger.Error("controlled import API unavailable")
 		return errors.New("api startup unavailable")
+	}
+	if nativeConfig.Enabled {
+		handler, err = httpserver.HandlerWithNativeAuth(handler, nativeBroker)
+		if err != nil {
+			logger.Error("native authentication API unavailable")
+			return errors.New("api startup unavailable")
+		}
+	} else {
+		handler = httpserver.HandlerWithClosedNativeAuth(handler)
 	}
 	writeTimeout := 10 * time.Second
 	if importEnabled {

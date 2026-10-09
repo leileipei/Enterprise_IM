@@ -1,0 +1,71 @@
+{
+  "schema_version": "p502_task1_local_evidence_v1",
+  "status": "backend_local_checks_passed",
+  "parent_commit": "d14811da142677c15d5d77aba6a14d34b981ee40",
+  "source_kind": "working_tree_before_task1_commit",
+  "source_files": {
+    "cmd/im-api/main.go": "12a728646ec422efab829e3bdced4b1b88c1f054ee237d52262485c13f59dd96",
+    "cmd/im-api/native_runtime.go": "012b385ed250d3328ce9fd9c165ed2e1ebfd1de19afa782b7a559716127017b6",
+    "cmd/im-api/native_runtime_test.go": "f65b1c46121522c35d8aab6999ad02efe0a52b9896ed10fc54e0e37a2e49916f",
+    "db/migrations/000026_native_oauth_rate.down.sql": "e78b0398afc509e2c7e0ca8fc5f2b91555ff5ff1152ec7f1655d0d13cc4ca42f",
+    "db/migrations/000026_native_oauth_rate.up.sql": "87fe6aab2f21bfdf3d4232f98c6ad8fea7a8baee21d8dc041ecca12968e6efe3",
+    "internal/httpserver/native_auth.go": "1bc18365fdf3b51a376a11a91502394a43655c388aba2440a5a4c953c80e9e0a",
+    "internal/httpserver/native_auth_test.go": "7ef0afec2633295c5b5a96e03c9f624f2983c488864d531fe0316ebf1aa197cd",
+    "internal/nativeauth/config.go": "5cbb40296b797ffb3091e3e630504c53d3e3f5679a80ba3f25aac537f9c10149",
+    "internal/nativeauth/config_test.go": "bcbbb275df2a5cfe9acb5f47c8fc11fb976dfd74db45dd809100e09362d0ef1c",
+    "internal/nativeauth/exchange.go": "e74f977b25f6156514659ad81afda4e5bc2868dcb5709f645e6cc6ee72b35c81",
+    "internal/nativeauth/exchange_test.go": "69d3258f779f11fef36f4459a750457e6636bd066c404db3588af8e42aa22d27",
+    "internal/nativeauth/tokens.go": "2b3db31aba9694f6162c1e45a76a31a789af7e7803be4d4d14cc7df146a1dcbb",
+    "internal/oidcauth/auth.go": "ef14e3238cc9afcdc3f1c37361f40f4ea01d809c553dd932a733c87dd5da6b95",
+    "internal/oidcauth/native_tokens_test.go": "6ca9102e6fa6ae2a32804be4a9cddb7699e03386406cdab168c3fd2761603470",
+    "internal/policystore/native_oauth.go": "268ac62dd508d34d5d48c8aac83a254512cdc3a279cbd5ec6870db6bd4975596",
+    "internal/policystore/native_oauth_api_test.go": "5bfc3321d5c33d885530eba748086d6ddfb0dfd7c7c3ecc8bd7de96774026563",
+    "internal/policystore/native_oauth_test.go": "d8b36b0ee733b4ddbb4840cd008265b384b422d6345aac5164b43a6fc48a6cb0"
+  },
+  "local_database_checks": [
+    {
+      "label": "task-1-native-privilege-green",
+      "actual_exit": 0,
+      "postgres_actual_exit": 0,
+      "cleanup": {
+        "removed": true,
+        "failures": []
+      },
+      "report_sha256": "963b1a31ad69c18e480f325fe90de1a5bd456c8f69171238d6df5d8cbe132f09",
+      "log_sha256": "7152b44f05b81fd7e2d92660919ee4959685dcff2f5b5659d82d608f02b06051"
+    },
+    {
+      "label": "task-1-native-api-green-b",
+      "actual_exit": 0,
+      "postgres_actual_exit": 0,
+      "cleanup": {
+        "removed": true,
+        "failures": []
+      },
+      "report_sha256": "f50454c2f9f3229a9e96878fe44cacfb2070bc56efa5816f05ece32c9a2c6760",
+      "log_sha256": "eda334ed0363384331fe599d7819771aa880531560fcad9a5983e70c9ebe64d2"
+    }
+  ],
+  "related_package_race": {
+    "actual_exit": 0,
+    "packages": [
+      "internal/nativeauth",
+      "internal/oidcauth",
+      "internal/httpserver",
+      "cmd/im-api"
+    ],
+    "timeout": "10m",
+    "log_sha256": "8d72e6b77a0984c22f529926bdf4258cf873bbbd547ed53676a82b1719453dc9"
+  },
+  "api_children": {
+    "count": 3,
+    "actual_wait": true,
+    "expected_exit": "signal:killed",
+    "actual_exit": "signal:killed",
+    "registry_sha256": "2e616407a0da4cd3197dda63a35cae5b7d5ead825c0c5055efb304f579d1a59f"
+  },
+  "fixed_source_final_acceptance": "not_executed",
+  "native_four_platform_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed"
+}
