@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
@@ -68,13 +69,13 @@ func TestReceiptHTTPCanonicalInt64AndStrictBody(t *testing.T) {
 	}
 	base := "/api/v1/conversations/" + targetUserID
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, receiptRequest("POST", base+"/read", `{"seqs":["9007199254740993"]}`))
+	h.ServeHTTP(w, receiptRequest("PUT", base+"/read", `{"seqs":["9007199254740993"]}`))
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `"read_seq":"9007199254740993"`) || !strings.Contains(w.Body.String(), `"receipt_revision":"9007199254740993"`) {
 		t.Fatal(w.Code, w.Body.String())
 	}
 	for _, body := range []string{`{"seqs":[9007199254740993]}`, `{"seqs":["9223372036854775808"]}`, `{"seqs":["01"]}`, `{"seqs":["+1"]}`, `{"seqs":["0"]}`, `{"seqs":["1","1"]}`, `{"seqs":["2","1"]}`, `{"seqs":[null]}`, `{"seqs":null}`, `{"seqs":[]}`, `{"seqs":["1"],"seqs":["2"]}`, `{"Seqs":["1"]}`, `{"seqs":["1"],"user_id":"x"}`, `{"seqs":["1"]}{}`, strings.Repeat(" ", 65537) + `{"seqs":["1"]}`} {
 		w = httptest.NewRecorder()
-		h.ServeHTTP(w, receiptRequest("POST", base+"/read", body))
+		h.ServeHTTP(w, receiptRequest("PUT", base+"/read", body))
 		if w.Code != 400 {
 			t.Fatal("bad read accepted", body[:min(len(body), 80)], w.Code)
 		}
@@ -109,7 +110,7 @@ func TestReceiptHTTPErrorMappingAndClosedRoutes(t *testing.T) {
 			t.Fatal(e)
 		}
 		w := httptest.NewRecorder()
-		h.ServeHTTP(w, receiptRequest("POST", base+"/delivered", `{"sync_proof":"`+strings.Repeat("A", 43)+`"}`))
+		h.ServeHTTP(w, receiptRequest("PUT", base+"/delivered", `{"sync_proof":"`+strings.Repeat("A", 43)+`"}`))
 		if w.Code != tc.status || !strings.Contains(w.Body.String(), tc.code) || strings.Contains(w.Body.String(), "sensitive") {
 			t.Fatal(tc, w.Code, w.Body.String())
 		}
@@ -147,5 +148,53 @@ func TestReceiptHTTPSyncStringSequencesAndJWTCacheClamp(t *testing.T) {
 	h.ServeHTTP(w, receiptRequest("GET", "/api/v1/conversations/"+targetUserID+"/sync?after_seq=9007199254740993&limit=500", ""))
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `"seq":"9007199254740994"`) || !strings.Contains(w.Body.String(), `"cache_until":"`+expiry.Format(time.RFC3339Nano)+`"`) || strings.Contains(w.Body.String(), `"seq":900719`) {
 		t.Fatal(w.Code, w.Body.String())
+	}
+}
+
+func TestReceiptHTTPUsesApprovedPUTContract(t *testing.T) {
+	calls := 0
+	svc := receiptStub{read: func([]int64) (policystore.ReceiptState, error) { calls++; return policystore.ReceiptState{}, nil }, delivered: func(string) (policystore.ReceiptState, error) { calls++; return policystore.ReceiptState{}, nil }}
+	h, _ := HandlerWithReceipts(http.NotFoundHandler(), authFunc(verified), svc)
+	for _, action := range []string{"read", "delivered"} {
+		body := `{"seqs":["1"]}`
+		if action == "delivered" {
+			body = `{"sync_proof":"` + strings.Repeat("A", 43) + `"}`
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, receiptRequest("PUT", "/api/v1/conversations/"+targetUserID+"/"+action, body))
+		if w.Code != 200 {
+			t.Fatalf("approved PUT %s: %d", action, w.Code)
+		}
+		w = httptest.NewRecorder()
+		h.ServeHTTP(w, receiptRequest("POST", "/api/v1/conversations/"+targetUserID+"/"+action, body))
+		if w.Code != 405 || w.Header().Get("Allow") != "PUT" {
+			t.Fatal("wrong method accepted", w.Code)
+		}
+	}
+	if calls != 2 {
+		t.Fatal(calls)
+	}
+}
+
+func TestReceiptSyncProofAndExpiryAreDistinct(t *testing.T) {
+	now := time.Now().UTC()
+	token := strings.Repeat("A", 43)
+	data, err := deviceSyncDTO(policystore.DeviceSyncPage{SyncProof: token, ProofExpiresAt: now.Add(300 * time.Second), ServerTime: now, ContentLeases: map[int64]policystore.ContentLease{}}, now.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Proof  string `json:"sync_proof"`
+		Expiry string `json:"proof_expires_at"`
+	}
+	if err = json.Unmarshal(raw, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Proof != token || result.Expiry != now.Add(300*time.Second).Format(time.RFC3339Nano) {
+		t.Fatal("proof DTO aliased expiry", len(result.Proof), len(result.Expiry))
 	}
 }

@@ -85,7 +85,7 @@ func HandlerWithReceipts(base http.Handler, auth Authenticator, svc ReceiptServi
 		}
 		method := "GET"
 		if action == "delivered" || action == "read" {
-			method = "POST"
+			method = "PUT"
 		}
 		if r.Method != method {
 			w.Header().Set("Allow", method)
@@ -106,7 +106,7 @@ func HandlerWithReceipts(base http.Handler, auth Authenticator, svc ReceiptServi
 			return
 		}
 		cid := strings.ToLower(parts[0])
-		if method == "POST" {
+		if method == "PUT" {
 			if r.URL.RawQuery != "" || r.URL.ForceQuery {
 				writeAdminError(w, 400, "invalid_request")
 				return
@@ -345,10 +345,10 @@ func deviceSyncDTO(p policystore.DeviceSyncPage, jwtExpiry time.Time) (any, erro
 		if !validReceiptProof(p.SyncProof) || p.ProofExpiresAt.IsZero() {
 			return nil, errors.New("sync proof unavailable")
 		}
-		v := p.SyncProof
-		proof = &v
-		v = p.ProofExpiresAt.UTC().Format(time.RFC3339Nano)
-		expiry = &v
+		proofValue := p.SyncProof
+		proof = &proofValue
+		expiryValue := p.ProofExpiresAt.UTC().Format(time.RFC3339Nano)
+		expiry = &expiryValue
 	}
 	return struct {
 		ConversationID  string           `json:"conversation_id"`

@@ -198,3 +198,7 @@ main{position:relative;z-index:1;min-height:100vh}
 .file-search-card button { margin-right: 8px; }
 .file-save { padding: 0 24px; font-size: 13px; }
 .file-save:empty { display: none; }
+
+.receipt-state { display: block; color: #497169; font-size: 12px; margin-top: 5px; }
+.device-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #d9e2e7; }
+#receipt-unread { padding: 0 20px; }

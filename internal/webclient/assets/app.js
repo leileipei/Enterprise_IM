@@ -176,6 +176,119 @@ async function openFileSearchConversation(id,kind){
  if(kind==="direct")activateConversation(id);else activateGroupHistory(id);
  await syncMessages();
 }
+const devicesDialog=element("devices-dialog");
+let loginGeneration=0,receiptSync=null,receiptSyncController=null,receiptSyncAgain=false,receiptRefreshGeneration=0,receiptSessionEpoch=0,deviceListCursor="";
+const receiptLeaseTimers=new Set();
+function identityContext() {
+ return Object.freeze({accountKey:self && accessToken ? `${self.tenant_id}:${self.user_id}:${loginGeneration}` : "",identityKey:`${identityEpoch}:${actingMembership}`,membershipId:actingMembership,userID:self?.user_id,conversation:activeConversation,conversationEpoch,receiptEpoch:receiptSessionEpoch,kind:activeConversationKind,accessToken,tokenExpiresAt});
+}
+function isReceiptContext(context) {const c=identityContext();return c.accountKey===context.accountKey && c.identityKey===context.identityKey && c.conversation===context.conversation && c.conversationEpoch===context.conversationEpoch && c.receiptEpoch===context.receiptEpoch;}
+async function apiCall(path,options={},context=identityContext(),needsMembership=true) {
+ const detached=options.detached===true,headers=new Headers(options.headers || {});
+ if(!context.accessToken || Date.now()>=context.tokenExpiresAt)throw new Error("登录已过期，请重新登录");
+ headers.set("Authorization",`Bearer ${context.accessToken}`);if(needsMembership)headers.set("X-Acting-Membership-ID",context.membershipId);
+ const credential=deviceSession.credential(context);
+ if(path.startsWith("/api/v1/conversations/")){if(!credential)throw new Error("当前设备未登记");headers.set("X-IM-Device-ID",credential.id);headers.set("X-IM-Device-Token",credential.token);}
+ const {detached:_,...fetchOptions}=options;
+ const response=await fetch(path,{...fetchOptions,headers,cache:"no-store",credentials:"omit",redirect:"error"});
+ const check=()=>{if(!detached && (context.accountKey!==identityContext().accountKey || (needsMembership && context.identityKey!==identityContext().identityKey)))throw Object.assign(new Error("身份已变化"),{stale:true});};check();
+ if(!response.ok) {
+  let body={};try{body=await response.json();}catch(_){}check();
+  if(!detached && response.status===401){if(body.error_code==="invalid_device"){deviceSession.invalidate();receiptContextChanged();}else logout("登录已过期，请重新登录。");}
+  if(!detached && response.status===403 && body.error_code==="invalid_identity")selectMembership("");
+  const e=new Error(body.error_code==="device_quota" ? "设备数量已达上限，请打开“我的设备”手动撤销旧设备。" : body.error_code==="rate_limited" && path==="/api/v1/devices" ? "本小时设备登记次数已达上限，请稍后重试。" : response.status===429 ? "操作太频繁，请稍后重试。" : response.status===404 ? "当前消息不可用或无权限。" : "回执操作未完成，请稍后重试。");
+  e.status=response.status;e.code=body.error_code;if(body.error_code==="registration_exists")e.deviceID=body.device_id;throw e;
+ }
+ const body=response.status===204 ? null : await response.json();check();return body;
+}
+const deviceSession=new window.DeviceSession({apiCall,identityContext,uuidV7,enabled:()=>config?.receipts_enabled===true});
+function validateReceiptMessage(message) {
+ if(!message || (message.redacted!==undefined && typeof message.redacted!=="boolean"))throw new Error("消息格式无效");
+ fileMessages.render(message);
+ if(!message.redacted && (!Number.isFinite(Date.parse(message.content_expires_at)) || !Number.isFinite(Date.parse(message.cache_until))))throw new Error("消息有效期限无效");
+}
+function commitMessagePage(page,context) {
+ if(!isReceiptContext(context))throw Object.assign(new Error("消息上下文已变化"),{stale:true});
+ const fragment=document.createDocumentFragment(),staged=[];
+ for(const message of page.messages) {
+  const existing=[...messages.querySelectorAll("[data-receipt-seq]")].find(e=>e.dataset.receiptSeq===message.seq);
+  if(existing)continue;
+  const item=document.createElement("div");item.className="message"+(message.redacted?" redacted":"")+(message.sender_user_id===self.user_id?" mine":"");item.dataset.receiptSeq=message.seq;
+  const meta=document.createElement("span");meta.className="message-meta";meta.textContent=`#${message.seq} · ${new Date(message.server_time).toLocaleString("zh-CN")}`;
+  const bubble=document.createElement("div");bubble.className="message-bubble";bubble.append(fileMessages.render(message));item.append(meta,bubble);
+  if(!message.redacted && message.sender_user_id===self.user_id){const state=document.createElement("small");state.className="receipt-state";state.textContent="已保存";item.append(state);item.dataset.receiptOwn="true";}
+  staged.push({item,message});fragment.append(item);
+ }
+ messages.querySelector(".empty-state")?.remove();messages.append(fragment);messages.scrollTop=messages.scrollHeight;
+ for(const {item,message} of staged) {
+  if(!message.redacted && message.sender_user_id!==self.user_id)receipts.observe(item,message.seq,context);
+  if(!message.redacted) {
+   const duration=Math.max(0,Math.min(Date.parse(message.content_expires_at),Date.parse(message.cache_until))-Date.parse(page.server_time));
+   const timer=setTimeout(()=>{receiptLeaseTimers.delete(timer);if(!isReceiptContext(context))return;receipts.forget(item);item.classList.add("redacted");item.querySelector(".message-bubble").replaceChildren(document.createTextNode("消息缓存已到期，正在重新核对…"));item.querySelector(".receipt-state")?.remove();refreshReceiptHistory(context);},Math.min(Math.max(0,duration-(Date.now()-page.localRequestStarted)),2147483647));receiptLeaseTimers.add(timer);
+  }
+ }
+}
+function refreshReceiptHistory(context) {
+ if(!isReceiptContext(context))return;
+ // Purge cached content before requesting new authorization and content leases.
+ receiptContextChanged();messages.replaceChildren();syncMessages().catch(report);
+}
+const receipts=new window.Receipts({apiCall,identityContext,commitMessagePage,validateMessage:validateReceiptMessage,isConversationActive:context=>isReceiptContext(context)&&!!activeConversation&&!document.querySelector("dialog[open]"),showReceiptState:(_,context)=>{refreshReceiptState(context).catch(()=>{});}});
+function receiptContextChanged() {
+ receiptSessionEpoch++;receipts.contextChanged();receiptSyncController?.abort();receiptSyncController=null;receiptSync=null;receiptSyncAgain=false;receiptRefreshGeneration++;for(const timer of receiptLeaseTimers)clearTimeout(timer);receiptLeaseTimers.clear();element("receipt-unread").classList.add("hidden");
+}
+async function refreshReceiptState(context) {
+ if(!config?.receipts_enabled || !isReceiptContext(context) || !deviceSession.credential(context))return;
+ const generation=++receiptRefreshGeneration;
+ const own=[...messages.querySelectorAll('[data-receipt-own="true"]')];
+ for(let i=0;i<own.length;i+=100) {
+  const batch=own.slice(i,i+100).sort((a,b)=>window.Receipts.parseSeq(a.dataset.receiptSeq)<window.Receipts.parseSeq(b.dataset.receiptSeq)?-1:1);
+  const page=await apiCall(`/api/v1/conversations/${context.conversation}/receipts?seqs=${batch.map(e=>e.dataset.receiptSeq).join(",")}`,{},context);
+  if(!isReceiptContext(context) || generation!==receiptRefreshGeneration)return;
+  if(!Array.isArray(page.receipts))throw new Error("回执响应无效");
+  for(const state of page.receipts) {
+   window.Receipts.parseSeq(state.seq);const item=batch.find(e=>e.dataset.receiptSeq===state.seq);if(!item)throw new Error("回执消息不匹配");
+   const label=item.querySelector(".receipt-state");if(!label)continue;
+   if(context.kind==="group")label.textContent=state.summary_available && Number.isSafeInteger(state.visible_recipient_count) && Number.isSafeInteger(state.visible_read_count) ? `可见接收者已读 ${state.visible_read_count}/${state.visible_recipient_count}` : "群回执不可查询";
+   else label.textContent=state.status==="read"?"已读":state.status==="delivered"?"已送达":"已保存";
+  }
+ }
+ const unread=await apiCall(`/api/v1/conversations/${context.conversation}/unread`,{},context);
+ if(!isReceiptContext(context) || generation!==receiptRefreshGeneration)return;
+ if(!Number.isSafeInteger(unread.unread_count) || unread.unread_count<0 || unread.unread_count>10000)throw new Error("未读响应无效");const count=BigInt(unread.unread_count);if(typeof unread.exact!=="boolean")throw new Error("未读响应无效");
+ const label=element("receipt-unread");label.textContent=unread.exact?`未读 ${count} 条`:count>0n?`至少 ${count} 条未读`:"未读待核对";label.classList.remove("hidden");
+}
+async function syncReceiptMessages() {
+ if(!activeConversation || !actingMembership)return;
+ if(receiptSync){receiptSyncAgain=true;return receiptSync;}
+ const context=identityContext(),controller=new AbortController();receiptSyncController=controller;
+ const promise=(async()=>{
+  const capabilities=await apiCall("/api/v1/me/client-capabilities",{signal:controller.signal},context);if(!isReceiptContext(context))return;
+  if(capabilities.receipts_enabled!==true)throw new Error("设备回执暂不可用");
+  await deviceSession.ensure(context);if(!isReceiptContext(context))return;
+  do {receiptSyncAgain=false;let more=true;
+   while(more && isReceiptContext(context)) {
+    const started=Date.now();const page=await apiCall(`/api/v1/conversations/${context.conversation}/sync?after_seq=${receipts.afterSeq}&limit=100&message_format=typed_v1`,{signal:controller.signal},context);page.localRequestStarted=started;
+    if(!isReceiptContext(context))return;more=await receipts.acceptPage(page,context);
+   }
+  }while(receiptSyncAgain && isReceiptContext(context));
+  if(isReceiptContext(context)){clearSyncRetry();await refreshReceiptState(context);}
+ })();receiptSync=promise;
+ try{await promise;}catch(error){if(!error.stale && isReceiptContext(context)){if(error.code==="sync_context_changed" || error.code==="sync_gap" || error.status===410){receiptContextChanged();messages.replaceChildren();}scheduleSyncRetry(context.conversation,context.membershipId,identityEpoch,context.conversationEpoch);}throw error;}
+ finally{if(receiptSync===promise){receiptSync=null;receiptSyncController=null;}}
+}
+async function showDevices(more=false) {
+ const context=identityContext();if(!config?.receipts_enabled || !context.accountKey)return;
+ if(!more){deviceListCursor="";element("devices-list").replaceChildren();devicesDialog.showModal();}
+ try {
+  const page=await deviceSession.list(deviceListCursor);if(context.accountKey!==identityContext().accountKey)return;
+  for(const device of page.devices){const row=document.createElement("div");row.className="device-row";const name=document.createElement("span");name.textContent=`${device.name} · ${device.platform} · ${device.status==="active"?"有效":device.status==="revoked"?"已撤销":"已到期"} · ${new Date(device.expires_at).toLocaleString("zh-CN")}`;row.append(name);
+   if(device.status==="active"){const button=document.createElement("button");button.type="button";button.textContent="撤销";button.className="secondary-button";button.addEventListener("click",async()=>{button.disabled=true;try{const own=deviceSession.credential(identityContext())?.id===device.device_id;await deviceSession.revoke(device.device_id);if(context.accountKey!==identityContext().accountKey)return;if(own){receiptContextChanged();messages.replaceChildren();}await showDevices(false);if(activeConversation)syncMessages().catch(report);}catch(error){report(error);}finally{button.disabled=false;}});row.append(button);}element("devices-list").append(row);}
+  deviceListCursor=page.next_cursor || "";element("devices-more").classList.toggle("hidden",!page.has_more);
+ }catch(error){if(!error.stale && context.accountKey===identityContext().accountKey)element("devices-hint").textContent=error.message;}
+}
+element("devices-open").addEventListener("click",()=>showDevices());element("devices-more").addEventListener("click",()=>showDevices(true));element("devices-close").addEventListener("click",()=>devicesDialog.close());
+
 function canSendFileInContext() {
  if (!actingMembership || !activeConversation || pendingMessage || fileMessagePending) return false;
  if (activeConversationKind === "direct") return conversations.has(activeConversation);
@@ -207,7 +320,7 @@ async function refreshFileAccess(generation) {
   if(enableTyped && activeConversation){
    if(syncPromise) await syncPromise;
    if(controller.signal.aborted || generation !== fileAccessGeneration || !window.FileTransport.sameContext(origin,fileContext())) return;
-   afterSeq=0;messages.replaceChildren();await syncMessages();
+   receiptContextChanged();afterSeq=0;messages.replaceChildren();await syncMessages();
   }
  } catch (_) { if (generation === fileAccessGeneration) {fileEffectivePolicy=null;fileCapabilities=Object.freeze({upload_enabled:false,message_send_enabled:false,download_enabled:false,filename_search_enabled:false});} }
  finally {clearTimeout(timer);if(generation === fileAccessGeneration){fileAccessController=null;renderFileAccess();}}
@@ -409,6 +522,7 @@ async function finishLogin(callbackQuery) {
   });
   if (!response.ok) throw new Error("身份验证未完成，请联系管理员确认账号已绑定。");
   const data = await response.json();
+  loginGeneration++;
   accessToken = data.access_token;
   tokenExpiresAt = Date.now() + data.expires_in * 1000;
   self = await request("/api/v1/me", {}, false);
@@ -422,6 +536,7 @@ function showWorkspace() {
   element("account-number").textContent = self.global_employee_no;
   element("avatar").textContent = [...self.display_name].slice(0, 2).join("") || "IM";
   renderMemberships();
+  element("devices-open").classList.toggle("hidden", !config.receipts_enabled);
   if (!self.memberships.length) notify("账号当前没有有效任职，请联系管理员。");
   if (!pollingTimer) pollingTimer = setInterval(() => {
     const connected = realtimeSocket && realtimeSocket.readyState === WebSocket.OPEN;
@@ -438,6 +553,9 @@ function showWorkspace() {
 }
 
 function logout(message = "已退出当前页面。") {
+  deviceSession.dispose().catch(()=>{});
+  receiptContextChanged();
+  devicesDialog.close();
   closeGroupCreate(true);
   closeGroupInvite(true);
   closeGroupLeave(true);
@@ -463,6 +581,7 @@ function logout(message = "已退出当前页面。") {
   activeConversationKind = "";
   filesContextChanged();
   conversationEpoch++;
+  receiptContextChanged();
   afterSeq = 0;
   syncPromise = null;
   syncAgain = false;
@@ -516,6 +635,7 @@ function renderMemberships() {
 
 function selectMembership(id) {
   if (id === actingMembership) return;
+  deviceSession.cancelPending();
   closeGroupCreate(true);
   closeGroupInvite(true);
   closeGroupLeave(true);
@@ -529,6 +649,7 @@ function selectMembership(id) {
   filesContextChanged();
   identityEpoch++;
   actingMembership = id;
+  receiptContextChanged();
   nextSafetySyncAt = 0;
   nextGroupSyncAt = 0;
   realtimeUnsupported = false;
@@ -536,6 +657,7 @@ function selectMembership(id) {
   activeConversationKind = "";
   filesContextChanged();
   conversationEpoch++;
+  receiptContextChanged();
   afterSeq = 0;
   syncPromise = null;
   syncAgain = false;
@@ -562,6 +684,7 @@ function selectMembership(id) {
   renderPendingGroupRemovals();
   renderPendingGroupTransfers();
   if (id) {
+    if(config?.receipts_enabled)deviceSession.ensure(identityContext()).catch(report);
     scheduleSafetySync();
     refreshInbox().catch(report);
     refreshGroups().catch(report);
@@ -2219,6 +2342,7 @@ function activateConversation(id) {
   activeConversationKind = "direct";
   filesContextChanged();
   conversationEpoch++;
+  receiptContextChanged();
   afterSeq = 0;
   syncPromise = null;
   syncAgain = false;
@@ -2251,6 +2375,7 @@ function activateGroupHistory(id) {
   activeConversationKind = "group";
   filesContextChanged();
   conversationEpoch++;
+  receiptContextChanged();
   afterSeq = 0;
   syncPromise = null;
   syncAgain = false;
@@ -2303,6 +2428,7 @@ function appendMessage(message) {
   const empty = messages.querySelector(".empty-state");
   if (empty) empty.remove();
   const item = document.createElement("div");
+  item.dataset.receiptSeq = String(message.seq);
   item.className = "message" + (message.redacted ? " redacted" : "") +
     (message.sender_user_id === self.user_id ? " mine" : "");
   const meta = document.createElement("span");
@@ -2314,9 +2440,11 @@ function appendMessage(message) {
   item.append(meta, bubble);
   messages.append(item);
   messages.scrollTop = messages.scrollHeight;
+  return item;
 }
 
 async function syncMessages() {
+  if (config?.receipts_enabled) return syncReceiptMessages();
   if (!activeConversation || !actingMembership) return;
   if (syncPromise) {
     syncAgain = true;

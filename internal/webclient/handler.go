@@ -111,6 +111,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		filename, contentType = "assets/file-policy.js", "text/javascript; charset=utf-8"
 	case "/web/file-search.js":
 		filename, contentType = "assets/file-search.js", "text/javascript; charset=utf-8"
+	case "/web/device-session.js":
+		filename, contentType = "assets/device-session.js", "text/javascript; charset=utf-8"
+	case "/web/receipts.js":
+		filename, contentType = "assets/receipts.js", "text/javascript; charset=utf-8"
 	case "/web/app.js":
 		filename, contentType = "assets/app.js", "text/javascript; charset=utf-8"
 	case "/web/legal-holds.js":
