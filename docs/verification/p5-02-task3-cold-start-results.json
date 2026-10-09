@@ -1,0 +1,146 @@
+{
+  "status": "shared_cold_start_checkpoint_passed",
+  "source_base_commit": "3cd56b3bcad40c83c051bd8c10a59a4dfa680492",
+  "source_scope": "working-tree checkpoint bound by exact source hashes; not installed-native or immutable whole-branch acceptance",
+  "shared_suite": {
+    "passed": 104,
+    "failed": 0,
+    "actual_exit": 0,
+    "log": "task-3-startup-full-final.log"
+  },
+  "analysis": {
+    "issues": 0,
+    "actual_exit": 0,
+    "log": "task-3-startup-analysis-final.log"
+  },
+  "checks": [
+    "last origin/tenant/user stored only as OS-vault metadata",
+    "selector metadata does not contain tokens or database keys and cannot authorize DB",
+    "same physical provider coordinates selector save/removal; unrelated vaults do not block each other",
+    "cold-start refresh verifies current native config and exact me before DB admission and successful UI",
+    "selector write failure prevents authenticated client admission",
+    "cancel/logout before identity response removes selected account without opening DB",
+    "late selector write is removed after logout; stale account removal cannot delete a newer selection",
+    "failed logout retains account cleanup scope for retry",
+    "failed store factory is retried with a new future",
+    "modified service address cannot restore the previous service",
+    "fresh login and refresh revoke old successful UI before waiting for authorization"
+  ],
+  "behavior_red": [
+    {
+      "log": "task-3-startup-owner-red.log",
+      "actual_exit": 1,
+      "failures": 4
+    },
+    {
+      "log": "task-3-startup-ui-red.log",
+      "actual_exit": 1,
+      "failures": 4
+    },
+    {
+      "log": "task-3-logout-retry-red.log",
+      "actual_exit": 1,
+      "failures": 1
+    },
+    {
+      "log": "task-3-selector-scope-red.log",
+      "actual_exit": 1,
+      "failures": 1
+    },
+    {
+      "log": "task-3-startup-scope-final.log",
+      "actual_exit": 1,
+      "passed": 15,
+      "failure": "failed store factory retained old failed future"
+    },
+    {
+      "log": "task-3-reauth-ui-red.log",
+      "actual_exit": 1,
+      "failures": 2
+    }
+  ],
+  "interrupted_runs": [
+    {
+      "log": "task-3-startup-ui-retry.log",
+      "observed_exit": 0,
+      "accepted_as_pass": false,
+      "cause": "global selector tail crossed independent widget fixture zones; unrelated providers were also incorrectly blocked"
+    }
+  ],
+  "excluded_fixture_or_edit_errors": [
+    "first selector invocation used repo cwd and never ran test",
+    "scope narrowing compile errors and accidental erase reference in admit catch",
+    "first factory-only run failed compilation, not behavior; later15pass/1factoryfail is its true RED",
+    "first full suite99pass/3fail: old login fixtures did not await cold-start completion; original security assertions retained"
+  ],
+  "fixture_cleanup": {
+    "interrupted_runner_pid": 40934,
+    "interrupted_tester_pid": 40986,
+    "confirmed_absent": true,
+    "abandoned_directory_removed": true,
+    "remaining_cold_start_directories": 0,
+    "remaining_login_handoff_directories": 0,
+    "remaining_client_session_directories": 0
+  },
+  "selector_schema": {
+    "version": 1,
+    "fields": [
+      "version",
+      "origin",
+      "tenant_id",
+      "user_id"
+    ],
+    "records": 1,
+    "storage": "OS secure vault only"
+  },
+  "task2_complete": false,
+  "task3_complete": false,
+  "task4_complete": false,
+  "native_vault_acceptance": "not_executed",
+  "four_platform_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "remaining": [
+    "membership/device admission and product message UI",
+    "actual platform vault write/restart/read/delete",
+    "native lifecycle/visibility adapters",
+    "iOS minimum version decision and Apple SDK license readiness",
+    "immutable final native branch acceptance and whole-branch review"
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/auth/account_selector.dart": "c9c2e40fdff42ac55da9c959c0486d439c747d44d96c65d2f911f72a0937ecf5",
+    "clients/enterprise_im/lib/core/auth/client_session.dart": "7cbdab312417c69e9ea614276e5b48449849d96704727847949a67b32c14a2f5",
+    "clients/enterprise_im/lib/core/auth/session_store.dart": "109ff1bac6e484193b88c7be5320d17e5e8e2b69114b891d97ac06810e8b86b9",
+    "clients/enterprise_im/lib/core/storage/secure_vault.dart": "1490415ca8fa74606048d646e2c9eb84a431e4966c2eef12f54000acc698fd3a",
+    "clients/enterprise_im/lib/ui/login_page.dart": "c0d9d68c0b436360c290a5e9f816def383e74c65d6b0b53a5608eca79faed7f1",
+    "clients/enterprise_im/test/account_selector_test.dart": "859f766312019d84da509a01074a703750542d63c77ccff1a4cd54fc7a31d9e1",
+    "clients/enterprise_im/test/client_startup_test.dart": "d21bc27466b259330935d01f816c43b49feb18b5fd4f21dd27e76f49b29e21c2",
+    "clients/enterprise_im/test/login_startup_test.dart": "f0d4cda25ee0576261e363d99226aa4db208fa6ebcc527e9974e671fba78947d",
+    "clients/enterprise_im/test/client_session_test.dart": "a74742042c5a2c387318a6dadbf527bf4e8396a777a83fe7e474c1c85218dc84",
+    "clients/enterprise_im/test/login_page_test.dart": "e23cf0f75f28d33ed34f9620778f9267935c11595cae5b5f680571fb98ba3ecb",
+    "clients/enterprise_im/test/login_session_test.dart": "a19e7130fc1d77c858a6e5ade30f8d9a0f679f756bf2e7eeca8a9986103541fd",
+    "clients/enterprise_im/test/secure_vault_test.dart": "42fcaa8ba48caf4894a5ec18f58e6444fff4efcedd0038ab283e0bb88505f4d5"
+  },
+  "log_sha256": {
+    "task-3-selector-red.log": "0ca5215c0e0b1152008d37f2ee10f67fae9d794a5bbaff83df4c7fdc8dbc407b",
+    "task-3-selector-missing-red.log": "05dc21164ece80afbdbb1efa4daed3030ed150f04db92d403a0495810368c169",
+    "task-3-selector-green.log": "a9dab8e81f48c2a6b66d3b711f02f56d3ae1c39410f2dc6441226d64e9f3f44e",
+    "task-3-startup-owner-red.log": "08f7a024b4a63732ddf6ad08497d6d26baa748bf8c4b421cabcd1dfa56908522",
+    "task-3-startup-owner-green.log": "a35afc12bf6ffaed27fecd9e34ea1314bbaa8fc83e41b3e229ebd188750c1b5b",
+    "task-3-startup-ui-red.log": "3e5e6e04626b2f83107e69f5416a9823cdc944355732e179b5d030f4bc295e8b",
+    "task-3-logout-retry-red.log": "a5d84cd0a6be3f3df7da6e7fc23dd4321e56fe8116e80a45198b8becb10a7656",
+    "task-3-startup-ui-green.log": "840dfb6754a25333d3c6b3ed915657f8984797413ec597ac561d117322ec30ea",
+    "task-3-startup-ui-retry.log": "4e073053a6d5341f6fc7accb8dd1f9695b190c5dd1f4d8fb13f094e1caf9ddb2",
+    "task-3-selector-scope-red.log": "cda788a8a505258ef24183b08ee1ead90f345b3adb7d807a1eabe5a1b4858f3a",
+    "task-3-startup-scope-green.log": "89f6860c51d1132aa41fb2e74ce6f415c47867c0ba37230b2b2f91ece133ca71",
+    "task-3-startup-scope-retry.log": "5a4c2958bf7582f5f7475d451020ff6c582b68328e39f1e2ec22b589b243792a",
+    "task-3-startup-factory-red.log": "c7d3e246f10965386a981d2d34dc02ac2f01598078a8dd458d6b7a1211c51c21",
+    "task-3-startup-scope-final.log": "aede9d012a3d31a24648da35b2f6624b5b131d4441d72da946387e39987e9454",
+    "task-3-startup-targeted-final.log": "57126f4abf7292586dea62dab59af121bed81e8c380b963a9149fdc2ac3f20bb",
+    "task-3-startup-full-first.log": "54a484d7fdbae260a3e13c1fa6ed9094ad084877ea38662ea309022eef4c1ccf",
+    "task-3-startup-ui-all-final.log": "29378fddf134e1a2282c6bef52804c86447e8fe3dd23ab99511977bba44cdb8b",
+    "task-3-reauth-ui-red.log": "f060381c5bbd4f7e5d51d74397867cb9d2faf3a2da3c6a2f50b5ac5aa5e46e9b",
+    "task-3-startup-full-final.log": "90d7ed36f155042cf3d6ff1ce275af0674175eb33bd436228cfbaca3d4939bef",
+    "task-3-startup-analysis-final.log": "4adebedfbfd49dd40ee8c50fff9e02640c0c2d46c25322873e67c5fc48a83203"
+  }
+}

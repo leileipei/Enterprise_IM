@@ -4,6 +4,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../protocol/api_client.dart';
 import '../protocol/models.dart';
 
+// SHA256 of the fixed application metadata namespace, separate from accounts.
+const bootstrapNamespace =
+    '109e0b69ec3ffb148fc2c5f102135fdee842590a601d340c757e234794d03314';
+
 final class VaultFailure implements Exception {
   const VaultFailure();
   @override
@@ -40,7 +44,16 @@ abstract interface class SecureVault {
   Future<void> delete(String namespace, String key);
 }
 
-final class OsSecureVault implements SecureVault {
+// Adapters sharing a physical provider expose one process-local coordination
+// scope; independent providers remain independent even during failed writes.
+abstract interface class CoordinatedVault {
+  Object get coordinationScope;
+}
+
+final class OsSecureVault implements SecureVault, CoordinatedVault {
+  static final Object _scope = Object();
+  @override
+  Object get coordinationScope => _scope;
   final FlutterSecureStorage _storage;
   OsSecureVault({FlutterSecureStorage? storage})
     : _storage =
@@ -61,7 +74,8 @@ final class OsSecureVault implements SecureVault {
           );
   String _key(String namespace, String key) {
     if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(namespace) ||
-        !{'session', 'key', 'refresh', 'device'}.contains(key)) {
+        (!{'session', 'key', 'refresh', 'device'}.contains(key) &&
+            !(namespace == bootstrapNamespace && key == 'account'))) {
       throw const FormatException('安全存储账号或记录类型无效');
     }
     return 'enterprise-im-v1/$namespace/$key';

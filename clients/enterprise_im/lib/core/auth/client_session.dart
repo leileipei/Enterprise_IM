@@ -1,5 +1,6 @@
 import '../storage/encrypted_store.dart';
 import 'account_reference.dart';
+import 'account_selector.dart';
 import 'native_auth.dart';
 import 'session_store.dart';
 
@@ -18,10 +19,13 @@ final class ClientSession {
   final NativeAuth auth;
   final SessionStore sessions;
   final String platform;
+  final AccountSelector accounts;
+  AccountReference? _account;
   AuthenticatedClient? _current;
   int _epoch = 0;
   bool _busy = false;
-  ClientSession(this.auth, this.sessions, {required this.platform});
+  ClientSession(this.auth, this.sessions, {required this.platform})
+    : accounts = AccountSelector(sessions.vault);
   AuthenticatedClient? get current =>
       _current?.session.isExpired == false ? _current : null;
   void _check(int epoch) {
@@ -33,6 +37,8 @@ final class ClientSession {
     // Reject a different service before assigning any credential-cleanup scope.
     if (account.origin != auth.api.origin)
       throw const AuthFailure('reauthenticate');
+    if (_busy) throw const AuthFailure('login_in_progress');
+    _account = account;
     return _admit(() async {
       final refresh = await sessions.loadRefresh(account);
       if (refresh == null) throw const AuthFailure('reauthenticate');
@@ -62,6 +68,7 @@ final class ClientSession {
       _check(epoch);
       if (session.isExpired || !identical(auth.session, session))
         throw const AuthFailure('reauthenticate');
+      _account = AccountReference.fromSession(session);
       final store = await sessions.open(session);
       _check(epoch);
       // Preserve an existing device credential; fresh server verification is
@@ -71,6 +78,8 @@ final class ClientSession {
         refreshToken: auth.refreshCredential,
         device: sessions.device,
       );
+      _check(epoch);
+      await accounts.save(_account!);
       _check(epoch);
       if (session.isExpired) throw const AuthFailure('reauthenticate');
       return _current = AuthenticatedClient._(session, store);
@@ -97,11 +106,16 @@ final class ClientSession {
   Future<void> close() => _shutdown(false);
   Future<void> logout() => _shutdown(true);
   Future<void> _shutdown(bool erase) async {
-    _epoch++;
+    final epoch = ++_epoch;
     _busy = false;
     _current = null;
+    final account = _account;
     final stopped = auth.cancel();
-    final closed = erase ? sessions.logout() : sessions.close();
-    await Future.wait([stopped, closed]);
+    final closed = erase ? sessions.logout(account: account) : sessions.close();
+    final forgotten = erase && account != null
+        ? accounts.forget(account)
+        : Future<void>.value();
+    await Future.wait([stopped, closed, forgotten]);
+    if (erase && epoch == _epoch) _account = null;
   }
 }

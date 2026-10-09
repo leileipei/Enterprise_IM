@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'package:enterprise_im/core/auth/session_store.dart';
+import 'session_store_test.dart' show MemoryVault;
+import 'login_session_test.dart' show pumpUntil;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:enterprise_im/ui/login_page.dart';
@@ -12,6 +16,8 @@ void main() {
         MaterialApp(
           home: LoginPage(
             platform: 'macos',
+            storeFactory: () async =>
+                SessionStore(MemoryVault(), directory: Directory.systemTemp),
             callbackFactory: (platform, state) {
               callbacks++;
               return LoopbackLoginCallback(state);
@@ -21,6 +27,12 @@ void main() {
       );
       expect(find.text('登录集团工作空间'), findsOneWidget);
       expect(find.text('服务地址'), findsOneWidget);
+      await pumpUntil(
+        tester,
+        () =>
+            tester.widget<FilledButton>(find.byType(FilledButton)).onPressed !=
+            null,
+      );
       await tester.enterText(find.byType(TextField), 'http://im.example.test');
       await tester.tap(find.text('使用企业账号登录'));
       await tester.pump();
@@ -40,6 +52,8 @@ void main() {
         MaterialApp(
           home: LoginPage(
             platform: 'android',
+            storeFactory: () async =>
+                SessionStore(MemoryVault(), directory: Directory.systemTemp),
             platformReady: false,
             callbackFactory: (platform, state) => LoopbackLoginCallback(state),
           ),

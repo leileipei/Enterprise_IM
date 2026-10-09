@@ -58,7 +58,13 @@ void main() {
       final current = await restoring;
       expect(owner.current, same(current));
       expect(current.session.userId, bootstrap.user);
-      final bundle = jsonDecode(vault.values.values.single) as Map;
+      final bundle =
+          jsonDecode(
+                vault.values.entries
+                    .singleWhere((e) => e.key.endsWith('/session'))
+                    .value,
+              )
+              as Map;
       expect(bundle['refresh_token'], 'rotated-refresh');
       expect(vault.values.values.join(), isNot(contains('private-access')));
       await owner.logout();
@@ -172,7 +178,13 @@ void main() {
     'invalid saved refresh deletes only that credential without opening the database',
     () async {
       final (_, vault, store) = await fixture();
-      final previous = jsonDecode(vault.values.values.single) as Map;
+      final previous =
+          jsonDecode(
+                vault.values.entries
+                    .singleWhere((e) => e.key.endsWith('/session'))
+                    .value,
+              )
+              as Map;
       final native = bootstrap.authentication(
         oidc.FakeTransport((request, _) async {
           if (request.uri.path.endsWith('/config'))
@@ -189,7 +201,13 @@ void main() {
         owner.restore(bootstrap.account()),
         throwsA(isA<AuthFailure>()),
       );
-      final current = jsonDecode(vault.values.values.single) as Map;
+      final current =
+          jsonDecode(
+                vault.values.entries
+                    .singleWhere((e) => e.key.endsWith('/session'))
+                    .value,
+              )
+              as Map;
       expect(current['refresh_token'], isNull);
       expect(current['key'], previous['key']);
       expect(owner.current, isNull);

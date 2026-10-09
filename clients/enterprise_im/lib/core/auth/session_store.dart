@@ -195,8 +195,9 @@ final class SessionStore {
       _auth?.isExpired == false ? _bundle?.refresh : null;
   DeviceGrant? get device => _auth?.isExpired == false ? _bundle?.device : null;
   Future<void> close() => _finish(false);
-  Future<void> logout() => _finish(true);
-  Future<void> _finish(bool erase) {
+  Future<void> logout({AccountReference? account}) =>
+      _finish(true, account: account);
+  Future<void> _finish(bool erase, {AccountReference? account}) {
     _epoch++;
     _auth = null;
     // Mark the repository closed synchronously, before a queued vault write
@@ -211,7 +212,16 @@ final class SessionStore {
                 onError: (Object error, StackTrace stack) => [error, stack],
               );
     return _serial(() async {
-      final store = _store, ns = _namespace;
+      final store = _store;
+      // Logout may interrupt restoration before authenticated DB admission.
+      // Resolve the explicit selected account only for an unopened repository.
+      final ns = store == null && account != null
+          ? await accountNamespace(
+              account.origin,
+              account.tenantId,
+              account.userId,
+            )
+          : _namespace;
       try {
         if (store != null) {
           final failure = await closing;

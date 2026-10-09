@@ -69,6 +69,12 @@ void main() {
         await tester.runAsync(() => root.delete(recursive: true));
       });
       await tester.pumpWidget(MaterialApp(home: page(sessions)));
+      await pumpUntil(
+        tester,
+        () =>
+            tester.widget<FilledButton>(find.byType(FilledButton)).onPressed !=
+            null,
+      );
       await tester.enterText(find.byType(TextField), 'https://im.example');
       await tester.tap(find.text('使用企业账号登录'));
       await pumpUntil(tester, () => vault.entered!.isCompleted);
@@ -104,6 +110,12 @@ void main() {
         await tester.runAsync(() => root.delete(recursive: true));
       });
       await tester.pumpWidget(MaterialApp(home: page(sessions)));
+      await pumpUntil(
+        tester,
+        () =>
+            tester.widget<FilledButton>(find.byType(FilledButton)).onPressed !=
+            null,
+      );
       await tester.enterText(find.byType(TextField), 'https://im.example');
       await tester.runAsync(() async {
         await tester.tap(find.text('使用企业账号登录'));

@@ -1,3 +1,5 @@
+import 'package:enterprise_im/core/auth/account_selector.dart';
+import 'package:enterprise_im/core/auth/account_reference.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:enterprise_im/core/storage/secure_vault.dart';
@@ -78,6 +80,22 @@ void main() {
       await vault.delete(a, 'session');
       expect(await vault.read(a, 'session'), isNull);
       expect(await vault.read(b, 'session'), 'secret-b');
+      final account = AccountReference(
+        origin: Uri.parse('https://im.example'),
+        tenantId: '00000000-0000-4000-8000-000000000001',
+        userId: '00000000-0000-4000-8000-000000000002',
+      );
+      await AccountSelector(vault).save(account);
+      expect(
+        (await AccountSelector(OsSecureVault()).load())!.userId,
+        '00000000-0000-4000-8000-000000000002',
+      );
+      await expectLater(
+        vault.write(b, 'account', 'never'),
+        throwsFormatException,
+      );
+      await AccountSelector(vault).forget(account);
+      expect(stored.keys.toList(), ['enterprise-im-v1/$b/session']);
       for (final call in requests) {
         final args = call.arguments as Map;
         final options = args['options'] as Map;

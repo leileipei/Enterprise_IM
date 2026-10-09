@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../core/auth/client_session.dart';
 import '../core/auth/account_reference.dart';
+import '../core/auth/account_selector.dart';
 import '../core/auth/session_store.dart';
 import '../core/storage/secure_vault.dart';
 import 'package:flutter/material.dart';
@@ -40,11 +41,122 @@ class _LoginPageState extends State<LoginPage> {
   AccountReference? _account;
   bool _hasSavedRefresh = false;
   Timer? _expiry;
-  bool _busy = false;
+  bool _busy = false, _starting = false;
+  bool _startupReadFailed = false, _cleanupFailed = false;
+  Future<SessionStore>? _storeFuture;
+  SessionStore? _sessions;
   String? _notice;
   int _generation = 0;
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restoreSaved());
+  }
+
+  Future<SessionStore> _store() {
+    final existing = _storeFuture;
+    if (existing != null) return existing;
+    late Future<SessionStore> pending;
+    pending = (widget.storeFactory?.call() ?? _defaultStore())
+        .then((sessions) async {
+          if (!mounted) {
+            await sessions.close();
+            throw const AuthCancelled();
+          }
+          _sessions = sessions;
+          return sessions;
+        })
+        .catchError((Object error, StackTrace stack) {
+          if (identical(_storeFuture, pending)) _storeFuture = null;
+          Error.throwWithStackTrace(error, stack);
+        });
+    return _storeFuture = pending;
+  }
+
+  ClientSession _clientFor(Uri origin, SessionStore sessions) {
+    _api?.close();
+    final api =
+        widget.apiFactory?.call(origin) ??
+        ApiClient(origin, HttpApiTransport());
+    final auth = NativeAuth(
+      api,
+      callbackFactory: widget.callbackFactory,
+      browser: widget.browser ?? ExternalBrowserLauncher(),
+    );
+    _api = api;
+    _auth = auth;
+    return _client = ClientSession(auth, sessions, platform: widget.platform);
+  }
+
+  Future<void> _restoreSaved() async {
+    if (_busy) return;
+    final generation = ++_generation;
+    var reading = true;
+    setState(() {
+      _busy = true;
+      _starting = true;
+      _startupReadFailed = false;
+      _notice = null;
+    });
+    try {
+      final sessions = await _store();
+      if (!mounted || generation != _generation) return;
+      final account = await AccountSelector(sessions.vault).load();
+      if (!mounted || generation != _generation || account == null) return;
+      reading = false;
+      setState(() {
+        _address.text = account.origin.origin;
+        _account = account;
+        _hasSavedRefresh = true;
+      });
+      final admitted = await _clientFor(
+        account.origin,
+        sessions,
+      ).restore(account);
+      _showSession(admitted.session, generation);
+    } on VaultFailure {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = null;
+          _startupReadFailed = reading;
+          _notice = reading
+              ? '无法读取上次账号，请检查系统安全存储后重试。'
+              : '系统安全存储不可用，登录未完成。请检查系统配置后重试。';
+        });
+    } on AuthFailure catch (error) {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = null;
+          if (error.code == 'reauthenticate') _hasSavedRefresh = false;
+          _notice = _message(error.code);
+        });
+    } catch (_) {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = null;
+          _startupReadFailed = reading;
+          _notice = reading ? '无法读取上次账号，请检查系统安全存储后重试。' : '登录暂时不可用，请稍后重试。';
+        });
+    } finally {
+      if (mounted && generation == _generation)
+        setState(() {
+          _busy = false;
+          _starting = false;
+        });
+    }
+  }
+
+  bool get _restoreMatchesAddress {
+    try {
+      return _account?.origin ==
+          ApiClient.validateOrigin(Uri.parse(_address.text.trim()));
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _login() async {
-    if (_busy || !widget.platformReady) return;
+    if (_busy || _cleanupFailed || !widget.platformReady) return;
     final generation = ++_generation;
     setState(() {
       _busy = true;
@@ -52,29 +164,20 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       final origin = ApiClient.validateOrigin(Uri.parse(_address.text.trim()));
+      _expiry?.cancel();
+      setState(() {
+        _session = null;
+        _startupReadFailed = false;
+      });
       await _client?.logout();
       await _auth?.cancel();
       _account = null;
       _hasSavedRefresh = false;
       _api?.close();
       if (!mounted || generation != _generation) return;
-      final api =
-          widget.apiFactory?.call(origin) ??
-          ApiClient(origin, HttpApiTransport());
-      _api = api;
-      final auth = NativeAuth(
-        api,
-        callbackFactory: widget.callbackFactory,
-        browser: widget.browser ?? ExternalBrowserLauncher(),
-      );
-      _auth = auth;
-      final sessions = await (widget.storeFactory?.call() ?? _defaultStore());
-      if (!mounted || generation != _generation) {
-        await sessions.close();
-        return;
-      }
-      final client = ClientSession(auth, sessions, platform: widget.platform);
-      _client = client;
+      final sessions = await _store();
+      if (!mounted || generation != _generation) return;
+      final client = _clientFor(origin, sessions);
       final admitted = await client.signIn();
       _showSession(admitted.session, generation);
     } on VaultFailure {
@@ -126,10 +229,16 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _refresh() async {
     final auth = _auth, client = _client, account = _account;
-    if (_busy || auth == null || client == null || account == null) return;
+    if (_busy ||
+        !_restoreMatchesAddress ||
+        auth == null ||
+        client == null ||
+        account == null)
+      return;
     final generation = ++_generation;
     setState(() {
       _busy = true;
+      _session = null;
       _notice = null;
     });
     try {
@@ -161,18 +270,37 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _cancel() async {
-    _generation++;
+  Future<bool> _cancel() async {
+    final generation = ++_generation;
+    final client = _client, auth = _auth;
     _expiry?.cancel();
     setState(() {
-      _busy = false;
+      _busy = true;
+      _starting = false;
+      _cleanupFailed = false;
       _session = null;
-      _notice = '已取消登录。';
+      _notice = '正在退出登录…';
+      _hasSavedRefresh = false;
     });
-    _account = null;
-    _hasSavedRefresh = false;
-    await _client?.logout();
-    await _auth?.cancel();
+    try {
+      await client?.logout();
+      await auth?.cancel();
+      if (!mounted || generation != _generation) return false;
+      setState(() {
+        _account = null;
+        _notice = '已取消登录。';
+      });
+      return true;
+    } catch (_) {
+      if (mounted && generation == _generation)
+        setState(() {
+          _cleanupFailed = true;
+          _notice = '退出清理未完成，请重试。';
+        });
+      return false;
+    } finally {
+      if (mounted && generation == _generation) setState(() => _busy = false);
+    }
   }
 
   static Future<SessionStore> _defaultStore() async {
@@ -205,9 +333,11 @@ class _LoginPageState extends State<LoginPage> {
     _generation++;
     _expiry?.cancel();
     unawaited(
-      (_client?.close() ?? _auth?.cancel() ?? Future<void>.value()).catchError(
-        _reportClose,
-      ),
+      (_client?.close() ??
+              _sessions?.close() ??
+              _auth?.cancel() ??
+              Future<void>.value())
+          .catchError(_reportClose),
     );
     _api?.close();
     _address.dispose();
@@ -242,6 +372,7 @@ class _LoginPageState extends State<LoginPage> {
                 ],
                 TextField(
                   controller: _address,
+                  onChanged: (_) => setState(() {}),
                   enabled: !_busy,
                   keyboardType: TextInputType.url,
                   autocorrect: false,
@@ -263,21 +394,42 @@ class _LoginPageState extends State<LoginPage> {
                 ],
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: _busy || !widget.platformReady ? null : _login,
-                  child: Text(_busy ? '等待登录完成…' : '使用企业账号登录'),
+                  onPressed: _busy || _cleanupFailed || !widget.platformReady
+                      ? null
+                      : _login,
+                  child: Text(
+                    _starting
+                        ? '恢复上次登录…'
+                        : _busy
+                        ? '等待登录完成…'
+                        : '使用企业账号登录',
+                  ),
                 ),
                 if (_busy)
                   TextButton(onPressed: _cancel, child: const Text('取消登录')),
+                if (_startupReadFailed)
+                  TextButton(
+                    onPressed: _busy ? null : _restoreSaved,
+                    child: const Text('重试读取上次账号'),
+                  ),
+                if (_cleanupFailed)
+                  TextButton(
+                    onPressed: _busy ? null : _cancel,
+                    child: const Text('重试退出清理'),
+                  ),
                 if (_hasSavedRefresh && _account != null)
                   TextButton(
-                    onPressed: _busy ? null : _refresh,
+                    onPressed: _busy || !_restoreMatchesAddress
+                        ? null
+                        : _refresh,
                     child: const Text('恢复登录'),
                   ),
                 if (_session != null)
                   TextButton(
                     onPressed: () async {
-                      await _cancel();
-                      if (mounted) setState(() => _notice = '已退出登录。');
+                      final cleaned = await _cancel();
+                      if (cleaned && mounted)
+                        setState(() => _notice = '已退出登录。');
                     },
                     child: const Text('退出登录'),
                   ),
