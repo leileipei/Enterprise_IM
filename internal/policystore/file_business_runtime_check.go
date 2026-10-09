@@ -132,6 +132,13 @@ WHERE n.nspname=$1 AND r.relname=ANY($2::text[])`, schema, tables).Scan(&functio
 			return fail
 		}
 		if selected[parts[1]] && got[key] != expected {
+			// 000023 permits account-only device audit operations. Accept its
+			// precise validated guard without relaxing any other frozen contract.
+			if key == "column:audit_events:acting_membership_id" &&
+				got[key] == "uuid|false||" &&
+				got["constraint:audit_events:audit_events_device_owner_context"] == fileDeviceOwnerAuditContract {
+				continue
+			}
 			return fail
 		}
 	}
@@ -180,3 +187,7 @@ FROM pg_index i JOIN pg_class r ON r.oid=i.indrelid JOIN pg_namespace n ON n.oid
 JOIN pg_class ir ON ir.oid=i.indexrelid
 WHERE n.nspname=$1 AND r.relname=ANY($2::text[]) AND i.indisunique
 `
+
+// Catalog form of the reviewed 000023 CHECK; NOT VALID, deferrable, or a
+// wider action allowlist cannot satisfy the upgraded audit-column contract.
+const fileDeviceOwnerAuditContract = "c|true|false|false|CHECK (acting_membership_id IS NOT NULL OR (action = ANY (ARRAY['device_list'::text, 'device_revoke'::text])))"

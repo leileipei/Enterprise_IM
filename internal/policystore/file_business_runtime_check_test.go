@@ -135,3 +135,38 @@ func TestFileDownloadAuditRuntimeSchema(t *testing.T) {
 		t.Fatal("repair permission bypassed")
 	}
 }
+
+// Device owner operations have no acting membership; every legacy audit action
+// still requires one. Both the old NOT NULL baseline and this exact guard are valid.
+func TestFileRuntimeDeviceOwnerAuditCompatibility(t *testing.T) {
+	for _, tc := range []struct {
+		name, sql string
+		valid     bool
+	}{
+		{"devices_guard", "", true},
+		{"legacy_not_null", "ALTER TABLE audit_events ALTER COLUMN acting_membership_id SET NOT NULL; ALTER TABLE audit_events DROP CONSTRAINT audit_events_device_owner_context", true},
+		{"missing_guard", "ALTER TABLE audit_events DROP CONSTRAINT audit_events_device_owner_context", false},
+		{"wrong_guard", "ALTER TABLE audit_events DROP CONSTRAINT audit_events_device_owner_context; ALTER TABLE audit_events ADD CONSTRAINT audit_events_device_owner_context CHECK (true)", false},
+		{"wider_actions", "ALTER TABLE audit_events DROP CONSTRAINT audit_events_device_owner_context; ALTER TABLE audit_events ADD CONSTRAINT audit_events_device_owner_context CHECK (acting_membership_id IS NOT NULL OR action IN ('device_list','device_revoke','file_download'))", false},
+		{"unvalidated_guard", "ALTER TABLE audit_events DROP CONSTRAINT audit_events_device_owner_context; ALTER TABLE audit_events ADD CONSTRAINT audit_events_device_owner_context CHECK (acting_membership_id IS NOT NULL OR action IN ('device_list','device_revoke')) NOT VALID", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := businessSchemaDB(t)
+			if tc.sql != "" {
+				run(t, c, tc.sql)
+			}
+			var guard string
+			c.QueryRow(context.Background(), "SELECT pg_get_constraintdef(oid,true) FROM pg_constraint WHERE conrelid='audit_events'::regclass AND conname='audit_events_device_owner_context'").Scan(&guard)
+			t.Log("audit guard definition", guard)
+			svc := policystore.Service{DB: c}
+			for _, check := range []struct {
+				name string
+				fn   func(context.Context) error
+			}{{"business", svc.CheckFileBusinessRuntime}, {"repair", svc.CheckFileDownloadAuditRuntime}} {
+				if e := check.fn(context.Background()); (e == nil) != tc.valid {
+					t.Errorf("%s valid=%v: %v", check.name, tc.valid, e)
+				}
+			}
+		})
+	}
+}
