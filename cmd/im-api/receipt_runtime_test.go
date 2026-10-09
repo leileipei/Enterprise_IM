@@ -89,7 +89,7 @@ func TestReceiptRuntimeQueryAssembly(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	r := httptest.NewRequest("POST", "/api/v1/conversations/cccccccc-cccc-4ccc-8ccc-cccccccccccc/read", strings.NewReader(`{"seqs":["1"]}`))
+	r := httptest.NewRequest("PUT", "/api/v1/conversations/cccccccc-cccc-4ccc-8ccc-cccccccccccc/read", strings.NewReader(`{"seqs":["1"]}`))
 	r.Header.Set("Authorization", "Bearer verified")
 	r.Header.Set("X-Acting-Membership-ID", "dddddddd-dddd-4ddd-8ddd-dddddddddddd")
 	r.Header.Set("X-IM-Device-ID", "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee")
@@ -99,6 +99,14 @@ func TestReceiptRuntimeQueryAssembly(t *testing.T) {
 	h.ServeHTTP(w, r)
 	if w.Code != 200 || !called {
 		t.Fatal("receipt assembly missing", w.Code)
+	}
+	called = false
+	post := r.Clone(context.Background())
+	post.Method = http.MethodPost
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, post)
+	if w.Code != http.StatusMethodNotAllowed || w.Header().Get("Allow") != http.MethodPut || called {
+		t.Fatal("legacy POST opened assembled receipt route", w.Code)
 	}
 	h, e = assembleReceiptRoutes(fallback, nil, nil, ReceiptRuntimeConfig{})
 	if e != nil {
