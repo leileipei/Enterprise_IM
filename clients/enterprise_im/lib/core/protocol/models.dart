@@ -318,3 +318,29 @@ final class ConversationSummary {
     );
   }
 }
+
+final class ReceiptState {
+  final Seq scannedSeq, deliveredSeq, readSeq, receiptRevision;
+  final bool duplicate;
+  ReceiptState._(
+    this.scannedSeq,
+    this.deliveredSeq,
+    this.readSeq,
+    this.receiptRevision,
+    this.duplicate,
+  );
+  factory ReceiptState.fromJson(Map<String, Object?> value) {
+    final scanned = Seq.fromWire(value['scanned_seq']),
+        delivered = Seq.fromWire(value['delivered_seq']);
+    if (delivered.compareTo(scanned) > 0) throw const FormatException('送达游标无效');
+    // User read may be ahead of this device's scan. It never grants this
+    // device per-message delivery or read authority.
+    return ReceiptState._(
+      scanned,
+      delivered,
+      Seq.fromWire(value['read_seq']),
+      Seq.fromWire(value['receipt_revision']),
+      boolField(value, 'duplicate'),
+    );
+  }
+}

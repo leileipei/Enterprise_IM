@@ -12,12 +12,14 @@ final class StoreFailure implements Exception {
   String toString() => '加密本地存储不可用';
 }
 
-// This low-level repository is not wired into the product UI until typed page
-// transactions, account restore and lease authorization are implemented.
+// Shared storage core. Product UI and actual platform storage integration
+// are completed and verified independently in the later client tasks.
 final class EncryptedStore {
   final ReceivePort _responses;
   final SendPort _commands;
   final Isolate _worker;
+  final Future<void> _exited;
+  bool _failed = false;
   final int generation;
   final String _path;
   final Object _owner;
@@ -34,26 +36,36 @@ final class EncryptedStore {
     this._responses,
     this._commands,
     this._worker,
+    this._exited,
     this.generation,
     this._path,
     this._owner,
-  ) {
-    _responses.listen((raw) {
-      final message = raw as List<Object?>;
-      final pending = _waiting.remove(message[0]);
-      if (pending == null) return;
-      if (message[1] == true) {
-        pending.complete(message[2]);
-      } else {
-        pending.completeError(const StoreFailure());
-      }
-    });
+  );
+  void _onReply(List<Object?> message) {
+    final pending = _waiting.remove(message[0]);
+    if (pending == null) return;
+    if (message[1] == true) {
+      pending.complete(message[2]);
+    } else {
+      pending.completeError(const StoreFailure());
+    }
   }
+
+  void _onWorkerFailure() {
+    _failed = true;
+    invalidateReading();
+    for (final pending in _waiting.values) {
+      pending.completeError(const StoreFailure());
+    }
+    _waiting.clear();
+  }
+
   static Future<EncryptedStore> open(
     String namespace,
     List<int> key, {
     required Directory directory,
     required int generation,
+    Future<void> Function(List<Object?>) workerEntryPoint = storeWorkerMain,
   }) async {
     if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(namespace) ||
         key.length != 32 ||
@@ -67,11 +79,27 @@ final class EncryptedStore {
     _owners[path] = owner;
     final startup = ReceivePort();
     final responses = ReceivePort();
-    final errors = ReceivePort();
+    final exited = Completer<void>();
+    final failed = Completer<void>();
+    EncryptedStore? store;
+    responses.listen((raw) {
+      // Replies, fatal errors and actual exit share one ordered event port, so
+      // the worker's close acknowledgment cannot be overtaken by its exit.
+      if (raw is List<Object?> &&
+          raw.length == 3 &&
+          raw[0] is int &&
+          raw[1] is bool) {
+        store?._onReply(raw);
+      } else {
+        if (raw == null && !exited.isCompleted) exited.complete();
+        if (!failed.isCompleted) failed.complete();
+        store?._onWorkerFailure();
+      }
+    });
     Isolate? worker;
     try {
       worker = await Isolate.spawn(
-        storeWorkerMain,
+        workerEntryPoint,
         [
           startup.sendPort,
           responses.sendPort,
@@ -80,30 +108,42 @@ final class EncryptedStore {
           List<int>.from(key),
           generation,
         ],
-        onError: errors.sendPort,
+        onError: responses.sendPort,
+        onExit: responses.sendPort,
         errorsAreFatal: true,
       );
       final result = await Future.any<Object?>([
         startup.first,
-        errors.first,
+        failed.future.then((_) => null),
       ]).timeout(const Duration(seconds: 15));
-      if (result is! SendPort) throw const StoreFailure();
-      return EncryptedStore._(
+      if (result is! SendPort || failed.isCompleted) throw const StoreFailure();
+      store = EncryptedStore._(
         responses,
         result,
         worker,
+        exited.future,
         generation,
         path,
         owner,
       );
+      return store;
     } catch (_) {
-      worker?.kill(priority: Isolate.immediate);
+      if (worker != null) {
+        worker.kill(priority: Isolate.immediate);
+        // Never release the path for another worker before observing actual
+        // exit. A failed wait retains ownership and prevents unsafe reopening.
+        try {
+          await exited.future.timeout(const Duration(seconds: 15));
+        } catch (_) {
+          responses.close();
+          throw const StoreFailure();
+        }
+      }
       responses.close();
-      _activePaths.remove(path);
+      if (identical(_owners[path], owner)) _activePaths.remove(path);
       throw const StoreFailure();
     } finally {
       startup.close();
-      errors.close();
     }
   }
 
@@ -156,13 +196,13 @@ final class EncryptedStore {
     Object? payload, {
     bool closing = false,
   }) async {
-    if (_closed && !closing) throw const StoreFailure();
+    if (_failed || (_closed && !closing)) throw const StoreFailure();
     final id = ++_requestId;
     final reply = Completer<Object?>();
     _waiting[id] = reply;
     _commands.send([id, operation, payload, generation]);
     final result = await reply.future;
-    if (_closed && !closing) throw const StoreFailure();
+    if (_failed || (_closed && !closing)) throw const StoreFailure();
     return result;
   }
 
@@ -251,6 +291,42 @@ final class EncryptedStore {
     }
   }
 
+  Future<void> clearReceivedState() async {
+    invalidateReading();
+    await _request('clear_received', null);
+  }
+
+  Future<void> purgeUnauthorizedMessages() async {
+    final rows = await _request('message_candidates', null) as List<Object?>;
+    final deletes = <Map<String, Object?>>[];
+    for (final raw in rows) {
+      final row = Map<String, Object?>.from(raw! as Map);
+      final value = StoredMessage.fromJson(
+        Map<String, Object?>.from(row['value']! as Map),
+      );
+      final grant = _readingGrants['${value.conversationId}/${value.seq}'];
+      final valid =
+          value.generation == generation &&
+          grant != null &&
+          grant.serverTime == value.authorizationServerTime &&
+          grant.remainingFor(value.message.cacheUntil!) > Duration.zero &&
+          grant.remainingFor(value.message.contentExpiresAt!) > Duration.zero;
+      if (!valid)
+        deletes.add({'opaque_key': row['opaque_key'], 'nonce': row['nonce']});
+    }
+    // Compare the observed ciphertext nonce too: a concurrently committed new
+    // authorization of the same message must not be deleted by an old sweep.
+    await _request('purge_messages', deletes);
+  }
+
+  Future<void> acknowledgePage(String conversationId, Seq next) async {
+    uuidField({'id': conversationId}, 'id');
+    await _request('acknowledge_page', {
+      'conversation_id': conversationId,
+      'next_after_seq': next.toString(),
+    });
+  }
+
   Future<Seq?> committedCursor(String conversationId) async {
     try {
       uuidField({'id': conversationId}, 'id');
@@ -278,7 +354,9 @@ final class EncryptedStore {
   }
 
   Future<List<StoredMessage>> readAuthorizedMessages(LeaseClock clock) async {
-    if (!_readingGrants.values.any((value) => identical(value, clock)) ||
+    if (_failed ||
+        _closed ||
+        !_readingGrants.values.any((value) => identical(value, clock)) ||
         clock.remaining == Duration.zero)
       return [];
     try {
@@ -317,7 +395,13 @@ final class EncryptedStore {
     if (_closing != null) {
       if (!erase) return _closing!;
       return _erasing ??= () async {
-        await _closing;
+        try {
+          await _closing;
+        } catch (_) {
+          // An observed exit still permits logout cleanup after a reported
+          // checkpoint/close error. An unobserved exit never permits deletion.
+          await _exited.timeout(const Duration(seconds: 15));
+        }
         if (!identical(_owners[_path], _owner) || !_activePaths.add(_path))
           throw const StoreFailure();
         try {
@@ -333,17 +417,43 @@ final class EncryptedStore {
     invalidateReading();
     _closed = true;
     return _closing = () async {
+      Object? closeError;
       try {
-        await _request(erase ? 'erase' : 'close', null, closing: true);
+        if (!_failed)
+          await _request(erase ? 'erase' : 'close', null, closing: true);
+      } catch (error) {
+        if (!_failed) closeError = error;
+        _worker.kill(priority: Isolate.immediate);
+      }
+      try {
+        await _exited.timeout(const Duration(seconds: 15));
+      } catch (_) {
+        _worker.kill(priority: Isolate.immediate);
+        // If even forced exit is not observed, preserve path ownership and
+        // evidence. Do not delete files still possibly held by a live worker.
+        try {
+          await _exited.timeout(const Duration(seconds: 15));
+        } catch (_) {
+          throw const StoreFailure();
+        }
+      }
+      try {
+        if (erase) {
+          if (!identical(_owners[_path], _owner)) throw const StoreFailure();
+          for (final suffix in ['', '-wal', '-shm']) {
+            final file = File('$_path$suffix');
+            if (await file.exists()) await file.delete();
+          }
+        }
       } finally {
         _responses.close();
         for (final pending in _waiting.values) {
           pending.completeError(const StoreFailure());
         }
         _waiting.clear();
-        _worker.kill(priority: Isolate.immediate);
         if (identical(_owners[_path], _owner)) _activePaths.remove(_path);
       }
+      if (closeError != null) throw const StoreFailure();
     }();
   }
 }

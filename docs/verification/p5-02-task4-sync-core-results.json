@@ -1,0 +1,80 @@
+{
+  "schema_version": "p502_task4_sync_core_local_v1",
+  "status": "in_progress",
+  "source_base_commit": "69633b2befde2287557e82ea91a724d1280c5637",
+  "source_kind": "working_tree_shared_core_checkpoint",
+  "shared_tests": {
+    "actual_exit": 0,
+    "passed": 54,
+    "command": "flutter test --timeout 30s"
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0,
+    "same_source_alias": "/private/tmp/p502-client-analysis-c90359e"
+  },
+  "verified_behavior": [
+    "actual isolate exit observed before database owner release",
+    "failed close still permits later owner-checked logout erasure",
+    "validated whole page atomic commit before delivered",
+    "expired proof re-pull retains committed cursor",
+    "503 retains exact proof",
+    "identity and device headers bound to context",
+    "cancelled or stale response cannot acknowledge delivery",
+    "front/focus/active conversation/half-visible continuous500ms plus300ms batch",
+    "background modal and context changes cancel qualification",
+    "scalar user read cursor cannot forge this device read facts",
+    "device revocation clears received rows and scanning state",
+    "expired body row sweep preserves cursor and pending send records",
+    "concurrent polling coalesces",
+    "429 retry-after and bounded1to30s policy"
+  ],
+  "evidence_boundary": "real SQLite/FFI/isolate and real monotonic timers; injected API transport; no native real-backend or platform acceptance",
+  "task3_complete": false,
+  "task4_complete": false,
+  "native_four_platform_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "remaining": [
+    "RealtimeChannel ticket/WS and automatic poll/reconnect scheduler",
+    "UnreadState and additional receipt summary DTOs",
+    "real Go API sender/Bob/two-device native protocol integration",
+    "native500-item queue and Retry-After scheduling integration boundaries",
+    "UI/NativeAuth storage handoff and lifecycle adapters",
+    "actual OS secure-storage/platform build/install gates"
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/protocol/api_client.dart": "3bdeaff0262bc066c423dc27e321e5704d779e8659ae073c208678cc930d6756",
+    "clients/enterprise_im/lib/core/protocol/models.dart": "18981a1ba992d910a2ff8ba36edbc94ceb24b30dcf60162ad88b30e73c6c6f97",
+    "clients/enterprise_im/lib/core/storage/encrypted_store.dart": "887b60fc03041702e9ba83126475f0b205b9000e384be4ff902284b34bc04144",
+    "clients/enterprise_im/lib/core/storage/store_worker.dart": "e60da4f232e9c0c909596bb79fe37c239d36d9e5b5e49ca7a72f0404b10bc460",
+    "clients/enterprise_im/lib/core/sync/client_context.dart": "2f132d2222a7440a6bdd2e4e28d9b4f5363e213ef2335e3ad55802175df887ae",
+    "clients/enterprise_im/lib/core/sync/sync_engine.dart": "637098594a5fe32f75627cfe6160a433290c2cf75c5646906928822ad98ff88e",
+    "clients/enterprise_im/lib/core/sync/receipt_queue.dart": "46319074fa65d9727c400c028641bca0a51ee03249db7017cf6418f3079060d4",
+    "clients/enterprise_im/lib/core/sync/retry_policy.dart": "c07b56b8cef124ddc6fc66454f622783e027810b24a84d9eebcab9f64c42d7ae",
+    "clients/enterprise_im/lib/platform/app_activity.dart": "4cf8c9f05e8450df03979d2f7fb3a7b35ba94c6ef7523226180bd414288af23a",
+    "clients/enterprise_im/test/store_worker_exit_test.dart": "73ce6dcebf9ec3cd4c523ed2c825d47d3633ffe0bb187b75ebd08526d1b47dc5",
+    "clients/enterprise_im/test/sync_test.dart": "3b904ca2d148d44b29a9d2ca74d8d91f468b79b8956c809e30c861a6ddadce84",
+    "clients/enterprise_im/test/receipt_queue_test.dart": "9842a855110c2f47b889cf11c1ed885f4f776e9e3d18264783c871f16eea4c22",
+    "clients/enterprise_im/test/recovery_test.dart": "037e111b60c895bf6e73e25c2463abf79b19db4c230618c7d616666bd0cc5616",
+    "clients/enterprise_im/test/retry_policy_test.dart": "f3c48d1ba4bd925c71e17129d9bee71660836d9ae63a8db0dc7d02c210d8ff03"
+  },
+  "log_sha256": {
+    "task-3-worker-api-red.log": "24a2d0af3f1da968ac586bfbe377898951cb2b52a0112a7909f77edf91b37744",
+    "task-3-worker-behavior-red.log": "ae9f53367724e0a00dcaf1b7e050d753fcdb7631a524d1f30a6c0dc6d1e9a70e",
+    "task-3-close-error-red.log": "5950c200dc48541516c4f0303712ab98983c5ec96d170f6a5387e24323ef86e3",
+    "task-4-sync-red.log": "567dc51c3dc3a1e7e8706e2c23293ab4df7af219da553c30a1a2e952ebaa32f4",
+    "task-4-sync-green.log": "ed5283924fa223aaa208e0b07f559b8011d6dfeee1156b4282993ad2e039353e",
+    "task-4-read-red.log": "3253d38a5e314162ed9a7d4b1dd5ec07e38509af936d8c609582b565267722c5",
+    "task-4-read-green.log": "06e2f0dde46b7a1fde04ac8e7fe0ab398920d96aa6c93ddd8e7638dec40d37ba",
+    "task-4-read-green-b.log": "fc9778bb39cbf8f7bd028968ab1d9afd50d2dbc7f84cc985ba37d7c801455cfd",
+    "task-4-read-green-c.log": "785e483b11ce7300be00da1e43669c083616fd09c8c1ff177938aef456cc66e9",
+    "task-4-recovery-red.log": "a3002ba2fe14b1f64314b256d00bb06c75e19614627694786c27fb1011f38ce3",
+    "task-4-recovery-behavior-red.log": "d577ce296f10a5dfeee001a799103b37dcddf1780977a59b6037edb03d182bac",
+    "task-4-core-all-green.log": "9fc6c4619a3ce4fdfce44bc8359e6ab295b2e953dfba8f2c6a808a437482a44e",
+    "task-4-retry-red.log": "daab41ab5c735d30ffb4f53ddda00576c8797a4209d8273c8309940f053b2009",
+    "task-4-core-final-boundary-test.log": "83de63424f3a873b8e8aa91d7cc694bbb1e61e30dfbb875f22e2c78ce75d87e6",
+    "task-4-final-tests.log": "3efec95207c2388b35308b78dba278b03fb0997a6e4b2a87f3864a3fa396bf0e",
+    "task-4-final-analysis.log": "2b8ad4b5e9d9e2eb1a8423ce9536b65743752047d5fdf282e7edbabb84c5ce81"
+  }
+}

@@ -212,6 +212,61 @@ Future<void> storeWorkerMain(List<Object?> args) async {
             db.execute('ROLLBACK');
             rethrow;
           }
+        } else if (operation == 'clear_received') {
+          db.execute(
+            "DELETE FROM records WHERE kind IN ('message','cursor','receipt')",
+          );
+        } else if (operation == 'message_candidates') {
+          final rows = <Map<String, Object?>>[];
+          for (final row in db.select(
+            "SELECT * FROM records WHERE kind='message'",
+          )) {
+            rows.add({
+              'value': await decrypt(row),
+              'opaque_key': row['opaque_key'],
+              'nonce': row['nonce'],
+            });
+          }
+          result = rows;
+        } else if (operation == 'purge_messages') {
+          db.execute('BEGIN IMMEDIATE');
+          try {
+            for (final raw in request[2]! as List) {
+              final row = Map<String, Object?>.from(raw as Map);
+              db.execute(
+                "DELETE FROM records WHERE kind='message' AND opaque_key=? AND nonce=?",
+                [row['opaque_key'], row['nonce']],
+              );
+            }
+            db.execute('COMMIT');
+          } catch (_) {
+            db.execute('ROLLBACK');
+            rethrow;
+          }
+        } else if (operation == 'acknowledge_page') {
+          final payload = Map<String, Object?>.from(request[2]! as Map);
+          final conversation = payload['conversation_id']! as String;
+          final next = Seq.fromWire(payload['next_after_seq']);
+          final deletes = <String>[];
+          for (final row in db.select(
+            "SELECT * FROM records WHERE kind='receipt'",
+          )) {
+            final receipt = await decrypt(row);
+            if (receipt['conversation_id'] == conversation &&
+                Seq.fromWire(receipt['next_after_seq']).compareTo(next) <= 0) {
+              deletes.add(row['opaque_key'] as String);
+            }
+          }
+          db.execute('BEGIN IMMEDIATE');
+          try {
+            for (final recordKey in deletes) {
+              db.execute('DELETE FROM records WHERE opaque_key=?', [recordKey]);
+            }
+            db.execute('COMMIT');
+          } catch (_) {
+            db.execute('ROLLBACK');
+            rethrow;
+          }
         } else if (operation == 'cursor') {
           final recordKey = await opaque('cursor', request[2]! as String);
           final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [

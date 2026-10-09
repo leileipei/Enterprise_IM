@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'api_error.dart';
+import 'models.dart';
 export 'api_error.dart';
 
 final class Cancellation {
@@ -118,6 +119,8 @@ final class ApiClient {
     String path, {
     Map<String, Object?>? body,
     String? bearer,
+    String? actingMembershipId,
+    DeviceGrant? device,
     Cancellation? cancellation,
     Duration timeout = const Duration(seconds: 15),
   }) async {
@@ -145,6 +148,17 @@ final class ApiClient {
           RegExp(r'[\x00-\x20\x7f]').hasMatch(bearer))
         throw const FormatException('认证凭据无效');
       headers['Authorization'] = 'Bearer $bearer';
+    }
+    if (actingMembershipId != null) {
+      uuidField({'id': actingMembershipId}, 'id');
+      headers['X-Acting-Membership-ID'] = actingMembershipId;
+    }
+    if (device != null) {
+      uuidField({'id': device.deviceId}, 'id');
+      if (!proofValid(device.deviceToken))
+        throw const FormatException('设备凭据无效');
+      headers['X-IM-Device-ID'] = device.deviceId;
+      headers['X-IM-Device-Token'] = device.deviceToken;
     }
     try {
       final response =
