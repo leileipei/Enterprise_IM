@@ -1,0 +1,93 @@
+{
+  "source_base_commit": "a0380fb10f2565285c704aa9798f41d608bb9b5a",
+  "source_scope": "working-tree checkpoint; source files hashed below; not final immutable-branch acceptance",
+  "status": "targeted_protocol_passed",
+  "task3_complete": false,
+  "task4_complete": false,
+  "shared_suite": {
+    "passed": 70,
+    "actual_exit": 0
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0
+  },
+  "real_backend_protocol": {
+    "actual_go_test_exit": 0,
+    "actual_supervisor_exit": 0,
+    "ordinary_skip": false,
+    "postgres": "owned local PostgreSQL16; local sslmode=disable, no database TLS acceptance claim",
+    "redis": "owned local Redis7 with password",
+    "api": "real im-api + im-outbox-worker + im-receipt-worker",
+    "dart": "fixed3.13.3 shared production core, real SQLite isolates and HTTPS/WSS private CA with serverAuth leaf",
+    "authentication": "signed OIDC fixture bearer; NativeAuth interactive/handoff/refresh not covered",
+    "messages": 3,
+    "bob_devices": 2,
+    "device_delivery_facts": 6,
+    "device_read_facts": 3,
+    "user_read_facts": 2,
+    "read_cursor": "2",
+    "remaining_unread": 1,
+    "checks": [
+      "actual TLS validation",
+      "actual ticket WebSocket ready and sync_required",
+      "durable full sync then own-device delivery",
+      "subthreshold visibility cannot read",
+      "background cannot read",
+      "second device without own delivery rejected404",
+      "user read merges across devices",
+      "two devices reading one message count one recipient",
+      "idempotent read"
+    ],
+    "child_lifecycle": {
+      "registered": 4,
+      "ready": 4,
+      "matching_actual_exits": 4
+    },
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    },
+    "private_root_removed": true
+  },
+  "four_platform_build_acceptance": "not_executed",
+  "installed_ui_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "remaining": [
+    "actual platform secure vault probe",
+    "iOS13 vs fixed SDK minimum15 decision",
+    "Xcode license gate",
+    "zero-cache foreground authorization renewal",
+    "NativeAuth/store/UI handoff",
+    "native lifecycle and visibility adapters",
+    "immutable whole-branch native acceptance and final review"
+  ],
+  "initial_failures": [
+    {
+      "attempt": "first",
+      "actual_exit": 1,
+      "reason": "test used unnamed Seq constructor; compiler error, not product failure"
+    },
+    {
+      "attempt": "second",
+      "actual_exit": 1,
+      "reason": "probe assumed new string seq for legacy send ACK; corrected to existing MessageACK parser"
+    }
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/tool/receipt_backend_probe.dart": "baf9251604254741c95bf020e960185e0bfa4980612ed3240fd929eb3c1bef97",
+    "internal/policystore/native_receipt_probe_test.go": "eb08e4c1aa14e9c9586bcc23462994114d21f5650e41ffd9a6efd0409d428182",
+    "clients/enterprise_im/pubspec.lock": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669"
+  },
+  "log_sha256": {
+    "task-4-real-go-first.log": "a90bf04df268d2d892a2ddeac7b87423e84d1311474702217eff3fb8d6b7ed93",
+    "task-4-real-go-second.log": "410dabe268bad5c17da7d706b66b97b35839ec1a882eab8d95c0f1e0a2a43d59",
+    "task-4-real-go-third.log": "4bb034de0ae3e7a12dd2893c2c0f43859f65ebe7975a8cd7f11b99ad8e112ec1",
+    "task-4-real-go-final.log": "4b94d613cb3ff5ca484d1b412859ba222bb0c570d50ec834ccca8df10a66c2c1",
+    "task-4-real-go-final.registry.jsonl": "be252313e5badc5ac364b4c7c7b9a570fd9138be9e72f92271eaa610660d58b7",
+    "task-4-protocol-shared-final.log": "d7a7df26c60be62e9376150057c8cee4f04d673f2582b94c62b874d0f4adf081",
+    "task-4-protocol-analysis-final.log": "2ffea254cc67ad63fc2627d62a2c73f5ed7b7ffa18b4f9da056b484e639d046c",
+    "run_protocol.py": "e8e599c3d3c0f39502e69ab69b8e1c04fe510686236aaf7e72120e763578d13c"
+  }
+}
