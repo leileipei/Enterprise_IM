@@ -1,0 +1,62 @@
+{
+  "schema_version": "p502_task2_shared_checkpoint_v1",
+  "status": "in_progress",
+  "base_commit": "beb161e2bf4f39bf59dbf3f4c3990a96fa5ea1a0",
+  "source_kind": "working_tree_checkpoint",
+  "shared_tests": {
+    "actual_exit": 0,
+    "passed": 11
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0,
+    "source_alias": "/private/tmp/p502-client-analysis-c90359e",
+    "same_source_alias": true
+  },
+  "toolchain_contract_tests": {
+    "actual_exit": 0,
+    "passed": 4
+  },
+  "toolchain_verifier_actual_exit": 0,
+  "macos_build": {
+    "actual_exit": 69,
+    "status": "blocked_xcode_license_not_accepted"
+  },
+  "ios_runner": "awaiting_required_baseline_decision_13_vs_15",
+  "native_plugin_write_read_delete": "not_executed",
+  "platform_acceptance": {
+    "windows": "not_executed",
+    "macos": "not_executed",
+    "android": "not_executed",
+    "ios": "not_executed"
+  },
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "log_sha256": {
+    "task-2-wire-budget-final.log": "a8f431caaefa2434515401886d76c514eea3ea27174d68a15d4e1ca02945182a",
+    "task-2-analysis-final.log": "f10f99934b950d356b149412f5252327173e7c49daa84aa1ed69a072aa7628c2",
+    "task-2-pins-final.log": "23c0e7623c20aeb36bf7502cb1fe31a70e8376c85490c96f12e39c0d087886b4",
+    "task-2-toolchain-final.log": "64c99a90dd3a4ca0552bedb4a7968a8ad6589f66d0e374ddb8948e08bf460cd8",
+    "task-2-macos-build.log": "a2dd5c9d86c01c76858aad3c994907bed2a6c4eeac3606efb5c240ba5bc9f4a1"
+  },
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/auth/auth_session.dart": "41e484fedf6be971d2576d9b0282c633b02e6ed5c7db0a577f57439c407791c4",
+    "clients/enterprise_im/lib/core/auth/native_auth.dart": "03ce622cdb4d842be695b3e776786fdfad78d5e3332ee1d1d09a049d35792409",
+    "clients/enterprise_im/lib/core/auth/pkce.dart": "30f32a78dbb279fc1a519c2e4c88bce627dee4a77b9a60428e0a76a0d5089ac7",
+    "clients/enterprise_im/lib/core/protocol/api_client.dart": "40a58ec03ed33db638f4b72fd19ca6868d9d237aad9daac2406cfb3b83ee1e26",
+    "clients/enterprise_im/lib/core/protocol/api_error.dart": "b5964443e281e6781bd1fc06e5a45f4398f674525d197e500da2ef9e874d4e92",
+    "clients/enterprise_im/lib/core/protocol/models.dart": "7b81c9483baa92271fc2cf8418fc868019b4c8bca25d319394f80b1bc4697dd8",
+    "clients/enterprise_im/lib/core/protocol/seq.dart": "f6be75a70de57ef6c6efed25d525e80fa7bac95dd53ee5ad573271dfe097089d",
+    "clients/enterprise_im/lib/main.dart": "b9a3c1df4940345f2cb0b853864deddbec4a5f26eeff1b64e59c1b29ec13007b",
+    "clients/enterprise_im/lib/platform/browser_launcher.dart": "e83f36ab2da997f6ed1ab315e4248e9b7e42709513f63a43b4ed2a67159ef4ca",
+    "clients/enterprise_im/lib/platform/login_callback.dart": "d46302d6c48379cdfd95501776538c5caaa0efa8053bc4fd7f4333e13af5747d",
+    "clients/enterprise_im/lib/ui/login_page.dart": "48c90933cc55125088bae955b368b261c72b96d7ca4eb3e95e2fdfb8571135f5",
+    "clients/enterprise_im/pubspec.lock": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669",
+    "clients/enterprise_im/test/auth_test.dart": "711ad9617e4d80f0f5c615cb7fd9002a8c6ef305ffd264d85d747bff9af591ec",
+    "clients/enterprise_im/test/login_callback_test.dart": "ddf2e1bb714a1e1ffe2265c1607675ab35531679a2c4b3503683f8600ee49bfc",
+    "clients/enterprise_im/test/login_page_test.dart": "3fea3cb72d0166e376404b0bf4ca6f7794ae59ae2e9d4da809a6f5c0aecce610",
+    "clients/enterprise_im/test/protocol_test.dart": "0c2301acb807c7f9d0495e3e543d0317aa857641ec9b423b708792411ab07b1c",
+    "scripts/prepare-client-toolchain.py": "be5a1ba99052a9f98232a3b0ec6b6248623575f44495fe0cffa2dee0725dce6e",
+    "scripts/tests/test_prepare_client_toolchain.py": "408083d0811e1df76cd5d64749da2d07ed5b2d1fe4f9e1e3438ec91145587684"
+  }
+}

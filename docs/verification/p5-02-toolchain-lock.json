@@ -1,0 +1,72 @@
+{
+  "schema_version": "p502_toolchain_lock_v1",
+  "status": "source_and_dependency_preparation",
+  "framework_version": "3.47.3",
+  "framework_commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+  "engine_commit": "06a2e2a110089dff50fe635cffd2a61e1b24fbcd",
+  "dart_version": "3.13.3",
+  "sdk_source_archive_sha256": "46a3e5203e855ff74fd4fcf1f5f511552881e07fc097a980775991183326a66b",
+  "dart_executable_sha256": "ab803932775184d265f4f11213e9b51a04c4d73571570b9464a3675956eb15bc",
+  "pubspec_lock_sha256": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669",
+  "direct_dependencies": {
+    "sqlite3": {
+      "version": "3.7.0",
+      "pub_archive_sha256": "cc62d72dbf16bb1f6ae8954b238016de1473e53df060ed0c332eed0a41dd1848"
+    },
+    "cryptography": {
+      "version": "2.9.0",
+      "pub_archive_sha256": "3eda3029d34ec9095a27a198ac9785630fe525c0eb6a49f3d575272f8e792ef0"
+    },
+    "flutter_secure_storage": {
+      "version": "11.2.0",
+      "pub_archive_sha256": "d4e1fb6b2cb524868929e78dc0282fa000554b22060fb53789dc481c9fc95bb8"
+    },
+    "app_links": {
+      "version": "7.2.2",
+      "pub_archive_sha256": "08ba88bf19d9edea33130cb71c8ced2cb982b4e00b82efef4a434d1357bc69c3"
+    },
+    "path_provider": {
+      "version": "2.1.6",
+      "pub_archive_sha256": "a7f4874f987173da295a61c181b8ee71dab59b332a486b391babf26a1b884825"
+    },
+    "url_launcher": {
+      "version": "6.3.3",
+      "pub_archive_sha256": "e8cc955c97e06df9879140a1fe301f3d493f01b7c62dec7f46834be31d7e9fda"
+    },
+    "file_selector": {
+      "version": "1.1.0",
+      "pub_archive_sha256": "bd15e43e9268db636b53eeaca9f56324d1622af30e5c34d6e267649758c84d9a"
+    },
+    "flutter_local_notifications": {
+      "version": "22.3.1",
+      "pub_archive_sha256": "357be7ff996dc272e2037c69c1bdd5d1bd21172219d55f8bd2e11aeea602e6d3"
+    }
+  },
+  "android": {
+    "gradle_version": "9.3.1",
+    "gradle_distribution_url": "https://services.gradle.org/distributions/gradle-9.3.1-all.zip",
+    "gradle_distribution_sha256": "17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43",
+    "agp_version": "9.1.0",
+    "kotlin_version": "2.4.0",
+    "jdk_validation": "not_executed",
+    "native_build": "not_executed"
+  },
+  "generated_runners": [
+    "windows",
+    "macos",
+    "android"
+  ],
+  "ios": {
+    "approved_minimum": "13",
+    "observed_fixed_engine_minimum": "15.0",
+    "baseline_decision": "awaiting_user"
+  },
+  "platform_acceptance": {
+    "windows": "not_executed",
+    "macos": "not_executed",
+    "android": "not_executed",
+    "ios": "not_executed"
+  },
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed"
+}

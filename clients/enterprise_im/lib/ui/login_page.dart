@@ -1,0 +1,214 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../core/auth/native_auth.dart';
+import '../core/protocol/api_client.dart';
+import '../platform/browser_launcher.dart';
+import '../platform/login_callback.dart';
+
+class LoginPage extends StatefulWidget {
+  final String platform;
+  final LoginCallback Function(String, String) callbackFactory;
+  final bool platformReady;
+  const LoginPage({
+    super.key,
+    required this.platform,
+    required this.callbackFactory,
+    this.platformReady = true,
+  });
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _address = TextEditingController();
+  NativeAuth? _auth;
+  ApiClient? _api;
+  AuthSession? _session;
+  Timer? _expiry;
+  bool _busy = false;
+  String? _notice;
+  int _generation = 0;
+  Future<void> _login() async {
+    if (_busy || !widget.platformReady) return;
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _notice = null;
+    });
+    try {
+      final origin = ApiClient.validateOrigin(Uri.parse(_address.text.trim()));
+      await _auth?.cancel();
+      _api?.close();
+      if (!mounted || generation != _generation) return;
+      final api = ApiClient(origin, HttpApiTransport());
+      _api = api;
+      final auth = NativeAuth(
+        api,
+        callbackFactory: widget.callbackFactory,
+        browser: ExternalBrowserLauncher(),
+      );
+      _auth = auth;
+      final session = await auth.signIn(widget.platform);
+      _showSession(session, generation);
+    } on FormatException {
+      if (mounted && generation == _generation)
+        setState(
+          () => _notice = '请输入有效的 HTTPS 服务根地址，例如 https://im.example.com。',
+        );
+    } on AuthFailure catch (error) {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = _auth?.session;
+          _notice = _message(error.code);
+        });
+    } catch (_) {
+      if (mounted && generation == _generation)
+        setState(() => _notice = '登录暂时不可用，请稍后重试。');
+    } finally {
+      if (mounted && generation == _generation) setState(() => _busy = false);
+    }
+  }
+
+  void _showSession(AuthSession session, int generation) {
+    if (!mounted || generation != _generation) return;
+    _expiry?.cancel();
+    setState(() {
+      _session = session;
+      _notice = null;
+    });
+    _expiry = Timer(session.remaining, () {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = null;
+          _notice = '登录已到期，请恢复登录或重新登录。';
+        });
+    });
+  }
+
+  Future<void> _refresh() async {
+    final auth = _auth;
+    if (_busy || auth == null) return;
+    final generation = ++_generation;
+    setState(() {
+      _busy = true;
+      _notice = null;
+    });
+    try {
+      _showSession(await auth.refresh(), generation);
+    } on AuthFailure catch (error) {
+      if (mounted && generation == _generation)
+        setState(() {
+          _session = _auth?.session;
+          _notice = _message(error.code);
+        });
+    } finally {
+      if (mounted && generation == _generation) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _cancel() async {
+    _generation++;
+    _expiry?.cancel();
+    setState(() {
+      _busy = false;
+      _session = null;
+      _notice = '已取消登录。';
+    });
+    await _auth?.cancel();
+  }
+
+  static String _message(String code) => switch (code) {
+    'cancelled' => '已取消登录。',
+    'timeout' => '登录等待超时，请重试。',
+    'provider_rejected' => '登录未获授权，请重试或联系管理员。',
+    'reauthenticate' || 'expired' => '登录已失效，请重新登录。',
+    'browser_unavailable' => '无法打开系统浏览器，请检查系统设置。',
+    'native_rate_limit' => '登录请求过于频繁，请稍后重试。',
+    'identity_changed' => '登录人员发生变化，请重新登录。',
+    _ => '登录暂时不可用，请核对服务地址或联系管理员。',
+  };
+  @override
+  void dispose() {
+    _generation++;
+    _expiry?.cancel();
+    unawaited(_auth?.cancel() ?? Future<void>.value());
+    _api?.close();
+    _address.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('企业 IM')),
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  _session == null ? '登录集团工作空间' : '登录成功',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 16),
+                if (_session != null) ...[
+                  Text(
+                    _session!.displayName,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('组织与会话功能正在接入。'),
+                  const SizedBox(height: 20),
+                ],
+                TextField(
+                  controller: _address,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: '服务地址',
+                    hintText: 'https://im.example.com',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('使用系统浏览器完成企业账号登录。'),
+                if (!widget.platformReady) ...[
+                  const SizedBox(height: 12),
+                  const Text('无法接收登录回调，请检查应用安装配置。'),
+                ],
+                if (_notice != null) ...[
+                  const SizedBox(height: 12),
+                  Semantics(liveRegion: true, child: Text(_notice!)),
+                ],
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: _busy || !widget.platformReady ? null : _login,
+                  child: Text(_busy ? '等待登录完成…' : '使用企业账号登录'),
+                ),
+                if (_busy)
+                  TextButton(onPressed: _cancel, child: const Text('取消登录')),
+                if (_auth?.canRefresh == true)
+                  TextButton(
+                    onPressed: _busy ? null : _refresh,
+                    child: const Text('恢复登录'),
+                  ),
+                if (_session != null)
+                  TextButton(
+                    onPressed: () async {
+                      await _cancel();
+                      if (mounted) setState(() => _notice = '已退出登录。');
+                    },
+                    child: const Text('退出登录'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
