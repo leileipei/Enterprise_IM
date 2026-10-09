@@ -422,6 +422,31 @@ func (r *delayedDownloadPreparationReader) Read(p []byte) (int, error) {
 }
 
 func testDownloadTokenExpiryBlockedWrite(t *testing.T, preparationDelay time.Duration) {
+	t.Helper()
+	// A real database check may expire before the restricted TCP send buffer fills.
+	// Re-arm only that safe, inconclusive setup; an unsafe result fails immediately.
+	// Every attempt retains the same token and write deadlines, real auth and store.
+	for attempt := 1; attempt <= 3; attempt++ {
+		observed := false
+		passed := t.Run(fmt.Sprintf("bounded_scenario_%d", attempt), func(t *testing.T) {
+			observed = downloadTokenExpiryBlockedWriteAttempt(t, preparationDelay)
+		})
+		if !passed || observed {
+			return
+		}
+	}
+	t.Fatal("real TCP blocking timeout was not observed in three bounded attempts")
+}
+
+func classifyDownloadExpiryEvidence(expiry time.Time, phase, reason string, e *tcpEvidence) (bool, bool) {
+	safe := reason == "token_expired" && phase == "interrupted" && e.deadline.Equal(expiry) && !e.last.After(expiry.Add(300*time.Millisecond)) && e.accepted < 8<<20
+	if e.timeout {
+		return safe && !e.started.IsZero() && e.started.Before(expiry), true
+	}
+	return safe && e.started.IsZero(), false
+}
+
+func downloadTokenExpiryBlockedWriteAttempt(t *testing.T, preparationDelay time.Duration) bool {
 	dedicatedUpload(t)
 	f := realFileMessageFixture(t)
 	sign := downloadJWTIssuer(t, f)
@@ -472,10 +497,15 @@ func testDownloadTokenExpiryBlockedWrite(t *testing.T, preparationDelay time.Dur
 	}
 	evidence.mu.Lock()
 	defer evidence.mu.Unlock()
-	if reason != "token_expired" || !evidence.started.Before(expiry) || phase != "interrupted" || !evidence.timeout || !evidence.deadline.Equal(expiry) || evidence.last.After(expiry.Add(300*time.Millisecond)) || evidence.accepted >= 8<<20 {
+	safe, blocked := classifyDownloadExpiryEvidence(expiry, phase, reason, evidence)
+	if !safe {
 		t.Fatal("blocked writer crossed bound", phase, reason, evidence.timeout, evidence.deadline.Sub(expiry), evidence.accepted, evidence.started.Sub(expiry))
 	}
-	t.Logf("TCP accepted=%d client-buffered=%d last-writer=%s timeout-start=%s exp=%s deadline=%s", evidence.accepted, reader.Buffered(), evidence.last.UTC().Format(time.RFC3339Nano), evidence.started.UTC().Format(time.RFC3339Nano), expiry.UTC().Format(time.RFC3339Nano), evidence.deadline.UTC().Format(time.RFC3339Nano))
+	t.Logf("TCP blocked-timeout-observed=%t accepted=%d client-buffered=%d last-writer=%s timeout-start=%s exp=%s deadline=%s", blocked, evidence.accepted, reader.Buffered(), evidence.last.UTC().Format(time.RFC3339Nano), evidence.started.UTC().Format(time.RFC3339Nano), expiry.UTC().Format(time.RFC3339Nano), evidence.deadline.UTC().Format(time.RFC3339Nano))
+	if !blocked {
+		t.Log("safe token-expired interruption before blocking write; scenario inconclusive, re-arm required")
+	}
+	return blocked
 }
 
 type gatedObjects struct {
@@ -746,4 +776,29 @@ func (o *observedDownload) Finish(ctx context.Context, p *filedownload.Prepared,
 		o.evidence.settled <- e
 	}
 	return e
+}
+
+func TestDownloadExpiryEvidenceClassification(t *testing.T) {
+	expiry := time.Unix(1800000000, 0)
+	good := tcpEvidence{deadline: expiry, last: expiry.Add(-time.Millisecond), accepted: 32768}
+	if safe, blocked := classifyDownloadExpiryEvidence(expiry, "interrupted", "token_expired", &good); !safe || blocked {
+		t.Fatal("safe nonblocking fixture must be inconclusive")
+	}
+	good.timeout = true
+	good.started = expiry.Add(-time.Millisecond)
+	if safe, blocked := classifyDownloadExpiryEvidence(expiry, "interrupted", "token_expired", &good); !safe || !blocked {
+		t.Fatal("real blocked writer is required")
+	}
+	for _, mutate := range []func(*tcpEvidence){func(e *tcpEvidence) { e.deadline = expiry.Add(time.Second) }, func(e *tcpEvidence) { e.last = expiry.Add(time.Second) }, func(e *tcpEvidence) { e.accepted = 8 << 20 }, func(e *tcpEvidence) { e.started = expiry }} {
+		e := tcpEvidence{deadline: expiry, last: expiry.Add(-time.Millisecond), accepted: 32768, timeout: true, started: expiry.Add(-time.Millisecond)}
+		mutate(&e)
+		if safe, _ := classifyDownloadExpiryEvidence(expiry, "interrupted", "token_expired", &e); safe {
+			t.Fatal("unsafe write evidence accepted")
+		}
+	}
+	for _, terminal := range [][2]string{{"completed", "token_expired"}, {"interrupted", "client_disconnected"}} {
+		if safe, _ := classifyDownloadExpiryEvidence(expiry, terminal[0], terminal[1], &good); safe {
+			t.Fatal("wrong terminal accepted")
+		}
+	}
 }
