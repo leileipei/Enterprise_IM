@@ -269,3 +269,131 @@ final class SendConfirmation {
         MessageACK.fromJson(objectMap(data['ack'])),
       );
 }
+
+// Account-encrypted singleton: an uncertain operation cannot be replaced or
+// silently retried. Paths are derived from a closed enum, never persisted URLs.
+enum ActionKind { direct, create, invite, remove, transfer, recheck, leave }
+
+final class PendingAction {
+  final String id, actingMembershipId, target;
+  final ActionKind kind;
+  final int generation;
+  final Map<String, Object?>? body;
+  PendingAction._(
+    this.id,
+    this.actingMembershipId,
+    this.target,
+    this.kind,
+    this.generation,
+    this.body,
+  );
+  factory PendingAction({
+    required String id,
+    required String actingMembershipId,
+    required String target,
+    required ActionKind kind,
+    required int generation,
+    required Map<String, Object?>? body,
+  }) {
+    uuidField({'id': id}, 'id');
+    uuidField({'id': actingMembershipId}, 'id');
+    if (generation < 0) throw const FormatException('操作代次无效');
+    if (kind == ActionKind.create || kind == ActionKind.direct) {
+      if (target.isNotEmpty) throw const FormatException('操作目标无效');
+    } else {
+      uuidField({'id': target}, 'id');
+    }
+    final keys = switch (kind) {
+      ActionKind.direct => {'target_membership_id'},
+      ActionKind.create => {
+        'client_request_id',
+        'name',
+        'member_membership_ids',
+      },
+      ActionKind.invite => {'client_request_id', 'target_membership_id'},
+      ActionKind.remove || ActionKind.leave => {'interval_id'},
+      ActionKind.transfer => {
+        'client_request_id',
+        'source_interval_id',
+        'target_interval_id',
+      },
+      ActionKind.recheck => <String>{},
+    };
+    if (kind == ActionKind.recheck) {
+      if (body != null) throw const FormatException('策略复核不接收正文');
+    } else {
+      if (body == null ||
+          body.keys.toSet().difference(keys).isNotEmpty ||
+          keys.difference(body.keys.toSet()).isNotEmpty)
+        throw const FormatException('操作正文无效');
+      for (final field in keys.where((k) => k.endsWith('_id'))) {
+        uuidField(body, field);
+        if (field == 'client_request_id' && body[field] != id)
+          throw const FormatException('请求编号不匹配');
+      }
+      if (kind == ActionKind.create) {
+        final name = stringField(body, 'name', max: 240);
+        if (name != name.trim() ||
+            name.runes.length > 120 ||
+            RegExp(r'[\x00-\x1f\x7f-\x9f]').hasMatch(name))
+          throw const FormatException('群名称无效');
+        final members = body['member_membership_ids'];
+        if (members is! List || members.isEmpty || members.length > 20)
+          throw const FormatException('创建群需1至20名其他任职');
+        final seen = <String>{actingMembershipId};
+        for (final m in members)
+          if (!seen.add(uuidField({'id': m}, 'id')))
+            throw const FormatException('群成员重复');
+      }
+    }
+    final frozen = body == null
+        ? null
+        : Map<String, Object?>.unmodifiable({
+            for (final e in body.entries)
+              e.key: e.value is List
+                  ? List<Object?>.unmodifiable(e.value! as List)
+                  : e.value,
+          });
+    return PendingAction._(
+      id,
+      actingMembershipId,
+      target,
+      kind,
+      generation,
+      frozen,
+    );
+  }
+  String get path => switch (kind) {
+    ActionKind.direct => '/api/v1/conversations',
+    ActionKind.create => '/api/v1/groups',
+    ActionKind.invite => '/api/v1/groups/$target/invitations',
+    ActionKind.remove => '/api/v1/groups/$target/removals',
+    ActionKind.transfer => '/api/v1/groups/$target/owner-transfers',
+    ActionKind.recheck => '/api/v1/groups/$target/policy-rechecks',
+    ActionKind.leave => '/api/v1/groups/$target/leave',
+  };
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'acting_membership_id': actingMembershipId,
+    'target': target,
+    'kind': kind.name,
+    'generation': generation,
+    'body': body,
+  };
+  factory PendingAction.fromJson(Map<String, Object?> data) {
+    final kind = ActionKind.values
+            .where((k) => k.name == data['kind'])
+            .toList(),
+        generation = data['generation'];
+    if (kind.length != 1 || generation is! int)
+      throw const FormatException('操作记录无效');
+    return PendingAction(
+      id: uuidField(data, 'id'),
+      actingMembershipId: uuidField(data, 'acting_membership_id'),
+      target: stringField(data, 'target', max: 36, empty: true),
+      kind: kind.single,
+      generation: generation,
+      body: data['body'] == null ? null : objectMap(data['body']),
+    );
+  }
+}

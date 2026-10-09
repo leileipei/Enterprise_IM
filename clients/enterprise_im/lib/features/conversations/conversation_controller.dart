@@ -44,8 +44,10 @@ final class ConversationController {
         context.generation != ready.client.store.generation)
       throw const ApiFailure('invalid_context');
     final pending = await ready.client.store.pendingSends();
+    final action = await ready.client.store.pendingAction();
     if (_closed || epoch != _epoch || !identical(memberships.current, ready))
       throw const ApiFailure('cancelled');
+    if (action != null) throw const ApiFailure('operation_unconfirmed');
     if (pending.any(
       (p) =>
           p.conversationId != context.conversationId ||
@@ -67,7 +69,9 @@ final class ConversationController {
     try {
       final ready = _admission!, context = _context!;
       final existing = await ready.client.store.pendingSends();
+      final action = await ready.client.store.pendingAction();
       _check(epoch);
+      if (action != null) throw const ApiFailure('operation_unconfirmed');
       if (existing.isNotEmpty) throw const ApiFailure('send_unconfirmed');
       final pending = PendingSend(
         clientMsgId: ClientMessageId.create(ready.clock),

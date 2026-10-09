@@ -79,7 +79,55 @@ Future<void> storeWorkerMain(List<Object?> args) async {
       try {
         if (request[3] != generation) throw StateError('stale');
         Object? result;
-        if (operation == 'put_registration' ||
+        if (operation == 'put_action' ||
+            operation == 'action' ||
+            operation == 'finish_action') {
+          final recordKey = await opaque('action', 'current');
+          final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [
+            recordKey,
+          ]);
+          final previous = rows.isEmpty ? null : await decrypt(rows.single);
+          if (operation == 'action')
+            result = previous;
+          else {
+            final payload = Map<String, Object?>.from(request[2]! as Map);
+            if (previous != null &&
+                jsonEncode(canonical(previous)) !=
+                    jsonEncode(canonical(payload)))
+              throw StateError('conflict');
+            if (operation == 'finish_action') {
+              if (previous == null) throw StateError('conflict');
+              db.execute('DELETE FROM records WHERE opaque_key=?', [recordKey]);
+            } else if (previous == null) {
+              final box = await aes.encrypt(
+                utf8.encode(jsonEncode(payload)),
+                secretKey: key,
+                nonce: aes.newNonce(),
+                aad: aad('action', recordKey),
+              );
+              db.execute('BEGIN IMMEDIATE');
+              try {
+                if (db
+                    .select(
+                      "SELECT 1 FROM records WHERE kind='pending_send' LIMIT 1",
+                    )
+                    .isNotEmpty)
+                  throw StateError('conflict');
+                db.execute('INSERT INTO records VALUES(?,?,?,?,?)', [
+                  recordKey,
+                  'action',
+                  Uint8List.fromList(box.nonce),
+                  Uint8List.fromList(box.cipherText),
+                  Uint8List.fromList(box.mac.bytes),
+                ]);
+                db.execute('COMMIT');
+              } catch (_) {
+                db.execute('ROLLBACK');
+                rethrow;
+              }
+            }
+          }
+        } else if (operation == 'put_registration' ||
             operation == 'registration' ||
             operation == 'finish_registration') {
           final recordKey = await opaque('registration', 'current');
@@ -136,6 +184,10 @@ Future<void> storeWorkerMain(List<Object?> args) async {
             );
             db.execute('BEGIN IMMEDIATE');
             try {
+              if (db
+                  .select("SELECT 1 FROM records WHERE kind='action' LIMIT 1")
+                  .isNotEmpty)
+                throw StateError('conflict');
               db.execute('INSERT INTO records VALUES(?,?,?,?,?)', [
                 recordKey,
                 'pending_send',

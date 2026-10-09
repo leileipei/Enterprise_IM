@@ -20,8 +20,14 @@ final class WorkspaceAdmission {
     this.clock,
     this._deadline,
   );
-  bool get isExpired =>
-      client.session.isExpired || LeaseClock.monotonicNow() >= _deadline;
+  Duration get remaining {
+    final device = _deadline - LeaseClock.monotonicNow();
+    final session = client.session.remaining;
+    final value = device < session ? device : session;
+    return value.isNegative ? Duration.zero : value;
+  }
+
+  bool get isExpired => remaining == Duration.zero;
   @override
   String toString() => 'WorkspaceAdmission';
 }
@@ -112,15 +118,23 @@ final class MembershipController {
     }
     final found = _memberships.where((m) => m.id == membershipId).toList();
     if (found.length != 1) throw const AuthFailure('invalid_acting_membership');
-    owner.claimMembership(client, membershipId);
     _current = null;
     _busy = true;
     final epoch = ++_epoch, cancel = Cancellation();
     _cancel = cancel;
     try {
+      final sends = await client.store.pendingSends();
+      final action = await client.store.pendingAction();
       final saved = owner.sessions.device;
       var pending = await client.store.pendingRegistration();
       _check(epoch, client);
+      if (sends.any((p) => p.actingMembershipId != membershipId))
+        throw const AuthFailure('send_context_mismatch');
+      if (action != null && action.actingMembershipId != membershipId)
+        throw const AuthFailure('operation_context_mismatch');
+      if (pending != null && pending.actingMembershipId != membershipId)
+        throw const AuthFailure('registration_context_mismatch');
+      owner.claimMembership(client, membershipId);
       DeviceGrant device;
       ServerClock clock;
       Duration deadline;

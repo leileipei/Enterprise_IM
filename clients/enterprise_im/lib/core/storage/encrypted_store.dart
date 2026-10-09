@@ -206,6 +206,22 @@ final class EncryptedStore {
     return result;
   }
 
+  Future<void> putPendingAction(PendingAction action) async =>
+      _request('put_action', action.toJson());
+  Future<PendingAction?> pendingAction() async {
+    try {
+      final value = await _request('action', null);
+      return value == null
+          ? null
+          : PendingAction.fromJson(Map<String, Object?>.from(value as Map));
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<void> finishAction(PendingAction action) async =>
+      _request('finish_action', action.toJson());
+
   Future<void> putPendingRegistration(PendingRegistration value) async {
     await _request('put_registration', value.toJson());
   }

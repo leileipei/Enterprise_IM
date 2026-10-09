@@ -6,6 +6,8 @@ import '../platform/native_activity.dart';
 import '../core/sync/client_context.dart';
 import '../features/conversations/conversation_view.dart';
 import 'message_page.dart';
+import 'directory_page.dart';
+import 'group_page.dart';
 import '../core/auth/auth_session.dart';
 import '../core/protocol/api_client.dart';
 import '../core/protocol/models.dart';
@@ -17,19 +19,21 @@ class ClientShell extends StatefulWidget {
   final ClientSession owner;
   final Future<bool> Function() onLogout;
   final AppActivity? activity;
+  final ValueChanged<AuthSession?>? onSessionChanged;
   const ClientShell({
     super.key,
     required this.owner,
     required this.onLogout,
     this.activity,
+    this.onSessionChanged,
   });
   @override
   State<ClientShell> createState() => _ClientShellState();
 }
 
 class _ClientShellState extends State<ClientShell> {
-  late final MembershipController _memberships;
-  late final ConversationList _lists;
+  late MembershipController _memberships;
+  late ConversationList _lists;
   WorkspaceAdmission? _ready;
   NativeActivityAdapter? _native;
   late final AppActivity _activity;
@@ -180,15 +184,21 @@ class _ClientShellState extends State<ClientShell> {
     _opening = true;
     try {
       final pending = await ready.client.store.pendingSends();
+      final action = await ready.client.store.pendingAction();
       if (!mounted || _expired || !identical(_memberships.current, ready))
         return;
-      if (_view?.sending == true ||
+      if (action != null ||
+          _view?.sending == true ||
           pending.any(
             (p) =>
                 p.conversationId != conversation.id ||
                 p.actingMembershipId != ready.membership.id,
           )) {
-        setState(() => _notice = '请先重试或明确放弃原消息，再切换会话。');
+        setState(
+          () => _notice = action != null
+              ? '请先重试或明确放弃原操作，再切换会话。'
+              : '请先重试或明确放弃原消息，再切换会话。',
+        );
         return;
       }
       await _closeDetail();
@@ -235,6 +245,107 @@ class _ClientShellState extends State<ClientShell> {
     }
   }
 
+  Future<void> _directory(DirectoryMode mode) async {
+    if (_busy || _opening || _memberships.current == null) return;
+    _opening = true;
+    try {
+      await _closeDetail();
+      if (!mounted || _memberships.current == null) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DirectoryPage(memberships: _memberships, mode: mode),
+        ),
+      );
+      if (mounted && _memberships.current != null)
+        await _loadList(
+          kind: mode == DirectoryMode.create ? 'group' : 'direct',
+        );
+    } finally {
+      _opening = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _manage(ConversationSummary group) async {
+    if (_busy || _opening || _memberships.current == null) return;
+    _opening = true;
+    try {
+      await _closeDetail();
+      if (!mounted || _memberships.current == null) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GroupPage(memberships: _memberships, group: group),
+        ),
+      );
+      if (mounted && _memberships.current != null) await _loadList();
+    } finally {
+      _opening = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _switchMembership() async {
+    if (_busy || _opening || _expired) return;
+    final epoch = ++_epoch;
+    setState(() {
+      _busy = true;
+      _notice = null;
+    });
+    _expiry?.cancel();
+    widget.onSessionChanged?.call(null);
+    try {
+      // The account owner freezes old admissions before its serialized queue
+      // preflight. Re-authentication creates a fresh generation/store owner.
+      await _closeDetail();
+      final switching = widget.owner.prepareMembershipSwitch();
+      final fresh = await switching;
+      // The login route remains the account owner after this route is popped.
+      // Hand off only this still-current session even when the shell is gone.
+      if (identical(widget.owner.current, fresh))
+        widget.onSessionChanged?.call(fresh.session);
+      if (!mounted || epoch != _epoch) return;
+      await _closeDetail();
+      if (!mounted || epoch != _epoch) return;
+      _lists.close();
+      _memberships.close();
+      _memberships = MembershipController(widget.owner);
+      _lists = ConversationList(_memberships);
+      setState(() {
+        _ready = null;
+        _roles = const [];
+        _items = const [];
+        _statuses = const {};
+        _cursor = null;
+        _expired = false;
+      });
+      _armExpiry();
+      final roles = await _memberships.load();
+      if (_active(epoch)) setState(() => _roles = roles);
+    } catch (error) {
+      if (mounted && epoch == _epoch) {
+        final restored = widget.owner.current;
+        widget.onSessionChanged?.call(restored?.session);
+        if (restored != null)
+          _armExpiry();
+        else {
+          await _closeDetail();
+          _memberships.close();
+          _lists.close();
+          _ready = null;
+          _roles = const [];
+          _items = const [];
+          _expired = true;
+        }
+        if (mounted && epoch == _epoch)
+          setState(() => _notice = _message(error));
+      }
+    } finally {
+      if (mounted && epoch == _epoch) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _logout() async {
     if (_busy) return;
     final epoch = ++_epoch;
@@ -274,6 +385,11 @@ class _ClientShellState extends State<ClientShell> {
         ? error.code
         : null;
     return switch (code) {
+      'send_context_mismatch' => '有另一任职的消息尚未确认，请选择原任职处理。',
+      'operation_context_mismatch' => '有另一任职的操作尚未确认，请选择原任职处理。',
+      'send_unconfirmed' => '请先重试或明确放弃原消息，再切换任职。',
+      'operation_unconfirmed' => '请先重试或明确放弃原操作，再切换任职。',
+      'registration_unconfirmed' => '请先完成原设备登记。',
       'device_quota' => '设备额度已满，请先在设备管理中撤销不用的设备。',
       'registration_exists' => '该登记已被服务端处理，凭据未保存。请在设备管理中撤销该设备后重新登记。',
       'registration_context_mismatch' => '有另一任职的设备登记尚未确认，请选择原任职重试。',
@@ -391,6 +507,22 @@ class _ClientShellState extends State<ClientShell> {
                         ? null
                         : (value) => _loadList(kind: value.single),
                   ),
+                  TextButton(
+                    onPressed: _busy || _opening
+                        ? null
+                        : () => _directory(DirectoryMode.browse),
+                    child: const Text('通讯录'),
+                  ),
+                  TextButton(
+                    onPressed: _busy || _opening
+                        ? null
+                        : () => _directory(DirectoryMode.create),
+                    child: const Text('创建群聊'),
+                  ),
+                  TextButton(
+                    onPressed: _busy || _opening ? null : _switchMembership,
+                    child: const Text('切换任职'),
+                  ),
                   IconButton(
                     tooltip: '刷新会话列表',
                     onPressed: _busy ? null : () => _loadList(),
@@ -415,6 +547,17 @@ class _ClientShellState extends State<ClientShell> {
                                 onTap: _busy || _opening
                                     ? null
                                     : () => _open(item, size.maxWidth >= 800),
+                                trailing: item.kind == 'group'
+                                    ? IconButton(
+                                        tooltip: '管理${item.name}',
+                                        onPressed: _busy || _opening
+                                            ? null
+                                            : () => _manage(item),
+                                        icon: const Icon(
+                                          Icons.settings_outlined,
+                                        ),
+                                      )
+                                    : null,
                                 leading: Icon(
                                   item.kind == 'group'
                                       ? Icons.groups

@@ -219,7 +219,9 @@ class _LoginPageState extends State<LoginPage> {
       _notice = null;
     });
     _expiry = Timer(session.remaining, () {
-      if (mounted && generation == _generation) {
+      if (mounted &&
+          generation == _generation &&
+          identical(_session, session)) {
         unawaited(
           (_client?.close() ?? Future<void>.value()).catchError(_reportClose),
         );
@@ -229,6 +231,18 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     });
+  }
+
+  void _workspaceSessionChanged(AuthSession? session) {
+    if (!mounted ||
+        session != null && !identical(_client?.current?.session, session))
+      return;
+    final generation = ++_generation;
+    _expiry?.cancel();
+    if (session == null)
+      setState(() => _session = null);
+    else
+      _showSession(session, generation);
   }
 
   Future<void> _refresh() async {
@@ -380,6 +394,7 @@ class _LoginPageState extends State<LoginPage> {
                                 owner: _client!,
                                 activity: widget.activity,
                                 onLogout: _cancel,
+                                onSessionChanged: _workspaceSessionChanged,
                               ),
                             ),
                           ),

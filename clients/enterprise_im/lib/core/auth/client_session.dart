@@ -45,6 +45,48 @@ final class ClientSession {
     client._actingMembershipId = membershipId;
   }
 
+  // Freeze the old admission before querying the serialized account queue.
+  // Outstanding old writes are observed before scope change; failed preflight
+  // restores only the same still-valid owner, never an owner after logout.
+  Future<AuthenticatedClient> prepareMembershipSwitch() async {
+    if (_busy) throw const AuthFailure('login_in_progress');
+    final previous = current;
+    if (previous == null) throw const AuthFailure('reauthenticate');
+    final epoch = ++_epoch;
+    _busy = true;
+    _current = null;
+    try {
+      if ((await previous.store.pendingSends()).isNotEmpty)
+        throw const AuthFailure('send_unconfirmed');
+      if (await previous.store.pendingAction() != null)
+        throw const AuthFailure('operation_unconfirmed');
+      if (await previous.store.pendingRegistration() != null)
+        throw const AuthFailure('registration_unconfirmed');
+      _check(epoch);
+    } catch (_) {
+      if (epoch == _epoch &&
+          !previous.session.isExpired &&
+          identical(auth.session, previous.session))
+        _current = previous;
+      rethrow;
+    } finally {
+      if (epoch == _epoch) _busy = false;
+    }
+    _check(epoch);
+    final account = AccountReference.fromSession(previous.session),
+        refresh = sessions.refreshToken;
+    return _admit(() async {
+      final session = await (auth.canRefresh && refresh != null
+          ? auth.restore(account, platform, refresh)
+          : auth.signIn(platform));
+      if (session.origin != account.origin ||
+          session.tenantId != account.tenantId ||
+          session.userId != account.userId)
+        throw const AuthFailure('identity_changed');
+      return session;
+    }, invalidRefreshAccount: account);
+  }
+
   Future<AuthenticatedClient> signIn() => _admit(() => auth.signIn(platform));
   Future<AuthenticatedClient> restore(AccountReference account) async {
     // Reject a different service before assigning any credential-cleanup scope.
