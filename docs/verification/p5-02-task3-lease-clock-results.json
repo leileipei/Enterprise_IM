@@ -1,0 +1,24 @@
+{
+  "schema_version": "p502_task3_lease_clock_local_v1",
+  "status": "in_progress",
+  "shared_tests": {
+    "actual_exit": 0,
+    "passed": 26
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0
+  },
+  "clock_cache_read_integration": "not_implemented",
+  "session_restore": "not_implemented",
+  "native_platform": "not_executed",
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/storage/records.dart": "aa85ecf9f002f2e290a1ffd42c7d12414d49bc23236edcd5978548c335436efc",
+    "clients/enterprise_im/test/session_restore_test.dart": "0547ccda47a8eddc0f867359ce13f4f598ba54af8ab67b1ed67bbe47f82d26ac"
+  },
+  "log_sha256": {
+    "task-3-lease-red.log": "eb1903e087c7e10ffb85db1d312d8a59c151b59b1a0b540fcfeb8e11d31841ea",
+    "task-3-lease-green.log": "41735eff46c5c287ba78e86b5b922d89536ddd767d5dfce8e68f0bf7baeb01d2",
+    "task-3-lease-analysis.log": "3baa4091fcb510dd20240c9a3194c10dfa09e83adabc97e1fcf6527e2909727d"
+  }
+}
