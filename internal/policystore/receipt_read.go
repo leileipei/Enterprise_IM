@@ -77,7 +77,7 @@ func (s Service) ConfirmRead(ctx context.Context, id access.TrustedIdentity, dev
 	if _, e = clientPolicyTx(ctx, tx, id.TenantID, false); e != nil {
 		return ReceiptState{}, e
 	}
-	if _, e = authorizeReceiptMessagesTx(ctx, tx, id, cid, seqs, s.now()); e != nil {
+	if _, e = authorizeReceiptMessagesTx(ctx, tx, id, cid, seqs, s.now); e != nil {
 		return ReceiptState{}, e
 	}
 	expiry, e := lockDeviceCredentialTx(ctx, tx, DeviceOwner{id.TenantID, id.UserID}, device, s.now(), false)
@@ -139,7 +139,7 @@ func (s Service) finalReadCheckTx(ctx context.Context, tx pgx.Tx, id access.Trus
 	if !s.now().Before(expiry) {
 		return ErrInvalidDevice
 	}
-	if _, e := authorizeReceiptMessagesTx(ctx, tx, id, cid, seqs, s.now()); e != nil {
+	if _, e := authorizeReceiptMessagesTx(ctx, tx, id, cid, seqs, s.now); e != nil {
 		return e
 	}
 	if _, e := s.activeGroupActor(ctx, tx, id); e != nil {

@@ -234,6 +234,11 @@ func runAPI(parent context.Context, getenv func(string) string, logger *slog.Log
 			logger.Error("device API unavailable")
 			return errors.New("api startup unavailable")
 		}
+		handler, err = assembleReceiptRoutes(handler, authenticator, receiptService, receiptConfig)
+		if err != nil {
+			logger.Error("receipt API unavailable")
+			return errors.New("api startup unavailable")
+		}
 		if receiptConfig.Enabled {
 			handler, err = httpserver.HandlerWithReceiptWriteLimit(handler, authenticator, receiptService)
 			if err != nil {

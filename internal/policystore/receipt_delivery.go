@@ -58,12 +58,12 @@ func proofReceiptItemsTx(ctx context.Context, tx pgx.Tx, id access.TrustedIdenti
 	}
 	return items, rows.Err()
 }
-func validateProofItemsTx(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, cid string, items []ReceiptAuthorizedMessage, at time.Time) error {
+func validateProofItemsTx(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, cid string, items []ReceiptAuthorizedMessage, now func() time.Time) error {
 	seqs := make([]int64, 0, len(items))
 	for _, i := range items {
 		seqs = append(seqs, i.Seq)
 	}
-	valid, e := authorizeReceiptMessagesTx(ctx, tx, id, cid, seqs, at)
+	valid, e := authorizeReceiptMessagesTx(ctx, tx, id, cid, seqs, now)
 	if errors.Is(e, ErrReceiptNotAvailable) || errors.Is(e, ErrMessageNotAvailable) {
 		return ErrSyncContextChanged
 	}
@@ -132,7 +132,7 @@ func (s Service) ConfirmDelivered(ctx context.Context, id access.TrustedIdentity
 		return ReceiptState{}, e
 	}
 	if p.confirmed == nil && s.now().Before(p.expires) {
-		if e = validateProofItemsTx(ctx, tx, id, cid, items, s.now()); e != nil {
+		if e = validateProofItemsTx(ctx, tx, id, cid, items, s.now); e != nil {
 			return ReceiptState{}, e
 		}
 	}
@@ -220,7 +220,7 @@ func (s Service) ConfirmDelivered(ctx context.Context, id access.TrustedIdentity
 	if !finalAt.Before(p.expires) {
 		return ReceiptState{}, ErrSyncProofExpired
 	}
-	if e = validateProofItemsTx(ctx, tx, id, cid, items, finalAt); e != nil {
+	if e = validateProofItemsTx(ctx, tx, id, cid, items, s.now); e != nil {
 		return ReceiptState{}, e
 	}
 	if _, e = s.activeGroupActor(ctx, tx, id); e != nil {
@@ -255,7 +255,7 @@ func (s Service) finalDeliveredCheckTx(ctx context.Context, tx pgx.Tx, id access
 		return e
 	}
 	if authorize {
-		if e := validateProofItemsTx(ctx, tx, id, cid, items, s.now()); e != nil {
+		if e := validateProofItemsTx(ctx, tx, id, cid, items, s.now); e != nil {
 			return e
 		}
 	}

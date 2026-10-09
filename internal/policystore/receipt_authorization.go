@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/leileipei/Enterprise_IM/internal/access"
+	"github.com/leileipei/Enterprise_IM/internal/policy"
 )
 
 var (
@@ -72,14 +73,31 @@ func receiptHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyReadCont
 	}
 	return readGroupHistorySelectionTx(ctx, tx, scope, cid, after, limit, historyReadAll, seqs)
 }
-func receiptFinalPageTx(ctx context.Context, tx pgx.Tx, scope historyReadContext, batch historyReadBatch, kind string, at time.Time) (MessagePage, error) {
+
+// Fetch matching peer facts for future as well as active rules before reading
+// the final clock. Activation during that database read must not evade filtering.
+func receiptFinalPageTx(ctx context.Context, tx pgx.Tx, scope historyReadContext, batch historyReadBatch, kind string, now func() time.Time) (MessagePage, error) {
+	var matched []policy.Rule
+	if kind == "group" && len(batch.Page.Messages) > 0 && hasGroupHistoryHardDeny(scope.Rules) {
+		var e error
+		matched, e = groupHistoryMatchingDenials(ctx, tx, scope.Identity, batch.Page.ConversationID, scope.Actor, batch.ReaderIntervals, scope.Rules)
+		if e != nil {
+			return MessagePage{}, e
+		}
+	}
+	return filterReceiptPage(scope, batch, kind, matched, now())
+}
+func filterReceiptPage(scope historyReadContext, batch historyReadBatch, kind string, matched []policy.Rule, at time.Time) (MessagePage, error) {
 	if !memberActiveAt(scope.Actor, at) {
 		return MessagePage{}, ErrForbidden
 	}
-	if kind == "group" {
-		return filterGroupHistoryBatchTx(ctx, tx, scope, batch, at)
+	page := filterDirectHistoryBatch(scope, batch, at)
+	if kind == "group" && groupHistoryDenialsActive(matched, at) {
+		for i, m := range page.Messages {
+			page.Messages[i] = PulledMessage{Seq: m.Seq, Redacted: true}
+		}
 	}
-	return filterDirectHistoryBatch(scope, batch, at), nil
+	return page, nil
 }
 func receiptPageItemsTx(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, page MessagePage, kind string) ([]ReceiptAuthorizedMessage, error) {
 	type interval struct {
@@ -131,14 +149,14 @@ func receiptPageItemsTx(ctx context.Context, tx pgx.Tx, id access.TrustedIdentit
 
 // Reuses the same final history filtering as sync. No current-membership
 // shortcut and no receipt high-water mark can authorize a missing message.
-func authorizeReceiptMessagesTx(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, cid string, seqs []int64, at time.Time) ([]ReceiptAuthorizedMessage, error) {
+func authorizeReceiptMessagesTx(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, cid string, seqs []int64, now func() time.Time) ([]ReceiptAuthorizedMessage, error) {
 	if len(seqs) == 0 {
 		return []ReceiptAuthorizedMessage{}, nil
 	}
 	if !validReceiptSeqs(seqs, 500) {
 		return nil, ErrInvalidReceiptRequest
 	}
-	s := Service{Now: func() time.Time { return at }}
+	s := Service{Now: now}
 	scope, e := s.newHistoryReadContextTx(ctx, tx, id, true)
 	if e != nil {
 		return nil, e
@@ -151,7 +169,7 @@ func authorizeReceiptMessagesTx(ctx context.Context, tx pgx.Tx, id access.Truste
 	if e != nil {
 		return nil, e
 	}
-	page, e := receiptFinalPageTx(ctx, tx, scope, batch, kind, at)
+	page, e := receiptFinalPageTx(ctx, tx, scope, batch, kind, now)
 	if e != nil {
 		return nil, e
 	}

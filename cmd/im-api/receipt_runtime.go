@@ -53,3 +53,10 @@ func assembleDeviceRoutes(base http.Handler, auth httpserver.Authenticator, svc 
 	}
 	return httpserver.HandlerWithDevices(base, auth, svc)
 }
+
+func assembleReceiptRoutes(base http.Handler, auth httpserver.Authenticator, svc httpserver.ReceiptService, cfg ReceiptRuntimeConfig) (http.Handler, error) {
+	if !cfg.Enabled {
+		return httpserver.HandlerWithClosedReceipts(base), nil
+	}
+	return httpserver.HandlerWithReceipts(base, auth, svc)
+}

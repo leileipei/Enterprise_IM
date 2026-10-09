@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
+	"github.com/leileipei/Enterprise_IM/internal/access"
+	"github.com/leileipei/Enterprise_IM/internal/httpserver"
+	"github.com/leileipei/Enterprise_IM/internal/policystore"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestReceiptRuntimeDefaultOff(t *testing.T) {
@@ -58,5 +64,49 @@ func TestReceiptRuntimeClosedAssembly(t *testing.T) {
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/conversations/11111111-1111-4111-8111-111111111111/messages", nil))
 	if w.Code != 200 {
 		t.Fatal("legacy route intercepted")
+	}
+}
+
+type receiptAssemblyAuth struct{}
+
+func (receiptAssemblyAuth) Authenticate(context.Context, string) (httpserver.VerifiedIdentity, error) {
+	return httpserver.VerifiedIdentity{TenantID: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", UserID: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", ExpiresAt: time.Now().Add(time.Hour)}, nil
+}
+
+type receiptAssemblyService struct {
+	httpserver.ReceiptService
+	called *bool
+}
+
+func (s receiptAssemblyService) ConfirmRead(_ context.Context, id access.TrustedIdentity, d policystore.DeviceCredential, c string, seqs []int64) (policystore.ReceiptState, error) {
+	*s.called = true
+	return policystore.ReceiptState{ReadSeq: seqs[0]}, nil
+}
+func TestReceiptRuntimeQueryAssembly(t *testing.T) {
+	called := false
+	fallback := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
+	h, e := assembleReceiptRoutes(fallback, receiptAssemblyAuth{}, receiptAssemblyService{called: &called}, ReceiptRuntimeConfig{Enabled: true})
+	if e != nil {
+		t.Fatal(e)
+	}
+	r := httptest.NewRequest("POST", "/api/v1/conversations/cccccccc-cccc-4ccc-8ccc-cccccccccccc/read", strings.NewReader(`{"seqs":["1"]}`))
+	r.Header.Set("Authorization", "Bearer verified")
+	r.Header.Set("X-Acting-Membership-ID", "dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+	r.Header.Set("X-IM-Device-ID", "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee")
+	r.Header.Set("X-IM-Device-Token", strings.Repeat("A", 43))
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 200 || !called {
+		t.Fatal("receipt assembly missing", w.Code)
+	}
+	h, e = assembleReceiptRoutes(fallback, nil, nil, ReceiptRuntimeConfig{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 404 {
+		t.Fatal("off route open", w.Code)
 	}
 }

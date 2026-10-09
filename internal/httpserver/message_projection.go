@@ -25,7 +25,7 @@ type messageItemDTO struct {
 	Attachment   *messageAttachmentDTO `json:"attachment,omitempty"`
 }
 
-func messagePageDTO(page policystore.MessagePage, typed bool) any {
+func messageItemsDTO(page policystore.MessagePage, typed bool) []messageItemDTO {
 	items := make([]messageItemDTO, 0, len(page.Messages))
 	for _, m := range page.Messages {
 		item := messageItemDTO{Seq: m.Seq, Redacted: m.Redacted}
@@ -68,6 +68,11 @@ func messagePageDTO(page policystore.MessagePage, typed bool) any {
 		}
 		items = append(items, item)
 	}
+	return items
+}
+
+func messagePageDTO(page policystore.MessagePage, typed bool) any {
+	items := messageItemsDTO(page, typed)
 	return struct {
 		ConversationID string           `json:"conversation_id"`
 		Messages       []messageItemDTO `json:"messages"`

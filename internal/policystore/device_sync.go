@@ -54,9 +54,13 @@ func (s Service) SyncDeviceMessages(ctx context.Context, id access.TrustedIdenti
 	if !now.Before(expiry) {
 		return DeviceSyncPage{}, ErrInvalidDevice
 	}
-	page, e := receiptFinalPageTx(ctx, tx, scope, batch, kind, now)
+	page, e := receiptFinalPageTx(ctx, tx, scope, batch, kind, s.now)
 	if e != nil {
 		return DeviceSyncPage{}, e
+	}
+	now = s.now()
+	if !now.Before(expiry) {
+		return DeviceSyncPage{}, ErrInvalidDevice
 	}
 	result := DeviceSyncPage{Page: page, ServerTime: now, ContentLeases: map[int64]ContentLease{}}
 	state, e := receiptStateTx(ctx, tx, id, device.ID, cid)
@@ -104,7 +108,7 @@ func (s Service) SyncDeviceMessages(ctx context.Context, id access.TrustedIdenti
 	if !finalAt.Before(expiry) {
 		return DeviceSyncPage{}, ErrInvalidDevice
 	}
-	final, e := receiptFinalPageTx(ctx, tx, scope, batch, kind, finalAt)
+	final, e := receiptFinalPageTx(ctx, tx, scope, batch, kind, s.now)
 	if e != nil {
 		return DeviceSyncPage{}, e
 	}
@@ -112,6 +116,13 @@ func (s Service) SyncDeviceMessages(ctx context.Context, id access.TrustedIdenti
 		if m.Redacted != page.Messages[i].Redacted {
 			return DeviceSyncPage{}, ErrSyncContextChanged
 		}
+	}
+	finalAt = s.now()
+	if !finalAt.Before(expiry) {
+		return DeviceSyncPage{}, ErrInvalidDevice
+	}
+	if result.SyncProof != "" && !finalAt.Before(result.ProofExpiresAt) {
+		return DeviceSyncPage{}, ErrSyncProofExpired
 	}
 	for _, m := range page.Messages {
 		if m.Redacted {
