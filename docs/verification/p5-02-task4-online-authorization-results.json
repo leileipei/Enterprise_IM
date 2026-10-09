@@ -1,0 +1,87 @@
+{
+  "status": "shared_online_authorization_checkpoint_passed",
+  "source_base_commit": "4604a5bdea3304277cccfd776bdf8a910fa7299c",
+  "source_scope": "working-tree checkpoint with exact source hashes, not immutable whole-branch/native acceptance",
+  "shared_suite": {
+    "passed": 74,
+    "actual_exit": 0
+  },
+  "analysis": {
+    "issues": 0,
+    "actual_exit": 0
+  },
+  "behavior_red": {
+    "actual_exit": 1,
+    "failures": [
+      "missing expiry timer",
+      "focus loss preserves online body"
+    ]
+  },
+  "authorization_failure_red": {
+    "actual_exit": 1,
+    "failure": "429 authorization failure retained online body"
+  },
+  "checks": [
+    "earliest online page deadline uses process monotonic grant and deducts request latency",
+    "expiry redacts all online pages before fresh full authorization",
+    "empty incremental page cannot extend online grant",
+    "focus/modal loss immediately revokes online body and stops owned timers",
+    "failed authorization immediately revokes online pages",
+    "RetryAfter applies to recovery",
+    "503 pending delivery retries identical proof before fresh history replay"
+  ],
+  "protocol_recheck": {
+    "actual_go_test_exit": 0,
+    "actual_supervisor_exit": 0,
+    "scope": "real HTTPS/WSS and SQLite shared core with Go API; injected activity, not platform UI",
+    "child_lifecycle": {
+      "registered": 4,
+      "ready": 4,
+      "matching_actual_exits": 4
+    },
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    },
+    "private_root_removed": true
+  },
+  "tradeoff": "full historical authorization replay increases load; conservative revocation also expires cached bodies on mixed pages",
+  "task3_complete": false,
+  "task4_complete": false,
+  "four_platform_acceptance": "not_executed",
+  "native_vault_acceptance": "not_executed",
+  "native_ui_acceptance": "not_executed",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "remaining": [
+    "OS vault write/restart/read/delete probe",
+    "NativeAuth startup/refresh/store handoff",
+    "native lifecycle/visibility adapters and product UI",
+    "iOS minimum version decision and Xcode license gate",
+    "fixed-source full native acceptance plus review"
+  ],
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/sync/sync_engine.dart": "f1aa31205e9f18237af612991361721ee122b3b2d6770f6518350afcda8c25eb",
+    "clients/enterprise_im/lib/core/sync/sync_coordinator.dart": "a06e5fceee740cf404d94bbaf4c874dea9614a2a759ab965d2d3d6e9467dba0d",
+    "clients/enterprise_im/test/sync_coordinator_test.dart": "36877f4ac69679073a69ba13886e2e871cf89b670c56445983be0e63e984a93e",
+    "clients/enterprise_im/tool/receipt_backend_probe.dart": "baf9251604254741c95bf020e960185e0bfa4980612ed3240fd929eb3c1bef97",
+    "internal/policystore/native_receipt_probe_test.go": "eb08e4c1aa14e9c9586bcc23462994114d21f5650e41ffd9a6efd0409d428182"
+  },
+  "log_sha256": {
+    "task-4-online-red.log": "1374ffdc62df82951eef412f958425f6be41b5fcb04c5b9257201ae112500ed3",
+    "task-4-online-behavior-red.log": "9059f6fc67d7abef35d23015e0b2bc901db28a89e864957ecaea515a01c2ff97",
+    "task-4-online-green.log": "fc35169114622911daa07596aed60a06748be7de667c31109c63659620633409",
+    "task-4-online-failure-red.log": "eaaa6affbc338f140738e9152659916932bfd7c782087282d120121ef5fa2966",
+    "task-4-online-coordinator-final.log": "835384cbc3c3e320354134934a05ef62495899d07e103dacb1e84944667b62b5",
+    "task-4-online-proof.log": "280de26df31f488548c7f96e2288e1852e2c4bdc559318a9af24d4439693ea48",
+    "task-4-online-final-shared-v2.log": "72c324cfb15a313abce031e190111bcc9a7c8d6e6f84b4fe16a358d1b7e4d57a",
+    "task-4-online-analysis-v2.log": "4adebedfbfd49dd40ee8c50fff9e02640c0c2d46c25322873e67c5fc48a83203",
+    "task-4-online-real-go.log": "a82cd5d7e5c2644dfe02c16f545210ac47af48b8fc1c388848f6082d82b2fb86",
+    "task-4-online-real-go.registry.jsonl": "0b1c4147360214a2d1fc6580a92c49b0a627a0bc207ee6c76c3aa8fd4af58728",
+    "run_protocol.py": "e8e599c3d3c0f39502e69ab69b8e1c04fe510686236aaf7e72120e763578d13c"
+  },
+  "fixture_errors_retained": [
+    "first zero-cache test used after instead of after_seq; excluded from behavior RED",
+    "first same-proof regression fired purge timer instead of retry timer; corrected to fire captured due timers, original proof assertions retained"
+  ]
+}

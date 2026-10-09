@@ -25,6 +25,27 @@ final class SyncResult {
     this.receiptState,
   ) : deliveredSeqs = List.unmodifiable(delivered),
       locallyReadSeqs = const [];
+  // Only fresh process-local online leases drive renewal. No persisted date
+  // can become a timer or a new grant, and request latency is already deducted.
+  Duration? get onlineAuthorizationRemaining {
+    Duration? result;
+    for (final message in _page.messages) {
+      if (message.redacted ||
+          message.cacheUntil != _page.serverTime ||
+          message.onlineUntil == null)
+        continue;
+      var remaining = _active()
+          ? _clock.remainingFor(message.onlineUntil!)
+          : Duration.zero;
+      final content = _clock.remainingFor(message.contentExpiresAt!);
+      if (content < remaining) remaining = content;
+      final session = _context.session.remaining;
+      if (session < remaining) remaining = session;
+      if (result == null || remaining < result) result = remaining;
+    }
+    return result;
+  }
+
   void invalidateReading() => _clock.invalidate();
   bool matchesContext(ClientContext context) =>
       _active() && _context.sameScope(context);

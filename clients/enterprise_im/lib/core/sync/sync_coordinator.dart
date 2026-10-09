@@ -22,7 +22,10 @@ final class SyncCoordinator {
   late final StreamSubscription<RealtimeSignal> _signals;
   late final StreamSubscription<ApiFailure> _failures;
   ClientContext? _context;
-  Timer? _poll, _reconnect, _syncRetry, _purge;
+  Timer? _poll, _reconnect, _syncRetry, _purge, _online;
+  SyncResult? _onlineResult;
+  final _onlinePages = <SyncResult>{};
+  bool _requiresFocus = false, _onlineRecovery = false;
   Future<void>? _refreshFlight, _connectFlight, _reset;
   bool _reauthorize = false;
   bool _dirty = false, _suspended = true, _disposed = false, _purging = false;
@@ -66,7 +69,8 @@ final class SyncCoordinator {
   }
   bool get _foreground =>
       activity.foreground &&
-      activity.activeConversation == _context?.conversationId;
+      activity.activeConversation == _context?.conversationId &&
+      (!_requiresFocus || (activity.focused && !activity.blocked));
   bool get _running =>
       !_disposed && !_suspended && _context != null && _foreground;
   bool _active(int epoch) => epoch == _epoch && _running;
@@ -137,10 +141,28 @@ final class SyncCoordinator {
             ? engine.reauthorizeConversation(context)
             : engine.syncConversation(context));
         if (!_active(epoch)) return;
+        final online = result.onlineAuthorizationRemaining;
+        if (online != null) {
+          _requiresFocus = true;
+          if (!_foreground) {
+            await _pause();
+            onResult(result); // stop invalidated this late unfocused page.
+            return;
+          }
+          _armOnline(result, online);
+        }
         receipts.acceptDelivered(result, context);
         _syncAttempt = 0;
         onResult(result);
         _dirty = _dirty || result.hasMore;
+        // Finish an existing pending page/proof retry before replaying history.
+        // This preserves identical-proof503 recovery while obtaining new body
+        // authorization after an offline/failed online grant.
+        if (_onlineRecovery && !result.hasMore) {
+          _onlineRecovery = false;
+          _reauthorize = true;
+          _dirty = true;
+        }
       } while (_active(epoch) && _dirty);
     } on ApiFailure catch (error) {
       if (_active(epoch)) _handle(error, connecting: false);
@@ -205,6 +227,11 @@ final class SyncCoordinator {
       onFailure?.call(error);
       return;
     }
+    if (_requiresFocus) {
+      _onlineRecovery = true;
+      _redactOnline();
+      if (!_running) return;
+    }
     final epoch = _epoch;
     final delay = decision.delay ?? const Duration(seconds: 1);
     if (connecting) {
@@ -220,6 +247,51 @@ final class SyncCoordinator {
         if (_active(epoch)) unawaited(_refresh());
       });
     }
+  }
+
+  void _redactOnline() {
+    _online?.cancel();
+    _online = null;
+    _onlineResult = null;
+    final pages = _onlinePages.toList();
+    _onlinePages.clear();
+    for (final page in pages) {
+      page.invalidateReading();
+    }
+    for (final page in pages) {
+      onResult(page);
+    }
+  }
+
+  void _armOnline(SyncResult result, Duration remaining) {
+    _onlinePages.removeWhere(
+      (page) => page.onlineAuthorizationRemaining == Duration.zero,
+    );
+    _onlinePages.add(result);
+    // An empty incremental page cannot extend an older body's online grant.
+    // Preserve the earliest page deadline when history contains several pages.
+    final previous = _onlineResult?.onlineAuthorizationRemaining;
+    if (_online?.isActive == true && previous != null && previous <= remaining)
+      return;
+    _online?.cancel();
+    _onlineResult = result;
+    final epoch = _epoch;
+    // If network latency consumed the entire grant, body is already redacted.
+    // Avoid a tight loop; retry authorization at the ordinary offline cadence.
+    final delay = remaining > Duration.zero
+        ? remaining
+        : const Duration(seconds: 5);
+    _online = schedule(delay, () {
+      _online = null;
+      if (!_active(epoch)) return;
+      _redactOnline(); // Revoke every online page before notifying the UI.
+      if (_refreshFlight == null) {
+        _reauthorize = true;
+      } else {
+        _onlineRecovery = true; // Preserve an in-flight pending proof.
+      }
+      unawaited(_refresh()); // Retry-After still gates this request.
+    });
   }
 
   void _armPoll() {
@@ -265,25 +337,31 @@ final class SyncCoordinator {
   }
 
   void _cancelTimers() {
-    for (final timer in [_poll, _reconnect, _syncRetry, _purge]) {
+    for (final timer in [_poll, _reconnect, _syncRetry, _purge, _online]) {
       timer?.cancel();
     }
-    _poll = _reconnect = _syncRetry = _purge = null;
+    _poll = _reconnect = _syncRetry = _purge = _online = null;
+    _onlineResult = null;
+    _onlinePages.clear();
+    _onlineRecovery = false;
   }
 
   Future<void> _pause() async {
+    final online = _onlineResult;
     _epoch++;
     _suspended = true;
     _dirty = false;
     _cancelTimers();
     _refreshFlight = _connectFlight = null;
     engine.stop();
+    if (online != null) onResult(online);
     receipts.contextChanged();
     await channel.stop();
   }
 
   Future<void> stop() {
     _context = null;
+    _requiresFocus = false;
     return _pause();
   }
 

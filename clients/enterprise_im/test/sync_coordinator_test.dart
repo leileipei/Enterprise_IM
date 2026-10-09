@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:enterprise_im/core/protocol/api_client.dart';
@@ -434,6 +435,345 @@ void main() {
             .queryParameters['after_seq'],
         '0',
       );
+    },
+  );
+  test(
+    'online-only lease expiry redacts before fresh full authorization',
+    () async {
+      final (_, store) = await fixture.storage();
+      var elapsed = Duration.zero;
+      var gets = 0;
+      final renewal = Completer<ApiResponse>();
+      final afters = <String>[];
+      Map<String, Object?> online() {
+        final page = fixture.syncPage();
+        final message =
+            (page['messages'] as List).single as Map<String, Object?>;
+        message['cache_until'] = fixture.server.toIso8601String();
+        message['online_until'] = fixture.server
+            .add(const Duration(seconds: 5))
+            .toIso8601String();
+        return page;
+      }
+
+      final transport = fixture.ScriptedTransport((request) {
+        if (request.uri.path.endsWith('/tickets'))
+          return fixture.response({
+            'ticket': realtime.ticket,
+            'expires_in_seconds': 30,
+          });
+        if (request.method == 'PUT') return fixture.response(fixture.state());
+        afters.add(request.uri.queryParameters['after_seq']!);
+        if (++gets == 3) return renewal.future;
+        return fixture.response(
+          gets == 1 ? online() : fixture.syncPage(empty: true),
+        );
+      });
+      final api = ApiClient(Uri.parse('https://im.example'), transport);
+      final engine = SyncEngine(api, store, now: () => elapsed);
+      final activity = AppActivity()
+        ..update(
+          foreground: true,
+          focused: true,
+          activeConversation: fixture.conversation,
+        );
+      final receipts = ReceiptQueue(api, activity);
+      final dial = realtime.DialFixture();
+      final channel = RealtimeChannel(api, dial);
+      final scheduler = ManualScheduler();
+      final results = <SyncResult>[];
+      final coordinator = SyncCoordinator(
+        engine,
+        channel,
+        receipts,
+        activity,
+        onResult: results.add,
+        schedule: scheduler.create,
+        retry: RetryPolicy(random: () => .5),
+      );
+      addTearDown(() async {
+        if (!renewal.isCompleted)
+          renewal.complete(fixture.response(fixture.syncPage(empty: true)));
+        await coordinator.dispose();
+        receipts.dispose();
+        activity.dispose();
+        await channel.dispose();
+      });
+      await coordinator.start(fixture.context());
+      final original = results.single;
+      expect(original.messages.single.redacted, isFalse);
+      dial.socket.controller.add('{"type":"ready","resync_required":true}');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(gets, 2);
+      expect(scheduler.has(const Duration(seconds: 35)), isTrue);
+      expect(
+        scheduler.has(const Duration(seconds: 5)),
+        isTrue,
+        reason: 'server online lease needs its own expiry timer',
+      );
+      elapsed = const Duration(seconds: 5);
+      scheduler.fire(const Duration(seconds: 5));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(
+        results.last.messages.single.redacted,
+        isTrue,
+        reason: 'publish redaction while new authorization remains blocked',
+      );
+      expect(afters, ['0', '1', '0']);
+      expect(await store.committedCursor(fixture.conversation), isNotNull);
+      renewal.complete(fixture.response(online()));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(original.messages.single.redacted, isTrue);
+      expect(results.last.messages.single.redacted, isFalse);
+    },
+  );
+  test(
+    'online-only body loses authorization immediately on focus loss',
+    () async {
+      final (_, store) = await fixture.storage();
+      final transport = fixture.ScriptedTransport((request) {
+        if (request.uri.path.endsWith('/tickets'))
+          return fixture.response({
+            'ticket': realtime.ticket,
+            'expires_in_seconds': 30,
+          });
+        if (request.method == 'PUT') return fixture.response(fixture.state());
+        final page = fixture.syncPage();
+        final message =
+            (page['messages'] as List).single as Map<String, Object?>;
+        message['cache_until'] = fixture.server.toIso8601String();
+        message['online_until'] = fixture.server
+            .add(const Duration(seconds: 5))
+            .toIso8601String();
+        return fixture.response(page);
+      });
+      final api = ApiClient(Uri.parse('https://im.example'), transport);
+      final engine = SyncEngine(api, store);
+      final activity = AppActivity()
+        ..update(
+          foreground: true,
+          focused: true,
+          activeConversation: fixture.conversation,
+        );
+      final receipts = ReceiptQueue(api, activity);
+      final channel = RealtimeChannel(api, realtime.DialFixture());
+      final scheduler = ManualScheduler();
+      final results = <SyncResult>[];
+      final coordinator = SyncCoordinator(
+        engine,
+        channel,
+        receipts,
+        activity,
+        onResult: results.add,
+        schedule: scheduler.create,
+      );
+      addTearDown(() async {
+        await coordinator.dispose();
+        receipts.dispose();
+        activity.dispose();
+        await channel.dispose();
+      });
+      await coordinator.start(fixture.context());
+      final original = results.single;
+      expect(original.messages.single.redacted, isFalse);
+      activity.update(
+        foreground: true,
+        focused: false,
+        activeConversation: fixture.conversation,
+      );
+      expect(original.messages.single.redacted, isTrue);
+      expect(results.last.messages.single.redacted, isTrue);
+      expect(scheduler.scheduled.where((entry) => entry.$2.isActive), isEmpty);
+      activity.update(
+        foreground: true,
+        focused: true,
+        activeConversation: fixture.conversation,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(results.last.messages.single.redacted, isFalse);
+      expect(original.messages.single.redacted, isTrue);
+    },
+  );
+  test(
+    'failed online authorization redacts and respects RetryAfter before recovery',
+    () async {
+      final (_, store) = await fixture.storage();
+      var gets = 0;
+      final afters = <String>[];
+      Map<String, Object?> online() {
+        final page = fixture.syncPage();
+        final message =
+            (page['messages'] as List).single as Map<String, Object?>;
+        message['cache_until'] = fixture.server.toIso8601String();
+        message['online_until'] = fixture.server
+            .add(const Duration(seconds: 5))
+            .toIso8601String();
+        return page;
+      }
+
+      final transport = fixture.ScriptedTransport((request) {
+        if (request.uri.path.endsWith('/tickets'))
+          return fixture.response({
+            'ticket': realtime.ticket,
+            'expires_in_seconds': 30,
+          });
+        if (request.method == 'PUT') return fixture.response(fixture.state());
+        afters.add(request.uri.queryParameters['after_seq']!);
+        gets++;
+        if (gets == 2)
+          return ApiResponse(
+            429,
+            fixture.response({'error_code': 'rate_limited'}).body,
+            {'retry-after': '7'},
+          );
+        return fixture.response(
+          gets == 3 ? fixture.syncPage(empty: true) : online(),
+        );
+      });
+      final api = ApiClient(Uri.parse('https://im.example'), transport);
+      final engine = SyncEngine(api, store);
+      final activity = AppActivity()
+        ..update(
+          foreground: true,
+          focused: true,
+          activeConversation: fixture.conversation,
+        );
+      final receipts = ReceiptQueue(api, activity);
+      final channel = RealtimeChannel(api, realtime.DialFixture());
+      final scheduler = ManualScheduler();
+      final results = <SyncResult>[];
+      final coordinator = SyncCoordinator(
+        engine,
+        channel,
+        receipts,
+        activity,
+        onResult: results.add,
+        schedule: scheduler.create,
+      );
+      addTearDown(() async {
+        await coordinator.dispose();
+        receipts.dispose();
+        activity.dispose();
+        await channel.dispose();
+      });
+      await coordinator.start(fixture.context());
+      final original = results.single;
+      await coordinator.resume();
+      expect(
+        original.messages.single.redacted,
+        isTrue,
+        reason: 'authorization failure revokes online-only body immediately',
+      );
+      expect(gets, 2);
+      expect(scheduler.has(const Duration(seconds: 7)), isTrue);
+      await coordinator.resume();
+      expect(gets, 2, reason: 'resume cannot bypass RetryAfter');
+      scheduler.fire(const Duration(seconds: 7));
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(afters, ['0', '1', '1', '0']);
+      expect(results.last.messages.single.redacted, isFalse);
+      expect(original.messages.single.redacted, isTrue);
+    },
+  );
+  test(
+    'online failure preserves the pending delivery proof before history replay',
+    () async {
+      final (_, store) = await fixture.storage();
+      var gets = 0, puts = 0;
+      final proofs = <String>[];
+      final afters = <String>[];
+      final proofA = fixture.syncPage()['sync_proof'] as String;
+      final proofB = '${'Ag' * 21}A';
+      final proofC = '${'Aw' * 21}A';
+      Map<String, Object?> online(int seq, String proof) {
+        final page = fixture.syncPage(seq: seq, proof: proof);
+        final message =
+            (page['messages'] as List).single as Map<String, Object?>;
+        message['cache_until'] = fixture.server.toIso8601String();
+        message['online_until'] = fixture.server
+            .add(const Duration(seconds: 5))
+            .toIso8601String();
+        return page;
+      }
+
+      final transport = fixture.ScriptedTransport((request) {
+        if (request.uri.path.endsWith('/tickets'))
+          return fixture.response({
+            'ticket': realtime.ticket,
+            'expires_in_seconds': 30,
+          });
+        if (request.method == 'PUT') {
+          // Evidence is the real product request payload, not a mock call count.
+          proofs.add(
+            (jsonDecode(utf8.decode(request.body!)) as Map)['sync_proof']
+                as String,
+          );
+          if (++puts == 2)
+            return fixture.response({'error_code': 'unavailable'}, status: 503);
+          return fixture.response(fixture.state(scanned: puts == 1 ? 1 : 2));
+        }
+        afters.add(request.uri.queryParameters['after_seq']!);
+        gets++;
+        if (gets == 1) return fixture.response(online(1, proofA));
+        if (gets == 2) return fixture.response(online(2, proofB));
+        final page = online(2, proofC);
+        page['messages'] = [
+          ...online(1, proofC)['messages'] as List,
+          ...page['messages'] as List,
+        ];
+        return fixture.response(page);
+      });
+      final api = ApiClient(Uri.parse('https://im.example'), transport);
+      final engine = SyncEngine(api, store);
+      final activity = AppActivity()
+        ..update(
+          foreground: true,
+          focused: true,
+          activeConversation: fixture.conversation,
+        );
+      final receipts = ReceiptQueue(api, activity);
+      final channel = RealtimeChannel(api, realtime.DialFixture());
+      final scheduler = ManualScheduler();
+      final results = <SyncResult>[];
+      final coordinator = SyncCoordinator(
+        engine,
+        channel,
+        receipts,
+        activity,
+        onResult: results.add,
+        schedule: scheduler.create,
+        retry: RetryPolicy(random: () => .5),
+      );
+      addTearDown(() async {
+        await coordinator.dispose();
+        receipts.dispose();
+        activity.dispose();
+        await channel.dispose();
+      });
+      await coordinator.start(fixture.context());
+      final original = results.single;
+      await coordinator.resume();
+      expect(original.messages.single.redacted, isTrue);
+      expect((await store.pendingReceipts()).single.syncProof, proofB);
+      // Both purge and retry timers are due at this instant. Fire the captured
+      // due timers rather than accidentally selecting only the purge timer.
+      final due = scheduler.scheduled
+          .where(
+            (item) => item.$1 == const Duration(seconds: 1) && item.$2.isActive,
+          )
+          .map((item) => item.$2)
+          .toList();
+      for (final timer in due) {
+        timer.fire();
+      }
+      final waited = Stopwatch()..start();
+      while (proofs.length < 4 && waited.elapsed < const Duration(seconds: 3)) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(proofs, [proofA, proofB, proofB, proofC]);
+      expect(afters, ['0', '1', '0']);
+      expect(await store.pendingReceipts(), isEmpty);
+      expect(results.last.messages.where((m) => !m.redacted).length, 2);
     },
   );
 }
