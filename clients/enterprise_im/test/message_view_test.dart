@@ -66,6 +66,89 @@ ApiResponse metadata(ApiRequest request) => oidc.response(
         },
 );
 void main() {
+  for (final mixed in [false, true]) {
+    test(
+      'recipient metadata preserves conversation and only queries own messages mixed=$mixed',
+      () async {
+        late String userId;
+        final owner = await nav.owner((r, _) async {
+          if (r.uri.path.endsWith('/tickets'))
+            throw const ApiFailure('unavailable');
+          if (r.uri.path.endsWith('/sync')) {
+            final incoming =
+                (page()['messages'] as List).single as Map<String, Object?>;
+            return oidc.response({
+              ...page(),
+              'next_after_seq': mixed ? '2' : '1',
+              'messages': [
+                incoming,
+                if (mixed)
+                  {
+                    ...incoming,
+                    'seq': '2',
+                    'sender_user_id': userId,
+                    'text': '本人发送',
+                  },
+              ],
+            });
+          }
+          if (r.uri.path.endsWith('/delivered'))
+            return oidc.response(disk.state(scanned: mixed ? 2 : 1));
+          if (r.uri.path.endsWith('/receipts')) {
+            // The production endpoint rejects any incoming message in this batch.
+            if (r.uri.queryParameters['seqs'] != '2')
+              return ApiResponse(
+                404,
+                utf8.encode('{"error_code":"not_found"}'),
+                const {},
+              );
+            return oidc.response({
+              'receipts': [
+                {
+                  'seq': '2',
+                  'status': 'read',
+                  'summary_available': true,
+                  'visible_recipient_count': 1,
+                  'visible_delivered_count': 1,
+                  'visible_read_count': 1,
+                  'delivered_at': '2026-10-09T00:00:00Z',
+                  'read_at': '2026-10-09T00:00:00Z',
+                },
+              ],
+            });
+          }
+          return metadata(r);
+        });
+        userId = owner.current!.session.userId;
+        addTearDown(owner.logout);
+        final (roles, context) = await sending.admission(owner);
+        addTearDown(roles.close);
+        final activity = AppActivity()
+          ..update(foreground: true, focused: true, activeConversation: nav.dm);
+        addTearDown(activity.dispose);
+        final view = ConversationView(
+          roles,
+          activity,
+          connector: OfflineSocket(),
+        );
+        addTearDown(view.close);
+        await view.select(context, ConversationSummary.fromJson(nav.direct()));
+        await view.refreshMetadata();
+        expect(view.context, isNotNull);
+        expect(view.canSend, isTrue);
+        expect(
+          view.messages.map((m) => m.text),
+          mixed ? ['真实授权正文', '本人发送'] : ['真实授权正文'],
+        );
+        expect(view.unread, isNotNull);
+        expect(
+          view.summaries.keys.map((seq) => seq.toString()),
+          mixed ? ['2'] : isEmpty,
+        );
+        if (mixed) expect(view.summaries.values.single.status, 'read');
+      },
+    );
+  }
   test(
     'view withdraws ordinary cached body at its deadline without another poll',
     () async {

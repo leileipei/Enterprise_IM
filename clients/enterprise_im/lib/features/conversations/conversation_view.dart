@@ -314,7 +314,14 @@ final class ConversationView extends ChangeNotifier {
           cancellation: cancel,
         );
         final seqs =
-            messages.where((m) => !m.redacted).map((m) => m.seq).toList()
+            messages
+                // Receipt summaries are authorized only for the sender.
+                .where(
+                  (m) =>
+                      !m.redacted && m.senderUserId == context.session.userId,
+                )
+                .map((m) => m.seq)
+                .toList()
               ..sort();
         final requested = seqs.length > 100
             ? seqs.sublist(seqs.length - 100)
