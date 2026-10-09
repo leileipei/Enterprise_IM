@@ -1,0 +1,151 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
+import 'package:cryptography/cryptography.dart';
+import 'package:sqlite3/sqlite3.dart';
+
+Object? canonical(Object? value) {
+  if (value is Map<String, Object?>) {
+    final keys = value.keys.toList()..sort();
+    return {for (final key in keys) key: canonical(value[key])};
+  }
+  if (value is List) return value.map(canonical).toList(growable: false);
+  return value;
+}
+
+// All SQLite access and encryption is serial inside this one isolate. No other
+// isolate obtains the database handle or executes a concurrent transaction.
+Future<void> storeWorkerMain(List<Object?> args) async {
+  final startup = args[0]! as SendPort;
+  final replies = args[1]! as SendPort;
+  final path = args[2]! as String;
+  final namespace = args[3]! as String;
+  final bytes = args[4]! as List<int>;
+  final generation = args[5]! as int;
+  final key = SecretKeyData(bytes, overwriteWhenDestroyed: true);
+  bool keyDestroyed = false;
+  void eraseKey() {
+    if (!keyDestroyed) {
+      key.destroy();
+      keyDestroyed = true;
+    }
+    bytes.fillRange(0, bytes.length, 0);
+  }
+
+  final aes = AesGcm.with256bits();
+  final commands = ReceivePort();
+  Database? database;
+  Future<String> opaque(String kind, String id) async {
+    final hash = await Sha256().hash(
+      utf8.encode(jsonEncode([namespace, kind, id])),
+    );
+    return hash.bytes
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
+  }
+
+  List<int> aad(String kind, String id) =>
+      utf8.encode(jsonEncode([1, namespace, kind, id]));
+  Future<Map<String, Object?>> decrypt(Row row) async {
+    final box = SecretBox(
+      row['ciphertext'] as Uint8List,
+      nonce: row['nonce'] as Uint8List,
+      mac: Mac(row['tag'] as Uint8List),
+    );
+    final plain = await aes.decrypt(
+      box,
+      secretKey: key,
+      aad: aad(row['kind'] as String, row['opaque_key'] as String),
+    );
+    return Map<String, Object?>.from(jsonDecode(utf8.decode(plain)) as Map);
+  }
+
+  try {
+    final db = sqlite3.open(path);
+    database = db;
+    db.execute('PRAGMA journal_mode=WAL');
+    db.execute('PRAGMA temp_store=MEMORY');
+    db.execute('PRAGMA synchronous=FULL');
+    db.execute(
+      'CREATE TABLE IF NOT EXISTS records(opaque_key TEXT PRIMARY KEY,kind TEXT NOT NULL,nonce BLOB NOT NULL,ciphertext BLOB NOT NULL,tag BLOB NOT NULL)',
+    );
+    startup.send(commands.sendPort);
+    await for (final raw in commands) {
+      final request = raw as List<Object?>;
+      final id = request[0]! as int;
+      final operation = request[1]! as String;
+      try {
+        if (request[3] != generation) throw StateError('stale');
+        Object? result;
+        if (operation == 'put_pending') {
+          final payload = Map<String, Object?>.from(request[2]! as Map);
+          final logical = payload['client_msg_id']! as String;
+          final recordKey = await opaque('pending_send', logical);
+          final current = db.select(
+            'SELECT * FROM records WHERE opaque_key=?',
+            [recordKey],
+          );
+          if (current.isNotEmpty) {
+            if (jsonEncode(canonical(await decrypt(current.single))) !=
+                jsonEncode(canonical(payload)))
+              throw StateError('conflict');
+          } else {
+            final box = await aes.encrypt(
+              utf8.encode(jsonEncode(payload)),
+              secretKey: key,
+              nonce: aes.newNonce(),
+              aad: aad('pending_send', recordKey),
+            );
+            db.execute('BEGIN IMMEDIATE');
+            try {
+              db.execute('INSERT INTO records VALUES(?,?,?,?,?)', [
+                recordKey,
+                'pending_send',
+                Uint8List.fromList(box.nonce),
+                Uint8List.fromList(box.cipherText),
+                Uint8List.fromList(box.mac.bytes),
+              ]);
+              db.execute('COMMIT');
+            } catch (_) {
+              db.execute('ROLLBACK');
+              rethrow;
+            }
+          }
+        } else if (operation == 'pending') {
+          final values = <Map<String, Object?>>[];
+          for (final row in db.select(
+            "SELECT * FROM records WHERE kind='pending_send' ORDER BY opaque_key",
+          )) {
+            values.add(await decrypt(row));
+          }
+          result = values;
+        } else if (operation == 'close' || operation == 'erase') {
+          db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+          db.close();
+          database = null;
+          if (operation == 'erase') {
+            for (final suffix in ['', '-wal', '-shm']) {
+              final file = File('$path$suffix');
+              if (await file.exists()) await file.delete();
+            }
+          }
+          eraseKey();
+          replies.send([id, true, null]);
+          break;
+        } else {
+          throw StateError('invalid');
+        }
+        replies.send([id, true, result]);
+      } catch (_) {
+        replies.send([id, false, null]);
+      }
+    }
+  } catch (_) {
+    startup.send(null);
+  } finally {
+    database?.close();
+    commands.close();
+    eraseKey();
+  }
+}

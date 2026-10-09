@@ -1,0 +1,46 @@
+{
+  "schema_version": "p502_task3_storage_foundation_v1",
+  "status": "in_progress",
+  "source_kind": "working_tree_checkpoint",
+  "base_commit": "d57c0aae1db5b0f8ff3dcfed007c799ad3168373",
+  "shared_tests": {
+    "actual_exit": 0,
+    "passed": 23
+  },
+  "analysis": {
+    "actual_exit": 0,
+    "issues": 0,
+    "same_source_ascii_alias": true
+  },
+  "real_local_sqlite": "tested",
+  "secure_vault_channel": "mock_contract_only",
+  "native_secure_vault_restart": "not_executed",
+  "page_cursor_receipt_atomic_commit": "not_implemented",
+  "monotonic_cache_lease": "not_implemented",
+  "authenticated_session_restore": "not_implemented",
+  "platform_acceptance": {
+    "windows": "not_executed",
+    "macos": "not_executed",
+    "android": "not_executed",
+    "ios": "not_executed"
+  },
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/storage/store_worker.dart": "d8f4b8f54043261aad596f31a1b713b8a30863da879bc978a67d7083f12809a5",
+    "clients/enterprise_im/lib/core/storage/secure_vault.dart": "ed9db086a526ca5982f7f7024ef048782e5c01be8161d649cf31fde6324e1158",
+    "clients/enterprise_im/lib/core/storage/encrypted_store.dart": "d7676d6a9eb7a3f830457e895994ba73876a2b6f2a59d2f22c2894d8c82d1642",
+    "clients/enterprise_im/test/secure_vault_test.dart": "c2cdb1c5937d1dc15e028a112fc9eef91d81408592ca81d00fde9d14ca0ecf9a",
+    "clients/enterprise_im/test/storage_test.dart": "1580746b15622191d50458378e4a1e16ff66b389cf2df2f8b453ede13ed26a37",
+    "clients/enterprise_im/integration_test/secure_storage_test.dart": "921e06cce977185137b6d4b7310475a86f0433c9f227963fa59b63b76da8d145"
+  },
+  "log_sha256": {
+    "task-3-foundation-checkpoint-tests.log": "2b7f48cdb6fc6b15c1231e9c8e30a123bb21195ed42a179beeb8f79832cdfa75",
+    "task-3-foundation-checkpoint-analysis.log": "93c62e9e71094e60e640e3c82ceba7a25a96aa7508d380e8a43aeac19e70940d",
+    "task-3-vault-red.log": "6bb727f530f1b6899416542afb0c3aba1a1e69ea001ef60dd315b5f91cf898c5",
+    "task-3-store-red.log": "60c7721462dcde2896267a56ffddadd49eea1e843c792719768f3e41242c10ac",
+    "task-3-store-close-red.log": "9508ea53b9a32c09ed83d8e14bf625fc60e6092acf977cff0e4a0016bd623ec0",
+    "task-3-store-order-red.log": "588cb87060b911d79f162949b08da3168511a10167a2e12203762484d7e376b3",
+    "task-3-concurrent-erase-red.log": "df15e12c0258abb9031878b0d69c615613239f11304fe8a4ec801e1fc5dbe5fb"
+  }
+}
