@@ -88,6 +88,10 @@ func filterGroupHistoryBatchTx(ctx context.Context, tx pgx.Tx, scope historyRead
 }
 
 func readDirectHistoryBatchTxMode(ctx context.Context, tx pgx.Tx, scope historyReadContext, conversationID string, afterSeq int64, limit int, mode historyReadMode) (historyReadBatch, error) {
+	return readDirectHistorySelectionTx(ctx, tx, scope, conversationID, afterSeq, limit, mode, nil)
+}
+
+func readDirectHistorySelectionTx(ctx context.Context, tx pgx.Tx, scope historyReadContext, conversationID string, afterSeq int64, limit int, mode historyReadMode, seqs []int64) (historyReadBatch, error) {
 	id := scope.Identity
 	if (mode != historyReadAll && mode != historyReadTextOnly) || limit < 1 || limit > 500 || afterSeq < 0 || !directoryUUIDPattern.MatchString(conversationID) {
 		return historyReadBatch{}, ErrInvalidMessageRequest
@@ -105,13 +109,19 @@ func readDirectHistoryBatchTxMode(ctx context.Context, tx pgx.Tx, scope historyR
 	histories := make([]historicalPair, 0, min(limit, 100))
 	// Bound message rows before joining card metadata; each message has at most one attachment.
 	// This preserves the lookahead while avoiding a full-conversation join for every proof.
+	selection := ""
+	args := []any{id.TenantID, conversationID, afterSeq, limit + 1}
+	if seqs != nil {
+		selection = " AND m.seq=ANY($5::bigint[])"
+		args = append(args, seqs)
+	}
 	rows, err := tx.Query(ctx, `
 SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,
  COALESCE(m.recipient_user_id::text,''),COALESCE(m.recipient_membership_id::text,''),
  m.text_body,m.accepted_at,m.body_cleared_at,
  COALESCE(m.sender_organization_id::text,''),COALESCE(m.recipient_organization_id::text,'')`+historyAttachmentSelect+`
-FROM (SELECT * FROM messages m WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+` ORDER BY m.seq LIMIT $4) m`+historyAttachmentJoin+`
-ORDER BY m.seq`, id.TenantID, conversationID, afterSeq, limit+1)
+FROM (SELECT * FROM messages m WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+selection+` ORDER BY m.seq LIMIT $4) m`+historyAttachmentJoin+`
+ORDER BY m.seq`, args...)
 	if err != nil {
 		return historyReadBatch{}, err
 	}
@@ -162,6 +172,10 @@ ORDER BY m.seq`, id.TenantID, conversationID, afterSeq, limit+1)
 }
 
 func readGroupHistoryBatchTxMode(ctx context.Context, tx pgx.Tx, scope historyReadContext, groupID string, afterSeq int64, limit int, mode historyReadMode) (historyReadBatch, error) {
+	return readGroupHistorySelectionTx(ctx, tx, scope, groupID, afterSeq, limit, mode, nil)
+}
+
+func readGroupHistorySelectionTx(ctx context.Context, tx pgx.Tx, scope historyReadContext, groupID string, afterSeq int64, limit int, mode historyReadMode, seqs []int64) (historyReadBatch, error) {
 	id := scope.Identity
 	if (mode != historyReadAll && mode != historyReadTextOnly) || limit < 1 || limit > 500 || afterSeq < 0 || !directoryUUIDPattern.MatchString(groupID) {
 		return historyReadBatch{}, ErrInvalidMessageRequest
@@ -183,9 +197,15 @@ func readGroupHistoryBatchTxMode(ctx context.Context, tx pgx.Tx, scope historyRe
 	}
 	page := MessagePage{ConversationID: groupID,
 		Messages: make([]PulledMessage, 0, min(limit, 100)), NextAfterSeq: afterSeq}
+	selection := ""
+	args := []any{id.TenantID, groupID, afterSeq, limit + 1}
+	if seqs != nil {
+		selection = " AND m.seq=ANY($5::bigint[])"
+		args = append(args, seqs)
+	}
 	rows, err := tx.Query(ctx, `SELECT m.id::text,m.seq,m.sender_user_id::text,m.sender_membership_id::text,m.text_body,m.accepted_at,m.body_cleared_at`+historyAttachmentSelect+`
- FROM messages m`+historyAttachmentJoin+` WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+`
- ORDER BY m.seq LIMIT $4`, id.TenantID, groupID, afterSeq, limit+1)
+ FROM messages m`+historyAttachmentJoin+` WHERE m.tenant_id=$1 AND m.conversation_id=$2 AND m.seq>$3`+historyTypePredicate(mode)+selection+`
+ ORDER BY m.seq LIMIT $4`, args...)
 	if err != nil {
 		return historyReadBatch{}, err
 	}
