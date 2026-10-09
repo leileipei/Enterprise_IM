@@ -203,3 +203,69 @@ final class PendingSend {
     );
   }
 }
+
+// One unresolved device registration per account. It is encrypted in the same
+// database as pending sends, and never contains a device or access token.
+final class PendingRegistration {
+  final String registrationId, actingMembershipId, platform, name;
+  PendingRegistration({
+    required this.registrationId,
+    required this.actingMembershipId,
+    required this.platform,
+    required this.name,
+  }) {
+    uuidField({'id': registrationId}, 'id');
+    uuidField({'id': actingMembershipId}, 'id');
+    if (registrationId[14] != '7' ||
+        !'89ab'.contains(registrationId[19]) ||
+        !const ['macos', 'windows', 'android', 'ios'].contains(platform) ||
+        name.isEmpty ||
+        name.runes.length > 80 ||
+        name.trim() != name ||
+        RegExp(r'[\x00-\x1f\x7f]').hasMatch(name))
+      throw const FormatException('设备登记请求无效');
+  }
+  Map<String, Object?> get body => {
+    'registration_id': registrationId,
+    'platform': platform,
+    'name': name,
+  };
+  Map<String, Object?> toJson() => {
+    ...body,
+    'acting_membership_id': actingMembershipId,
+  };
+  factory PendingRegistration.fromJson(Map<String, Object?> data) =>
+      PendingRegistration(
+        registrationId: uuidField(data, 'registration_id'),
+        actingMembershipId: uuidField(data, 'acting_membership_id'),
+        platform: stringField(data, 'platform', max: 16),
+        name: stringField(data, 'name', max: 160),
+      );
+}
+
+// Confirmation keeps only the ACK and scope metadata, never the message body.
+final class SendConfirmation {
+  final String clientMsgId, actingMembershipId;
+  final MessageACK ack;
+  SendConfirmation(this.clientMsgId, this.actingMembershipId, this.ack) {
+    uuidField({'id': clientMsgId}, 'id');
+    uuidField({'id': actingMembershipId}, 'id');
+  }
+  Map<String, Object?> toJson() => {
+    'client_msg_id': clientMsgId,
+    'acting_membership_id': actingMembershipId,
+    'ack': {
+      'message_id': ack.messageId,
+      'conversation_id': ack.conversationId,
+      'seq': ack.seq.toString(),
+      'server_time': ack.serverTime.toIso8601String(),
+      'duplicate': ack.duplicate,
+    },
+  };
+  factory SendConfirmation.fromJson(Map<String, Object?> data) =>
+      SendConfirmation(
+        uuidField(data, 'client_msg_id'),
+        uuidField(data, 'acting_membership_id'),
+        MessageACK.fromJson(objectMap(data['ack'])),
+      );
+}

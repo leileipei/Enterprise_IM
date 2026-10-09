@@ -92,6 +92,15 @@ final class DeviceGrant {
   }
 }
 
+// Renewal deliberately retains the previously issued token. A different ID or
+// a surprising token field must never replace a saved device credential.
+DeviceGrant renewedDevice(Map<String, Object?> data, DeviceGrant previous) {
+  if (data.containsKey('device_token') ||
+      uuidField(data, 'device_id') != previous.deviceId)
+    throw const FormatException('设备续期响应无效');
+  return DeviceGrant.fromJson({...data, 'device_token': previous.deviceToken});
+}
+
 final class MessageDTO {
   final Seq seq;
   final bool redacted;

@@ -1,4 +1,5 @@
 import '../storage/encrypted_store.dart';
+import '../protocol/models.dart';
 import 'account_reference.dart';
 import 'account_selector.dart';
 import 'native_auth.dart';
@@ -7,6 +8,7 @@ import 'session_store.dart';
 final class AuthenticatedClient {
   final AuthSession session;
   final EncryptedStore store;
+  String? _actingMembershipId;
   AuthenticatedClient._(this.session, this.store);
   @override
   String toString() => 'AuthenticatedClient';
@@ -30,6 +32,17 @@ final class ClientSession {
       _current?.session.isExpired == false ? _current : null;
   void _check(int epoch) {
     if (epoch != _epoch) throw const AuthCancelled();
+  }
+
+  // Selection survives reopening a UI controller. Re-authentication closes the
+  // old store and creates a fresh admission owner before another role is used.
+  void claimMembership(AuthenticatedClient client, String membershipId) {
+    uuidField({'id': membershipId}, 'id');
+    if (!identical(current, client)) throw const AuthCancelled();
+    final selected = client._actingMembershipId;
+    if (selected != null && selected != membershipId)
+      throw const AuthFailure('membership_switch_requires_reauthentication');
+    client._actingMembershipId = membershipId;
   }
 
   Future<AuthenticatedClient> signIn() => _admit(() => auth.signIn(platform));

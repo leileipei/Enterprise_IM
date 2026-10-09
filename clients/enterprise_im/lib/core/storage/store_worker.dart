@@ -79,7 +79,43 @@ Future<void> storeWorkerMain(List<Object?> args) async {
       try {
         if (request[3] != generation) throw StateError('stale');
         Object? result;
-        if (operation == 'put_pending') {
+        if (operation == 'put_registration' ||
+            operation == 'registration' ||
+            operation == 'finish_registration') {
+          final recordKey = await opaque('registration', 'current');
+          final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [
+            recordKey,
+          ]);
+          final previous = rows.isEmpty ? null : await decrypt(rows.single);
+          if (operation == 'registration') {
+            result = previous;
+          } else if (operation == 'finish_registration') {
+            if (previous != null && previous['registration_id'] != request[2])
+              throw StateError('conflict');
+            db.execute('DELETE FROM records WHERE opaque_key=?', [recordKey]);
+          } else {
+            final payload = Map<String, Object?>.from(request[2]! as Map);
+            if (previous != null) {
+              if (jsonEncode(canonical(previous)) !=
+                  jsonEncode(canonical(payload)))
+                throw StateError('conflict');
+            } else {
+              final box = await aes.encrypt(
+                utf8.encode(jsonEncode(payload)),
+                secretKey: key,
+                nonce: aes.newNonce(),
+                aad: aad('registration', recordKey),
+              );
+              db.execute('INSERT INTO records VALUES(?,?,?,?,?)', [
+                recordKey,
+                'registration',
+                Uint8List.fromList(box.nonce),
+                Uint8List.fromList(box.cipherText),
+                Uint8List.fromList(box.mac.bytes),
+              ]);
+            }
+          }
+        } else if (operation == 'put_pending') {
           final payload = Map<String, Object?>.from(request[2]! as Map);
           final logical = payload['client_msg_id']! as String;
           final recordKey = await opaque('pending_send', logical);
@@ -113,6 +149,60 @@ Future<void> storeWorkerMain(List<Object?> args) async {
               rethrow;
             }
           }
+        } else if (operation == 'acknowledge_send' ||
+            operation == 'abandon_send') {
+          final payload = Map<String, Object?>.from(request[2]! as Map);
+          final pending = operation == 'abandon_send'
+              ? payload
+              : Map<String, Object?>.from(payload['pending']! as Map);
+          final logical = pending['client_msg_id']! as String;
+          final recordKey = await opaque('pending_send', logical);
+          final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [
+            recordKey,
+          ]);
+          if (rows.isEmpty ||
+              jsonEncode(canonical(await decrypt(rows.single))) !=
+                  jsonEncode(canonical(pending)))
+            throw StateError('conflict');
+          List<Object?>? write;
+          if (operation == 'acknowledge_send') {
+            final value = Map<String, Object?>.from(
+              payload['confirmation']! as Map,
+            );
+            final confirmationKey = await opaque('send_confirmation', logical);
+            final box = await aes.encrypt(
+              utf8.encode(jsonEncode(value)),
+              secretKey: key,
+              nonce: aes.newNonce(),
+              aad: aad('send_confirmation', confirmationKey),
+            );
+            write = [
+              confirmationKey,
+              'send_confirmation',
+              Uint8List.fromList(box.nonce),
+              Uint8List.fromList(box.cipherText),
+              Uint8List.fromList(box.mac.bytes),
+            ];
+          }
+          db.execute('BEGIN IMMEDIATE');
+          try {
+            if (write != null)
+              db.execute('INSERT INTO records VALUES(?,?,?,?,?)', write);
+            db.execute('DELETE FROM records WHERE opaque_key=?', [recordKey]);
+            db.execute('COMMIT');
+          } catch (_) {
+            db.execute('ROLLBACK');
+            rethrow;
+          }
+        } else if (operation == 'send_confirmation') {
+          final recordKey = await opaque(
+            'send_confirmation',
+            request[2]! as String,
+          );
+          final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [
+            recordKey,
+          ]);
+          result = rows.isEmpty ? null : await decrypt(rows.single);
         } else if (operation == 'pending') {
           final values = <Map<String, Object?>>[];
           for (final row in db.select(

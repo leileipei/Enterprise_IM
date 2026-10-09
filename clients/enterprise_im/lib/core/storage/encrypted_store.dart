@@ -206,6 +206,58 @@ final class EncryptedStore {
     return result;
   }
 
+  Future<void> putPendingRegistration(PendingRegistration value) async {
+    await _request('put_registration', value.toJson());
+  }
+
+  Future<PendingRegistration?> pendingRegistration() async {
+    try {
+      final value = await _request('registration', null);
+      return value == null
+          ? null
+          : PendingRegistration.fromJson(
+              Map<String, Object?>.from(value as Map),
+            );
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<void> finishRegistration(String id) async {
+    uuidField({'id': id}, 'id');
+    await _request('finish_registration', id);
+  }
+
+  Future<void> acknowledgeSend(PendingSend pending, MessageACK ack) async {
+    if (pending.conversationId != ack.conversationId)
+      throw const StoreFailure();
+    final confirmation = SendConfirmation(
+      pending.clientMsgId,
+      pending.actingMembershipId,
+      ack,
+    );
+    await _request('acknowledge_send', {
+      'pending': pending.toJson(),
+      'confirmation': confirmation.toJson(),
+    });
+  }
+
+  Future<SendConfirmation?> sendConfirmation(String clientMsgId) async {
+    uuidField({'id': clientMsgId}, 'id');
+    try {
+      final value = await _request('send_confirmation', clientMsgId);
+      return value == null
+          ? null
+          : SendConfirmation.fromJson(Map<String, Object?>.from(value as Map));
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<void> abandonPendingSend(PendingSend pending) async {
+    await _request('abandon_send', pending.toJson());
+  }
+
   Future<void> putPendingSend(PendingSend value) async {
     if (value.generation != generation) throw const StoreFailure();
     await _request('put_pending', value.toJson());

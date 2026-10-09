@@ -11,6 +11,7 @@ import '../core/auth/native_auth.dart';
 import '../core/protocol/api_client.dart';
 import '../platform/browser_launcher.dart';
 import '../platform/login_callback.dart';
+import 'client_shell.dart';
 
 class LoginPage extends StatefulWidget {
   final String platform;
@@ -367,7 +368,19 @@ class _LoginPageState extends State<LoginPage> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
-                  const Text('组织与会话功能正在接入。'),
+                  FilledButton.tonal(
+                    onPressed: _busy || _client?.current == null
+                        ? null
+                        : () => Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => ClientShell(
+                                owner: _client!,
+                                onLogout: _cancel,
+                              ),
+                            ),
+                          ),
+                    child: const Text('进入工作空间'),
+                  ),
                   const SizedBox(height: 20),
                 ],
                 TextField(

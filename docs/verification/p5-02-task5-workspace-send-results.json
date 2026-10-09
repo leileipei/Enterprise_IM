@@ -1,0 +1,190 @@
+{
+  "status": "shared_membership_device_ui_and_reliable_send_core_checkpoint_passed",
+  "source_base_commit": "2ec34734e50627392cbda7d340bb14f658a97216",
+  "source_scope": "exact working-tree hashes; not immutable whole-branch acceptance or installed native UI",
+  "shared_suite": {
+    "passed": 128,
+    "failed": 0,
+    "actual_exit": 0,
+    "log": "task-5-full-final.log"
+  },
+  "analysis": {
+    "issues": 0,
+    "actual_exit": 0,
+    "log": "task-5-analysis-final.log",
+    "source_alias": "/private/tmp/p502-client-analysis-c90359e"
+  },
+  "new_tests": {
+    "membership_admission": 12,
+    "navigation": 5,
+    "message_send": 7
+  },
+  "checks": [
+    "me without acting header, exact current principal, strict selectable memberships",
+    "initial role bound to authenticated owner and cannot be changed by reopening UI",
+    "fresh owner cannot consume previous owner membership metadata",
+    "fresh device registration written durably before POST; timeout/restart reuses original id/body",
+    "device renewal retains previous token and rejects changed device/token response",
+    "vault failure, quota, revoked device and late logout response never admit device",
+    "login-to-workspace-to-logout Widget route uses actual auth/session/SQLite cores",
+    "direct/group pages validate type, privacy, int64 sequence and cursor progress",
+    "send persists immutable body before network and retries explicitly under exact current scope",
+    "restart with changed process generation retains original message id/body",
+    "ACK wrong conversation or 403/410 does not mark success or regenerate id",
+    "real SQLite trigger-induced delete failure rolls back ACK insertion and preserves pending body",
+    "ACK metadata and pending deletion are one encrypted SQLite transaction",
+    "next failed attempt clears previous ACK and cancellation refuses late success"
+  ],
+  "actual_backend_protocol": {
+    "exit_code": 0,
+    "skipped": false,
+    "log_sha256": "188a5e736b2fef2f244372d870ccd1801f58365d4b4bd410953c28e297b07cc9",
+    "child_lifecycle": {
+      "registered": 4,
+      "ready": 4,
+      "matching_actual_exits": 4
+    },
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    },
+    "private_root_removed": true,
+    "acceptance_scope": "targeted Dart shared-core and real Go API protocol; not installed native UI or final fixed-source acceptance"
+  },
+  "temporary_fixture_prefix_counts": {
+    "im-client-session-test-": 0,
+    "im-login-startup-test-": 0,
+    "im-login-session-test-": 0
+  },
+  "source_sha256": {
+    "clients/enterprise_im/lib/core/auth/account_reference.dart": "8013ab7cc5e185ba6ec626925228e7b315f61d7d1529cb45242b2d0d29fbf22f",
+    "clients/enterprise_im/lib/core/auth/account_selector.dart": "c9c2e40fdff42ac55da9c959c0486d439c747d44d96c65d2f911f72a0937ecf5",
+    "clients/enterprise_im/lib/core/auth/auth_session.dart": "41e484fedf6be971d2576d9b0282c633b02e6ed5c7db0a577f57439c407791c4",
+    "clients/enterprise_im/lib/core/auth/client_session.dart": "bcb17263b1ff103387a4f90c25c643649e4368728d6a31bf4d6e8ce20213ae36",
+    "clients/enterprise_im/lib/core/auth/native_auth.dart": "106040dbdb1009a04d4a1dc55d22abdd0ca24773f81aebe0ec0cc11b32adec3e",
+    "clients/enterprise_im/lib/core/auth/pkce.dart": "30f32a78dbb279fc1a519c2e4c88bce627dee4a77b9a60428e0a76a0d5089ac7",
+    "clients/enterprise_im/lib/core/auth/session_store.dart": "109ff1bac6e484193b88c7be5320d17e5e8e2b69114b891d97ac06810e8b86b9",
+    "clients/enterprise_im/lib/core/protocol/api_client.dart": "3bdeaff0262bc066c423dc27e321e5704d779e8659ae073c208678cc930d6756",
+    "clients/enterprise_im/lib/core/protocol/api_error.dart": "b5964443e281e6781bd1fc06e5a45f4398f674525d197e500da2ef9e874d4e92",
+    "clients/enterprise_im/lib/core/protocol/client_id.dart": "ccafd09bd26b5e4d01239df550b68a6fb8bedae44cd894ca4afe8b2189d34d31",
+    "clients/enterprise_im/lib/core/protocol/models.dart": "37f55c148b791af29e36c6e107966f7be66cd1fa736713a1125d93ad78c70c69",
+    "clients/enterprise_im/lib/core/protocol/seq.dart": "f6be75a70de57ef6c6efed25d525e80fa7bac95dd53ee5ad573271dfe097089d",
+    "clients/enterprise_im/lib/core/storage/encrypted_store.dart": "a0f1544210d11ff3ed6ed21e684c0dc5072fc6d82bbe3ac9d6a6fd0102be7152",
+    "clients/enterprise_im/lib/core/storage/records.dart": "7f26e2384c5922e4a8877aea09a22bdb4c991ef327469327d74691945fdc7593",
+    "clients/enterprise_im/lib/core/storage/secure_vault.dart": "1490415ca8fa74606048d646e2c9eb84a431e4966c2eef12f54000acc698fd3a",
+    "clients/enterprise_im/lib/core/storage/store_worker.dart": "2be4346eb24ff529275c2063abfbd5ac884c2b2a22258ecfbb221d4f3aed2156",
+    "clients/enterprise_im/lib/core/sync/client_context.dart": "2f132d2222a7440a6bdd2e4e28d9b4f5363e213ef2335e3ad55802175df887ae",
+    "clients/enterprise_im/lib/core/sync/realtime_channel.dart": "1e4f9bf5c0ab27645227bf0f75d4aaf2fe26bc0e2d455b54f8b589d0d39c7f24",
+    "clients/enterprise_im/lib/core/sync/receipt_queue.dart": "46319074fa65d9727c400c028641bca0a51ee03249db7017cf6418f3079060d4",
+    "clients/enterprise_im/lib/core/sync/retry_policy.dart": "c07b56b8cef124ddc6fc66454f622783e027810b24a84d9eebcab9f64c42d7ae",
+    "clients/enterprise_im/lib/core/sync/sync_coordinator.dart": "a06e5fceee740cf404d94bbaf4c874dea9614a2a759ab965d2d3d6e9467dba0d",
+    "clients/enterprise_im/lib/core/sync/sync_engine.dart": "f1aa31205e9f18237af612991361721ee122b3b2d6770f6518350afcda8c25eb",
+    "clients/enterprise_im/lib/features/conversations/conversation_controller.dart": "df83aab8e38b05dafa4391d724fcdcdd755b8844341ce76b6c0641729575ec23",
+    "clients/enterprise_im/lib/features/conversations/conversation_list.dart": "766a7c9cba78b0917c871a51baa1f83937a50f0787ba88402313c5346fb455f5",
+    "clients/enterprise_im/lib/features/memberships/membership_controller.dart": "a9b9d50ad49959576199eb5fbad46d42fe31cf6b310aa9cec16562d938b50191",
+    "clients/enterprise_im/lib/features/memberships/membership_model.dart": "82c358019aa618d0c44c9a3fe4ac2c78865a086491faba2772c31aec8b9b0deb",
+    "clients/enterprise_im/lib/main.dart": "b9a3c1df4940345f2cb0b853864deddbec4a5f26eeff1b64e59c1b29ec13007b",
+    "clients/enterprise_im/lib/platform/app_activity.dart": "4cf8c9f05e8450df03979d2f7fb3a7b35ba94c6ef7523226180bd414288af23a",
+    "clients/enterprise_im/lib/platform/browser_launcher.dart": "e83f36ab2da997f6ed1ab315e4248e9b7e42709513f63a43b4ed2a67159ef4ca",
+    "clients/enterprise_im/lib/platform/login_callback.dart": "d46302d6c48379cdfd95501776538c5caaa0efa8053bc4fd7f4333e13af5747d",
+    "clients/enterprise_im/lib/ui/client_shell.dart": "e96f10cb0341304b874eb997cc0c6716612c47b67e03deb8a0ad4bc7d7826bb0",
+    "clients/enterprise_im/lib/ui/login_page.dart": "3bff986236de0b6202f97a0749a01ddbb5ebe49a5f8ac6133febdd4160dffbee",
+    "clients/enterprise_im/test/account_selector_test.dart": "859f766312019d84da509a01074a703750542d63c77ccff1a4cd54fc7a31d9e1",
+    "clients/enterprise_im/test/auth_test.dart": "711ad9617e4d80f0f5c615cb7fd9002a8c6ef305ffd264d85d747bff9af591ec",
+    "clients/enterprise_im/test/client_session_test.dart": "a74742042c5a2c387318a6dadbf527bf4e8396a777a83fe7e474c1c85218dc84",
+    "clients/enterprise_im/test/client_startup_test.dart": "d21bc27466b259330935d01f816c43b49feb18b5fd4f21dd27e76f49b29e21c2",
+    "clients/enterprise_im/test/login_callback_test.dart": "ddf2e1bb714a1e1ffe2265c1607675ab35531679a2c4b3503683f8600ee49bfc",
+    "clients/enterprise_im/test/login_page_test.dart": "e23cf0f75f28d33ed34f9620778f9267935c11595cae5b5f680571fb98ba3ecb",
+    "clients/enterprise_im/test/login_session_test.dart": "a19e7130fc1d77c858a6e5ade30f8d9a0f679f756bf2e7eeca8a9986103541fd",
+    "clients/enterprise_im/test/login_startup_test.dart": "f0d4cda25ee0576261e363d99226aa4db208fa6ebcc527e9974e671fba78947d",
+    "clients/enterprise_im/test/membership_admission_test.dart": "728d7b19b238d6626366cf8d1d5d98c12f5d4ecdd6949fd956da6ad05f5ff957",
+    "clients/enterprise_im/test/message_send_test.dart": "b8e58e7ed8cc042fa02fea012cc68a659503ceaf41745dac8da83ff9f402a80d",
+    "clients/enterprise_im/test/navigation_test.dart": "4b26c180d3194b14f86f4f64a550b3755e3d984ebe52b5f050a963c31757bd5f",
+    "clients/enterprise_im/test/page_transaction_test.dart": "7aee9afecc67c819f9dba2a176715d48a95ff8abc195c898e1702a0c8ab89e7f",
+    "clients/enterprise_im/test/pending_send_test.dart": "e3b55bf44f2b325f9462483d9f3b66a34ddf6ee5c570e5131d7c37007bba22f9",
+    "clients/enterprise_im/test/protocol_test.dart": "0c2301acb807c7f9d0495e3e543d0317aa857641ec9b423b708792411ab07b1c",
+    "clients/enterprise_im/test/realtime_channel_test.dart": "ceaa9914fa5ed8c5fa6ed221ce40b2594b02b50c28516fbfea2299c12917e3ff",
+    "clients/enterprise_im/test/realtime_transport_test.dart": "626bd41203092f63ba20b9abe0d5bbbe14514771c5a7dc9c31eb748118d8b54d",
+    "clients/enterprise_im/test/receipt_query_models_test.dart": "d1c431100f9e7d100a453dc98fab8631b576dcd7d8a384389a3b090b7bc54ed7",
+    "clients/enterprise_im/test/receipt_queue_test.dart": "52ecb248e166861621e08a2ff3d8f1b9327841b469a9e55c8ac47570e3f2826b",
+    "clients/enterprise_im/test/recovery_test.dart": "6bb9d45faf0f842ebbc036cc306e829b67f333024febc7dd38849bfad816b5de",
+    "clients/enterprise_im/test/retry_policy_test.dart": "f3c48d1ba4bd925c71e17129d9bee71660836d9ae63a8db0dc7d02c210d8ff03",
+    "clients/enterprise_im/test/secure_vault_test.dart": "42fcaa8ba48caf4894a5ec18f58e6444fff4efcedd0038ab283e0bb88505f4d5",
+    "clients/enterprise_im/test/session_bootstrap_test.dart": "321427f7db58bd52ab12c037911a0be1228e2c5e956249cf0b1530ea0316947a",
+    "clients/enterprise_im/test/session_restore_test.dart": "0547ccda47a8eddc0f867359ce13f4f598ba54af8ab67b1ed67bbe47f82d26ac",
+    "clients/enterprise_im/test/session_store_test.dart": "96a590d41b8be39965138d5f5b29ed08fe96fa12115c264f20d2d521b391de1e",
+    "clients/enterprise_im/test/storage_test.dart": "7a1df8ab679173e15380aa3417b92d4942bebe288278d040a0620c95550f2549",
+    "clients/enterprise_im/test/store_worker_exit_test.dart": "73ce6dcebf9ec3cd4c523ed2c825d47d3633ffe0bb187b75ebd08526d1b47dc5",
+    "clients/enterprise_im/test/sync_coordinator_test.dart": "36877f4ac69679073a69ba13886e2e871cf89b670c56445983be0e63e984a93e",
+    "clients/enterprise_im/test/sync_test.dart": "3b904ca2d148d44b29a9d2ca74d8d91f468b79b8956c809e30c861a6ddadce84",
+    "clients/enterprise_im/pubspec.yaml": "b9e74791b2c56b3bbfef4466eb541794f946017784f93e5e466dde26f0d2997c",
+    "clients/enterprise_im/pubspec.lock": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669"
+  },
+  "log_sha256": {
+    "task-5-admission-red.log": "b82755d00c09b0e0cdf574f0eaaef7d562f96959bec2511ce491f942239ce486",
+    "task-5-admission-green.log": "b76d894712730164b0bfd1d73e3cfa86bdc94c64466d89a3849a79f99493d497",
+    "task-5-navigation-red.log": "b615749734b222c735885b6bdb89347bbe4ee3a7a9e0e67fa388cbbb039c3d77",
+    "task-5-navigation-green.log": "fe7183f9b35b885f5a6367eba49eb20194df7c80086830659e69f478b8b84e6d",
+    "task-5-role-fence-red.log": "3da5cc27209dbce1b34d793273e2db5d8891a892e50f138d72012e6e9036f61a",
+    "task-5-owner-fence-red-final.log": "ad584a440c4a4594def1289780f278c538abc247372b4b5c2014402444398a52",
+    "task-5-send-red.log": "67f5ba02bc4151b19d984b22aee57f3f0f5fc99684ad1598e28a445ab09cb7ef",
+    "task-5-send-green.log": "d54685247d44f6597076eaf4a1db4528d07cdf86570f6856c7895db6095b6057",
+    "task-5-send-final.log": "1f159e46ee6e2f1e2c8432a3e00a1067f255197eef1c15648f5e6a533c565dfb",
+    "task-5-send-previous-ack-red.log": "5d04e954097acd52df9f15f7459e29d020b51d8fdfe2956803f19ce29ff28b55",
+    "task-5-full-final.log": "119ff167892499485a30ef6ee042814b6ffaa4a8d074ddc11db8a6a1a935eb99",
+    "task-5-analysis-final.log": "52ce1d3da4fe24781136f045d5c19828eb83ee8450eecfcb5e1358b3cc10aabb",
+    "task-5-real-protocol-final.log": "188a5e736b2fef2f244372d870ccd1801f58365d4b4bd410953c28e297b07cc9"
+  },
+  "behavior_red": [
+    {
+      "log": "task-5-role-fence-red.log",
+      "actual_exit": 1
+    },
+    {
+      "log": "task-5-owner-fence-red-final.log",
+      "actual_exit": 1
+    },
+    {
+      "log": "task-5-send-previous-ack-red.log",
+      "actual_exit": 1
+    }
+  ],
+  "missing_module_red": [
+    {
+      "log": "task-5-admission-red.log",
+      "actual_exit": 1
+    },
+    {
+      "log": "task-5-navigation-red.log",
+      "actual_exit": 1
+    },
+    {
+      "log": "task-5-send-red.log",
+      "actual_exit": 1
+    }
+  ],
+  "excluded_runs": [
+    "task-5-role-fence-green-invalidcwd.log: repository cwd; not a test verdict",
+    "initial owner-fence insertion script failed; task-5-owner-fence-red.log only old eleven passing tests, not RED",
+    "initial send-test write used wrong relative directory and stopped before any test; no verdict",
+    "task-5-admission-full.log:120PASS1FAIL; new navigation fixture matched two logout buttons during animation",
+    "task-5-admission-analysis.log:2 unawaited test futures; corrected before final analysis"
+  ],
+  "pending": [
+    "Task5 conversation messages UI, IME composer, visible-message read authority, receipt/unread rendering",
+    "Task5 directory and group actions and real messaging UI integration",
+    "Task5 membership switch with fresh generation/store and pending-send guard",
+    "Task6 quota/orphan device-management UI and attachment/export flow",
+    "real backend protocol does not exercise new native auth/device/send controller or installed UI",
+    "native OS vault, lifecycle/IME and four-platform builds and installation",
+    "iOS13 requirement versus fixed SDK iOS15 minimum unresolved; Apple license needs user action",
+    "fixed-source whole-native acceptance and fresh final branch review",
+    "customer SSO/signing and production acceptance"
+  ],
+  "tasks": {
+    "2": "in_progress",
+    "3": "in_progress",
+    "4": "in_progress",
+    "5": "in_progress"
+  }
+}
