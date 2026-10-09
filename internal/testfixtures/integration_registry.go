@@ -86,6 +86,13 @@ func integrationRecord(gate, test string) (*IntegrationProcess, error) {
 }
 
 func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationProcess, error) {
+	return registerIntegrationProcess(cmd, gate, test, 0)
+}
+
+// verifiedParent is set only after independent browser parent/executable checks.
+// Write the complete fingerprint at registration; later lifecycle events must
+// preserve it exactly.
+func registerIntegrationProcess(cmd *exec.Cmd, gate, test string, verifiedParent int) (*IntegrationProcess, error) {
 	p, err := integrationRecord(gate, test)
 	if err != nil {
 		return nil, err
@@ -163,6 +170,9 @@ func RegisterIntegrationProcess(cmd *exec.Cmd, gate, test string) (*IntegrationP
 	}
 	p.fingerprint = map[string]any{"pid": pid, "uid": uid, "start_time": strings.Join(fields[1:6], " "),
 		"executable_path": executable, "executable_sha256": fmt.Sprintf("%x", sha256.Sum256(binary)), "workdir": directory, "pgid": pgid}
+	if verifiedParent > 0 {
+		p.fingerprint["parent_pid"] = verifiedParent
+	}
 	if err := p.write("registered", nil); err != nil {
 		return nil, err
 	}

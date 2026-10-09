@@ -53,5 +53,10 @@ class ClientReceiptContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.runner.validate_child_exits([row],COMMIT)
         bad=copy.deepcopy(exited);bad['detail']['actual_exit']='exit:1'
         with self.assertRaises(ValueError):self.runner.validate_child_exits([row,bad],COMMIT)
+        for field,value in (('start_time','other'),('executable_sha256','f'*64),('parent_pid',99)):
+            bad=copy.deepcopy(exited);bad['fingerprint'][field]=value
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError):self.runner.validate_child_exits([row,bad],COMMIT)
+        with self.assertRaises(ValueError):self.runner.validate_child_exits([row,exited,copy.deepcopy(exited)],COMMIT)
 
 if __name__=='__main__':unittest.main()

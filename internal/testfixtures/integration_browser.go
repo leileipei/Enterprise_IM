@@ -258,11 +258,7 @@ func RegisterIntegrationBrowserChild(parent *exec.Cmd, pid int, path, gate, test
 		return nil, err
 	}
 	cmd := &exec.Cmd{Path: expected, Dir: parent.Dir, Process: process}
-	p, err := RegisterIntegrationProcess(cmd, gate, test)
-	if err == nil {
-		p.fingerprint["parent_pid"] = parent.Process.Pid
-	}
-	return p, err
+	return registerIntegrationProcess(cmd, gate, test, parent.Process.Pid)
 }
 
 func integrationExit(state *os.ProcessState) string {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -76,6 +77,8 @@ func TestIntegrationBrowserCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	counts := map[string]int{}
+	fingerprints := map[string]map[string]any{}
+	browserRegistered := false
 	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
 		var row map[string]any
 		if json.Unmarshal([]byte(line), &row) != nil {
@@ -83,6 +86,21 @@ func TestIntegrationBrowserCancellation(t *testing.T) {
 		}
 		event := row["event"].(string)
 		counts[event]++
+		if event == "registered" {
+			fp := row["fingerprint"].(map[string]any)
+			fingerprints[row["identity"].(string)] = fp
+			if fp["pid"] != float64(cmd.Process.Pid) {
+				browserRegistered = true
+				if fp["parent_pid"] != float64(cmd.Process.Pid) {
+					t.Error("browser registration must contain independently verified parent PID")
+				}
+			}
+		}
+		if event == "ready" || event == "exited" {
+			if !reflect.DeepEqual(fingerprints[row["identity"].(string)], row["fingerprint"]) {
+				t.Error("registered process fingerprint changed during lifecycle")
+			}
+		}
 		if event == "exited" {
 			detail := row["detail"].(map[string]any)
 			if detail["actual_exit"] != detail["expected_exit"] {
@@ -94,6 +112,9 @@ func TestIntegrationBrowserCancellation(t *testing.T) {
 		if counts[event] != 2 {
 			t.Errorf("cancelled Node/Chrome %s=%d want2", event, counts[event])
 		}
+	}
+	if !browserRegistered {
+		t.Error("actual browser registration missing")
 	}
 	if cmd.ProcessState == nil || cmd.ProcessState.ExitCode() != 130 {
 		t.Fatal("actual Node interrupt Wait status missing")
