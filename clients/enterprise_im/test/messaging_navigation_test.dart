@@ -104,6 +104,15 @@ void main() {
           () => find.text('未读至少 1 条').evaluate().isNotEmpty,
         );
         expect(find.text('未读至少 1 条'), findsOneWidget);
+        // File recovery reads the real SQLite worker. Wait for actual completion
+        // before advancing animation time in the widget test's fake clock.
+        await tester.pump();
+        await pumpUntil(tester, () {
+          final choice = find.widgetWithText(TextButton, '选择附件');
+          return choice.evaluate().isNotEmpty &&
+              tester.widget<TextButton>(choice).onPressed != null &&
+              find.byType(LinearProgressIndicator).evaluate().isEmpty;
+        });
         await tester.pumpAndSettle();
         expect(activity.activeConversation, nav.dm);
         if (width >= 800)

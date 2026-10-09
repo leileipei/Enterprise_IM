@@ -241,6 +241,24 @@ final class EncryptedStore {
   Future<void> finishDeviceRevocation(PendingDeviceRevocation value) async =>
       _request('finish_device_revocation', value.toJson());
 
+  Future<void> putPendingUpload(PendingUpload value) async =>
+      _request('put_upload', value.toJson());
+  Future<void> saveUploadFile(PendingUpload value, String fileId) async =>
+      _request('upload_file', {'original': value.toJson(), 'file_id': fileId});
+  Future<PendingUpload?> pendingUpload() async {
+    try {
+      final value = await _request('upload', null);
+      return value == null
+          ? null
+          : PendingUpload.fromJson(Map<String, Object?>.from(value as Map));
+    } catch (_) {
+      throw const StoreFailure();
+    }
+  }
+
+  Future<void> finishUpload(PendingUpload value) async =>
+      _request('finish_upload', value.toJson());
+
   Future<void> putPendingRegistration(PendingRegistration value) async {
     await _request('put_registration', value.toJson());
   }

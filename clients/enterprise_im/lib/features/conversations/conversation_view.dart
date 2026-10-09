@@ -11,12 +11,16 @@ import '../../core/sync/realtime_channel.dart';
 import '../../platform/app_activity.dart';
 import '../memberships/membership_controller.dart';
 import 'conversation_controller.dart';
+import '../files/file_transfer.dart';
+import '../files/file_wire.dart';
 
 final class ConversationView extends ChangeNotifier {
   final MembershipController memberships;
   final AppActivity activity;
   final bool sendAllowed;
   late final ConversationController sender;
+  late final FileTransfer files;
+  PendingUpload? _upload;
   late final SyncEngine engine;
   late final ReceiptQueue receipts;
   late final RealtimeChannel channel;
@@ -42,12 +46,22 @@ final class ConversationView extends ChangeNotifier {
     this.memberships,
     this.activity, {
     RealtimeConnector? connector,
+    FileWireTransport? fileWire,
     this.sendAllowed = true,
   }) {
     final ready = memberships.current;
     if (ready == null) throw const ApiFailure('reauthenticate');
     final api = memberships.owner.auth.api;
     sender = ConversationController(memberships);
+    files = FileTransfer(
+      memberships,
+      sender,
+      wire: fileWire,
+      onStateChanged: () {
+        if (!_disposed) notifyListeners();
+      },
+      guard: () => _active && _synced && activity.foreground,
+    );
     engine = SyncEngine(api, ready.client.store);
     receipts = ReceiptQueue(
       api,
@@ -92,6 +106,7 @@ final class ConversationView extends ChangeNotifier {
     _activity = activity.changes.listen((_) {
       if (_disposed) return;
       if (!activity.foreground) {
+        files.stopRequest();
         _synced = false;
         _metadataAuthority++;
         _metadataCancel?.cancel();
@@ -109,8 +124,9 @@ final class ConversationView extends ChangeNotifier {
       _context != null &&
       identical(memberships.current, _admission);
   bool get loading => _loading;
-  bool get sending => _sending;
-  bool get canSend =>
+  bool get sending => _sending || files.busy;
+  PendingUpload? get pendingUpload => _active ? _upload : null;
+  bool get canManageFiles =>
       _active &&
       _synced &&
       activity.foreground &&
@@ -118,6 +134,16 @@ final class ConversationView extends ChangeNotifier {
       sendAllowed &&
       !_sending &&
       _pending.isEmpty;
+  bool get canSend =>
+      _active &&
+      _synced &&
+      activity.foreground &&
+      !activity.blocked &&
+      sendAllowed &&
+      !_sending &&
+      _pending.isEmpty &&
+      _upload == null &&
+      !files.busy;
   ApiFailure? get failure => _failure;
   UnreadState? get unread => _active ? _unread : null;
   Map<Seq, ReceiptSummary> get summaries =>
@@ -176,7 +202,13 @@ final class ConversationView extends ChangeNotifier {
     final ready = _admission, context = _context;
     if (ready == null || context == null) return;
     final rows = await ready.client.store.pendingSends();
+    final upload = await ready.client.store.pendingUpload();
     if (!_active || epoch != _epoch) return;
+    _upload = upload;
+    if (upload == null && _synced && activity.foreground && !files.busy) {
+      await files.restore(context);
+      if (!_active || epoch != _epoch) return;
+    }
     _pending = List.unmodifiable(
       rows.where(
         (p) =>
@@ -359,6 +391,7 @@ final class ConversationView extends ChangeNotifier {
       _epoch++;
       _context = null;
       sender.close();
+      unawaited(files.close());
       _clear();
       engine.stop();
       receipts.contextChanged();
@@ -374,6 +407,24 @@ final class ConversationView extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  Duration fileAuthorizationRemaining(MessageDTO message) {
+    if (!_active ||
+        !activity.foreground ||
+        !messages.any((m) => identical(m, message)) ||
+        message.attachment?['download_available'] != true)
+      return Duration.zero;
+    return _results[message.seq]?.contentAuthorizationRemaining ??
+        Duration.zero;
+  }
+
+  Future<void> reloadPending() async {
+    final epoch = _epoch;
+    await _loadPending(epoch);
+    if (_active && epoch == _epoch) notifyListeners();
+  }
+
+  Future<void> bindFile(String caption) =>
+      _send(() => files.bindToMessage(caption));
   Future<void> sendText(String text) => _send(() => sender.sendText(text));
   Future<void> retryPending(String id) => _send(() => sender.retryPending(id));
   Future<void> _send(Future<MessageACK> Function() operation) async {
@@ -432,6 +483,7 @@ final class ConversationView extends ChangeNotifier {
     _redacted.clear();
     _summaries.clear();
     _pending = const [];
+    _upload = null;
     _unread = null;
     _synced = false;
   }
@@ -443,11 +495,13 @@ final class ConversationView extends ChangeNotifier {
     _context = null;
     _clear();
     sender.close();
+    final stoppedFiles = files.close();
     engine.stop();
     receipts.dispose();
     notifyListeners();
     super.dispose();
     return _closing = () async {
+      await stoppedFiles;
       await coordinator.dispose();
       await channel.dispose();
       await _activity.cancel();

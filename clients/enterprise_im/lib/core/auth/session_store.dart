@@ -21,7 +21,30 @@ final class SessionStore {
   AuthSession? _auth;
   EncryptedStore? _store;
   _Bundle? _bundle;
+  final _privateClosers = <Future<void> Function()>{};
   SessionStore(this.vault, {required this.directory});
+  void Function() ownPrivateFiles(
+    AuthSession session,
+    Future<void> Function() close,
+  ) {
+    _check(session, _epoch);
+    if (!identical(_auth, session) || _store == null)
+      throw const AuthFailure('reauthenticate');
+    _privateClosers.add(close);
+    return () => _privateClosers.remove(close);
+  }
+
+  Future<void> _erasePrivateFiles(String ns) async {
+    final path = '${directory.path}/$ns.attachments';
+    final kind = await FileSystemEntity.type(path, followLinks: false);
+    if (kind == FileSystemEntityType.link)
+      await Link(path).delete();
+    else if (kind == FileSystemEntityType.directory)
+      await Directory(path).delete(recursive: true);
+    else if (kind != FileSystemEntityType.notFound)
+      throw const StoreFailure();
+  }
+
   Future<T> _serial<T>(Future<T> Function() operation) {
     final result = _tail.then((_) => operation());
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
@@ -50,6 +73,8 @@ final class SessionStore {
         );
         _check(session, epoch);
         _namespace = ns;
+        await _erasePrivateFiles(ns);
+        _check(session, epoch);
         final raw = await vault.read(ns, 'session');
         _check(session, epoch);
         _Bundle? bundle;
@@ -199,6 +224,13 @@ final class SessionStore {
       _finish(true, account: account);
   Future<void> _finish(bool erase, {AccountReference? account}) {
     _epoch++;
+    final privateClosers = List<Future<void> Function()>.from(_privateClosers);
+    _privateClosers.clear();
+    final privateClosing = Future.wait(privateClosers.map((close) => close()))
+        .then<Object?>(
+          (_) => null,
+          onError: (Object e, StackTrace stack) => [e, stack],
+        );
     _auth = null;
     // Mark the repository closed synchronously, before a queued vault write
     // can delay teardown. Capture any error immediately to avoid an unhandled
@@ -223,6 +255,13 @@ final class SessionStore {
             )
           : _namespace;
       try {
+        final privateFailure = await privateClosing;
+        if (privateFailure is List)
+          Error.throwWithStackTrace(
+            privateFailure[0] as Object,
+            privateFailure[1] as StackTrace,
+          );
+        if (ns != null) await _erasePrivateFiles(ns);
         if (store != null) {
           final failure = await closing;
           if (failure is List)

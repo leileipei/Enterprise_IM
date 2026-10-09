@@ -45,6 +45,11 @@ final class ConversationController {
       throw const ApiFailure('invalid_context');
     final pending = await ready.client.store.pendingSends();
     final action = await ready.client.store.pendingAction();
+    final upload = await ready.client.store.pendingUpload();
+    if (upload != null &&
+        (upload.conversationId != context.conversationId ||
+            upload.actingMembershipId != context.actingMembershipId))
+      throw const ApiFailure('upload_unconfirmed');
     if (_closed || epoch != _epoch || !identical(memberships.current, ready))
       throw const ApiFailure('cancelled');
     if (action != null) throw const ApiFailure('operation_unconfirmed');
@@ -59,15 +64,35 @@ final class ConversationController {
     _conversation = conversation;
   }
 
-  Future<MessageACK> sendText(String text) async {
+  Future<MessageACK> sendText(String text) => _sendNew(text);
+  Future<MessageACK> sendFile(
+    String fileId,
+    String caption,
+    String uploadRequestId,
+  ) => _sendNew(caption, fileId: fileId, uploadRequestId: uploadRequestId);
+  Future<MessageACK> _sendNew(
+    String text, {
+    String? fileId,
+    String? uploadRequestId,
+  }) async {
     final epoch = _epoch;
     _check(epoch);
     if (_busy) throw const ApiFailure('send_in_progress');
-    messageBodyField({'text': text}, 'text');
+    messageBodyField({'text': text}, 'text', empty: fileId != null);
     _busy = true;
     _lastACK = null;
     try {
       final ready = _admission!, context = _context!;
+      final upload = await ready.client.store.pendingUpload();
+      if (fileId == null && upload != null)
+        throw const ApiFailure('upload_unconfirmed');
+      if (fileId != null &&
+          (upload == null ||
+              upload.fileId != fileId ||
+              upload.requestId != uploadRequestId ||
+              upload.conversationId != context.conversationId ||
+              upload.actingMembershipId != context.actingMembershipId))
+        throw const ApiFailure('invalid_context');
       final existing = await ready.client.store.pendingSends();
       final action = await ready.client.store.pendingAction();
       _check(epoch);
@@ -80,6 +105,8 @@ final class ConversationController {
         text: text,
         generation: context.generation,
         createdAt: ready.clock.now,
+        fileId: fileId,
+        uploadRequestId: uploadRequestId,
       );
       await ready.client.store.putPendingSend(pending);
       _check(epoch);
@@ -133,7 +160,7 @@ final class ConversationController {
         '/api/v1/${conversation.kind == 'group' ? 'groups' : 'conversations'}/${context.conversationId}/messages',
         bearer: context.session.accessToken,
         actingMembershipId: context.actingMembershipId,
-        body: {'client_msg_id': pending.clientMsgId, 'text': pending.text},
+        body: pending.body,
         cancellation: cancel,
       );
       _check(epoch);

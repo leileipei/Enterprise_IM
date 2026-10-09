@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../protocol/models.dart';
 import '../protocol/seq.dart';
 
@@ -157,6 +158,7 @@ final class StoredMessage {
 
 final class PendingSend {
   final String clientMsgId, conversationId, actingMembershipId, text, state;
+  final String? fileId, uploadRequestId;
   final int generation;
   final DateTime createdAt;
   PendingSend({
@@ -167,6 +169,8 @@ final class PendingSend {
     required this.generation,
     required this.createdAt,
     this.state = 'pending',
+    this.fileId,
+    this.uploadRequestId,
   }) {
     uuidField({'id': conversationId}, 'id');
     uuidField({'id': actingMembershipId}, 'id');
@@ -175,11 +179,23 @@ final class PendingSend {
         ).hasMatch(clientMsgId) ||
         generation < 0 ||
         !createdAt.isUtc ||
-        state != 'pending') {
+        state != 'pending' ||
+        (fileId == null) != (uploadRequestId == null))
       throw const FormatException('待发送记录无效');
+    if (fileId != null) {
+      uuidField({'id': fileId}, 'id');
+      uuidField({'id': uploadRequestId}, 'id');
     }
-    messageBodyField({'text': text}, 'text');
+    messageBodyField({'text': text}, 'text', empty: fileId != null);
   }
+  Map<String, Object?> get body => fileId == null
+      ? {'client_msg_id': clientMsgId, 'text': text}
+      : {
+          'client_msg_id': clientMsgId,
+          'message_type': 'file',
+          'file_id': fileId,
+          'caption': text,
+        };
   Map<String, Object?> toJson() => {
     'client_msg_id': clientMsgId,
     'conversation_id': conversationId,
@@ -188,6 +204,8 @@ final class PendingSend {
     'generation': generation,
     'created_at': createdAt.toIso8601String(),
     'state': state,
+    if (fileId != null) 'file_id': fileId,
+    if (uploadRequestId != null) 'upload_request_id': uploadRequestId,
   };
   factory PendingSend.fromJson(Map<String, Object?> value) {
     final generation = value['generation'];
@@ -196,12 +214,102 @@ final class PendingSend {
       clientMsgId: stringField(value, 'client_msg_id', max: 36),
       conversationId: uuidField(value, 'conversation_id'),
       actingMembershipId: uuidField(value, 'acting_membership_id'),
-      text: messageBodyField(value, 'text'),
+      text: messageBodyField(
+        value,
+        'text',
+        empty: value.containsKey('file_id'),
+      ),
       generation: generation,
       createdAt: wireTime(value['created_at']),
       state: stringField(value, 'state', max: 16),
+      fileId: value.containsKey('file_id') ? uuidField(value, 'file_id') : null,
+      uploadRequestId: value.containsKey('upload_request_id')
+          ? uuidField(value, 'upload_request_id')
+          : null,
     );
   }
+}
+
+// Original file bytes are reselected explicitly and verified by SHA256; local
+// paths and credentials are never persisted in this encrypted recovery record.
+final class PendingUpload {
+  final String requestId,
+      conversationId,
+      actingMembershipId,
+      name,
+      mediaType,
+      sha256;
+  final int size;
+  final String? fileId;
+  PendingUpload({
+    required this.requestId,
+    required this.conversationId,
+    required this.actingMembershipId,
+    required this.name,
+    required this.mediaType,
+    required this.size,
+    required this.sha256,
+    this.fileId,
+  }) {
+    for (final id in [
+      requestId,
+      conversationId,
+      actingMembershipId,
+      if (fileId != null) fileId!,
+    ]) {
+      uuidField({'id': id}, 'id');
+    }
+    if (requestId[14] != '7' ||
+        size < 1 ||
+        size > 25 * 1024 * 1024 ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(sha256) ||
+        name.isEmpty ||
+        name.trim() != name ||
+        name == '.' ||
+        name == '..' ||
+        utf8.encode(name).length > 255 ||
+        RegExp(r'[\x00-\x1f\x7f-\x9f/\\:]').hasMatch(name) ||
+        !const [
+          'application/pdf',
+          'image/png',
+          'image/jpeg',
+          'text/plain',
+        ].contains(mediaType))
+      throw const FormatException('文件登记无效');
+  }
+  Map<String, Object?> get body => {
+    'upload_request_id': requestId,
+    'original_filename': name,
+    'declared_media_type': mediaType,
+    'declared_size_bytes': size.toString(),
+  };
+  Map<String, Object?> toJson() => {
+    ...body,
+    'conversation_id': conversationId,
+    'acting_membership_id': actingMembershipId,
+    'sha256': sha256,
+    if (fileId != null) 'file_id': fileId,
+  };
+  PendingUpload withFile(String id) => PendingUpload(
+    requestId: requestId,
+    conversationId: conversationId,
+    actingMembershipId: actingMembershipId,
+    name: name,
+    mediaType: mediaType,
+    size: size,
+    sha256: sha256,
+    fileId: id,
+  );
+  factory PendingUpload.fromJson(Map<String, Object?> d) => PendingUpload(
+    requestId: uuidField(d, 'upload_request_id'),
+    conversationId: uuidField(d, 'conversation_id'),
+    actingMembershipId: uuidField(d, 'acting_membership_id'),
+    name: stringField(d, 'original_filename', max: 255),
+    mediaType: stringField(d, 'declared_media_type', max: 64),
+    size: Seq.fromWire(d['declared_size_bytes']).value.toInt(),
+    sha256: stringField(d, 'sha256', max: 64),
+    fileId: d.containsKey('file_id') ? uuidField(d, 'file_id') : null,
+  );
 }
 
 // One unresolved device registration per account. It is encrypted in the same

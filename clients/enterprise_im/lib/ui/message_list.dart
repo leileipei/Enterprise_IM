@@ -4,6 +4,8 @@ import '../core/protocol/seq.dart';
 import '../core/sync/receipt_queue.dart';
 import '../core/sync/client_context.dart';
 import 'receipt_badge.dart';
+import '../features/files/file_download.dart';
+import '../features/files/file_message_card.dart';
 
 class MessageList extends StatefulWidget {
   final List<MessageDTO> messages;
@@ -11,6 +13,8 @@ class MessageList extends StatefulWidget {
   final Map<Seq, ReceiptSummary> summaries;
   final ClientContext context;
   final ReceiptQueue receipts;
+  final FileDownload? download;
+  final Duration Function(MessageDTO)? authorizationRemaining;
   const MessageList({
     super.key,
     required this.messages,
@@ -19,6 +23,8 @@ class MessageList extends StatefulWidget {
     required this.summaries,
     required this.context,
     required this.receipts,
+    this.download,
+    this.authorizationRemaining,
   });
   @override
   State<MessageList> createState() => _MessageListState();
@@ -153,6 +159,16 @@ class _MessageListState extends State<MessageList> with WidgetsBindingObserver {
                           ),
                           if (message.messageType == 'text')
                             Text(message.text!)
+                          else if (widget.download != null &&
+                              widget.authorizationRemaining != null)
+                            FileMessageCard(
+                              key: ValueKey('file-${message.seq}'),
+                              message: message,
+                              context: widget.context,
+                              download: widget.download!,
+                              authorizationRemaining: () =>
+                                  widget.authorizationRemaining!(message),
+                            )
                           else ...[
                             Text(
                               message.attachment?['available'] == true

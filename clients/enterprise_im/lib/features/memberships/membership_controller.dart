@@ -125,6 +125,9 @@ final class MembershipController {
     try {
       if (await client.store.pendingDeviceRevocation() != null)
         throw const AuthFailure('device_revocation_unconfirmed');
+      final upload = await client.store.pendingUpload();
+      if (upload != null && upload.actingMembershipId != membershipId)
+        throw const AuthFailure('upload_context_mismatch');
       final sends = await client.store.pendingSends();
       final action = await client.store.pendingAction();
       final saved = owner.sessions.device;

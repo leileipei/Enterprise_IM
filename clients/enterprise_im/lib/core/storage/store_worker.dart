@@ -79,7 +79,78 @@ Future<void> storeWorkerMain(List<Object?> args) async {
       try {
         if (request[3] != generation) throw StateError('stale');
         Object? result;
-        if (operation == 'put_device_revocation' ||
+        if (const [
+          'put_upload',
+          'upload',
+          'upload_file',
+          'finish_upload',
+        ].contains(operation)) {
+          final recordKey = await opaque('upload', 'current');
+          final rows = db.select('SELECT * FROM records WHERE opaque_key=?', [
+            recordKey,
+          ]);
+          final previous = rows.isEmpty ? null : await decrypt(rows.single);
+          if (operation == 'upload')
+            result = previous;
+          else {
+            final input = Map<String, Object?>.from(request[2]! as Map);
+            final payload = operation == 'upload_file'
+                ? Map<String, Object?>.from(input['original']! as Map)
+                : input;
+            if (previous != null &&
+                jsonEncode(canonical(previous)) !=
+                    jsonEncode(canonical(payload)))
+              throw StateError('conflict');
+            if (operation != 'put_upload' && previous == null)
+              throw StateError('missing');
+            if (operation == 'upload_file' &&
+                previous!['file_id'] != null &&
+                previous['file_id'] != input['file_id'])
+              throw StateError('conflict');
+            final next = operation == 'upload_file'
+                ? {...payload, 'file_id': input['file_id']}
+                : payload;
+            List<Object?>? write;
+            if (operation != 'finish_upload' &&
+                (previous == null || operation == 'upload_file')) {
+              final box = await aes.encrypt(
+                utf8.encode(jsonEncode(next)),
+                secretKey: key,
+                nonce: aes.newNonce(),
+                aad: aad('upload', recordKey),
+              );
+              write = [
+                recordKey,
+                'upload',
+                Uint8List.fromList(box.nonce),
+                Uint8List.fromList(box.cipherText),
+                Uint8List.fromList(box.mac.bytes),
+              ];
+            }
+            db.execute('BEGIN IMMEDIATE');
+            try {
+              if (db
+                  .select(
+                    "SELECT 1 FROM records WHERE kind IN ('pending_send','action','device_revocation') LIMIT 1",
+                  )
+                  .isNotEmpty)
+                throw StateError('conflict');
+              if (operation == 'finish_upload')
+                db.execute('DELETE FROM records WHERE opaque_key=?', [
+                  recordKey,
+                ]);
+              else if (write != null)
+                db.execute(
+                  'INSERT OR REPLACE INTO records VALUES(?,?,?,?,?)',
+                  write,
+                );
+              db.execute('COMMIT');
+            } catch (_) {
+              db.execute('ROLLBACK');
+              rethrow;
+            }
+          }
+        } else if (operation == 'put_device_revocation' ||
             operation == 'device_revocation' ||
             operation == 'finish_device_revocation') {
           final recordKey = await opaque('device_revocation', 'current');
@@ -144,7 +215,7 @@ Future<void> storeWorkerMain(List<Object?> args) async {
               try {
                 if (db
                     .select(
-                      "SELECT 1 FROM records WHERE kind='pending_send' LIMIT 1",
+                      "SELECT 1 FROM records WHERE kind IN ('pending_send','upload') LIMIT 1",
                     )
                     .isNotEmpty)
                   throw StateError('conflict');
@@ -223,6 +294,21 @@ Future<void> storeWorkerMain(List<Object?> args) async {
                   .select("SELECT 1 FROM records WHERE kind='action' LIMIT 1")
                   .isNotEmpty)
                 throw StateError('conflict');
+              final uploads = db.select(
+                "SELECT * FROM records WHERE kind='upload'",
+              );
+              if (uploads.isNotEmpty) {
+                final upload = await decrypt(uploads.single);
+                if (payload['file_id'] == null ||
+                    payload['file_id'] != upload['file_id'] ||
+                    payload['upload_request_id'] !=
+                        upload['upload_request_id'] ||
+                    payload['conversation_id'] != upload['conversation_id'] ||
+                    payload['acting_membership_id'] !=
+                        upload['acting_membership_id'])
+                  throw StateError('conflict');
+              } else if (payload['file_id'] != null)
+                throw StateError('conflict');
               db.execute('INSERT INTO records VALUES(?,?,?,?,?)', [
                 recordKey,
                 'pending_send',
@@ -275,6 +361,19 @@ Future<void> storeWorkerMain(List<Object?> args) async {
           try {
             if (write != null)
               db.execute('INSERT INTO records VALUES(?,?,?,?,?)', write);
+            if (pending['file_id'] != null) {
+              final uploads = db.select(
+                "SELECT * FROM records WHERE kind='upload'",
+              );
+              if (uploads.length != 1) throw StateError('missing');
+              final upload = await decrypt(uploads.single);
+              if (upload['file_id'] != pending['file_id'] ||
+                  upload['upload_request_id'] != pending['upload_request_id'])
+                throw StateError('conflict');
+              db.execute('DELETE FROM records WHERE opaque_key=?', [
+                uploads.single['opaque_key'],
+              ]);
+            }
             db.execute('DELETE FROM records WHERE opaque_key=?', [recordKey]);
             db.execute('COMMIT');
           } catch (_) {

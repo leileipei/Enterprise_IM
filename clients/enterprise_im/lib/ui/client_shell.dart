@@ -187,9 +187,13 @@ class _ClientShellState extends State<ClientShell> {
     try {
       final pending = await ready.client.store.pendingSends();
       final action = await ready.client.store.pendingAction();
+      final upload = await ready.client.store.pendingUpload();
       if (!mounted || _expired || !identical(_memberships.current, ready))
         return;
-      if (action != null ||
+      if ((upload != null &&
+              (upload.conversationId != conversation.id ||
+                  upload.actingMembershipId != ready.membership.id)) ||
+          action != null ||
           _view?.sending == true ||
           pending.any(
             (p) =>
@@ -428,6 +432,8 @@ class _ClientShellState extends State<ClientShell> {
       'send_unconfirmed' => '请先重试或明确放弃原消息，再切换任职。',
       'operation_unconfirmed' => '请先重试或明确放弃原操作，再切换任职。',
       'registration_unconfirmed' => '请先完成原设备登记。',
+      'upload_unconfirmed' => '请先完成或明确放弃原文件操作，再切换任职。',
+      'upload_context_mismatch' => '有原文件操作尚未确认，请回原任职和会话处理。',
       'device_revocation_unconfirmed' => '设备撤销尚未确认，请进入设备管理重试原撤销。',
       'device_quota' => '设备额度已满，请先在设备管理中撤销不用的设备。',
       'registration_exists' => '该登记已被服务端处理，凭据未保存。请在设备管理中撤销该设备后重新登记。',

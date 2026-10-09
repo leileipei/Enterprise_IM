@@ -5,6 +5,9 @@ import '../features/conversations/conversation_view.dart';
 import 'message_list.dart';
 import 'message_composer.dart';
 import 'receipt_badge.dart';
+import '../features/files/file_download.dart';
+import '../features/files/file_upload_panel.dart';
+import '../platform/file_picker.dart';
 
 class MessagePage extends StatefulWidget {
   final ConversationView view;
@@ -22,21 +25,33 @@ class MessagePage extends StatefulWidget {
 
 class _MessagePageState extends State<MessagePage> {
   String? _notice;
+  FileDownload? _downloads;
   int _draft = 0;
   bool _leaving = false, _allowLeave = false;
   @override
   void initState() {
     super.initState();
     widget.view.addListener(_changed);
+    _downloads = FileDownload(widget.view.memberships);
   }
 
   void _changed() {
+    if (widget.view.context == null || !widget.view.activity.foreground) {
+      final downloads = _downloads;
+      _downloads = null;
+      if (downloads != null) unawaited(downloads.close());
+    } else {
+      _downloads ??= FileDownload(widget.view.memberships);
+      unawaited(_downloads!.prune().catchError((Object _) {}));
+    }
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     widget.view.removeListener(_changed);
+    final downloads = _downloads;
+    if (downloads != null) unawaited(downloads.close());
     unawaited(widget.view.close());
     super.dispose();
   }
@@ -209,6 +224,8 @@ class _MessagePageState extends State<MessagePage> {
                         summaries: view.summaries,
                         context: client,
                         receipts: view.receipts,
+                        download: _downloads,
+                        authorizationRemaining: view.fileAuthorizationRemaining,
                       ),
               ),
               for (final pending in view.pending)
@@ -241,6 +258,38 @@ class _MessagePageState extends State<MessagePage> {
                       ),
                     ],
                   ),
+                ),
+              if (client != null)
+                FileUploadPanel(
+                  key: ValueKey(client),
+                  transfer: view.files,
+                  context: client,
+                  enabled: view.canManageFiles,
+                  bind: (caption) async {
+                    await _operation(() => view.bindFile(caption));
+                    return null;
+                  },
+                  onChanged: view.reloadPending,
+                  pick: () async {
+                    final activity = view.activity,
+                        wasBlocked = activity.blocked;
+                    activity.update(
+                      foreground: activity.foreground,
+                      focused: activity.focused,
+                      activeConversation: activity.activeConversation,
+                      blocked: true,
+                    );
+                    try {
+                      return await FilePicker().pick();
+                    } finally {
+                      activity.update(
+                        foreground: activity.foreground,
+                        focused: activity.focused,
+                        activeConversation: activity.activeConversation,
+                        blocked: wasBlocked,
+                      );
+                    }
+                  },
                 ),
               Padding(
                 padding: const EdgeInsets.all(12),
