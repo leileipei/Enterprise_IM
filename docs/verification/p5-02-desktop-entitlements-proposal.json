@@ -1,6 +1,6 @@
 {
-  "status": "proposed_not_applied",
-  "reason": "automatic approval review rejected persistent Release network.server; explicit approval required",
+  "status": "applied_native_validation_pending",
+  "reason": "approved by user and applied exactly; previous automatic rejection preserved in checkpoint evidence",
   "date": "2026-10-10",
   "changes": [
     {
@@ -23,7 +23,8 @@
         "com.apple.security.network.client": true,
         "com.apple.security.files.user-selected.read-write": true,
         "keychain-access-groups": []
-      }
+      },
+      "applied_sha256": "4bf8fccb0e90203979194856cd9fb10a5b0689ae9cb39219cf81fa6f4a534cde"
     },
     {
       "path": "clients/enterprise_im/macos/Runner/Release.entitlements",
@@ -43,7 +44,8 @@
         "com.apple.security.files.user-selected.read-write": true,
         "keychain-access-groups": [],
         "com.apple.security.network.server": true
-      }
+      },
+      "applied_sha256": "47014aaf66980b128b8112f510ce1f050e99a4f96c7bc6d1bde58b39777144b2"
     }
   ],
   "purposes": {
@@ -52,6 +54,8 @@
     "com.apple.security.files.user-selected.read-write": "系统文件选择器中由用户明确选中的导入／导出文件",
     "keychain-access-groups": "固定安全存储插件默认访问组；空数组，不配置额外 App Group；需原生签名／provisioning验证"
   },
-  "authorization": "not_received",
-  "runtime_validation": "not_run"
+  "authorization": "explicit_user_approval",
+  "runtime_validation": "not_run",
+  "authorization_text": "批准这组权限设置",
+  "proposal_sha256_before_approval": "2a8a1d03dbcb4ec17b495f9e06965054721d62086b59b3b2b96c2f651d3a28d3"
 }

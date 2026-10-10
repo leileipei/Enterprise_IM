@@ -1,0 +1,78 @@
+{
+  "parent_commit": "3d393d0aad64954b081dd8621fb35c1282f34e67",
+  "date": "2026-10-10",
+  "authorization": "direct user: 批准这组权限设置",
+  "scope": "exact saved proposal, no additional security changes",
+  "changes": [
+    {
+      "path": "clients/enterprise_im/macos/Runner/DebugProfile.entitlements",
+      "current_sha256": "ebaab2b9992173de422c33e1fbab7f6e31acaa2213956097ac8cefd894a91ac8",
+      "before": {
+        "com.apple.security.app-sandbox": true,
+        "com.apple.security.cs.allow-jit": true,
+        "com.apple.security.network.server": true
+      },
+      "proposed_after": {
+        "com.apple.security.app-sandbox": true,
+        "com.apple.security.cs.allow-jit": true,
+        "com.apple.security.network.server": true,
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": []
+      },
+      "additions": {
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": []
+      },
+      "applied_sha256": "4bf8fccb0e90203979194856cd9fb10a5b0689ae9cb39219cf81fa6f4a534cde"
+    },
+    {
+      "path": "clients/enterprise_im/macos/Runner/Release.entitlements",
+      "current_sha256": "b746c74b201e6af4e0864fbd1f4f629f96156a7ec4b7208bc995d0a5089bb592",
+      "before": {
+        "com.apple.security.app-sandbox": true
+      },
+      "proposed_after": {
+        "com.apple.security.app-sandbox": true,
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": [],
+        "com.apple.security.network.server": true
+      },
+      "additions": {
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": [],
+        "com.apple.security.network.server": true
+      },
+      "applied_sha256": "47014aaf66980b128b8112f510ce1f050e99a4f96c7bc6d1bde58b39777144b2"
+    }
+  ],
+  "proposal_before_sha256": "2a8a1d03dbcb4ec17b495f9e06965054721d62086b59b3b2b96c2f651d3a28d3",
+  "build_preflight": {
+    "command": [
+      "/bin/bash",
+      "scripts/build-client-macos.sh"
+    ],
+    "actual_exit": 69,
+    "log_sha256": "411522ec89779639df259fa9f595942811c505c31bc2eb85696023376304b203",
+    "output": "You have not agreed to the Xcode license agreements. Please run 'sudo xcodebuild -license' from within a Terminal window to review and agree to the Xcode and Apple SDKs license.\n",
+    "native_build_executed": false
+  },
+  "plist_validation": {
+    "command": [
+      "/usr/bin/plutil",
+      "-lint",
+      "clients/enterprise_im/macos/Runner/DebugProfile.entitlements",
+      "clients/enterprise_im/macos/Runner/Release.entitlements"
+    ],
+    "actual_exit": 0,
+    "output": "clients/enterprise_im/macos/Runner/DebugProfile.entitlements: OK\nclients/enterprise_im/macos/Runner/Release.entitlements: OK\n"
+  },
+  "exact_proposal_match": true,
+  "acceptance_status": "permissions applied; native build/install/plugin acceptance blocked by user Xcode license action",
+  "task7_status": "in_progress",
+  "runtime_validation": "not_run",
+  "additional_runtime_tests": "not rerun: entitlement-only change, native preflight blocked"
+}
