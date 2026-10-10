@@ -1,0 +1,158 @@
+name: Desktop build and scoped native checks
+
+# Manual preparation gate. No push/PR trigger and no production backend secrets.
+'on':
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Platform to check (macOS requires a prepared isolated runner)
+        type: choice
+        required: true
+        default: windows
+        options: [windows, macos, both]
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.ref }}-${{ inputs.target }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    if: inputs.target == 'windows' || inputs.target == 'both'
+    # Build/startup on Server 2025 does not prove the Windows 10 product baseline.
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      FLUTTER_SUPPRESS_ANALYTICS: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, verified 2026-10-10
+        with:
+          persist-credentials: false
+          set-safe-directory: false
+      - name: Prepare exact Flutter source and package cache
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $taskRoot = Join-Path $env:RUNNER_TEMP ('im-desktop-' + [guid]::NewGuid().ToString('N'))
+          $taskSdk = Join-Path $taskRoot 'flutter'
+          & git init $taskSdk
+          if ($LASTEXITCODE -ne 0) { throw 'sdk_init_failed' }
+          & git -C $taskSdk remote add origin https://github.com/flutter/flutter.git
+          if ($LASTEXITCODE -ne 0) { throw 'sdk_remote_failed' }
+          & git -C $taskSdk fetch --depth 1 origin e8113bf45620cbeb8aff64947ee4c93e16adb4cf
+          if ($LASTEXITCODE -ne 0) { throw 'sdk_fetch_failed' }
+          & git -C $taskSdk checkout --detach e8113bf45620cbeb8aff64947ee4c93e16adb4cf
+          if ($LASTEXITCODE -ne 0) { throw 'sdk_checkout_failed' }
+          "IM_FLUTTER_SDK=$taskSdk" >> $env:GITHUB_ENV
+          "PUB_CACHE=$(Join-Path $taskRoot 'pub-cache')" >> $env:GITHUB_ENV
+          $taskNamespace = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
+          "IM_VAULT_PROBE_ID=$taskNamespace" >> $env:GITHUB_ENV
+      - name: Resolve fixed lock, shared tests, analyzer and release build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $taskFlutter = Join-Path $env:IM_FLUTTER_SDK 'bin/flutter.bat'
+          Push-Location clients/enterprise_im
+          try {
+            & $taskFlutter pub get --enforce-lockfile
+            if ($LASTEXITCODE -ne 0) { throw 'pub_lock_failed' }
+            & $taskFlutter test --no-pub
+            if ($LASTEXITCODE -ne 0) { throw 'shared_tests_failed' }
+            & $taskFlutter analyze --fatal-infos
+            if ($LASTEXITCODE -ne 0) { throw 'analysis_failed' }
+          } finally { Pop-Location }
+          & ./scripts/build-client-windows.ps1 -FlutterSdk $env:IM_FLUTTER_SDK
+      - name: Real executable startup and rejected input
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path desktop-artifacts | Out-Null
+          & ./scripts/test-client-windows-startup.ps1 -Executable clients/enterprise_im/build/windows/x64/runner/Release/enterprise_im.exe -Output desktop-artifacts/startup.json -IsolatedTestAccount
+      - name: Native loopback and secure-vault write process
+        shell: pwsh
+        working-directory: clients/enterprise_im
+        run: |
+          $taskFlutter = Join-Path $env:IM_FLUTTER_SDK 'bin/flutter.bat'
+          & $taskFlutter test integration_test/desktop_lifecycle_test.dart -d windows --no-pub
+          if ($LASTEXITCODE -ne 0) { throw 'native_loopback_failed' }
+          & $taskFlutter test integration_test/secure_storage_test.dart -d windows --no-pub "--dart-define=IM_VAULT_PROBE_ID=$env:IM_VAULT_PROBE_ID" --dart-define=IM_VAULT_PROBE_PHASE=write
+          if ($LASTEXITCODE -ne 0) { throw 'native_vault_write_failed' }
+      - name: Restarted vault verify and owned-record deletion
+        if: always() && env.IM_VAULT_PROBE_ID != '' && env.IM_FLUTTER_SDK != ''
+        shell: pwsh
+        working-directory: clients/enterprise_im
+        run: |
+          $taskFlutter = Join-Path $env:IM_FLUTTER_SDK 'bin/flutter.bat'
+          & $taskFlutter test integration_test/secure_storage_test.dart -d windows --no-pub "--dart-define=IM_VAULT_PROBE_ID=$env:IM_VAULT_PROBE_ID" --dart-define=IM_VAULT_PROBE_PHASE=verify
+          if ($LASTEXITCODE -ne 0) { throw 'native_vault_verify_or_cleanup_failed' }
+      - name: Archive release runtime
+        shell: pwsh
+        run: |
+          Compress-Archive -Path clients/enterprise_im/build/windows/x64/runner/Release/* -DestinationPath desktop-artifacts/windows-runtime.zip
+          Get-FileHash -Algorithm SHA256 desktop-artifacts/windows-runtime.zip | ConvertTo-Json | Set-Content desktop-artifacts/runtime-hash.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7, verified 2026-10-10
+        with:
+          name: windows-scoped-native-${{ github.sha }}
+          path: desktop-artifacts/
+          retention-days: 7
+          if-no-files-found: error
+  macos:
+    if: inputs.target == 'macos' || inputs.target == 'both'
+    # Prepared SDK/cache, developer cert and intended team are operator-owned.
+    runs-on: [self-hosted, macOS, ARM64, enterprise-im-desktop-isolated]
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      FLUTTER_SUPPRESS_ANALYTICS: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          path: im-desktop-${{ github.run_id }}-${{ github.run_attempt }}
+          persist-credentials: false
+          set-safe-directory: false
+          clean: false
+      - name: Resolve fixed cache and signed release
+        shell: bash
+        working-directory: im-desktop-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -eu
+          : "${IM_FLUTTER_SDK:?Prepared exact SDK required}"
+          : "${FLUTTER_XCODE_DEVELOPMENT_TEAM:?Intended development team required}"
+          : "${FLUTTER_XCODE_CODE_SIGN_IDENTITY:?Intended developer certificate required}"
+          task_namespace="$(openssl rand -hex 32)"
+          echo "IM_VAULT_PROBE_ID=$task_namespace" >> "$GITHUB_ENV"
+          cd clients/enterprise_im
+          "$IM_FLUTTER_SDK/bin/flutter" pub get --offline --enforce-lockfile
+          "$IM_FLUTTER_SDK/bin/flutter" test --no-pub
+          "$IM_FLUTTER_SDK/bin/flutter" analyze --fatal-infos
+          cd ../..
+          /bin/bash scripts/build-client-macos.sh
+      - name: Native loopback and secure-vault write process
+        shell: bash
+        working-directory: im-desktop-${{ github.run_id }}-${{ github.run_attempt }}/clients/enterprise_im
+        run: |
+          set -eu
+          "$IM_FLUTTER_SDK/bin/flutter" test integration_test/desktop_lifecycle_test.dart -d macos --no-pub
+          "$IM_FLUTTER_SDK/bin/flutter" test integration_test/secure_storage_test.dart -d macos --no-pub "--dart-define=IM_VAULT_PROBE_ID=$IM_VAULT_PROBE_ID" --dart-define=IM_VAULT_PROBE_PHASE=write
+      - name: Restarted vault verify and owned-record deletion
+        if: always() && env.IM_VAULT_PROBE_ID != ''
+        shell: bash
+        working-directory: im-desktop-${{ github.run_id }}-${{ github.run_attempt }}/clients/enterprise_im
+        run: |
+          set -eu
+          "$IM_FLUTTER_SDK/bin/flutter" test integration_test/secure_storage_test.dart -d macos --no-pub "--dart-define=IM_VAULT_PROBE_ID=$IM_VAULT_PROBE_ID" --dart-define=IM_VAULT_PROBE_PHASE=verify
+      - name: Inspect and archive development-signed release
+        shell: bash
+        working-directory: im-desktop-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -eu
+          task_app=clients/enterprise_im/build/macos/Build/Products/Release/enterprise_im.app
+          codesign --verify --deep --strict "$task_app"
+          mkdir desktop-artifacts
+          ditto -c -k --keepParent "$task_app" desktop-artifacts/macos-runtime.zip
+          shasum -a 256 desktop-artifacts/macos-runtime.zip > desktop-artifacts/runtime-hash.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: macos-scoped-native-${{ github.sha }}
+          path: im-desktop-${{ github.run_id }}-${{ github.run_attempt }}/desktop-artifacts/
+          retention-days: 7
+          if-no-files-found: error

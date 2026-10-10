@@ -1,17 +1,23 @@
 # Enterprise IM 原生客户端
 
-共享 Flutter 客户端开发中。当前已生成 Windows、macOS、Android runner；iOS runner 等待最低系统版本决定。尚未交付四平台安装包。
+共享Flutter客户端开发中，已生成Windows、macOS、Android runner；iOS runner等待最低系统版本决定，尚未交付四平台验收安装包。
 
-## 当前功能
+## 当前功能与证据
 
-中文 HTTPS 服务配置、系统浏览器登录、PKCE、动态本地回调、移动链接订阅、刷新和退出。访问令牌与人员资料只保存在内存。支持严格消息 DTO、64 位序号、同步证明和缓存期限解析；持久化、消息列表、原生设备送达及已读仍按后续计划实施。
+已实现中文服务配置／原生OIDC登录、任职与设备准入、加密SQLite与原请求恢复、消息／送达／精确已读、通讯录／跨组织群操作、本人设备管理、附件扫描状态及私有下载／导出。共享逻辑和正式HTTPS／PostgreSQL／Redis后端已分别验证；对应证据与范围见仓库`docs/verification/p5-02-task5-real-messaging-results.json`及`p5-02-task6-real-files-results.json`。这些记录不代表已安装的四平台系统插件或窗口事件验收。
+
+桌面当前会话通知须用户显式启用，仅在进程运行且前台授权页面提示“收到新消息”；拒绝通知不阻止消息，不支持应用终止后的推送或冷启动通知导航。Windows启动只允许无参数，令牌、URL、文件路径和未知参数均在Flutter引擎初始化前被拒绝；OAuth仍使用本机随机端口回调。
 
 ## 固定工具链
 
-Flutter 3.47.3、Dart 3.13.3，精确源码和插件归档摘要记录在 `../../docs/verification/p5-02-toolchain-lock.json`。保留 `pubspec.lock`，禁止静默升级。SDK、pub cache 与平台 SDK 位于工程外。
+Flutter3.47.3、Dart3.13.3，源码固定为`e8113bf45620cbeb8aff64947ee4c93e16adb4cf`，记录在仓库`docs/verification/p5-02-toolchain-lock.json`。保留pubspec.lock并使用`flutter pub get --enforce-lockfile`，禁止静默升级。SDK、pub cache和平台SDK位于工程外。Xcode许可／工具可用状态改变后需要重新生成插件清单；已有缓存可执行`flutter pub get --offline --enforce-lockfile`。
 
-在本目录执行 `flutter test --timeout 30s`。固定 Flutter 的分析器在包含中文的目录名中会产生 LSP 字节长度错误；静态分析使用指向本目录同一源码的英文符号链接，执行 `flutter analyze --fatal-infos <英文链接绝对路径>`，不修改 SDK 或复制源码。
+本目录执行`flutter test --no-pub`。固定Flutter分析器在包含中文目录名时曾出现LSP字节长度错误；可创建指向同一目录的英文符号链接，再执行`flutter analyze --fatal-infos <英文链接绝对路径>`，不修改SDK或复制源码。
 
-## 验证边界
+## 桌面门禁
 
-共享测试和实际 TCP 本地回调测试已通过。macOS 实际构建退出69，需用户本人完成 Xcode/Apple SDK 许可；iOS13 基线与固定引擎最低15冲突，等待决定。Windows、Android 构建、安全存储插件写读删、真机、签名和安装验收尚未执行。共享测试不能替代这些平台门禁。
+Windows启动防护的宿主C++测试编译真实wWinMain，但Win32／Flutter SDK边界为夹具；不能替代Windows真实`.exe`运行。原生启动门禁、两进程安全存储及桌面回调测试的命令和边界见仓库`docs/P5-02-桌面验证操作.md`。`.github/workflows/client-desktop.yml`仅提供手动触发的构建／专项验证准备，不把工作流文件存在当作PASS。
+
+## 当前未完成项
+
+Xcode许可已经解除。macOS原生编译检查通过，但仅为命令级禁用签名的编译产物，链接器隐式ad-hoc签名不代表开发证书签名；本机开发证书数量仍为0，真实签名／安装、OS通知／文件选择／窗口生命周期及后端验收尚未完成。Windows原生构建／运行及CI未执行，Windows10基线仍需实际验证。iOS13与固定引擎最低15冲突等待决定；Android／iOS真机和正式签名／公证／客户生产验收均未完成。
