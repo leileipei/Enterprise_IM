@@ -1,0 +1,57 @@
+{
+  "status": "proposed_not_applied",
+  "reason": "automatic approval review rejected persistent Release network.server; explicit approval required",
+  "date": "2026-10-10",
+  "changes": [
+    {
+      "path": "clients/enterprise_im/macos/Runner/DebugProfile.entitlements",
+      "current_sha256": "ebaab2b9992173de422c33e1fbab7f6e31acaa2213956097ac8cefd894a91ac8",
+      "before": {
+        "com.apple.security.app-sandbox": true,
+        "com.apple.security.cs.allow-jit": true,
+        "com.apple.security.network.server": true
+      },
+      "proposed_after": {
+        "com.apple.security.app-sandbox": true,
+        "com.apple.security.cs.allow-jit": true,
+        "com.apple.security.network.server": true,
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": []
+      },
+      "additions": {
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": []
+      }
+    },
+    {
+      "path": "clients/enterprise_im/macos/Runner/Release.entitlements",
+      "current_sha256": "b746c74b201e6af4e0864fbd1f4f629f96156a7ec4b7208bc995d0a5089bb592",
+      "before": {
+        "com.apple.security.app-sandbox": true
+      },
+      "proposed_after": {
+        "com.apple.security.app-sandbox": true,
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": [],
+        "com.apple.security.network.server": true
+      },
+      "additions": {
+        "com.apple.security.network.client": true,
+        "com.apple.security.files.user-selected.read-write": true,
+        "keychain-access-groups": [],
+        "com.apple.security.network.server": true
+      }
+    }
+  ],
+  "purposes": {
+    "com.apple.security.network.client": "生产 HTTPS/OIDC/WebSocket 出站连接",
+    "com.apple.security.network.server": "Release OAuth 127.0.0.1 临时回调监听；权限本身为应用级入站，绑定地址由 LoopbackLoginCallback 限制",
+    "com.apple.security.files.user-selected.read-write": "系统文件选择器中由用户明确选中的导入／导出文件",
+    "keychain-access-groups": "固定安全存储插件默认访问组；空数组，不配置额外 App Group；需原生签名／provisioning验证"
+  },
+  "authorization": "not_received",
+  "runtime_validation": "not_run"
+}

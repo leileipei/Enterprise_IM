@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/auth/client_session.dart';
 import '../platform/app_activity.dart';
 import '../platform/native_activity.dart';
+import '../platform/notifications.dart';
 import '../core/sync/client_context.dart';
 import '../features/conversations/conversation_view.dart';
 import 'message_page.dart';
@@ -20,12 +21,14 @@ class ClientShell extends StatefulWidget {
   final ClientSession owner;
   final Future<bool> Function() onLogout;
   final AppActivity? activity;
+  final NotificationPort? notificationPort;
   final ValueChanged<AuthSession?>? onSessionChanged;
   const ClientShell({
     super.key,
     required this.owner,
     required this.onLogout,
     this.activity,
+    this.notificationPort,
     this.onSessionChanged,
   });
   @override
@@ -38,6 +41,8 @@ class _ClientShellState extends State<ClientShell> {
   WorkspaceAdmission? _ready;
   NativeActivityAdapter? _native;
   late final AppActivity _activity;
+  late final MessageNotifications _notifications;
+  bool _requestingNotifications = false;
   ConversationView? _view;
   ConversationSummary? _detail;
   bool _opening = false;
@@ -54,6 +59,10 @@ class _ClientShellState extends State<ClientShell> {
     super.initState();
     if (widget.activity == null) _native = NativeActivityAdapter();
     _activity = widget.activity ?? _native!.activity;
+    _notifications = MessageNotifications(
+      _activity,
+      widget.notificationPort ?? NativeNotificationPort(widget.owner.platform),
+    );
     _memberships = MembershipController(widget.owner);
     _lists = ConversationList(_memberships);
     _armExpiry();
@@ -170,6 +179,7 @@ class _ClientShellState extends State<ClientShell> {
     final view = _view;
     _view = null;
     _detail = null;
+    unawaited(_notifications.clear());
     if (mounted) setState(() {});
     _activity.update(
       foreground: _activity.foreground,
@@ -214,6 +224,7 @@ class _ClientShellState extends State<ClientShell> {
         _memberships,
         _activity,
         sendAllowed: _statuses[conversation.id] != 'policy_blocked',
+        onAuthorizedPage: (page) => unawaited(_notifications.acceptPage(page)),
       );
       _view = view;
       final client = ClientContext(
@@ -222,6 +233,17 @@ class _ClientShellState extends State<ClientShell> {
         device: ready.device,
         generation: ready.client.session.generation,
         conversationId: conversation.id,
+      );
+      _notifications.bind(
+        client,
+        after: conversation.lastSeq,
+        isCurrent: () =>
+            mounted &&
+            !_expired &&
+            identical(_memberships.current, ready) &&
+            identical(_view, view) &&
+            view.context?.sameScope(client) == true,
+        onTap: (context) => _openNotification(context, conversation.kind),
       );
       unawaited(
         view.select(client, conversation).catchError((Object error) {
@@ -449,8 +471,49 @@ class _ClientShellState extends State<ClientShell> {
     };
   }
 
+  Future<void> _enableNotifications() async {
+    if (_requestingNotifications || _expired) return;
+    setState(() => _requestingNotifications = true);
+    final allowed = await _notifications.enable();
+    if (!mounted) return;
+    setState(() {
+      _requestingNotifications = false;
+      _notice = allowed ? '已请求消息通知，显示方式由系统设置决定。' : '消息通知未启用，不影响正常收发。';
+    });
+  }
+
+  Future<void> _openNotification(ClientContext context, String kind) async {
+    final ready = _ready, epoch = _epoch;
+    if (_busy ||
+        _opening ||
+        _expired ||
+        _activity.blocked ||
+        ready == null ||
+        _view?.context?.sameScope(context) != true)
+      return;
+    final lists = ConversationList(_memberships);
+    try {
+      final page = await lists.load(kind);
+      if (!_active(epoch) ||
+          !identical(_memberships.current, ready) ||
+          _view?.context?.sameScope(context) != true ||
+          _activity.blocked)
+        return;
+      final matches = page.items.where(
+        (item) => item.id == context.conversationId,
+      );
+      if (matches.isEmpty) return;
+      // _open creates a new view and authorized sync; payload is never content authority.
+      if (!mounted) return;
+      await _open(matches.single, MediaQuery.sizeOf(this.context).width >= 800);
+    } finally {
+      lists.close();
+    }
+  }
+
   @override
   void dispose() {
+    unawaited(_notifications.close());
     _epoch++;
     _expiry?.cancel();
     final view = _view;
@@ -472,6 +535,15 @@ class _ClientShellState extends State<ClientShell> {
     appBar: AppBar(
       title: const Text('集团工作空间'),
       actions: [
+        if (!_expired &&
+            !_logoutFailed &&
+            (widget.owner.platform == 'macos' ||
+                widget.owner.platform == 'windows'))
+          IconButton(
+            tooltip: '启用消息通知',
+            onPressed: _requestingNotifications ? null : _enableNotifications,
+            icon: const Icon(Icons.notifications_outlined),
+          ),
         if (!_expired && !_logoutFailed)
           TextButton(
             onPressed: _busy || _opening ? null : _devices,

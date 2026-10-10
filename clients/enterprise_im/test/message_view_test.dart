@@ -66,6 +66,41 @@ ApiResponse metadata(ApiRequest request) => oidc.response(
         },
 );
 void main() {
+  test(
+    'decorative notification failure cannot stop authorized messaging',
+    () async {
+      final owner = await nav.owner((r, _) async {
+        if (r.uri.path.endsWith('/tickets'))
+          throw const ApiFailure('unavailable');
+        if (r.uri.path.endsWith('/sync')) return oidc.response(page());
+        if (r.uri.path.endsWith('/delivered'))
+          return oidc.response(disk.state());
+        return metadata(r);
+      });
+      addTearDown(owner.logout);
+      final (roles, context) = await sending.admission(owner);
+      addTearDown(roles.close);
+      final activity = AppActivity()
+        ..update(foreground: true, focused: true, activeConversation: nav.dm);
+      addTearDown(activity.dispose);
+      var notifications = 0;
+      final view = ConversationView(
+        roles,
+        activity,
+        connector: OfflineSocket(),
+        onAuthorizedPage: (result) {
+          notifications++;
+          throw StateError('notification unavailable');
+        },
+      );
+      addTearDown(view.close);
+      await view.select(context, ConversationSummary.fromJson(nav.direct()));
+      expect(notifications, 1);
+      expect(view.canSend, isTrue);
+      expect(view.messages.single.text, '真实授权正文');
+    },
+  );
+
   for (final mixed in [false, true]) {
     test(
       'recipient metadata preserves conversation and only queries own messages mixed=$mixed',

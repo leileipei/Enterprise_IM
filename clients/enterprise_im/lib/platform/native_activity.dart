@@ -26,8 +26,14 @@ final class NativeActivityAdapter with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) =>
-      _update(state == AppLifecycleState.resumed);
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached)
+      _focused = false;
+    _update(state == AppLifecycleState.resumed);
+  }
+
   @override
   void didChangeViewFocus(ViewFocusEvent event) {
     if (_disposed || event.viewId != viewId) return;

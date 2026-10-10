@@ -18,6 +18,7 @@ final class ConversationView extends ChangeNotifier {
   final MembershipController memberships;
   final AppActivity activity;
   final bool sendAllowed;
+  final void Function(SyncResult)? onAuthorizedPage;
   late final ConversationController sender;
   late final FileTransfer files;
   PendingUpload? _upload;
@@ -48,6 +49,7 @@ final class ConversationView extends ChangeNotifier {
     RealtimeConnector? connector,
     FileWireTransport? fileWire,
     this.sendAllowed = true,
+    this.onAuthorizedPage,
   }) {
     final ready = memberships.current;
     if (ready == null) throw const ApiFailure('reauthenticate');
@@ -231,6 +233,10 @@ final class ConversationView extends ChangeNotifier {
     _armExpiry();
     notifyListeners();
     unawaited(refreshMetadata());
+    // Optional notification/UI decoration never changes sync or send authority.
+    try {
+      onAuthorizedPage?.call(result);
+    } catch (_) {}
   }
 
   void _prune() {
