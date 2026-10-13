@@ -80,6 +80,14 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
   const path = String.fromEnvironment('IM_FILES_FIXTURE');
   if (path.isEmpty)
     throw StateError('explicit owned real-backend config required; no skip');
+  const isolated = bool.fromEnvironment('IM_NATIVE_ISOLATED_PROFILE');
+  if (!host && !isolated) {
+    throw StateError('empty disposable native OS profile must be confirmed');
+  }
+  final platform = host ? 'macos' : Platform.operatingSystem;
+  if (!host && !{'macos', 'windows'}.contains(platform)) {
+    throw StateError('native desktop backend entry requires macOS or Windows');
+  }
   final config = objectMap(jsonDecode(await File(path).readAsString()));
   final trust = SecurityContext(withTrustedRoots: false)
     ..setTrustedCertificates(config['ca'] as String);
@@ -95,7 +103,7 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
     await root.create();
     final vault = host ? HostFixtureVault() : OsSecureVault();
     final sessions = SessionStore(vault, directory: root);
-    final owner = ClientSession(auth, sessions, platform: 'macos');
+    final owner = ClientSession(auth, sessions, platform: platform);
     MembershipController? roles;
     ConversationController? sender;
     FileTransfer? transfer;
@@ -129,12 +137,20 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
     }
 
     try {
+      if (!host) {
+        expect(
+          await vault.read(bootstrapNamespace, 'account'),
+          isNull,
+          reason:
+              'native fixture must not replace an existing account selector',
+        );
+      }
       await control('runtime', runtimePid: pid);
       // Seed only a fresh, real broker+me-verified refresh result, then close and
       // restore through the production ClientSession boundary in a fresh generation.
       final seed = await auth.restore(
         account,
-        'macos',
+        platform,
         config['refresh'] as String,
       );
       await sessions.open(seed);
@@ -240,7 +256,9 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
         root
             .listSync(recursive: true)
             .whereType<File>()
-            .where((f) => f.path.endsWith('/content')),
+            .where(
+              (f) => f.path.split(Platform.pathSeparator).last == 'content',
+            ),
         hasLength(1),
       );
       await control('download-healthy');
@@ -263,7 +281,9 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
         root
             .listSync(recursive: true)
             .whereType<File>()
-            .where((f) => f.path.endsWith('/content')),
+            .where(
+              (f) => f.path.split(Platform.pathSeparator).last == 'content',
+            ),
         isEmpty,
       );
       download = null;
@@ -323,7 +343,7 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
       );
       // ignore: avoid_print
       print(
-        'NATIVE_FILES_REPORT ${jsonEncode({'status': 'passed', 'clean': true, 'eicar': true, 'scan_failed': true, 'download_failed': true, 'expired': true, 'revoked': true, 'os_vault_real': !host, 'installed_native_ui': false, 'native_export_real': false, 'runtime_pid': pid})}',
+        'NATIVE_FILES_REPORT ${jsonEncode({'status': 'passed', 'clean': true, 'eicar': true, 'scan_failed': true, 'download_failed': true, 'expired': true, 'revoked': true, 'platform': platform, 'os_vault_real': !host, 'installed_native_ui': false, 'native_export_real': false, 'runtime_pid': pid})}',
       );
     } finally {
       devices?.close();

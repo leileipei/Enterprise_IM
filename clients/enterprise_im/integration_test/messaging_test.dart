@@ -15,6 +15,7 @@ import 'package:enterprise_im/core/protocol/models.dart';
 import 'package:enterprise_im/core/protocol/seq.dart';
 import 'package:enterprise_im/core/sync/client_context.dart';
 import 'package:enterprise_im/platform/app_activity.dart';
+import 'package:enterprise_im/platform/native_activity.dart';
 import 'package:enterprise_im/features/memberships/membership_controller.dart';
 import 'package:enterprise_im/features/conversations/conversation_list.dart';
 import 'package:enterprise_im/features/conversations/conversation_view.dart';
@@ -39,6 +40,14 @@ Future<void> runMessagingScenario(
   const path = String.fromEnvironment('IM_MESSAGING_FIXTURE');
   if (path.isEmpty)
     throw StateError('explicit owned real backend config required; no skip');
+  const isolated = bool.fromEnvironment('IM_NATIVE_ISOLATED_PROFILE');
+  if (!host && !isolated) {
+    throw StateError('empty disposable native OS profile must be confirmed');
+  }
+  final platform = host ? 'macos' : Platform.operatingSystem;
+  if (!host && !{'macos', 'windows'}.contains(platform)) {
+    throw StateError('native desktop backend entry requires macOS or Windows');
+  }
   final config = objectMap(
     jsonDecode((await tester.runAsync(() => File(path).readAsString()))!),
   );
@@ -46,6 +55,8 @@ Future<void> runMessagingScenario(
     ..setTrustedCertificates(config['ca'] as String);
   await HttpOverrides.runWithHttpOverrides(() async {
     final origin = Uri.parse(config['origin'] as String);
+    final nativeActivity = host ? null : NativeActivityAdapter();
+    final nativeVault = host ? null : OsSecureVault();
     final owners = <ClientSession>[],
         roles = <MembershipController>[],
         apis = <ApiClient>[],
@@ -66,10 +77,13 @@ Future<void> runMessagingScenario(
       }
     }
 
-    Future<void> wait(bool Function() condition) async {
+    Future<void> wait(
+      bool Function() condition, {
+      Duration timeout = const Duration(seconds: 25),
+    }) async {
       final sw = Stopwatch()..start();
       while (!condition()) {
-        if (sw.elapsed > const Duration(seconds: 25))
+        if (sw.elapsed > timeout)
           throw StateError('real widget condition timed out');
         await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 25)),
@@ -80,8 +94,10 @@ Future<void> runMessagingScenario(
     }
 
     Future<void> mount(Widget page, {double width = 1100}) async {
-      tester.view.physicalSize = Size(width, 900);
-      tester.view.devicePixelRatio = 1;
+      if (host) {
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+      }
       await tester.pumpWidget(MaterialApp(home: page));
       await tester.pump();
     }
@@ -94,7 +110,7 @@ Future<void> runMessagingScenario(
         callbackFactory: (_, __) => throw StateError('refresh only'),
         browser: NoInteractiveBrowser(),
       );
-      final vault = host ? HostFixtureVault() : OsSecureVault();
+      final vault = nativeVault ?? HostFixtureVault();
       final storage = Directory('${config['storage']}/$name');
       await storage.create(recursive: true);
       final sessions = SessionStore(vault, directory: storage);
@@ -103,11 +119,14 @@ Future<void> runMessagingScenario(
         tenantId: config['tenant'] as String,
         userId: config['${name}_user'] as String,
       );
+      final owner = ClientSession(auth, sessions, platform: platform);
+      owners.add(owner);
+      // Register cleanup before the first owned credential write.
       // ignore: avoid_print
       print('MESSAGING_ADMIT $name refresh');
       final seed = await auth.restore(
         account,
-        'macos',
+        platform,
         config['${name}_refresh'] as String,
       );
       // ignore: avoid_print
@@ -121,8 +140,6 @@ Future<void> runMessagingScenario(
       print('MESSAGING_ADMIT $name seed-close');
       await sessions.close();
       await auth.cancel();
-      final owner = ClientSession(auth, sessions, platform: 'macos');
-      owners.add(owner);
       // ignore: avoid_print
       print('MESSAGING_ADMIT $name cold-restore');
       await owner.restore(account);
@@ -154,13 +171,14 @@ Future<void> runMessagingScenario(
         generation: ready.client.store.generation,
         conversationId: summary.id,
       );
-      final activity = AppActivity()
-        ..update(
-          foreground: true,
-          focused: true,
-          activeConversation: summary.id,
-        );
-      activities.add(activity);
+      final activity =
+          nativeActivity?.activity ??
+          (AppActivity()..update(
+            foreground: true,
+            focused: true,
+            activeConversation: summary.id,
+          ));
+      if (host) activities.add(activity);
       final view = ConversationView(memberships, activity);
       views.add(view);
       await view.select(ctx, summary);
@@ -171,10 +189,13 @@ Future<void> runMessagingScenario(
       ConversationView view,
       ConversationSummary summary, {
       double width = 1100,
+      bool awaitSendReady = true,
+      String? nativeHint,
     }) async {
       await mount(
         Scaffold(
           body: MessagePage(view: view, conversation: summary, onBack: () {}),
+          bottomNavigationBar: nativeHint == null ? null : Text(nativeHint),
         ),
         width: width,
       );
@@ -184,7 +205,7 @@ Future<void> runMessagingScenario(
       );
       await wait(
         () =>
-            view.canSend &&
+            (!awaitSendReady || view.canSend) &&
             find.byKey(const ValueKey('message-editor')).evaluate().isNotEmpty,
       );
     }
@@ -210,6 +231,16 @@ Future<void> runMessagingScenario(
     }
 
     try {
+      if (nativeVault != null) {
+        expect(
+          await tester.runAsync(
+            () => nativeVault.read(bootstrapNamespace, 'account'),
+          ),
+          isNull,
+          reason:
+              'native fixture must not replace an existing account selector',
+        );
+      }
       await tester.runAsync(() => control('runtime'));
       // ignore: avoid_print
       print('MESSAGING_STAGE admit');
@@ -252,12 +283,78 @@ Future<void> runMessagingScenario(
       await tester.pumpWidget(const SizedBox.shrink());
       // ignore: avoid_print
       print('MESSAGING_STAGE read');
+      // Block continuous exposure before rendering Bob's unread messages. Only
+      // actual engine/window events can release the native lifecycle gate.
+      if (nativeActivity != null) {
+        final activity = nativeActivity.activity;
+        activity.update(
+          foreground: activity.foreground,
+          focused: activity.focused,
+          activeConversation: activity.activeConversation,
+          blocked: true,
+        );
+      }
       final (bView, bDirect) = (await tester.runAsync(
         () => conversation(bRoles, 'direct', id: direct.id),
       ))!;
-      await showMessage(bView, bDirect, width: 390);
+      await showMessage(
+        bView,
+        bDirect,
+        width: 390,
+        awaitSendReady: host,
+        nativeHint: host ? null : '原生验收：最小化窗口，等待5秒，再恢复并点击窗口。',
+      );
       expect(find.text(first), findsOneWidget);
       expect(find.text(second), findsOneWidget);
+      if (nativeActivity != null) {
+        final activity = nativeActivity.activity;
+        // No lifecycle/focus event injection and no virtual window metrics.
+        // The operator controls the actual window; no event means a timeout.
+        await wait(
+          () =>
+              WidgetsBinding.instance.lifecycleState ==
+              AppLifecycleState.hidden,
+          timeout: const Duration(seconds: 90),
+        );
+        expect(activity.foreground, isFalse);
+        expect(activity.focused, isFalse);
+        expect(bView.receipts.locallyReadSeqs, isEmpty);
+        activity.update(
+          foreground: activity.foreground,
+          focused: activity.focused,
+          activeConversation: activity.activeConversation,
+          blocked: false,
+        );
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 700)),
+        );
+        expect(
+          activity.foreground,
+          isFalse,
+          reason: 'restore only after the hidden-window observation',
+        );
+        expect(bView.receipts.locallyReadSeqs, isEmpty);
+        final before = await tester.runAsync(
+          () => alice.auth.api.json(
+            'GET',
+            '/api/v1/conversations/${direct.id}/receipts?seqs=1,2',
+            bearer: alice.current!.session.accessToken,
+            actingMembershipId: aRoles.current!.membership.id,
+            device: aRoles.current!.device,
+          ),
+        );
+        expect(before!['receipts'], hasLength(2));
+        expect(
+          (before['receipts'] as List).map((r) => objectMap(r)['status']),
+          everyElement(isNot('read')),
+        );
+        await wait(
+          () => activity.foreground && activity.focused,
+          timeout: const Duration(seconds: 90),
+        );
+        // canSend requires ConversationView's post-background sync admission.
+        await wait(() => bView.canSend);
+      }
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 550)),
       );
@@ -271,8 +368,9 @@ Future<void> runMessagingScenario(
           device: aRoles.current!.device,
         ),
       );
+      expect(reads!['receipts'], hasLength(2));
       expect(
-        (reads!['receipts'] as List).map((r) => objectMap(r)['status']),
+        (reads['receipts'] as List).map((r) => objectMap(r)['status']),
         everyElement('read'),
       );
       await tester.runAsync(bView.close);
@@ -375,7 +473,7 @@ Future<void> runMessagingScenario(
       finalList.close();
       // ignore: avoid_print
       print(
-        'NATIVE_MESSAGING_REPORT ${jsonEncode({'status': 'passed', 'messages': 3, 'denied_group': true, 'cross_organization_group': true, 'lost_ack_retry': true, 'visible_read': true, 'left': true, 'installed_native_ui': false, 'os_focus_real': false, 'os_vault_real': !host})}',
+        'NATIVE_MESSAGING_REPORT ${jsonEncode({'status': 'passed', 'messages': 3, 'denied_group': true, 'cross_organization_group': true, 'lost_ack_retry': true, 'visible_read': true, 'left': true, 'installed_native_ui': false, 'os_focus_real': !host, 'native_minimize_gate': !host, 'native_window_metrics': !host, 'platform': platform, 'os_vault_real': !host})}',
       );
     } catch (error, stack) {
       // No request bodies, identifiers or tokens are included by these errors.
@@ -385,24 +483,51 @@ Future<void> runMessagingScenario(
     } finally {
       // ignore: avoid_print
       print('MESSAGING_STAGE closing');
-      for (final view in views) {
-        await tester.runAsync(view.close);
+      Object? cleanupFailure;
+      Future<void> cleanup(Future<void> Function() operation) async {
+        try {
+          await operation();
+        } catch (error) {
+          cleanupFailure ??= error;
+        }
       }
-      await tester.pumpWidget(const SizedBox.shrink());
+
+      for (final view in views) {
+        await cleanup(() async {
+          await tester.runAsync(view.close);
+        });
+      }
+      await cleanup(() => tester.pumpWidget(const SizedBox.shrink()));
       for (final role in roles) {
-        role.close();
+        await cleanup(() async {
+          role.close();
+        });
       }
       for (final activity in activities) {
-        activity.dispose();
+        await cleanup(() async {
+          activity.dispose();
+        });
       }
       for (final owner in owners) {
-        await tester.runAsync(owner.logout);
+        await cleanup(() async {
+          await tester.runAsync(owner.logout);
+        });
       }
       for (final api in apis) {
-        api.close();
+        await cleanup(() async {
+          api.close();
+        });
       }
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
+      nativeActivity?.dispose();
+      if (host) {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      }
+      if (cleanupFailure != null) {
+        throw StateError(
+          'owned messaging fixture cleanup failed: ${cleanupFailure.runtimeType}',
+        );
+      }
     }
   }, FixtureTrust(trust));
 }
