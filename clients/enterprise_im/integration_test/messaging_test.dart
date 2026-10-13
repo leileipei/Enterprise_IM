@@ -22,6 +22,7 @@ import 'package:enterprise_im/features/conversations/conversation_view.dart';
 import 'package:enterprise_im/ui/message_page.dart';
 import 'package:enterprise_im/ui/directory_page.dart';
 import 'package:enterprise_im/ui/group_page.dart';
+import 'owned_backend_fixture.dart';
 import 'files_and_devices_test.dart'
     show FixtureTrust, HostFixtureVault, NoInteractiveBrowser;
 
@@ -38,7 +39,7 @@ Future<void> runMessagingScenario(
   required bool host,
 }) async {
   const path = String.fromEnvironment('IM_MESSAGING_FIXTURE');
-  if (path.isEmpty)
+  if (host && path.isEmpty)
     throw StateError('explicit owned real backend config required; no skip');
   const isolated = bool.fromEnvironment('IM_NATIVE_ISOLATED_PROFILE');
   if (!host && !isolated) {
@@ -48,15 +49,15 @@ Future<void> runMessagingScenario(
   if (!host && !{'macos', 'windows'}.contains(platform)) {
     throw StateError('native desktop backend entry requires macOS or Windows');
   }
-  final config = objectMap(
-    jsonDecode((await tester.runAsync(() => File(path).readAsString()))!),
-  );
-  final trust = SecurityContext(withTrustedRoots: false)
-    ..setTrustedCertificates(config['ca'] as String);
+  final config = (await tester.runAsync(
+    () => readOwnedBackendFixture(host: host, path: path),
+  ))!;
+  final trust = ownedBackendTrust(config, host: host);
   await HttpOverrides.runWithHttpOverrides(() async {
     final origin = Uri.parse(config['origin'] as String);
     final nativeActivity = host ? null : NativeActivityAdapter();
     final nativeVault = host ? null : OsSecureVault();
+    Directory? nativeStorage;
     final owners = <ClientSession>[],
         roles = <MembershipController>[],
         apis = <ApiClient>[],
@@ -111,7 +112,9 @@ Future<void> runMessagingScenario(
         browser: NoInteractiveBrowser(),
       );
       final vault = nativeVault ?? HostFixtureVault();
-      final storage = Directory('${config['storage']}/$name');
+      final storage = Directory(
+        '${nativeStorage?.path ?? config['storage']}/$name',
+      );
       await storage.create(recursive: true);
       final sessions = SessionStore(vault, directory: storage);
       final account = AccountReference(
@@ -121,6 +124,16 @@ Future<void> runMessagingScenario(
       );
       final owner = ClientSession(auth, sessions, platform: platform);
       owners.add(owner);
+      if (nativeVault != null) {
+        // Opaque owned recovery handle only; no credential or account ID logged.
+        final namespace = await accountNamespace(
+          origin,
+          account.tenantId,
+          account.userId,
+        );
+        // ignore: avoid_print
+        print('NATIVE_MESSAGING_VAULT_NAMESPACE $namespace');
+      }
       // Register cleanup before the first owned credential write.
       // ignore: avoid_print
       print('MESSAGING_ADMIT $name refresh');
@@ -231,6 +244,9 @@ Future<void> runMessagingScenario(
     }
 
     try {
+      nativeStorage = await tester.runAsync<Directory?>(
+        () => createOwnedNativeStorage(host: host),
+      );
       if (nativeVault != null) {
         expect(
           await tester.runAsync(
@@ -513,9 +529,42 @@ Future<void> runMessagingScenario(
           await tester.runAsync(owner.logout);
         });
       }
+      await cleanup(() async {
+        if (nativeVault != null) {
+          for (final name in ['alice', 'bob']) {
+            final namespace = await accountNamespace(
+              origin,
+              config['tenant'] as String,
+              config['${name}_user'] as String,
+            );
+            for (final key in ['session', 'key']) {
+              expect(
+                await tester.runAsync(() => nativeVault.read(namespace, key)),
+                isNull,
+              );
+            }
+          }
+          expect(
+            await tester.runAsync(
+              () => nativeVault.read(bootstrapNamespace, 'account'),
+            ),
+            isNull,
+          );
+        } else {
+          for (final owner in owners) {
+            expect((owner.sessions.vault as HostFixtureVault).values, isEmpty);
+          }
+        }
+      });
       for (final api in apis) {
         await cleanup(() async {
           api.close();
+        });
+      }
+      if (cleanupFailure == null && nativeStorage != null) {
+        await cleanup(() async {
+          await tester.runAsync(() => nativeStorage!.delete(recursive: true));
+          expect(await tester.runAsync(() => nativeStorage!.exists()), isFalse);
         });
       }
       nativeActivity?.dispose();
@@ -528,6 +577,10 @@ Future<void> runMessagingScenario(
           'owned messaging fixture cleanup failed: ${cleanupFailure.runtimeType}',
         );
       }
+      // ignore: avoid_print
+      print(
+        'NATIVE_MESSAGING_CLEANUP ${jsonEncode({'status': 'verified', 'os_vault_real': !host, 'own_records_absent': true, 'native_private_storage_removed': nativeStorage != null})}',
+      );
     }
   }, FixtureTrust(trust));
 }

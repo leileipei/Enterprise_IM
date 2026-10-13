@@ -9,13 +9,15 @@ import 'files_and_devices_test.dart' as files;
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   const scenario = String.fromEnvironment('IM_BACKEND_SCENARIO');
+  const bundled = bool.fromEnvironment('IM_NATIVE_BUNDLED_FIXTURE');
   if (!Platform.isWindows && !Platform.isMacOS) {
     throw StateError('native desktop backend entry requires macOS or Windows');
   }
   switch (scenario) {
     case 'messaging':
       const fixture = String.fromEnvironment('IM_MESSAGING_FIXTURE');
-      if (fixture.isEmpty) throw StateError('owned messaging config required');
+      if (fixture.isEmpty && !bundled)
+        throw StateError('owned messaging config required');
       testWidgets(
         'testDesktopMinimizeStopsReadAndRefocusResyncs',
         (tester) => messaging.runMessagingScenario(tester, host: false),
@@ -23,7 +25,8 @@ void main() {
       );
     case 'files':
       const fixture = String.fromEnvironment('IM_FILES_FIXTURE');
-      if (fixture.isEmpty) throw StateError('owned files config required');
+      if (fixture.isEmpty && !bundled)
+        throw StateError('owned files config required');
       testWidgets('native backend attachments and own-device revocation', (
         tester,
       ) async {

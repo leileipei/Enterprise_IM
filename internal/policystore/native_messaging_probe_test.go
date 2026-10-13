@@ -36,6 +36,7 @@ import (
 )
 
 func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
+	mode := loadNativeBackendLaunch(t)
 	for _, k := range []string{"IM_TEST_DATABASE_URL", "IM_TEST_REDIS_URL", "IM_TEST_NATIVE_DART", "IM_TEST_NATIVE_FLUTTER_SNAPSHOT", "IM_TEST_NATIVE_TESTER"} {
 		if os.Getenv(k) == "" {
 			t.Fatalf("explicit gate requires %s", k)
@@ -116,6 +117,8 @@ func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
 	}
 	proxy, ca := nativeProbeTLS(t, reverse)
 	var flutter atomic.Pointer[exec.Cmd]
+	var runtimeExecutable atomic.Value
+	runtimeExecutable.Store(os.Getenv("IM_TEST_NATIVE_TESTER"))
 	var runtimePID atomic.Int64
 	key := freshFile().ID
 	control := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +135,7 @@ func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
 				w.WriteHeader(400)
 				return
 			}
-			proof, e := testfixtures.RegisterIntegrationBrowserChild(flutter.Load(), d.PID, os.Getenv("IM_TEST_NATIVE_TESTER"), os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name()+"/flutter_runtime")
+			proof, e := testfixtures.RegisterIntegrationBrowserChild(flutter.Load(), d.PID, runtimeExecutable.Load().(string), os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name()+"/flutter_runtime")
 			if e != nil {
 				t.Error(e)
 				w.WriteHeader(500)
@@ -171,7 +174,9 @@ func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
 		t.Fatal(e)
 	}
 	client := nativeProbeClientCopy(t, filepath.Join(dir, "client"))
-	for _, part := range []string{"integration_test/messaging_test.dart", "integration_test/files_and_devices_test.dart", "test/native_messaging_backend_probe.dart", ".dart_tool/package_graph.json"} {
+	mode.prepare(t, client)
+	runtimeExecutable.Store(mode.runtimePath(client, os.Getenv("IM_TEST_NATIVE_TESTER")))
+	for _, part := range []string{"integration_test/owned_backend_fixture.dart", "integration_test/messaging_test.dart", "integration_test/files_and_devices_test.dart", "test/native_messaging_backend_probe.dart", ".dart_tool/package_graph.json"} {
 		b, e := os.ReadFile("../../clients/enterprise_im/" + part)
 		if e != nil {
 			t.Fatal(e)
@@ -185,17 +190,22 @@ func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
 		}
 	}
 	input := map[string]any{"origin": proxy.URL, "ca": caPath, "storage": filepath.Join(dir, "storage"), "tenant": tenantA, "conversation": directA, "alice_user": adminA, "alice_membership": adminM, "alice_refresh": refresh["alice"], "bob_user": personA, "bob_membership": targetM2, "bob_group_membership": targetM, "bob_refresh": refresh["bob"], "control": control.URL, "control_key": key}
+	mode.stageBundledFixture(t, client, input, ca)
 	b, _ := json.Marshal(input)
 	config := filepath.Join(dir, "input.json")
 	if e := os.WriteFile(config, b, 0600); e != nil {
 		t.Fatal(e)
 	}
-	probeCtx, cancel := context.WithTimeout(ctx, 4*time.Minute)
+	probeTimeout := 4 * time.Minute
+	if mode.native {
+		probeTimeout = 12 * time.Minute
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(probeCtx, os.Getenv("IM_TEST_NATIVE_DART"), os.Getenv("IM_TEST_NATIVE_FLUTTER_SNAPSHOT"), "test", "--no-pub", "--reporter", "expanded", "--dart-define=IM_MESSAGING_FIXTURE="+config, "test/native_messaging_backend_probe.dart")
+	cmd := mode.command(probeCtx, os.Getenv("IM_TEST_NATIVE_DART"), os.Getenv("IM_TEST_NATIVE_FLUTTER_SNAPSHOT"), config, "messaging")
 	flutter.Store(cmd)
 	cmd.Dir = client
-	cmd.Env = processChildEnv(map[string]string{"HOME": os.Getenv("HOME"), "CI": "true", "FLUTTER_SUPPRESS_ANALYTICS": "true", "PUB_CACHE": os.Getenv("IM_TEST_NATIVE_PUB_CACHE")})
+	cmd.Env = mode.environment()
 	log, e := os.CreateTemp(dir, "flutter-*.log")
 	if e != nil {
 		t.Fatal(e)
@@ -220,16 +230,24 @@ func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
 	if b, e := exec.Command("/bin/ps", "-p", fmt.Sprint(runtimePID.Load()), "-o", "stat=").Output(); e == nil && strings.TrimSpace(string(b)) != "" {
 		t.Fatal("runtime still present")
 	}
-	var report map[string]any
+	var report, cleanupReport map[string]any
 	for _, line := range strings.Split(string(output), "\n") {
+		if p := strings.Index(line, "NATIVE_MESSAGING_CLEANUP "); p >= 0 {
+			if e = json.Unmarshal([]byte(line[p+len("NATIVE_MESSAGING_CLEANUP "):]), &cleanupReport); e != nil {
+				t.Fatal(e)
+			}
+		}
 		if p := strings.Index(line, "NATIVE_MESSAGING_REPORT "); p >= 0 {
 			if e = json.Unmarshal([]byte(line[p+len("NATIVE_MESSAGING_REPORT "):]), &report); e != nil {
 				t.Fatal(e)
 			}
 		}
 	}
-	if report == nil || report["status"] != "passed" || report["messages"] != float64(3) || report["denied_group"] != true || report["cross_organization_group"] != true || report["lost_ack_retry"] != true || report["visible_read"] != true || report["left"] != true {
+	if report == nil || report["os_vault_real"] != mode.native || report["platform"] != "macos" || report["os_focus_real"] != mode.native || report["native_minimize_gate"] != mode.native || report["status"] != "passed" || report["messages"] != float64(3) || report["denied_group"] != true || report["cross_organization_group"] != true || report["lost_ack_retry"] != true || report["visible_read"] != true || report["left"] != true {
 		t.Fatal("complete UI report missing")
+	}
+	if cleanupReport == nil || cleanupReport["status"] != "verified" || cleanupReport["own_records_absent"] != true || cleanupReport["os_vault_real"] != mode.native {
+		t.Fatal("owned vault cleanup proof missing")
 	}
 	var directMessages, groupMessages, groups, read, left, intact int
 	if e = conn.QueryRow(ctx, "SELECT count(*) FILTER (WHERE conversation_id=$2),count(*) FILTER (WHERE conversation_id<>$2) FROM messages WHERE tenant_id=$1", tenantA, directA).Scan(&directMessages, &groupMessages); e != nil {
@@ -248,6 +266,7 @@ func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
 		t.Fatalf("independent facts direct=%d groupMessages=%d groups=%d read=%d left=%d owner=%d", directMessages, groupMessages, groups, read, left, intact)
 	}
 	t.Log("NATIVE_MESSAGING_LIFECYCLE runtime_registered=true runtime_absent_after_parent_wait=true runtime_os_exit_independently_observed=false")
+	t.Logf("NATIVE_MESSAGING_VAULT_CLEANUP os_vault_real=%t own_records_absent=true", mode.native)
 	t.Log("NATIVE_MESSAGING_DB direct_messages=2 group_messages=1 groups=1 user_reads=3 left=1 active_owner=1")
 }
 

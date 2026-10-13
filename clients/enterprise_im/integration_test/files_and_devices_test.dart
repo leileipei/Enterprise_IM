@@ -22,6 +22,7 @@ import 'package:enterprise_im/features/files/file_download.dart';
 import 'package:enterprise_im/platform/browser_launcher.dart';
 import 'package:enterprise_im/platform/file_picker.dart';
 import 'package:enterprise_im/platform/file_export.dart';
+import 'owned_backend_fixture.dart';
 
 final class HostFixtureVault implements SecureVault {
   final values = <String, String>{};
@@ -78,7 +79,7 @@ void main() {
 
 Future<void> runFilesAndDevicesScenario({required bool host}) async {
   const path = String.fromEnvironment('IM_FILES_FIXTURE');
-  if (path.isEmpty)
+  if (host && path.isEmpty)
     throw StateError('explicit owned real-backend config required; no skip');
   const isolated = bool.fromEnvironment('IM_NATIVE_ISOLATED_PROFILE');
   if (!host && !isolated) {
@@ -88,9 +89,8 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
   if (!host && !{'macos', 'windows'}.contains(platform)) {
     throw StateError('native desktop backend entry requires macOS or Windows');
   }
-  final config = objectMap(jsonDecode(await File(path).readAsString()));
-  final trust = SecurityContext(withTrustedRoots: false)
-    ..setTrustedCertificates(config['ca'] as String);
+  final config = await readOwnedBackendFixture(host: host, path: path);
+  final trust = ownedBackendTrust(config, host: host);
   await HttpOverrides.runWithHttpOverrides(() async {
     final origin = Uri.parse(config['origin'] as String);
     final api = ApiClient(origin, HttpApiTransport());
@@ -99,7 +99,8 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
       callbackFactory: (_, __) => throw StateError('refresh only'),
       browser: NoInteractiveBrowser(),
     );
-    final root = Directory(config['storage'] as String);
+    final nativeStorage = await createOwnedNativeStorage(host: host);
+    final root = nativeStorage ?? Directory(config['storage'] as String);
     await root.create();
     final vault = host ? HostFixtureVault() : OsSecureVault();
     final sessions = SessionStore(vault, directory: root);
@@ -352,8 +353,15 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
       await transfer?.close();
       sender?.close();
       roles?.close();
-      await owner.logout();
-      api.close();
+      try {
+        await owner.logout();
+        if (nativeStorage != null) {
+          await nativeStorage.delete(recursive: true);
+          expect(await nativeStorage.exists(), isFalse);
+        }
+      } finally {
+        api.close();
+      }
     }
   }, FixtureTrust(trust));
 }

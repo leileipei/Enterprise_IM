@@ -32,6 +32,7 @@ import (
 // The real backend, MinIO and bound ClamAV worker are never replaced. The host
 // Flutter runner uses an in-memory vault; installed native plugins are a separate gate.
 func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
+	mode := loadNativeBackendLaunch(t)
 	for _, k := range []string{"IM_TEST_DATABASE_URL", "IM_TEST_NATIVE_DART", "IM_TEST_NATIVE_FLUTTER_SNAPSHOT", "IM_TEST_INTEGRATION_PROBE_VERSION"} {
 		if os.Getenv(k) == "" {
 			t.Fatalf("explicit gate requires %s", k)
@@ -109,6 +110,8 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	var flutter atomic.Pointer[exec.Cmd]
+	var runtimeExecutable atomic.Value
+	runtimeExecutable.Store(os.Getenv("IM_TEST_NATIVE_TESTER"))
 	var runtimePID atomic.Int64
 	controlKey := freshFile().ID
 	control := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +128,7 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 				w.WriteHeader(400)
 				return
 			}
-			proof, e := testfixtures.RegisterIntegrationBrowserChild(flutter.Load(), d.PID, os.Getenv("IM_TEST_NATIVE_TESTER"), os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name()+"/flutter_runtime")
+			proof, e := testfixtures.RegisterIntegrationBrowserChild(flutter.Load(), d.PID, runtimeExecutable.Load().(string), os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name()+"/flutter_runtime")
 			if e != nil {
 				t.Error("runtime identity registration failed", e)
 				w.WriteHeader(500)
@@ -186,7 +189,9 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 		t.Fatal(e)
 	}
 	client := nativeProbeClientCopy(t, filepath.Join(dir, "client"))
-	for _, part := range []string{"integration_test/files_and_devices_test.dart", "test/native_files_backend_probe.dart", ".dart_tool/package_graph.json"} {
+	mode.prepare(t, client)
+	runtimeExecutable.Store(mode.runtimePath(client, os.Getenv("IM_TEST_NATIVE_TESTER")))
+	for _, part := range []string{"integration_test/owned_backend_fixture.dart", "integration_test/files_and_devices_test.dart", "test/native_files_backend_probe.dart", ".dart_tool/package_graph.json"} {
 		b, e := os.ReadFile("../../clients/enterprise_im/" + part)
 		if e != nil {
 			t.Fatal(e)
@@ -200,17 +205,22 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 		}
 	}
 	input := map[string]any{"origin": proxy.URL, "ca": caPath, "storage": filepath.Join(dir, "storage"), "tenant": tenantA, "user": adminA, "membership": adminM, "conversation": directA, "refresh": refresh, "control": control.URL, "control_key": controlKey}
+	mode.stageBundledFixture(t, client, input, ca)
 	b, _ := json.Marshal(input)
 	config := filepath.Join(dir, "input.json")
 	if e := os.WriteFile(config, b, 0600); e != nil {
 		t.Fatal(e)
 	}
-	probeCtx, cancel := context.WithTimeout(ctx, 4*time.Minute)
+	probeTimeout := 4 * time.Minute
+	if mode.native {
+		probeTimeout = 12 * time.Minute
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(probeCtx, os.Getenv("IM_TEST_NATIVE_DART"), os.Getenv("IM_TEST_NATIVE_FLUTTER_SNAPSHOT"), "test", "--no-pub", "--reporter", "expanded", "--dart-define=IM_FILES_FIXTURE="+config, "test/native_files_backend_probe.dart")
+	cmd := mode.command(probeCtx, os.Getenv("IM_TEST_NATIVE_DART"), os.Getenv("IM_TEST_NATIVE_FLUTTER_SNAPSHOT"), config, "files")
 	flutter.Store(cmd)
 	cmd.Dir = client
-	cmd.Env = processChildEnv(map[string]string{"HOME": os.Getenv("HOME"), "CI": "true", "FLUTTER_SUPPRESS_ANALYTICS": "true", "PUB_CACHE": os.Getenv("IM_TEST_NATIVE_PUB_CACHE")})
+	cmd.Env = mode.environment()
 	logPath := filepath.Join(dir, "flutter.log")
 	log, e := os.OpenFile(logPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if e != nil {
@@ -247,7 +257,7 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 			}
 		}
 	}
-	if report == nil || report["status"] != "passed" || report["clean"] != true || report["eicar"] != true || report["scan_failed"] != true || report["download_failed"] != true || report["expired"] != true || report["revoked"] != true {
+	if report == nil || report["os_vault_real"] != mode.native || report["platform"] != "macos" || report["status"] != "passed" || report["clean"] != true || report["eicar"] != true || report["scan_failed"] != true || report["download_failed"] != true || report["expired"] != true || report["revoked"] != true {
 		t.Fatal("complete real files report missing")
 	}
 	var ready, rejected, failed, bound, revoked int
