@@ -7,14 +7,17 @@ import android.provider.DocumentsContract
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import java.io.OutputStream
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 
 class MainActivity : FlutterActivity() {
     private val exportRequest = 6102
     private var choosing: MethodChannel.Result? = null
     private var active: Export? = null
-    private data class Export(val ticket: String, val uri: Uri, var stream: OutputStream? = null, var bytes: Long = 0)
+    private class ExportBuffer : ByteArrayOutputStream(32768) {
+        fun discard() { buf.fill(0); reset() }
+    }
+    private data class Export(val ticket: String, val uri: Uri, val buffer: ExportBuffer = ExportBuffer(), var bytes: Long = 0)
 
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
@@ -38,18 +41,20 @@ class MainActivity : FlutterActivity() {
                         val export = requireExport(call.argument<String>("ticket"))
                         val bytes = call.argument<ByteArray>("bytes") ?: throw IllegalArgumentException()
                         if (bytes.size > 32768 || export.bytes + bytes.size > 26214400L) throw IllegalArgumentException()
-                        val stream = export.stream ?: (contentResolver.openOutputStream(export.uri, "w")
-                            ?: throw IllegalStateException()).also { export.stream = it }
-                        stream.write(bytes)
+                        export.buffer.write(bytes)
                         export.bytes += bytes.size
                         result.success(null)
                     }
                     "finishExport" -> {
                         val export = requireExport(call.argument<String>("ticket"))
                         if (export.bytes < 1) throw IllegalArgumentException()
-                        val stream = export.stream ?: throw IllegalStateException()
-                        stream.flush()
-                        stream.close()
+                        // Publish only a complete source. Closing a partially written
+                        // Downloads stream and immediately deleting its document can
+                        // race the provider's asynchronous metadata update.
+                        val stream = contentResolver.openOutputStream(export.uri, "w")
+                            ?: throw IllegalStateException()
+                        stream.use { export.buffer.writeTo(it); it.flush() }
+                        export.buffer.discard()
                         active = null
                         result.success(null)
                     }
@@ -74,7 +79,7 @@ class MainActivity : FlutterActivity() {
     }
     private fun abort(export: Export) {
         active = null
-        try { export.stream?.close() } catch (_: Exception) {}
+        export.buffer.discard()
         try { DocumentsContract.deleteDocument(contentResolver, export.uri) } catch (_: Exception) {}
     }
     @Deprecated("Deprecated in Android API")
@@ -86,9 +91,9 @@ class MainActivity : FlutterActivity() {
         if (resultCode != Activity.RESULT_OK || uri == null) { reply.success(null); return }
         if (uri.scheme != "content") { reply.error("export_unavailable", "Invalid export destination", null); return }
         try {
-            // The source callback authorizes content after selection. Opening a
-            // Downloads stream before any bytes creates an asynchronous close
-            // update that can race deletion when that authorization fails.
+            // The selected document stays empty until finishExport. Partial
+            // source errors, cancellation and size rejection only erase the
+            // bounded private RAM buffer and delete the unopened document.
             val export = Export(UUID.randomUUID().toString(), uri)
             active = export
             reply.success(export.ticket)
