@@ -1,0 +1,806 @@
+{
+  "schema_version": "p502_task8_ios_export_v1",
+  "date": "2026-10-15",
+  "status": "implemented_with_partial_native_verification_picker_interaction_unverified",
+  "parent_commit": "5f902dd3d78115074544a1c532ddebf3496f20c5",
+  "task_status": {
+    "5": "in_progress",
+    "6": "in_progress",
+    "7": "in_progress",
+    "8": "in_progress"
+  },
+  "changes": [
+    "iOS folder picker precedes fresh Dart contents authorization",
+    "Security scope and file coordination; opaque ticket, bounded stream, exclusive staging and no-replace commit",
+    "Existing/colliding targets and symlinks protected; cleanup inode identity checked",
+    "Cleanup deletion failures reported; retained owned ticket retried before next chooser"
+  ],
+  "checks": {
+    "shared_flutter": {
+      "passed": 242,
+      "actual_exit": 0
+    },
+    "dart_analysis": {
+      "issues": 0,
+      "actual_exit": 0
+    },
+    "file_export_boundary_dart": {
+      "passed": 14,
+      "actual_exit": 0,
+      "execution": "included in full shared suite",
+      "native_OS_behavior": false
+    },
+    "native_swift_filesystem": {
+      "cases": 9,
+      "actual_exit": 0,
+      "runtime": "macOS host using production Foundation/Darwin source",
+      "iOS_provider_acceptance": false
+    },
+    "compiled_ios_boundary": {
+      "passed": 1,
+      "actual_exit": 0,
+      "runtime": "iOS27 iPhone18Pro owned simulator",
+      "scope": "invalid filename and unknown ticket rejection only"
+    },
+    "normal_debug_simulator_build": {
+      "actual_exit": 0,
+      "minimum_os_version": "15.0",
+      "physical_ios15_runtime_tested": false
+    },
+    "python_all": {
+      "rerun_this_checkpoint": false,
+      "historical_result": "144/145; browser pin154 differs from installed155; not globally green"
+    }
+  },
+  "red_green": {
+    "missing_ios_dart_branch": {
+      "red_actual_exit": 1,
+      "failed": 5,
+      "green_actual_exit": 0
+    },
+    "native_unavailable": {
+      "first_actual_exit": 133,
+      "controlled_actual_exit": 1,
+      "green_actual_exit": 0
+    },
+    "cleanup_failure_reporting": {
+      "first_actual_exit": 133,
+      "controlled_actual_exit": 1,
+      "green_actual_exit": 0
+    },
+    "cleanup_retry_before_next_chooser": {
+      "red_actual_exit": 1,
+      "failed": 2,
+      "passed": 10,
+      "green_actual_exit": 0
+    },
+    "cancel_during_cleanup_retry": {
+      "red_actual_exit": 1,
+      "failed": 2,
+      "passed": 12,
+      "green_actual_exit": 0
+    },
+    "preparation_excluded": [
+      "Python edit path/index failures did not add tests",
+      "avoid_print analysis1; corrected before native run"
+    ]
+  },
+  "interactive_picker": {
+    "status": "not_passed",
+    "attempt_actual_exit": 1,
+    "timeout_minutes": 3,
+    "native_boundary_passed_before_timeout": 1,
+    "cancel_observed": false,
+    "directory_selection_and_commit_observed": false,
+    "cua_observer": "Simulator app unavailable by name/path/bundle; Xcode AX returned after4904.5643s",
+    "entry": "clients/enterprise_im/integration_test/ios_export_picker_test.dart"
+  },
+  "attempts": [
+    {
+      "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01",
+      "status": "failed",
+      "runner_exit": 1,
+      "commands": [
+        {
+          "name": "pub",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "shared",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "analysis",
+          "actual_exit": 1,
+          "failures": []
+        }
+      ],
+      "error": "RuntimeError:analysis_failed",
+      "source_unchanged": true,
+      "private_root_removed": true
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02",
+      "status": "failed",
+      "runner_exit": 1,
+      "commands": [
+        {
+          "name": "pub",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "shared",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "analysis",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "export",
+          "actual_exit": 1,
+          "failures": []
+        }
+      ],
+      "error": "RuntimeError:export_failed",
+      "source_unchanged": true,
+      "private_root_removed": true
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03",
+      "status": "passed",
+      "runner_exit": 0,
+      "commands": [
+        {
+          "name": "pub",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "shared",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "analysis",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "export",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "build",
+          "actual_exit": 0,
+          "failures": []
+        }
+      ],
+      "error": null,
+      "source_unchanged": true,
+      "private_root_removed": true
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04",
+      "status": "passed",
+      "runner_exit": 0,
+      "commands": [
+        {
+          "name": "pub",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "shared",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "analysis",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "export",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "build",
+          "actual_exit": 0,
+          "failures": []
+        }
+      ],
+      "error": null,
+      "source_unchanged": true,
+      "private_root_removed": true
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01",
+      "status": "passed",
+      "runner_exit": 0,
+      "commands": [
+        {
+          "name": "pub",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "build",
+          "actual_exit": 0,
+          "failures": []
+        }
+      ],
+      "error": null,
+      "source_unchanged": true,
+      "private_root_removed": true
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05",
+      "status": "passed",
+      "runner_exit": 0,
+      "commands": [
+        {
+          "name": "pub",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "shared",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "analysis",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "export",
+          "actual_exit": 0,
+          "failures": []
+        },
+        {
+          "name": "build",
+          "actual_exit": 0,
+          "failures": []
+        }
+      ],
+      "error": null,
+      "source_unchanged": true,
+      "private_root_removed": true
+    }
+  ],
+  "bundle": {
+    "minimum_os_version": "15.0",
+    "platform": "iphonesimulator",
+    "bundle_id": "com.enterpriseim.client",
+    "executable_sha256": "8797cd02aff93db9e58ae8568e1fe2c35d848014715cd07e3973cfa0f2109caf",
+    "codesign_actual_exit": 0,
+    "signature": "Executable=/private/tmp/im-ios-export-f8ezgnzq/9677386fd695e7b89d774464071660a0/client/build/ios/iphonesimulator/Runner.app/Runner\nIdentifier=com.enterpriseim.client\nFormat=app bundle with Mach-O universal (x86_64 arm64)\nCodeDirectory v=20400 size=304 flags=0x2(adhoc) hashes=3+3 location=embedded\nSignature=adhoc\nInfo.plist entries=37\nTeamIdentifier=not set\nSealed Resources version=2 rules=10 files=87\nInternal requirements count=0 size=12\nTotal signatures=1\nChosen signature=1\n",
+    "file_count": 91
+  },
+  "archive": {
+    "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/ios-simulator-debug.zip",
+    "sha256": "e321d04604b0a6b0f16982e271096a835841b8148a84a81a6ed32216d97c1a93",
+    "manifest_verified_files": 91,
+    "format": "simulator Debug adhoc .app zip; not device IPA"
+  },
+  "cleanup": {
+    "independent_original_process_identity_absence": [
+      {
+        "pid": "54027",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "pub"
+      },
+      {
+        "pid": "54044",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "shared"
+      },
+      {
+        "pid": "54203",
+        "original_identity_absent": true,
+        "actual_exit": 1,
+        "gate": "analysis"
+      },
+      {
+        "pid": "54252",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "pub"
+      },
+      {
+        "pid": "54268",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "shared"
+      },
+      {
+        "pid": "54513",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "analysis"
+      },
+      {
+        "pid": "54884",
+        "original_identity_absent": true,
+        "actual_exit": 1,
+        "gate": "export"
+      },
+      {
+        "pid": "68910",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "pub"
+      },
+      {
+        "pid": "68926",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "shared"
+      },
+      {
+        "pid": "69061",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "analysis"
+      },
+      {
+        "pid": "69357",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "export"
+      },
+      {
+        "pid": "70353",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "build"
+      },
+      {
+        "pid": "73350",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "pub"
+      },
+      {
+        "pid": "73366",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "shared"
+      },
+      {
+        "pid": "73512",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "analysis"
+      },
+      {
+        "pid": "74549",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "export"
+      },
+      {
+        "pid": "75673",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "build"
+      },
+      {
+        "pid": "76989",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "pub"
+      },
+      {
+        "pid": "77005",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "build"
+      },
+      {
+        "pid": "78503",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "pub"
+      },
+      {
+        "pid": "78518",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "shared"
+      },
+      {
+        "pid": "78661",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "analysis"
+      },
+      {
+        "pid": "78959",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "export"
+      },
+      {
+        "pid": "79951",
+        "original_identity_absent": true,
+        "actual_exit": 0,
+        "gate": "build"
+      }
+    ],
+    "independent_devices": [
+      {
+        "udid": "0FF90511-6CA7-40B5-9BCE-D1E7CCF368DA",
+        "inventory_absent": true,
+        "directory_absent": true
+      },
+      {
+        "udid": "59ED9201-F74E-41DB-A540-A9293EABA900",
+        "inventory_absent": true,
+        "directory_absent": true
+      },
+      {
+        "udid": "0D35E890-EBB6-4909-82A5-49EAC2882A5E",
+        "inventory_absent": true,
+        "directory_absent": true
+      },
+      {
+        "udid": "9458422F-D63A-409F-9FE2-47EDE28709DC",
+        "inventory_absent": true,
+        "directory_absent": true
+      }
+    ],
+    "owned_roots_removed": true,
+    "host_filesystem_fixtures_removed": true,
+    "crashed_fixture_recovery": "only exact verified fixture names/bytes/symlink; recovery JSON preserved",
+    "native_leaf_os_exit_independently_observed": false,
+    "existing_devices_and_sdk_caches_preserved": true
+  },
+  "source_sha256": {
+    "clients/enterprise_im/.gitignore": "441eaa1de5b3db9fae056e7503567e9f8dd94173e1389c60f76956abf729015a",
+    "clients/enterprise_im/.metadata": "e828f34e7b02000d36db8d739a0e839fbc0c59197f750d41b20dd36f96bedb8e",
+    "clients/enterprise_im/README.md": "3ad60c8e6b82f8d9846d05b9f877e41a7eb6732ce3073aa586ecf50c9c59adad",
+    "clients/enterprise_im/analysis_options.yaml": "68ad26a5ae82e3eac43e6977e14f41194f8791511ac8edd516ff52854358430e",
+    "clients/enterprise_im/android/.gitignore": "b027c9de1011765c015e5819bf857c0d75bfcd0886fb01721c091159012e50f1",
+    "clients/enterprise_im/android/app/build.gradle.kts": "6121fea7deae4a61a6aeecfba2d2c5cd2e02da2c4d5e4d96f8983c1f5450399d",
+    "clients/enterprise_im/android/app/src/debug/AndroidManifest.xml": "30b0832ed8b92dfbd6ae2abfa939ccf26333d37600056b1572bd4a397a18a74b",
+    "clients/enterprise_im/android/app/src/main/AndroidManifest.xml": "92a9f25eb3a024c6f32d85929448a53e28c207364d984e1aa184245310aa11b7",
+    "clients/enterprise_im/android/app/src/main/kotlin/com/enterpriseim/client/MainActivity.kt": "a4fa1c4c0abdf9498348ce818d8bfb498832b95a61aecdb7d8b34916d30d2f33",
+    "clients/enterprise_im/android/app/src/main/res/drawable-v21/launch_background.xml": "7ca6d5cec2169c5a98661a119db23a6f3399c8fef2256ff04f3a642831282478",
+    "clients/enterprise_im/android/app/src/main/res/drawable/launch_background.xml": "94433756fe10005ddd6fc55cc5c0b1e9f3c10b66a08ceac795ece6713d34e28a",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": "6a7c8f0d703e3682108f9662f813302236240d3f8f638bb391e32bfb96055fef",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": "c7c0c0189145e4e32a401c61c9bdc615754b0264e7afae24e834bb81049eaf81",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": "e14aa40904929bf313fded22cf7e7ffcbf1d1aac4263b5ef1be8bfce650397aa",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": "4d470bf22d5c17d84edc5f82516d1ba8a1c09559cd761cefb792f86d9f52b540",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": "3c34e1f298d0c9ea3455d46db6b7759c8211a49e9ec6e44b635fc5c87dfb4180",
+    "clients/enterprise_im/android/app/src/main/res/values-night/styles.xml": "8c5bad5152f217e837519f9c15211d19f39bd45f5f67faf6dd81cb4b299e518f",
+    "clients/enterprise_im/android/app/src/main/res/values/styles.xml": "937d7c82f539c72eb94fd3a3773f29b3d3fef1997213c92cb632298cedf4bda9",
+    "clients/enterprise_im/android/app/src/profile/AndroidManifest.xml": "30b0832ed8b92dfbd6ae2abfa939ccf26333d37600056b1572bd4a397a18a74b",
+    "clients/enterprise_im/android/build.gradle.kts": "6a26dba2cb8dfba1e74f540b0d17a89d96c1301d3c3bfda14348bed257fddcba",
+    "clients/enterprise_im/android/gradle.properties": "0f82b18017fba6bb5ce3aa4b2d1a00c9382fc8aae7b1d9326e44b18abd66d80b",
+    "clients/enterprise_im/android/gradle/wrapper/gradle-wrapper.properties": "67ce033cdd43a5af2686f7ecae3b527d70041824260d6f15a7c2c3a100a8d1c2",
+    "clients/enterprise_im/android/settings.gradle.kts": "016759283e88ade6eba92910583feeef88b962839b957aa414296afd2952d122",
+    "clients/enterprise_im/integration_test/desktop_lifecycle_test.dart": "e49afe25ece6fae7c44c5c683027ea71330b702d06b94200cb7b6bd10307d68d",
+    "clients/enterprise_im/integration_test/files_and_devices_test.dart": "cd74464ac5302e8770d892e38502e7bd9d2c0acd5bfa9b21e4e4dd174ae502fa",
+    "clients/enterprise_im/integration_test/ios_export_picker_test.dart": "0cd9b3435272437060d16e1ef3f65680faedb3de5262d1ed303e615c137a033f",
+    "clients/enterprise_im/integration_test/ios_export_test.dart": "8869a95b30ab0ab754ce83e1cdf7d6bc45df41e28c0102ed90e8e635ced09d51",
+    "clients/enterprise_im/integration_test/messaging_test.dart": "aa69dff97321e69b639ee8c7e9e7d89a999f5f2bb2362427cb5d095986e1f7f7",
+    "clients/enterprise_im/integration_test/mobile_lifecycle_test.dart": "3ab529be1e7fd68bb5d2d1e694b53728ba64f46040a9ae3cde8b09b76d13f648",
+    "clients/enterprise_im/integration_test/owned_backend_fixture.dart": "61463d083f44f7dc31fda063ed49b061088ab3db96b140045cfd29e488d116f9",
+    "clients/enterprise_im/integration_test/real_backend_test.dart": "430acd67a38f46007ca42a30a0b605a4045839c143247c4d8df6016d354f003a",
+    "clients/enterprise_im/integration_test/secure_storage_test.dart": "8b29e0ff369c7d7552feb2a65d4cee11f8fd1e51d75677d03395ffcf7c3cd468",
+    "clients/enterprise_im/ios/.gitignore": "37380775aeb2499662b7aca80f4ac4c95ae827c3ba2bfa179aa3e9af4812c623",
+    "clients/enterprise_im/ios/Flutter/AppFrameworkInfo.plist": "da12038f9b2688a8a26160fea2609fa8fcb11421448c109f09c0f573efe7698d",
+    "clients/enterprise_im/ios/Flutter/Debug.xcconfig": "a82d7765b37116ee4821d2cd1d65942febf8032353757ffb0826eabde785b4a6",
+    "clients/enterprise_im/ios/Flutter/Release.xcconfig": "a82d7765b37116ee4821d2cd1d65942febf8032353757ffb0826eabde785b4a6",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.pbxproj": "5035e98f9e0c32e285ffbfc349336cde627e304236d62ee9957035a20ca0f54e",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata": "7f3b00b5c3fdb45242d7b87e1e5c4e25d1fa8129a16c94295ecc4e8ea2235c5f",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings": "11b247bc6796892d67c9a821d18604db4dd6a880981b34f38460b9866e6b247f",
+    "clients/enterprise_im/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme": "9fbce429f56243561dd437a527136c9f9ed77165e3b271b923faf236cfcd0484",
+    "clients/enterprise_im/ios/Runner.xcworkspace/contents.xcworkspacedata": "46c3c9702ff7c5584e11c954d943cfb6e07fb26e3fbd072ddbc0f388aa352de1",
+    "clients/enterprise_im/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings": "11b247bc6796892d67c9a821d18604db4dd6a880981b34f38460b9866e6b247f",
+    "clients/enterprise_im/ios/Runner/AppDelegate.swift": "85b2e9fd445e02f5156328403eeb94adaa9138772a7a10fcc78df18d3c81d2b2",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": "3b1e214f466ffedff74baa5598ad5c4421130eea6bc8d57b8fe23435e8280ae4",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "7770183009e914112de7d8ef1d235a6a30c5834424858e0d2f8253f6b8d31926",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": "cab10a0d391ec5bc09ef50ce49e8ad401cee7ef03707ec0923a222c5c2b3d212",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": "b9ad02cf6576a04d1b6806ac02a2431481b448dd0c2e505ce25842d1f7c4730b",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": "c6e6d3b215ae744a9c391f4c4d44157eff5e739d6ad6c39f9bfa5df66dddd267",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": "5dee24dc104ac76dc162e42ae0beb163d426bf365562ee28ba7b3ad368559a60",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": "a9b21eb6f4271385655a8771f76e29eef8c1107d7879cbcfc567e6619d1f716a",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": "e677d701ffe4af7bc2935098d6b3984cc9ab7ace573e6900955a5535b12410cf",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": "b9ad02cf6576a04d1b6806ac02a2431481b448dd0c2e505ce25842d1f7c4730b",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": "7c61c42fc7b657d9cf314d32a4ec458f0647c3aaf360be1b9377857266ec2499",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": "19be171481dc71a0b2803ebcd01dd8b0c5fd5778dee34c0a3cabc948c225f24e",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": "19be171481dc71a0b2803ebcd01dd8b0c5fd5778dee34c0a3cabc948c225f24e",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": "4209a49e44a92ec40a327d3455eb1b1c153ee83d75de1c2be0a12ab18b2ff9de",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": "836c918cb613249eba0483a6b02fa3df3c1c0a89a315ee4d3b88509b83c7ab73",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": "41c7d42f6e61f8fe7f30b1ffa2256aecbc9682be06d18c4a3062043e1a2e547c",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": "5d7e5bdf01b93802bc973345b3a78c038907147625035952a08a115a563b7f81",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json": "ccc7950fd5f5b82067c85f667940a9d59189151460761ece8098ca78daa19469",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md": "a985b626c4f7546a8ba392d135e9226c3547c8e2b46895f5f2bdf40d7b14ef9f",
+    "clients/enterprise_im/ios/Runner/Base.lproj/LaunchScreen.storyboard": "857e61203b3deafb05766d8fcda898b86a7cb6f3d5e385ecc9926c4d698215e9",
+    "clients/enterprise_im/ios/Runner/Base.lproj/Main.storyboard": "fd367b6c43006d61b730f674970dd48b9f662c8f2264e52ffc1558102a2c9f2d",
+    "clients/enterprise_im/ios/Runner/IOSFileExport.swift": "6cc2cab6010741c2f8f2cbcbb1adbf047a6326235fd10d6047a9900d51aeffea",
+    "clients/enterprise_im/ios/Runner/Info.plist": "a533bf13dc1d98dc29871d5ac68850c6017a39f53c0207d8796432dcd7e9950c",
+    "clients/enterprise_im/ios/Runner/NativeExportSession.swift": "1730a5915fa745905719411e3559514ecf97bc2891aff23e4d016bd05859e41c",
+    "clients/enterprise_im/ios/Runner/Runner-Bridging-Header.h": "1a8d11d01d1cc92c650c9c9ed35299240052d4683a15a719a2315ef44185e074",
+    "clients/enterprise_im/ios/Runner/SceneDelegate.swift": "add68b905971dedfcc0d0b5b7118030de5925ba8c081ad9815463699e3a444ad",
+    "clients/enterprise_im/ios/RunnerTests/RunnerTests.swift": "5e8f4908dacea6f29b2a790e4d38bf5fded69096063f9a27a2f21584d62b30c0",
+    "clients/enterprise_im/lib/core/auth/account_reference.dart": "8013ab7cc5e185ba6ec626925228e7b315f61d7d1529cb45242b2d0d29fbf22f",
+    "clients/enterprise_im/lib/core/auth/account_selector.dart": "c9c2e40fdff42ac55da9c959c0486d439c747d44d96c65d2f911f72a0937ecf5",
+    "clients/enterprise_im/lib/core/auth/auth_session.dart": "41e484fedf6be971d2576d9b0282c633b02e6ed5c7db0a577f57439c407791c4",
+    "clients/enterprise_im/lib/core/auth/client_session.dart": "b57a73a5fe6588fa36fd6b92a178900c975c8b5a97e7f1b66ab55cbcdf6fed1c",
+    "clients/enterprise_im/lib/core/auth/native_auth.dart": "106040dbdb1009a04d4a1dc55d22abdd0ca24773f81aebe0ec0cc11b32adec3e",
+    "clients/enterprise_im/lib/core/auth/pkce.dart": "30f32a78dbb279fc1a519c2e4c88bce627dee4a77b9a60428e0a76a0d5089ac7",
+    "clients/enterprise_im/lib/core/auth/session_store.dart": "fe385905d37fb10ddc0b4b44f82d29b4ff61d1ed3fa9a87745f839c963a519b3",
+    "clients/enterprise_im/lib/core/protocol/api_client.dart": "7552d29685cf8229e4bdbfc75b0cf51997e59c473335cdf8da7ab14e5fac0aa0",
+    "clients/enterprise_im/lib/core/protocol/api_error.dart": "b5964443e281e6781bd1fc06e5a45f4398f674525d197e500da2ef9e874d4e92",
+    "clients/enterprise_im/lib/core/protocol/client_id.dart": "ccafd09bd26b5e4d01239df550b68a6fb8bedae44cd894ca4afe8b2189d34d31",
+    "clients/enterprise_im/lib/core/protocol/models.dart": "37f55c148b791af29e36c6e107966f7be66cd1fa736713a1125d93ad78c70c69",
+    "clients/enterprise_im/lib/core/protocol/seq.dart": "f6be75a70de57ef6c6efed25d525e80fa7bac95dd53ee5ad573271dfe097089d",
+    "clients/enterprise_im/lib/core/storage/encrypted_store.dart": "ffc219e830e739c45f20ad3b80f88bfa6a61fe714feaf6f9947bbba520f3808d",
+    "clients/enterprise_im/lib/core/storage/records.dart": "825cfdd40bf5f12b91d9ef546e7366cf038f430b86cd386e1d10c26b728c149f",
+    "clients/enterprise_im/lib/core/storage/secure_vault.dart": "1490415ca8fa74606048d646e2c9eb84a431e4966c2eef12f54000acc698fd3a",
+    "clients/enterprise_im/lib/core/storage/store_worker.dart": "d53e0173cc09c0c7fc138ca7c513a9cd82644900d93f0a8431757a28e4bad8c8",
+    "clients/enterprise_im/lib/core/sync/client_context.dart": "2f132d2222a7440a6bdd2e4e28d9b4f5363e213ef2335e3ad55802175df887ae",
+    "clients/enterprise_im/lib/core/sync/realtime_channel.dart": "1e4f9bf5c0ab27645227bf0f75d4aaf2fe26bc0e2d455b54f8b589d0d39c7f24",
+    "clients/enterprise_im/lib/core/sync/receipt_queue.dart": "46319074fa65d9727c400c028641bca0a51ee03249db7017cf6418f3079060d4",
+    "clients/enterprise_im/lib/core/sync/retry_policy.dart": "c07b56b8cef124ddc6fc66454f622783e027810b24a84d9eebcab9f64c42d7ae",
+    "clients/enterprise_im/lib/core/sync/sync_coordinator.dart": "a06e5fceee740cf404d94bbaf4c874dea9614a2a759ab965d2d3d6e9467dba0d",
+    "clients/enterprise_im/lib/core/sync/sync_engine.dart": "edec76adf469e2143553e8bffacce745d1975c9e6c5e57fef6f9c75501c3f70b",
+    "clients/enterprise_im/lib/features/conversations/conversation_controller.dart": "4fb7253ad794b0262b4601112bdd1dc4ca37643d0ada4dc23340dc7159aaae9d",
+    "clients/enterprise_im/lib/features/conversations/conversation_list.dart": "766a7c9cba78b0917c871a51baa1f83937a50f0787ba88402313c5346fb455f5",
+    "clients/enterprise_im/lib/features/conversations/conversation_view.dart": "2779a814f2c0c86eca8b0c564ff96fe50f67ce579649ba5fc4fdb686709ead93",
+    "clients/enterprise_im/lib/features/devices/device_controller.dart": "9190def6081423599ef2ed6fa7358be59fcf3227c37faddd9a5d438c6af352ab",
+    "clients/enterprise_im/lib/features/devices/device_page.dart": "c334b6d9b14f032b4d17b07455c2481fa27c174c9aeeab5e125cb1352bbe7050",
+    "clients/enterprise_im/lib/features/directory/directory_controller.dart": "313878beb13587d092f247be4c02ffd7164abdc7dbfd29c5e5f6769249ba01d7",
+    "clients/enterprise_im/lib/features/files/file_download.dart": "07b4c52ba8dee0a6e3987dc97645a81a414e612958d226496ab70a1b60f3bfcc",
+    "clients/enterprise_im/lib/features/files/file_message_card.dart": "5a54f989ba3cd691d18a1298488535979850ea8d8f0346c260299ea77d7241d5",
+    "clients/enterprise_im/lib/features/files/file_transfer.dart": "76e0f923bc857a85cc5082ec38a2f0dea7d176b630361ed94ce14817eaaf5001",
+    "clients/enterprise_im/lib/features/files/file_upload_panel.dart": "bbaccf0e80ac63225a1e9b81f55b76338106f0fd52d713b72d9d0e47d10499b0",
+    "clients/enterprise_im/lib/features/files/file_wire.dart": "f2a7bedb0fad0a1b314bd0d5f0ffb5bfff5ace03e2c69632de93a98bbf4352f8",
+    "clients/enterprise_im/lib/features/groups/group_controller.dart": "4d81dea537f9723f0a5b558bf5d1816a7d83db03652c0661e8369a3c3ad90461",
+    "clients/enterprise_im/lib/features/memberships/membership_controller.dart": "88da5b208d4338b464b4991a4cc4711d9e0d3f8588df4ab1e9742b6f81e4670d",
+    "clients/enterprise_im/lib/features/memberships/membership_model.dart": "82c358019aa618d0c44c9a3fe4ac2c78865a086491faba2772c31aec8b9b0deb",
+    "clients/enterprise_im/lib/features/memberships/workspace_requests.dart": "104286561db86438b1203f7d7fb3bfed1e10e2cac588138379a6ac8111b2805f",
+    "clients/enterprise_im/lib/main.dart": "f79de3eec126b246fb87ea57fc73af880126106f8cec4b48953e5447a8f83f8e",
+    "clients/enterprise_im/lib/platform/app_activity.dart": "4cf8c9f05e8450df03979d2f7fb3a7b35ba94c6ef7523226180bd414288af23a",
+    "clients/enterprise_im/lib/platform/browser_launcher.dart": "e83f36ab2da997f6ed1ab315e4248e9b7e42709513f63a43b4ed2a67159ef4ca",
+    "clients/enterprise_im/lib/platform/file_export.dart": "43c8f63da267ec9b43eb61e27a246800658f97cfa3b149a91a9c0f272e14b35e",
+    "clients/enterprise_im/lib/platform/file_picker.dart": "99953ba0995ed742b3b62779b144fe23ea0064f5f5a268ec94209b4c68eee3df",
+    "clients/enterprise_im/lib/platform/login_callback.dart": "d46302d6c48379cdfd95501776538c5caaa0efa8053bc4fd7f4333e13af5747d",
+    "clients/enterprise_im/lib/platform/mobile_activity.dart": "1adc317500dd1123227fefbb9465d33d42f3409aa66f891b461bb59f04b68f9f",
+    "clients/enterprise_im/lib/platform/native_activity.dart": "a3d79c5849581d8c80882eba90215a2dc7c000341bac4f9c41da137b74ca6206",
+    "clients/enterprise_im/lib/platform/notifications.dart": "c303642fa0542c264420793b08ab68d00f118d99ecd9f0bc13b79a76fa72aaba",
+    "clients/enterprise_im/lib/ui/client_shell.dart": "9f8fc699dd1c3b433f2caffed7882d9ea92cb43ad0aa0ed70ffda1bef6980431",
+    "clients/enterprise_im/lib/ui/directory_page.dart": "9d26d0f345579e7f644ee8671dbc238222bcd432e554836cc853881ff7ea967b",
+    "clients/enterprise_im/lib/ui/group_page.dart": "e614a84439e2e3a4c54f7fe851e6941edfccaa45bd9921e11cd638ad8a04dae3",
+    "clients/enterprise_im/lib/ui/login_page.dart": "a9770d7a81b8b0b462192da23530a83453c8a0166e7a5a0bdd943c24ee941d37",
+    "clients/enterprise_im/lib/ui/message_composer.dart": "e4aa81e4158c0ad9f6558162af54f1a2e9f56ed4f67417b93b00daa7a4209bdb",
+    "clients/enterprise_im/lib/ui/message_list.dart": "446eafd3de482c1246c99517c86d37253728040c87d0e513627c39a38814d107",
+    "clients/enterprise_im/lib/ui/message_page.dart": "7fe30b5847dd408b463cda845ee3e53070e7e969f0b492ed1d21c806f658be3c",
+    "clients/enterprise_im/lib/ui/receipt_badge.dart": "6027ee95b85025c3481990cc7e765bc0dc9ebd07944c43e28a6e963f43f788f1",
+    "clients/enterprise_im/lib/ui/workspace_action_page.dart": "2c9d55d339c063e1a79b19d364f7f5ab2d22471735a3da9c2a0123143db0fb43",
+    "clients/enterprise_im/macos/.gitignore": "ffec1a0bbd70547186b82ad4e49089bafab2de309b89de97c776d70debb179fa",
+    "clients/enterprise_im/macos/Flutter/Flutter-Debug.xcconfig": "62290ad8e938bf410206d8c7e131262696b58a6df110d39faf3399396ffe61b1",
+    "clients/enterprise_im/macos/Flutter/Flutter-Release.xcconfig": "62290ad8e938bf410206d8c7e131262696b58a6df110d39faf3399396ffe61b1",
+    "clients/enterprise_im/macos/Flutter/GeneratedPluginRegistrant.swift": "fdca9e0f1ec9f31d311829cc3d9886c14b8313e2a48b957e63bfd1454e2084df",
+    "clients/enterprise_im/macos/Runner.xcodeproj/project.pbxproj": "5f7804a2f90659ed9bc7befd57ec13465fd41e29999e7cf92a83260128c330d6",
+    "clients/enterprise_im/macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme": "0488f2c93f44971cebc2e5d72acd209a0497d2b655a66a53834209f14a263ea9",
+    "clients/enterprise_im/macos/Runner.xcworkspace/contents.xcworkspacedata": "46c3c9702ff7c5584e11c954d943cfb6e07fb26e3fbd072ddbc0f388aa352de1",
+    "clients/enterprise_im/macos/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/macos/Runner/AppDelegate.swift": "ce9dbe45a57c59e85519da50a26c471615b9c8cdd85a8f4a39d2e480e62a4af4",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": "bc6ba8105ca69651aeeb77358851590de295dca04681a1d58c0f449641c242f3",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png": "6232e5815af17e25e0268b2fec7aea9e068cc92ec709e9605c2b31df4ff2a313",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png": "15591f03f31313af6fd644ed0512106cc04365130b8b73244f1cfa6dddfb4400",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png": "cc6928b5adfc00dbf526192e2705dd9af641cdf20ab4c6c7ca7cd4936dca59f0",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png": "416efd77cde932d42ef34168da24dd428a495b1f4f34bbbd125a18d2add186a2",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png": "ae8c4458e41f1e28b1e851ed87d3268d4a0351ceea427fa2a84cc94ddfb6d4c5",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png": "0a91c6c1bf242e54ee179e34629e9ef3e8a6d286c0fce01e302280a8be9277e6",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png": "6ad229623498e5f1277800db3ab7cb11faf85eb2569e1213f7d8e55003c07b42",
+    "clients/enterprise_im/macos/Runner/Base.lproj/MainMenu.xib": "be9e9ef8469d3262370e0f0b855ed163cbf9c8362c59e330b2ffe63b86fa42f4",
+    "clients/enterprise_im/macos/Runner/Configs/AppInfo.xcconfig": "611a3b35169ef67179fd7df0ae6565c4aa5e9f936ac875506bff291e4f59461c",
+    "clients/enterprise_im/macos/Runner/Configs/Debug.xcconfig": "8067d533ef6593760baad9a9855a786a7a77470fcc3f0925ec04fe43bc1ac4b0",
+    "clients/enterprise_im/macos/Runner/Configs/Release.xcconfig": "7a6a4b4d973a23052fa0a0388dd261e32d311d7b66ba1bfc3b914b361808ac61",
+    "clients/enterprise_im/macos/Runner/Configs/Warnings.xcconfig": "0e341a392b16ad302d12890aa3dac9257a6c10ece685437604259a85341645a3",
+    "clients/enterprise_im/macos/Runner/DebugProfile.entitlements": "4bf8fccb0e90203979194856cd9fb10a5b0689ae9cb39219cf81fa6f4a534cde",
+    "clients/enterprise_im/macos/Runner/Info.plist": "f253e89c512b3a9a81bc5cdd7a14bf932470f835f261654a808ea4549cd94aad",
+    "clients/enterprise_im/macos/Runner/MainFlutterWindow.swift": "65c9613c11bcedfa51416b16c975d8ba6ff12b405fc19d60db8755d92e86d9fe",
+    "clients/enterprise_im/macos/Runner/Release.entitlements": "47014aaf66980b128b8112f510ce1f050e99a4f96c7bc6d1bde58b39777144b2",
+    "clients/enterprise_im/macos/RunnerTests/RunnerTests.swift": "6bc180bc77c7def7a21d197233e25dff42cc493ab9d294632edafc18fdf0ac44",
+    "clients/enterprise_im/pubspec.lock": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669",
+    "clients/enterprise_im/pubspec.yaml": "b9e74791b2c56b3bbfef4466eb541794f946017784f93e5e466dde26f0d2997c",
+    "clients/enterprise_im/test/account_selector_test.dart": "859f766312019d84da509a01074a703750542d63c77ccff1a4cd54fc7a31d9e1",
+    "clients/enterprise_im/test/auth_test.dart": "711ad9617e4d80f0f5c615cb7fd9002a8c6ef305ffd264d85d747bff9af591ec",
+    "clients/enterprise_im/test/client_notifications_ui_test.dart": "f45ad13bfcd126417a45f2d866b1ed4cad42089e74bf55acbec93a556b3d61b2",
+    "clients/enterprise_im/test/client_session_test.dart": "a74742042c5a2c387318a6dadbf527bf4e8396a777a83fe7e474c1c85218dc84",
+    "clients/enterprise_im/test/client_startup_test.dart": "d21bc27466b259330935d01f816c43b49feb18b5fd4f21dd27e76f49b29e21c2",
+    "clients/enterprise_im/test/desktop_notifications_test.dart": "4dbf8388c9787ee35fb849a6659db595d45e721ef468277becceb5f575b364f0",
+    "clients/enterprise_im/test/device_test.dart": "864c189ebc6d9b5d37559487406fbef4a3d1dd88aad0149270931da6544655c6",
+    "clients/enterprise_im/test/device_ui_test.dart": "79e1e98956d12c3d086ba1da9561239de1212ba25710b70762538cdace9cdb35",
+    "clients/enterprise_im/test/directory_group_test.dart": "5a25910e3d25c4bd37ab5220240355485307b7a3c7cda3e6c2f4087cb2469450",
+    "clients/enterprise_im/test/directory_group_ui_test.dart": "0c7e8516dbb5cb8a444cf04c6c360ec677c9fcf7d27daf7405ddbb5f09a500a2",
+    "clients/enterprise_im/test/file_download_test.dart": "d463c1b55a35393722525606299c0e3b876b20fc7457a9ae143bfdbfaad0a7bb",
+    "clients/enterprise_im/test/file_export_test.dart": "09c878a5207a233e0738611f9cb88bf43764ed85b41255ade29a3789e7c10d26",
+    "clients/enterprise_im/test/file_transfer_test.dart": "59f43027748f52507bb4f54ff8cf4078eff77d3772e9ce224d424fc952285857",
+    "clients/enterprise_im/test/file_upload_ui_test.dart": "d48af2f8c8852f77ebf20dff9854c69e4deb06ba9dd9b907af1e89bfa00d9b8a",
+    "clients/enterprise_im/test/file_view_test.dart": "17dc98a6f31bc78ab7a860852b7acbbcc8c5a00563765246f74f7f0052f69f2c",
+    "clients/enterprise_im/test/group_accessibility_test.dart": "c45ca6f9f942d84cd02933f2a2403f8854e7de9e9f6b0d0362823a26cd05fe4b",
+    "clients/enterprise_im/test/group_reliability_test.dart": "0e45c01777334246bf511703e05ce684f082263e03d14db7583aa185cf97179a",
+    "clients/enterprise_im/test/login_callback_test.dart": "ddf2e1bb714a1e1ffe2265c1607675ab35531679a2c4b3503683f8600ee49bfc",
+    "clients/enterprise_im/test/login_page_test.dart": "e23cf0f75f28d33ed34f9620778f9267935c11595cae5b5f680571fb98ba3ecb",
+    "clients/enterprise_im/test/login_session_test.dart": "a19e7130fc1d77c858a6e5ade30f8d9a0f679f756bf2e7eeca8a9986103541fd",
+    "clients/enterprise_im/test/login_startup_test.dart": "f0d4cda25ee0576261e363d99226aa4db208fa6ebcc527e9974e671fba78947d",
+    "clients/enterprise_im/test/membership_admission_test.dart": "728d7b19b238d6626366cf8d1d5d98c12f5d4ecdd6949fd956da6ad05f5ff957",
+    "clients/enterprise_im/test/membership_switch_test.dart": "c31d0888db0d0c3124c654bd2960a99a794302a17a15fd33fea96c1c7096ce87",
+    "clients/enterprise_im/test/message_composer_test.dart": "bb2f1fd61b17eccc7374f7bbdf46a9f76e1c377ad25af419578d5b999fbdd09e",
+    "clients/enterprise_im/test/message_send_test.dart": "6a29f2b0d94f3d49bffb554588a7c621eb563f896dc056804d01625fc27a70e3",
+    "clients/enterprise_im/test/message_view_test.dart": "5688ea32243f2a4763dbdbd0359476123700923373551ca1f8bc5252c617eafe",
+    "clients/enterprise_im/test/messaging_navigation_test.dart": "2b24716067079087b102bf17f801af919e3a61aa8cfb9de5d91699c7afd5062d",
+    "clients/enterprise_im/test/mobile_activity_test.dart": "bf50e4d46bc975f1766cb823d527632761885ea583eb0fae1943ba1d912b63ed",
+    "clients/enterprise_im/test/native_activity_test.dart": "24a0ff6661bc095f4133a77ea70054349d77098ebfcb65e50fe35fb97231bc5a",
+    "clients/enterprise_im/test/native_files_backend_probe.dart": "ab27fd759e6592696e9a002ee541ca6913c88ae8b851ac9721e0f7cb659af625",
+    "clients/enterprise_im/test/native_messaging_backend_probe.dart": "9298d94d3c914a7a3f92c339a2c72e5b955034ff76da78a04429d2fe67fa2a85",
+    "clients/enterprise_im/test/navigation_test.dart": "4b26c180d3194b14f86f4f64a550b3755e3d984ebe52b5f050a963c31757bd5f",
+    "clients/enterprise_im/test/page_transaction_test.dart": "7aee9afecc67c819f9dba2a176715d48a95ff8abc195c898e1702a0c8ab89e7f",
+    "clients/enterprise_im/test/pending_send_test.dart": "e3b55bf44f2b325f9462483d9f3b66a34ddf6ee5c570e5131d7c37007bba22f9",
+    "clients/enterprise_im/test/protocol_test.dart": "0c2301acb807c7f9d0495e3e543d0317aa857641ec9b423b708792411ab07b1c",
+    "clients/enterprise_im/test/realtime_channel_test.dart": "ceaa9914fa5ed8c5fa6ed221ce40b2594b02b50c28516fbfea2299c12917e3ff",
+    "clients/enterprise_im/test/realtime_transport_test.dart": "626bd41203092f63ba20b9abe0d5bbbe14514771c5a7dc9c31eb748118d8b54d",
+    "clients/enterprise_im/test/receipt_badge_test.dart": "646ebe8838b0214ec53d80d40f8b62a4d7f958ddc6832191b89d4dcc1cb3db1d",
+    "clients/enterprise_im/test/receipt_query_models_test.dart": "d1c431100f9e7d100a453dc98fab8631b576dcd7d8a384389a3b090b7bc54ed7",
+    "clients/enterprise_im/test/receipt_queue_test.dart": "52ecb248e166861621e08a2ff3d8f1b9327841b469a9e55c8ac47570e3f2826b",
+    "clients/enterprise_im/test/recovery_test.dart": "6bb9d45faf0f842ebbc036cc306e829b67f333024febc7dd38849bfad816b5de",
+    "clients/enterprise_im/test/retry_policy_test.dart": "f3c48d1ba4bd925c71e17129d9bee71660836d9ae63a8db0dc7d02c210d8ff03",
+    "clients/enterprise_im/test/secure_vault_test.dart": "42fcaa8ba48caf4894a5ec18f58e6444fff4efcedd0038ab283e0bb88505f4d5",
+    "clients/enterprise_im/test/session_bootstrap_test.dart": "321427f7db58bd52ab12c037911a0be1228e2c5e956249cf0b1530ea0316947a",
+    "clients/enterprise_im/test/session_restore_test.dart": "0547ccda47a8eddc0f867359ce13f4f598ba54af8ab67b1ed67bbe47f82d26ac",
+    "clients/enterprise_im/test/session_store_test.dart": "96a590d41b8be39965138d5f5b29ed08fe96fa12115c264f20d2d521b391de1e",
+    "clients/enterprise_im/test/storage_test.dart": "7a1df8ab679173e15380aa3417b92d4942bebe288278d040a0620c95550f2549",
+    "clients/enterprise_im/test/store_worker_exit_test.dart": "73ce6dcebf9ec3cd4c523ed2c825d47d3633ffe0bb187b75ebd08526d1b47dc5",
+    "clients/enterprise_im/test/sync_coordinator_test.dart": "b0134afd437ee578f9c9d8cfbdca21280dd422b33c5e71e7d06bc05a86d2352f",
+    "clients/enterprise_im/test/sync_test.dart": "3b904ca2d148d44b29a9d2ca74d8d91f468b79b8956c809e30c861a6ddadce84",
+    "clients/enterprise_im/test/windows_runner/startup_arguments_test.cpp": "bcf0113a9407cec297657def7f860fc9a05e0c8b7da458c01045b40a8708a19b",
+    "clients/enterprise_im/test/windows_runner/stubs/flutter/dart_project.h": "4481adaac9cfa639a50ed60253a3cdf833281904474c9d11efea0c5cbbf65f5e",
+    "clients/enterprise_im/test/windows_runner/stubs/flutter/flutter_view_controller.h": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
+    "clients/enterprise_im/test/windows_runner/stubs/shellapi.h": "dbf27368c88a534740ccf48eb7ed9afbbdb0df158650507892f84fb091bbb669",
+    "clients/enterprise_im/test/windows_runner/stubs/windows.h": "96fccace38aacac6e1e91439196b17942019c2a7e339051838a7ee8360cede0e",
+    "clients/enterprise_im/tool/receipt_backend_probe.dart": "baf9251604254741c95bf020e960185e0bfa4980612ed3240fd929eb3c1bef97",
+    "clients/enterprise_im/windows/.gitignore": "96345475f1a3c66bd32d28178fba151ab1506b35b1f7857b8f7651863093ea11",
+    "clients/enterprise_im/windows/CMakeLists.txt": "99a105bf6f250f516cc9f7a522519e9abbfd44ce40a5e5018b94d28ca8582898",
+    "clients/enterprise_im/windows/flutter/CMakeLists.txt": "1fe418971b6f41bb35ceb3d64113a835f3f6f171ecaa707bf232492b57a588d6",
+    "clients/enterprise_im/windows/flutter/generated_plugin_registrant.cc": "c5b5460ce7db0e021a1250d95c9e8bde6996279a095b305eb3d038e628199a6e",
+    "clients/enterprise_im/windows/flutter/generated_plugin_registrant.h": "dbc11635d7b1ba1887adf40df5b83d634e9c3ab0bee34510c71528bb4d73602a",
+    "clients/enterprise_im/windows/flutter/generated_plugins.cmake": "eeb7f75f18bfda1ed715020ee548c0fd32b4b2de5ef902c2e037effa9aa68cc1",
+    "clients/enterprise_im/windows/runner/CMakeLists.txt": "6f4c064ed4d2bb59e1b6ca4351306778bb150af1ae920fba494d1ab59ee6f392",
+    "clients/enterprise_im/windows/runner/Runner.rc": "c718070de6796715ab26e0c0a712e7652782a6f6276a6fd815b522686c0bee3c",
+    "clients/enterprise_im/windows/runner/flutter_window.cpp": "dd185884c0b5301d400b58f12ebb36b1c8b326531597e531b40e44a6eeb0e943",
+    "clients/enterprise_im/windows/runner/flutter_window.h": "38e0fcd3a0b83895852ec295cb70d90179c0dcd40d58f065eb5232a4ecd84898",
+    "clients/enterprise_im/windows/runner/main.cpp": "0bae1edc0a7a4f7593c7e4439fb468b12ce953c93fd88e32f4b5902d2909061c",
+    "clients/enterprise_im/windows/runner/resource.h": "1fa98588b04561590ba1cf0521ab86a9db4a878312f21c9d5861d965ddd8d1ae",
+    "clients/enterprise_im/windows/runner/resources/app_icon.ico": "c098d3fc85cacff98b8e69811b48e9f0d852fcee278132d794411d978869cbf8",
+    "clients/enterprise_im/windows/runner/runner.exe.manifest": "825d243e9fa1542619909c1b72d09b3ed7c1f3b225bb8367c125835e5dc3f8aa",
+    "clients/enterprise_im/windows/runner/utils.cpp": "6c2c87106b4b29d534c7edcafb3b7f7b9079caa3cdafa7e56671ad2adf5a2543",
+    "clients/enterprise_im/windows/runner/utils.h": "95a7f7dddb832997cefa937a96f89472332277e75734a5de553610760b744b03",
+    "clients/enterprise_im/windows/runner/win32_window.cpp": "9065f31ccf746cf8b390121f958f9e959033af864aed779597066625ed56bc36",
+    "clients/enterprise_im/windows/runner/win32_window.h": "7dd03746b19dcf3542829b2f6e8ed40a2714ce5f2cb3b0e23f0118a2fcf62d62",
+    "scripts/tests/native_export_session_test.swift": "fb615cf5929454c9902e34720061a065ce5a3b0703bb77b53ea5d4d073faf181"
+  },
+  "automated_run_source_difference_at_packaging": {
+    "documentation_only": [],
+    "all_other_client_inputs_match": true
+  },
+  "log_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-cancel-retry-red.log": "b37d1e13bd1fdfcc4c991e1566319da25cf55c0ae92bc51163b0f1be503ff180",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-cleanup-red-02-build.log": "6679a69cfdd9981df365b9856068fa0c79010c024fc7987129a8b9fa5940e3ba",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-cleanup-red-02.log": "30f557df1307febd524748314258aa146af0fdc4f1b5a3424989f85a6e5b5007",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-cleanup-red-build.log": "fe93d012f52a01638db42c52011c97c694df0d7fe5825f339f33d526f6d37e57",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-cleanup-red.log": "78155b35becfc681738f18579b8732365fc07e8d95ff8b683dcadc110267d7a5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-dart-green.log": "18343c4234e1ac10dc03f01a3d9b8ec4b995d34a04e6264b270601e4260477a3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-dart-red.log": "928938155fd943ac1f21757d3ec0590184a5c484db9fb7b402cd96f7992c32f9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-driver-02.log": "320b9207b87d16da5a5950def54436c00b55fc8a9d13d7f435463e5e68e074bb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-driver-03.log": "752bfcb575eb9821e9b08078bfdaf5578459e0951dc533c0eb22f1d4b821e47a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-driver-04.log": "752bfcb575eb9821e9b08078bfdaf5578459e0951dc533c0eb22f1d4b821e47a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-driver-05.log": "752bfcb575eb9821e9b08078bfdaf5578459e0951dc533c0eb22f1d4b821e47a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-driver.log": "7a0da3b2783826466b2920c89e4e20e1a3e17d85b1959ea73272c51c3cb7d3ea",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-native-final.log": "d98c6b671685e758eb611e35c9efc1f3c8aefba0dd0a546e5af3eb0ebf19f18e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-native-green-02.log": "e5f95464430b8c5223ae1f14f0174c5a6f6a5d2ca5ebd8cc949db51821283737",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-native-green.log": "80fc33cb22450af3180a208ee661ad77d0f506331e2470ff340d5f8129ec57ce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-native-red-02.log": "5211b5c59f7760df77b489e1cfb1ee958af14baad3bf0ee3195b1af7c7ca069b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-native-red.log": "199e6da1108363f2ec4d5e4efa2685b4fa30ef9e3c4b644c807c905bbad801bf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/build.log": "e10133a4d48dd3f6fa216c6848ad3f9fe1c7da3d1b41fa0661852292d778ef6f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/bundle-manifest.json": "c48e91d2ffab29b397336f6fc57f010152093702bb8c7f9bac800e31ff192fcd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/preflight.json": "806a2d09130493a74ae9833a0c095c988a315695d1ac1969b3a23792806609f9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/registry.jsonl": "f001645910f764c18905312dae009f45111554bc9968d88ad62053c65fb4337e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-01/result.json": "8d43dd2cdb40a5d06eb8244c5ab530c1004908b074b7e62df8eef0810009cc92",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-package-driver.log": "df51e5416f13614e615d83f8d372ddf45bf0ffa6445eebbe92131c4a135a6e2f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-paths.nul": "24d0466d872d2e65afdf1ac8ad802e5811cea6a35c699d75d64e5f5ea84144d8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-red-recovery.json": "829da2b6bac5f0439146b3f4c3efcd50f86cf321f6a50f117ca35eaaff40ddee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-retry-green.log": "a90a664d3da6c5e71cb98af990fe67e69f07d95e30b65245fe49c0a2a283dadf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-retry-red-02.log": "18343c4234e1ac10dc03f01a3d9b8ec4b995d34a04e6264b270601e4260477a3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-retry-red-03.log": "5ecef58878be890a314a83ea472d885976d159a33105bf15eb79e4231d393617",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-retry-red.log": "18343c4234e1ac10dc03f01a3d9b8ec4b995d34a04e6264b270601e4260477a3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/analysis.log": "e2d7dbb7583fe017bde17b08223e0c1cc9a66f1ea3ca946620b53e24115bfb11",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/analysis.log.stderr": "cb01d3e55eab4d84a251e8151664793a73bd060a9e97b1773fc4c6a1f29ebbb3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/registry.jsonl": "160bf11ff921f4f3276941bacb327e42a8e6c5bb0a59e364750acf94a5ecd7bc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/result.json": "8725d35ebd045ec87840f4649c92c3cea79ed59e9b3062e43fec8dd7179827fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/shared.log": "c8002778cc4b88c3b7e83ea344b878fa8b6163ff9bbf5bca50c37683a9e23cf2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/analysis.log": "f2d9b9546358235d48ef0f722ba2e6b648faae320c652ba16e59574d33981008",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/export.log": "f663833eda57feb27c36b9675c992a19e436a85f89a4a87460525513f5a5a6e6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/export.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/registry.jsonl": "1545cd69491bac40c0b8addcc6549471c6a017adea27ba51b66df7bf1c43904e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/result.json": "12753573e2d2a65035c2ff13c8c284ebcb721e6e1fa24ed74437c815da4f5511",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/shared.log": "3582fbd22b805c1623db52092a1f9c5b693929b1ac39febf6023cdbff8a7af21",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-02/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/analysis.log": "96dd1c2dfbde8b775ba5dc31545a9b734dd0dd0bf4bbf4225ed7f3fc14ec0eac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/build.log": "5b03a8bf5778c25f0b9d3bf2d8190c021773455ffaaf66c40cea0316277110ea",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/export.log": "853b0eb030c4abf6a97787d0ab781c42434e32bd232c4329102eb637dbe59f74",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/export.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/registry.jsonl": "4a97157a4e64143be7069572272dcd319b67e2a1605aebcc600f19c1da45c80f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/result.json": "5474381a60d4452e0cb338391d426541ee998736d4ddbc206a7abe6cd323d133",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/shared.log": "33351db16c91affd0b451cc891d1cdd9d6dafe936bdf2ec43425a9a5e1e9c793",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-03/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/analysis.log": "6447c32ae08f67eb54192a53818794a16342b992949eec2d0f20e43a68dceead",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/build.log": "6c07173976230159d97f1c9804bb28ebc45c556ba2ae3c15ef96ec21c11a489a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/export.log": "7ba31858180198efc490750bd406fbe1283ffc581d9446cfc349aab0bcef6229",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/export.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/registry.jsonl": "86d5e11d95d115dd5668e44727118d39a72a53b4604ab812045ee0d4dc8c7951",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/result.json": "9ed680f4484100b9774ff04777c86352348212dd1429015b914c0aa25ec9201f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/shared.log": "268d29d2211a8c48ba1bd291a34ce373f77f79f26fd4b23d6cb66dda5fd5f25c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-04/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/analysis.log": "2f1889d6407dddf9946e8747d9e966eabe492028c0521936448ba58a0d045d93",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/build.log": "1921bd3f4e07f3b9f9518031cb29f03b1cee962a64d33e68a56a2ebb09aab585",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/bundle-manifest.json": "34887f76a703d5f8b34e3c24882205ee7c183081fb296aece9f5e00085eefac1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/export.log": "5b3c28b9bfdbceb6085a6b78be92d3ce26cf7ed0d6d011cc62531858be909d9b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/export.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/registry.jsonl": "f9c77a25439fe1ac2d5bf2eed9c90a73f53f92bd0d93fc34aa3d8e881e6de56a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/result.json": "354063a707d05693b64de98245a92aab38d87e6dfe0eb7eaf045dbd60eef500b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/shared.log": "825bb1075bace9590491b7918aabe5c4f2b5f6b566ef9fddedaef5d8a3e20e60",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/ios-export-run-05/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "remaining": [
+    "Real system picker cancellation and full selected-folder export, interruptions and provider cleanup",
+    "iCloud/third-party providers and physical devices/minimum iOS15",
+    "Android SDK/JDK/licenses, native build/device gates",
+    "Mobile callback/lifecycle/backend/notification and four-platform final review"
+  ],
+  "push_merge_deploy_ci": false
+}

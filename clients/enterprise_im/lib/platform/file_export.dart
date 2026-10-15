@@ -17,9 +17,21 @@ abstract interface class FileExporter {
 final class FileExport implements FileExporter {
   final MethodChannel _channel;
   final String _platform;
+  String? _pendingAbort;
   FileExport({MethodChannel? channel, String? platform})
     : _channel = channel ?? const MethodChannel('enterprise_im/file_export'),
       _platform = platform ?? Platform.operatingSystem;
+  Future<void> _abortExport(String ticket) async {
+    try {
+      await _channel.invokeMethod<void>('abortExport', {'ticket': ticket});
+      if (_pendingAbort == ticket) _pendingAbort = null;
+    } catch (_) {
+      // Retry the owned ticket before another chooser if native cleanup failed.
+      _pendingAbort = ticket;
+      rethrow;
+    }
+  }
+
   @override
   Future<bool> save(
     String filename,
@@ -27,7 +39,9 @@ final class FileExport implements FileExporter {
     Cancellation cancel,
   ) async {
     cancel.check();
-    if (_platform == 'android') {
+    if (_platform == 'android' || _platform == 'ios') {
+      if (_pendingAbort != null) await _abortExport(_pendingAbort!);
+      cancel.check();
       final pending = _channel.invokeMethod<String>('beginExport', {
         'name': filename,
       });
@@ -35,9 +49,7 @@ final class FileExport implements FileExporter {
         pending
             .then((ticket) async {
               if (cancel.isCancelled && ticket != null)
-                await _channel.invokeMethod<void>('abortExport', {
-                  'ticket': ticket,
-                });
+                await _abortExport(ticket);
             })
             .catchError((Object _) {}),
       );
@@ -67,11 +79,10 @@ final class FileExport implements FileExporter {
         await _channel.invokeMethod<void>('finishExport', {'ticket': ticket});
         return true;
       } catch (_) {
-        await _channel.invokeMethod<void>('abortExport', {'ticket': ticket});
+        await _abortExport(ticket);
         rethrow;
       }
     }
-    if (_platform == 'ios') throw const ApiFailure('native_export_unavailable');
     final choice = await Future.any([
       selector.getSaveLocation(suggestedName: filename),
       cancel.whenCancelled.then<selector.FileSaveLocation?>(
