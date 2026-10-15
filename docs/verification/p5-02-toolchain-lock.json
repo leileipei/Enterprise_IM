@@ -62,7 +62,9 @@
     "core_library_desugaring": "com.android.tools:desugar_jdk_libs:2.1.4",
     "physical_minimum_api_runtime_test": "not_executed",
     "release_signature": "temporary Android Debug certificate; not customer distribution signing",
-    "evidence": "p5-02-task8-android-results.json"
+    "evidence": "p5-02-task8-android-results.json",
+    "system_document_picker": "cancel_full_export_duplicate_and_prewrite_auth_failure_passed_aosp36_local_provider",
+    "picker_evidence": "p5-02-task8-android-picker-results.json"
   },
   "generated_runners": [
     "windows",
