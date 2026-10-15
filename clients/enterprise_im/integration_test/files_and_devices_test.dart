@@ -147,6 +147,15 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
         );
       }
       await control('runtime', runtimePid: pid);
+      if (!host) {
+        final namespace = await accountNamespace(
+          origin,
+          account.tenantId,
+          account.userId,
+        );
+        // ignore: avoid_print
+        print('NATIVE_FILES_VAULT_NAMESPACE $namespace');
+      }
       // Seed only a fresh, real broker+me-verified refresh result, then close and
       // restore through the production ClientSession boundary in a fresh generation.
       final seed = await auth.restore(
@@ -347,21 +356,61 @@ Future<void> runFilesAndDevicesScenario({required bool host}) async {
         'NATIVE_FILES_REPORT ${jsonEncode({'status': 'passed', 'clean': true, 'eicar': true, 'scan_failed': true, 'download_failed': true, 'expired': true, 'revoked': true, 'platform': platform, 'os_vault_real': !host, 'installed_native_ui': false, 'native_export_real': false, 'runtime_pid': pid})}',
       );
     } finally {
-      devices?.close();
-      engine?.stop();
-      await download?.close();
-      await transfer?.close();
-      sender?.close();
-      roles?.close();
-      try {
-        await owner.logout();
-        if (nativeStorage != null) {
+      Object? cleanupFailure;
+      Future<void> cleanup(Future<void> Function() operation) async {
+        try {
+          await operation();
+        } catch (error) {
+          cleanupFailure ??= error;
+        }
+      }
+
+      await cleanup(() async {
+        devices?.close();
+      });
+      await cleanup(() async {
+        engine?.stop();
+      });
+      await cleanup(() async {
+        await download?.close();
+      });
+      await cleanup(() async {
+        await transfer?.close();
+      });
+      await cleanup(() async {
+        sender?.close();
+      });
+      await cleanup(() async {
+        roles?.close();
+      });
+      await cleanup(owner.logout);
+      await cleanup(() async {
+        final namespace = await accountNamespace(
+          origin,
+          account.tenantId,
+          account.userId,
+        );
+        for (final key in ['session', 'key']) {
+          expect(await vault.read(namespace, key), isNull);
+        }
+        expect(await vault.read(bootstrapNamespace, 'account'), isNull);
+        if (vault is HostFixtureVault) expect(vault.values, isEmpty);
+      });
+      if (cleanupFailure == null && nativeStorage != null) {
+        await cleanup(() async {
           await nativeStorage.delete(recursive: true);
           expect(await nativeStorage.exists(), isFalse);
-        }
-      } finally {
-        api.close();
+        });
       }
+      api.close();
+      if (cleanupFailure != null)
+        throw StateError(
+          'owned files fixture cleanup failed: ${cleanupFailure.runtimeType}',
+        );
+      // ignore: avoid_print
+      print(
+        'NATIVE_FILES_CLEANUP ${jsonEncode({'status': 'verified', 'os_vault_real': !host, 'own_records_absent': true, 'native_private_storage_removed': nativeStorage != null})}',
+      );
     }
   }, FixtureTrust(trust));
 }

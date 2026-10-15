@@ -249,8 +249,13 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 	}
 	// Parent Wait is observed. Native tester absence is audited, but its OS exit
 	// code was reaped by Flutter tooling; never invent an independent exit code.
-	var report map[string]any
+	var report, cleanupReport map[string]any
 	for _, line := range strings.Split(string(output), "\n") {
+		if p := strings.Index(line, "NATIVE_FILES_CLEANUP "); p >= 0 {
+			if e = json.Unmarshal([]byte(line[p+len("NATIVE_FILES_CLEANUP "):]), &cleanupReport); e != nil {
+				t.Fatal(e)
+			}
+		}
 		if p := strings.Index(line, "NATIVE_FILES_REPORT "); p >= 0 {
 			if e = json.Unmarshal([]byte(line[p+len("NATIVE_FILES_REPORT "):]), &report); e != nil {
 				t.Fatal(e)
@@ -259,6 +264,9 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 	}
 	if report == nil || report["os_vault_real"] != mode.native || report["platform"] != "macos" || report["status"] != "passed" || report["clean"] != true || report["eicar"] != true || report["scan_failed"] != true || report["download_failed"] != true || report["expired"] != true || report["revoked"] != true {
 		t.Fatal("complete real files report missing")
+	}
+	if cleanupReport == nil || cleanupReport["status"] != "verified" || cleanupReport["own_records_absent"] != true || cleanupReport["os_vault_real"] != mode.native || cleanupReport["native_private_storage_removed"] != mode.native {
+		t.Fatal("owned files vault/storage cleanup proof missing")
 	}
 	var ready, rejected, failed, bound, revoked int
 	if e = conn.QueryRow(ctx, "SELECT count(*) FILTER (WHERE state='ready'),count(*) FILTER (WHERE state='rejected'),count(*) FILTER (WHERE state='scan_failed') FROM file_objects WHERE tenant_id=$1", tenantA).Scan(&ready, &rejected, &failed); e != nil {
@@ -278,6 +286,7 @@ func TestNativeFilesAndDevicesAgainstProductionAPI(t *testing.T) {
 		t.Fatal("scanner provenance missing", e)
 	}
 	t.Logf("NATIVE_FILES_LIFECYCLE runtime_registered=true runtime_absent_after_parent_wait=true runtime_os_exit_independently_observed=false")
+	t.Logf("NATIVE_FILES_VAULT_CLEANUP os_vault_real=%t own_records_absent=true native_private_storage_removed=%t", mode.native, mode.native)
 	t.Logf("NATIVE_FILES_DB ready=%d rejected=%d scan_failed=%d bound=%d revoked=%d scanner_sealed=%d", ready, rejected, failed, bound, revoked, sealed)
 	t.Log("real Flutter host files/devices: native refresh/me and admission; ready/rejected/scan_failed; streamed download/fresh export/expiry; own revoke; independent DB facts")
 }

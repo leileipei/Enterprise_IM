@@ -8,10 +8,7 @@ from integration.registry import Registry
 from integration.model import ResourceRef
 from integration.tools import _lock
 from integration.services import docker_environment
-def signing_choice_available(inventory,identity):
- if not identity:return False
- rows=re.findall(r'^\s*\d+\) ([A-Fa-f0-9]{40}) "([^"\n]+)"',inventory,re.MULTILINE)
- return any(identity==name or identity.lower()==fingerprint.lower() for fingerprint,name in rows)
+from integration.native_client import signing_choice_available,client_preflight
 
 
 def main():
@@ -28,33 +25,10 @@ def main():
  args.output.mkdir(mode=0o700,parents=False,exist_ok=False)
  label='result'
  argv=[str(args.go),'test','-tags=nativeclientintegration','-count=1','-v','-timeout=15m','./internal/policystore','-run','^TestNativeMessagingUIAgainstProductionAPI$']
- preflight={'target':args.target,'status':'not_run','fixtures_created':False}
- try:
-  sdk_commit=subprocess.check_output(['git','-C',str(args.flutter_sdk),'rev-parse','HEAD'],text=True).strip()
-  sdk_changes=subprocess.check_output(['git','-C',str(args.flutter_sdk),'status','--porcelain','--untracked-files=no'])
-  if sdk_commit!='e8113bf45620cbeb8aff64947ee4c93e16adb4cf' or sdk_changes:raise RuntimeError('fixed_sdk_source_mismatch')
-  preflight['sdk_commit']=sdk_commit
-  if not args.pub_cache.is_dir() or not args.go.is_file():raise RuntimeError('prepared_cache_or_go_missing')
-  if args.target=='macos':
-   if sys.platform!='darwin' or platform.machine()!='arm64':raise RuntimeError('native_macos_arm64_required')
-   if not args.isolated_test_account:raise RuntimeError('empty_disposable_os_profile_must_be_confirmed')
-   task_env=dict(os.environ,DEVELOPER_DIR='/Applications/Xcode.app/Contents/Developer')
-   terms=subprocess.run(['/usr/bin/xcodebuild','-checkFirstLaunchStatus'],env=task_env,capture_output=True,timeout=30)
-   preflight['xcode_first_launch_actual_exit']=terms.returncode
-   if terms.returncode:raise RuntimeError('operator_xcode_first_launch_required')
-   identities=subprocess.run(['/usr/bin/security','find-identity','-v','-p','codesigning'],capture_output=True,text=True,timeout=30)
-   preflight['signing_identity_check_actual_exit']=identities.returncode
-   if identities.returncode or '0 valid identities found' in identities.stdout:raise RuntimeError('existing_development_signing_identity_required')
-   team=os.environ.get('FLUTTER_XCODE_DEVELOPMENT_TEAM','')
-   identity=os.environ.get('FLUTTER_XCODE_CODE_SIGN_IDENTITY','')
-   if not team or not identity:raise RuntimeError('operator_team_and_identity_selection_required')
-   if not signing_choice_available(identities.stdout,identity):raise RuntimeError('selected_identity_not_in_valid_identity_inventory')
-  preflight['status']='ready'
- except Exception as exc:
-  preflight['blocked_reason']=str(exc) if isinstance(exc,RuntimeError) else type(exc).__name__
-  (args.output/'preflight.json').write_text(json.dumps(preflight,indent=2)+'\n')
-  print(json.dumps(preflight));sys.exit(2)
+ preflight=client_preflight(args)
  (args.output/'preflight.json').write_text(json.dumps(preflight,indent=2)+'\n')
+ if preflight['status']!='ready':
+  print(json.dumps(preflight));sys.exit(2)
  commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
  owner=secrets.token_hex(16); root=Path(tempfile.mkdtemp(prefix='im-p502-protocol-',dir='/private/tmp')).resolve(); root.chmod(0o700)
  registry=Registry(root/'resources.jsonl',owner,commit); private=root/owner
@@ -75,7 +49,7 @@ def main():
   return r.stdout.strip()
  def sources():
   files=subprocess.check_output(['git','ls-files','-z','--','clients/enterprise_im'],cwd=repo).split(b'\0')+subprocess.check_output(['git','ls-files','--others','--exclude-standard','-z','--','clients/enterprise_im'],cwd=repo).split(b'\0')
-  paths={os.fsdecode(f) for f in files if f};paths.update(['internal/policystore/native_messaging_probe_test.go','internal/policystore/native_files_probe_test.go','internal/policystore/native_backend_launch_helpers_test.go','internal/policystore/native_backend_launch_test.go','internal/policystore/native_receipt_probe_test.go','internal/testfixtures/integration_browser.go','internal/testfixtures/integration_registry.go','scripts/test-client-macos-backend.py','scripts/tests/test_client_macos_backend.py'])
+  paths={os.fsdecode(f) for f in files if f};paths.update(['internal/policystore/native_messaging_probe_test.go','internal/policystore/native_files_probe_test.go','internal/policystore/native_backend_launch_helpers_test.go','internal/policystore/native_backend_launch_test.go','internal/policystore/native_receipt_probe_test.go','internal/testfixtures/integration_browser.go','internal/testfixtures/integration_registry.go','scripts/test-client-macos-backend.py','scripts/tests/test_client_macos_backend.py','scripts/integration/native_client.py'])
   return {p:hashlib.sha256((repo/p).read_bytes()).hexdigest() for p in sorted(paths)}
  try:
   result['source_sha256']=sources()
