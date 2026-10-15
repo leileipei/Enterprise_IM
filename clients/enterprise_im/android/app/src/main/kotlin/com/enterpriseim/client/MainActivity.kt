@@ -51,8 +51,8 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "abortExport" -> {
-                        val export = requireExport(call.argument<String>("ticket"))
-                        abort(export)
+                        val export = active
+                        if (export != null && call.argument<String>("ticket") == export.ticket) abort(export)
                         result.success(null)
                     }
                     else -> result.notImplemented()

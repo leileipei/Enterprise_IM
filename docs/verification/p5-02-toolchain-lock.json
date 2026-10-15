@@ -48,8 +48,21 @@
     "gradle_distribution_sha256": "17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43",
     "agp_version": "9.1.0",
     "kotlin_version": "2.4.0",
-    "jdk_validation": "not_executed",
-    "native_build": "not_executed"
+    "jdk_validation": "temurin_21.0.12.1+1_arm64_passed_2026-10-15",
+    "native_build": "release_apk_passed_2026-10-15",
+    "minimum_api": 24,
+    "compile_sdk": 36,
+    "target_sdk": 36,
+    "build_tools": "36.0.0",
+    "ndk": "28.2.13676358",
+    "commandline_tools": "23.0",
+    "platform_tools": "37.0.1",
+    "emulator": "37.2.12",
+    "emulator_runtime": "AOSP API36 default arm64-v8a revision2",
+    "core_library_desugaring": "com.android.tools:desugar_jdk_libs:2.1.4",
+    "physical_minimum_api_runtime_test": "not_executed",
+    "release_signature": "temporary Android Debug certificate; not customer distribution signing",
+    "evidence": "p5-02-task8-android-results.json"
   },
   "generated_runners": [
     "windows",
@@ -69,7 +82,7 @@
   "platform_acceptance": {
     "windows": "not_executed",
     "macos": "not_executed",
-    "android": "not_executed",
+    "android": "partial_api36_arm64_emulator_checks_only",
     "ios": "partial_simulator_checks_only"
   },
   "customer_acceptance": "not_executed",
