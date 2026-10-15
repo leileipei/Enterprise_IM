@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:enterprise_im/core/storage/secure_vault.dart';
@@ -15,6 +16,8 @@ void main() {
     (tester) async {
       expect(namespace, matches(RegExp(r'^[a-f0-9]{64}$')));
       expect({'write', 'verify'}.contains(phase), isTrue);
+      // ignore: avoid_print
+      print('NATIVE_VAULT_PROBE phase=$phase runtime_pid=$pid');
       final vault = OsSecureVault();
       final marker = 'enterprise-im-private-fixture/$namespace';
       if (phase == 'write') {

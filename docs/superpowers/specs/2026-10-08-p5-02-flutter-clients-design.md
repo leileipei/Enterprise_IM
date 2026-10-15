@@ -6,7 +6,7 @@
 
 使用 `clients/enterprise_im` 一个Flutter工程，接入P5-01回执协议和P4-31真实API。成功标准是每个平台可安装／启动、完成OIDC登录和集团任职选择、单聊／群聊文本与附件、历史补拉、送达／已读及设备管理，并提供该平台独立证据。使用共享核心或在模拟API运行不能替代平台验收。
 
-依赖回执规格 `2026-10-08-p5-01-receipts-design.md`。最小首批系统版本作为产品基线：Windows 10 x64、macOS 12 ARM64、Android API24、iOS13；如精确SDK或插件需要更高版本，先用构建证据提出基线修订，不静默抬升。Windows ARM64、macOS Intel、Linux不计本轮平台完成范围。
+依赖回执规格 `2026-10-08-p5-01-receipts-design.md`。最小首批系统版本作为产品基线：Windows 10 x64、macOS 12 ARM64、Android API24、iOS15（2026-10-15用户批准由13调整）；如精确SDK或插件需要更高版本，先用构建证据提出基线修订，不静默抬升。Windows ARM64、macOS Intel、Linux不计本轮平台完成范围。
 
 ## 2. 工具链与精确依赖
 

@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- 首批Windows10 x64、macOS12 ARM64、AndroidAPI24、iOS13；依赖不兼容须用证据修订，不静默提高门槛。
+- 首批Windows10 x64、macOS12 ARM64、AndroidAPI24、iOS15（2026-10-15用户批准由13调整）；依赖不兼容须用证据修订，不静默提高门槛。
 - 固定SDK版本/源码、pubspec.lock及插件精确版本；无caret/latest；不升级Go依赖。
 - sqlite3 3.7.0、cryptography 2.9.0、flutter_secure_storage 11.2.0、app_links 7.2.2、path_provider 2.1.6、url_launcher 6.3.3、file_selector 1.1.0、flutter_local_notifications 22.3.1。
 - JWT access token只在内存；refresh token、device凭据与数据库密钥在操作系统安全存储。

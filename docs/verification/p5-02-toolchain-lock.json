@@ -54,18 +54,23 @@
   "generated_runners": [
     "windows",
     "macos",
-    "android"
+    "android",
+    "ios"
   ],
   "ios": {
-    "approved_minimum": "13",
+    "approved_minimum": "15",
     "observed_fixed_engine_minimum": "15.0",
-    "baseline_decision": "awaiting_user"
+    "baseline_decision": "approved_by_user_2026-10-15",
+    "previous_approved_minimum": "13",
+    "native_build": "simulator_debug_passed_2026-10-15",
+    "simulator_runtime": "iOS27.0",
+    "physical_minimum_version_runtime_test": "not_executed"
   },
   "platform_acceptance": {
     "windows": "not_executed",
     "macos": "not_executed",
     "android": "not_executed",
-    "ios": "not_executed"
+    "ios": "partial_simulator_checks_only"
   },
   "customer_acceptance": "not_executed",
   "production_acceptance": "not_executed"

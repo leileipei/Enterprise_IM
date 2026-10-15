@@ -8,6 +8,7 @@ analyzer:
     - android/**
     - windows/**
     - macos/**
+    - ios/**
 linter:
   rules:
     - avoid_print

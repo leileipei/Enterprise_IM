@@ -4,10 +4,13 @@ import 'platform/login_callback.dart';
 import 'ui/login_page.dart';
 import 'platform/app_activity.dart';
 import 'platform/native_activity.dart';
+import 'platform/mobile_activity.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final nativeActivity = NativeActivityAdapter();
+  final nativeActivity = Platform.isIOS || Platform.isAndroid
+      ? mobileActivityAdapter()
+      : NativeActivityAdapter();
   AppLinksSource? mobile;
   bool ready = true;
   if (Platform.isAndroid || Platform.isIOS) {

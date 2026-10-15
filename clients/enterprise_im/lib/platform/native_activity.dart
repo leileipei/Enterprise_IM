@@ -3,12 +3,14 @@ import 'package:flutter/widgets.dart';
 import 'app_activity.dart';
 
 // Register before runApp so window focus events are not lost during login.
-// An unobserved focus is never treated as permission to report reading.
+// Desktop requires an observed view focus. Mobile resumed lifecycle already
+// means the scene is active; inactive/paused still withdraw all visibility.
 final class NativeActivityAdapter with WidgetsBindingObserver {
   final AppActivity activity = AppActivity();
   final int? viewId;
+  final bool focusFromLifecycle;
   bool _focused = false, _disposed = false;
-  NativeActivityAdapter({int? viewId})
+  NativeActivityAdapter({int? viewId, this.focusFromLifecycle = false})
     : viewId = viewId ?? PlatformDispatcher.instance.implicitView?.viewId {
     WidgetsBinding.instance.addObserver(this);
     _update(
@@ -19,7 +21,7 @@ final class NativeActivityAdapter with WidgetsBindingObserver {
     if (_disposed) return;
     activity.update(
       foreground: foreground,
-      focused: foreground && _focused,
+      focused: foreground && (focusFromLifecycle || _focused),
       activeConversation: activity.activeConversation,
       blocked: activity.blocked,
     );

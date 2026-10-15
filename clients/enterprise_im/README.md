@@ -1,6 +1,6 @@
 # Enterprise IM 原生客户端
 
-共享Flutter客户端开发中，已生成Windows、macOS、Android runner；iOS runner等待最低系统版本决定，尚未交付四平台验收安装包。
+共享Flutter客户端开发中，已生成Windows、macOS、Android、iOS runner。2026-10-15用户批准iOS最低15；已完成iOS27专用模拟器Debug构建／启动、前台活动边界及两进程Keychain专项，尚未交付四平台验收安装包。
 
 ## 当前功能与证据
 
@@ -20,4 +20,4 @@ Windows启动防护的宿主C++测试编译真实wWinMain，但Win32／Flutter S
 
 ## 当前未完成项
 
-Xcode许可已经解除。macOS原生编译检查通过，但仅为命令级禁用签名的编译产物，链接器隐式ad-hoc签名不代表开发证书签名；本机开发证书数量仍为0，真实签名／安装、OS通知／文件选择／窗口生命周期及后端验收尚未完成。Windows原生构建／运行及CI未执行，Windows10基线仍需实际验证。iOS13与固定引擎最低15冲突等待决定；Android／iOS真机和正式签名／公证／客户生产验收均未完成。
+Xcode许可已经解除。macOS原生编译检查通过，但仅为命令级禁用签名的编译产物，链接器隐式ad-hoc签名不代表开发证书签名；本机开发证书数量仍为0，真实签名／安装、OS通知／文件选择／窗口生命周期及后端验收尚未完成。Windows原生构建／运行及CI未执行，Windows10基线仍需实际验证。iOS基线已批准为15，当前只在iOS27模拟器运行，未验证iOS15实际设备兼容性。Android SDK／JDK未准备，iOS系统导出尚未实现；移动冷／热回调、真实挂起／恢复准入、通知／附件／回执完整链路、Android／iOS真机和正式签名／公证／客户生产验收仍未完成。移动复现条件见仓库docs/P5-02-移动端验证操作.md。
