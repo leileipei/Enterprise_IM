@@ -55,10 +55,11 @@ def process_fingerprint(pid):
 
 
 class Registry:
-    def __init__(self,path: Path,owner: str,commit: str):
+    def __init__(self,path: Path,owner: str,commit: str,recover_containers=True):
         if not re.fullmatch('[a-f0-9]{32}',owner) or not re.fullmatch('[a-f0-9]{40}',commit):
             raise ValueError('invalid_registry_identity')
         self.path=Path(path);self.owner=owner;self.commit=commit
+        self.recover_containers=recover_containers
         if self.path.is_symlink() or self.path.parent.is_symlink():raise ValueError('registry_link')
         self.path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
         if self.path.parent.stat().st_mode & 0o077:raise ValueError('registry_root_not_private')
@@ -182,7 +183,7 @@ class Registry:
                 start=datetime.datetime.strptime(f['start_time'],'%a %b %d %H:%M:%S %Y').replace(tzinfo=datetime.timezone.utc).timestamp()
                 if start<int(reserved['time']):continue
                 self.add(ResourceRef('process',owner,str(pid),f));known.add(str(pid))
-            for cid in self.docker(['ps','-a','--filter','label=im.integration.owner='+owner,'--format','{{.ID}}']):
+            for cid in (self.docker(['ps','-a','--filter','label=im.integration.owner='+owner,'--format','{{.ID}}']) if self.recover_containers else []):
                 actual=self._owned_container(cid,owner)
                 if actual and actual['Id'] not in known:
                     self.add(ResourceRef('container',owner,actual['Id'],{'container_id':actual['Id']}))
