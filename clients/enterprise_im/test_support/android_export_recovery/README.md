@@ -1,6 +1,6 @@
 # Android 清理票据恢复验证
 
-仅用于全新、自有的 API36 AOSP ARM64 模拟器和合成文件。普通产品包不包含本目录 instrumentation 或独立故障 DocumentsProvider。
+仅用于全新、自有的 API24 Google APIs／API36 AOSP ARM64 模拟器和合成文件。普通产品包不包含本目录 instrumentation 或独立故障 DocumentsProvider。
 
 ## 真实生命周期用例
 
@@ -41,6 +41,8 @@ adb -s <所属serial> shell am instrument -w -e owner <本轮32hex> com.enterpri
 
 必须观察 `RECOVERY_ALL_PASSED 15` 和 `TREE_ALLOCATION_ALL_PASSED 16`，而不是只看ADB退出0；失败会带failed及堆栈。检查实际Android AtomicFile、真实文件副作用，资源边界注入删除／授权失败；不宣称31个真实云盘故障。测试目录成功后自行删除。
 
-本节旧版生命周期入口从原生票据ACK后开始；当前目录模式的创建后、ACK前验证见 `../android_export_handoff/README.md`。断电／OS重启、真实最低API24、物理设备及云盘异步提交未覆盖。票据恢复在下一次导出前重试，不自动重放业务正文；无法确认目标不存在时保留票据并阻止新导出。
+本节旧版生命周期入口从原生票据ACK后开始；当前目录模式的创建后、ACK前验证见 `../android_export_handoff/README.md`。本次最低API24 ARM64模拟器结果见仓库docs/verification/p5-02-task8-android-api24-results.json；断电／OS重启、物理设备及云盘异步提交未覆盖。票据恢复在下一次导出前重试，不自动重放业务正文；无法确认目标不存在时保留票据并阻止新导出。
 
 目录契约使用真实 MatrixCursor、生产 ExportDirectory 解析和真实磁盘文件。16项覆盖：创建后返回丢失、延迟创建、delete返回false／抛错、既有目录权限、前缀碰撞、多匹配、COMMITTED保护、DELETED重试、部分取权失败、不支持创建目录、UTF8文件名、错误URI记录、loading空列表、loading单行部分列表和error结果。查询不完整时文件、票据和授权必须全部保留；不能通过空列表或单行推断不存在／唯一。旧版15项仍读写v1并检查未知版本、损坏及AtomicFile中断。
+
+API24注意：不要在测试中使用API26才引入的File.toPath／java.nio.file.Files；使用流IO。Android7 AtomicFile.delete只处理base和bak，本产品在已确认清理／提交并释放授权后还核验并删除保留的.new侧文件；未知或孤立元数据仍保留并阻断。旧版15项包含此真实AtomicFile中断回归。

@@ -16,7 +16,7 @@ python3 test_support/android_export_provider/build.py --sdk <SDK绝对路径> --
 
 # 同步关闭错误和可靠描述符终态
 
-../android_export_session 的 ExportSessionChecks 用真实文件加测试专用 OutputStream 包装器，在写入／close 处抛同步 IOException；同一组6项契约可在宿主JVM与Android instrumentation运行，覆盖描述符关闭、同时write／close异常、delete抛错或返回false、原目标重试及成功复制。
+../android_export_session 的 ExportSessionChecks 用真实文件加测试专用 OutputStream 包装器，在写入／close 处抛同步 IOException；同一组7项契约可在宿主JVM与Android instrumentation运行，覆盖描述符关闭、同时write／close异常、delete抛错或返回false、原目标重试及成功复制；新增25MiB完整内容、输入缓冲复用与完成前不打开目标检查，宿主可用java -Xmx48m复现连续缓冲OOM并验证修正。
 
 ExportSessionInstrumentation 还运行真实Android可靠管道：接收端读取并独立保存70000字节，然后 closeWithError；测试夹具确保该状态已报告才执行关闭。生产 ProviderOutput.checkError 必须捕获该状态，删除目标且关闭描述符。instrumentation APK链接目标应用的生产类，不能将 ExportSession／ProviderOutput 编入测试dex；build.py需传入其编译classpath、所属Debug keystore和私有输出目录。
 
@@ -24,7 +24,7 @@ ExportSessionInstrumentation 还运行真实Android可靠管道：接收端读�
 adb -s <自有序列号> shell am instrument -w -r -e owner <新32hex> com.enterpriseim.exportsessiontests/com.enterpriseim.client.tests.ExportSessionInstrumentation
 ```
 
-必须核对结果中的 SESSION_ALL_PASSED 7 和 INSTRUMENTATION_CODE: -1；adb命令退出0本身不代表测试通过。试验后卸载两个所属测试APK并清理所属模拟器／临时根，保留日志。此验证包括受控提供程序及同步故障，未证明任意云盘关闭后的异步提交、远端持久化、进程死亡后恢复或真机表现。
+必须核对结果中的 SESSION_ALL_PASSED 8 和 INSTRUMENTATION_CODE: -1；adb命令退出0本身不代表测试通过。试验后卸载两个所属测试APK并清理所属模拟器／临时根，保留日志。此验证包括受控提供程序及同步故障，未证明任意云盘关闭后的异步提交、远端持久化、进程死亡后恢复或真机表现。
 
 固定SDK的DDS启动若失败，可用同一测试的标准driver入口：
 
@@ -37,3 +37,9 @@ flutter drive --driver=test_driver/integration_test.dart --target=integration_te
 ## 创建返回前的销毁窗口
 
 夹具还支持 `../android_export_handoff/README.md`：含 `-handoff-` 的合成文件在真实文件及name映射落地后建立 `<UUID>.return-wait`，阻塞createDocument返回（上限120秒）。主机独立确认文件和门禁后才销毁所属Activity／进程，再仅删除已观察到的该门禁，使创建RPC返回；不注入URI、回调或原生票据。delete门禁仍保留，验证清理失败时禁止新选择器／正文，然后解除delete门禁由应用恢复删除。`files/directory-loading` 是显式查询故障夹具，返回带EXTRA_LOADING=true的空MatrixCursor；在成功验证前必须移除此测试开关。
+
+## 最低 API24 兼容验证
+
+夹具minSdk24，仍用固定SDK36／JDK21编译。API24使用真实普通ParcelFileDescriptor和关闭监听；API26+才加载独立嵌套类中的ProxyFileDescriptorCallback。名称含-write的代理EIO夹具在API24明确不支持，不能把API36的代理写入故障验收套用到API24。API24的同步write／close故障与可靠管道终态检查来自单独instrumentation，共7项文件／25MiB契约加1项可靠管道，生产类从目标APK加载。
+
+API24真实目录创建前返回阻塞、拒绝删除、加载中查询与RAM ACK后SIGKILL恢复均可使用；先选目录界面的确认文案是SELECT。最终结果及边界见仓库docs/verification/p5-02-task8-android-api24-results.json。

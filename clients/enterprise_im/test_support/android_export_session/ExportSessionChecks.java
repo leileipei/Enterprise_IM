@@ -2,12 +2,22 @@ package com.enterpriseim.client.tests;
 
 import com.enterpriseim.client.ExportSession;
 import java.io.*;
-import java.nio.file.Files;
 import java.util.Arrays;
 
 // Same contract checks run on the host and against the target app's class on Android.
 // Stream faults live only here; they wrap real files and throw synchronous IOException.
 public final class ExportSessionChecks {
+    private static byte[] read(File file) throws IOException {
+        try (FileInputStream in = new FileInputStream(file); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] block = new byte[8192]; int count;
+            while ((count = in.read(block)) != -1) out.write(block, 0, count);
+            return out.toByteArray();
+        }
+    }
+    private static void write(File file, byte[] bytes) throws IOException {
+        try (FileOutputStream out = new FileOutputStream(file)) { out.write(bytes); }
+    }
+
     private static void require(boolean value,String message){if(!value)throw new AssertionError(message);}
     private static final byte[] PAYLOAD=new byte[70000];
     static {for(int i=0;i<PAYLOAD.length;i++)PAYLOAD[i]=(byte)(i%251);}
@@ -25,7 +35,7 @@ public final class ExportSessionChecks {
     private static boolean delete(File target){return !target.exists()||target.delete();}
     public static int run(File root)throws Exception{
         require(root.mkdir(),"fresh owned check directory required");int passed=0;
-        File sentinel=new File(root,"sentinel");Files.write(sentinel.toPath(),new byte[]{31,41,59,26});
+        File sentinel=new File(root,"sentinel");write(sentinel,new byte[]{31,41,59,26});
         try{
             for(String mode:new String[]{"write","close","write-close"}){
                 File target=new File(root,mode);FaultOutput[] output={null};boolean w=mode.contains("write"),c=mode.contains("close");
@@ -42,9 +52,25 @@ public final class ExportSessionChecks {
                 rejected(()->session.write(new byte[]{99}));rejected(session::finish);
                 allowed[0]=true;session.abort();require(!target.exists(),"retry did not remove same owned target");session.abort();passed++;System.out.println("SESSION_PASS "+(falseResult?"delete-false":"delete-throws"));
             }
-            File target=new File(root,"complete");ExportSession ok=new ExportSession(()->new FileOutputStream(target),()->delete(target));feed(ok);ok.finish();require(Arrays.equals(Files.readAllBytes(target.toPath()),PAYLOAD),"successful copy changed bytes");passed++;System.out.println("SESSION_PASS success");
-            require(Arrays.equals(Files.readAllBytes(sentinel.toPath()),new byte[]{31,41,59,26}),"unrelated sentinel changed");return passed;
+            File target=new File(root,"complete");ExportSession ok=new ExportSession(()->new FileOutputStream(target),()->delete(target));feed(ok);ok.finish();require(Arrays.equals(read(target),PAYLOAD),"successful copy changed bytes");passed++;System.out.println("SESSION_PASS success");
+            File large=new File(root,"maximum");boolean[] opened={false};
+            ExportSession maximum=new ExportSession(()->{opened[0]=true;return new FileOutputStream(large);},()->delete(large));
+            byte[] block=new byte[32768];
+            for(int i=0;i<800;i++){Arrays.fill(block,(byte)(i%251));maximum.write(block);}
+            Arrays.fill(block,(byte)99);
+            require(!opened[0]&&!large.exists(),"source must remain private until finish");
+            rejected(()->maximum.write(new byte[]{1}));maximum.finish();
+            require(large.length()==26214400L,"maximum export size changed");
+            try(FileInputStream in=new FileInputStream(large)){
+                for(int i=0;i<800;i++){
+                    int offset=0;while(offset<block.length){int n=in.read(block,offset,block.length-offset);require(n>0,"maximum export truncated");offset+=n;}
+                    for(byte value:block)require(value==(byte)(i%251),"maximum export bytes or ownership changed");
+                }
+                require(in.read()==-1,"maximum export grew");
+            }
+            rejected(maximum::finish);rejected(()->maximum.write(new byte[]{1}));passed++;System.out.println("SESSION_PASS maximum-25MiB-owned-buffer");
+            require(Arrays.equals(read(sentinel),new byte[]{31,41,59,26}),"unrelated sentinel changed");return passed;
         }finally{for(File f:root.listFiles())require(f.delete(),"test-owned fixture cleanup");require(root.delete(),"owned root cleanup");}
     }
-    public static void main(String[] args)throws Exception{int n=run(new File(args[0]));require(n==6,"expected six contracts");System.out.println("SESSION_ALL_PASSED "+n);}
+    public static void main(String[] args)throws Exception{int n=run(new File(args[0]));require(n==7,"expected seven contracts");System.out.println("SESSION_ALL_PASSED "+n);}
 }

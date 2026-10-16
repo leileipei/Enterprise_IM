@@ -19,6 +19,16 @@ import java.util.*;
 // Test APK only. Uses Binder, DocumentsUI and real app-private files, with
 // deliberate OS-level write EIO and delete rejection; never packaged in the client.
 public final class FaultDocumentsProvider extends DocumentsProvider {
+    private static byte[] read(File file) throws IOException {
+        try (FileInputStream in = new FileInputStream(file); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] block = new byte[8192]; int count;
+            while ((count = in.read(block)) != -1) out.write(block, 0, count);
+            return out.toByteArray();
+        }
+    }
+    private static void write(File file, byte[] bytes) throws IOException {
+        try (FileOutputStream out = new FileOutputStream(file)) { out.write(bytes); }
+    }
     private File base;
     private Handler handler;
     @Override public boolean onCreate() {
@@ -36,7 +46,7 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
         return new File(base,id+".bin");
     }
     private String name(String id) throws FileNotFoundException {
-        try { return new String(java.nio.file.Files.readAllBytes(new File(base,id+".name").toPath()), java.nio.charset.StandardCharsets.UTF_8); }
+        try { return new String(read(new File(base,id+".name")), java.nio.charset.StandardCharsets.UTF_8); }
         catch(IOException e) { throw new FileNotFoundException("missing metadata"); }
     }
     @Override public boolean isChildDocument(String parent, String child) {
@@ -62,7 +72,7 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
     }
     @Override public String createDocument(String parent,String mime,String displayName) throws FileNotFoundException {
         if(!parent.equals("root") || !displayName.matches("(?:im-[a-f0-9-]{36}-)?im-[a-f0-9]{32}-(write|delete|write-delete|recovery|handoff-delete)\\.bin")) throw new FileNotFoundException("fixture name required");
-        String id=UUID.randomUUID().toString();try { if(!data(id).createNewFile())throw new IOException();java.nio.file.Files.write(new File(base,id+".name").toPath(),displayName.getBytes(java.nio.charset.StandardCharsets.UTF_8));if(displayName.endsWith("delete.bin"))new File(base,id+".blocked").createNewFile(); }catch(IOException e){throw new FileNotFoundException(e.toString());}
+        String id=UUID.randomUUID().toString();try { if(!data(id).createNewFile())throw new IOException();write(new File(base,id+".name"),displayName.getBytes(java.nio.charset.StandardCharsets.UTF_8));if(displayName.endsWith("delete.bin"))new File(base,id+".blocked").createNewFile(); }catch(IOException e){throw new FileNotFoundException(e.toString());}
         event("create id="+id+" name="+displayName);
         if(displayName.contains("-handoff-")) {
             File gate=new File(base,id+".return-wait");
@@ -79,19 +89,34 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
     }
     @Override public ParcelFileDescriptor openDocument(String id,String mode,CancellationSignal signal) throws FileNotFoundException {
         File f=data(id);String n=name(id);if(mode.equals("r"))return ParcelFileDescriptor.open(f,ParcelFileDescriptor.MODE_READ_ONLY);
-        event("open id="+id+" name="+n);final RandomAccessFile output;
+        if (android.os.Build.VERSION.SDK_INT < 26) {
+            if (n.contains("-write")) throw new FileNotFoundException("Proxy write fault fixture requires API26");
+            event("open id="+id+" name="+n);
+            try {
+                return ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_WRITE_ONLY | ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_TRUNCATE,
+                    handler, error -> event((error == null ? "release id=" : "release_error id=")+id));
+            } catch (IOException error) { throw new FileNotFoundException(error.toString()); }
+        }
+        return Api26.open(this, f, id, n);
+    }
+    @android.annotation.TargetApi(26)
+    private static final class Api26 {
+        static ParcelFileDescriptor open(FaultDocumentsProvider provider, File f, String id, String n) throws FileNotFoundException {
+        provider.event("open id="+id+" name="+n);final RandomAccessFile output;
         try { output=new RandomAccessFile(f,"rw");output.setLength(0); }catch(IOException e){throw new FileNotFoundException(e.toString());}
-        try { return getContext().getSystemService(StorageManager.class).openProxyFileDescriptor(ParcelFileDescriptor.MODE_WRITE_ONLY,new ProxyFileDescriptorCallback(){
+        try { return provider.getContext().getSystemService(StorageManager.class).openProxyFileDescriptor(ParcelFileDescriptor.MODE_WRITE_ONLY,new ProxyFileDescriptorCallback(){
             @Override public long onGetSize(){return f.length();}
             @Override public int onWrite(long offset,int size,byte[] bytes) throws ErrnoException {
-                if(n.contains("-write") && offset>=4096){event("write_error id="+id+" offset="+offset);throw new ErrnoException("fixture-write",OsConstants.EIO);}
+                if(n.contains("-write") && offset>=4096){provider.event("write_error id="+id+" offset="+offset);throw new ErrnoException("fixture-write",OsConstants.EIO);}
                 int count=n.contains("-write")?Math.min(size,(int)(4096-offset)):size;
-                try {output.seek(offset);output.write(bytes,0,count);event("write id="+id+" offset="+offset+" size="+count);return count;}catch(IOException e){throw new ErrnoException("fixture-file",OsConstants.EIO);}
+                try {output.seek(offset);output.write(bytes,0,count);provider.event("write id="+id+" offset="+offset+" size="+count);return count;}catch(IOException e){throw new ErrnoException("fixture-file",OsConstants.EIO);}
             }
-            @Override public void onFsync() throws ErrnoException {try{output.getFD().sync();event("fsync id="+id);}catch(IOException e){throw new ErrnoException("fixture-fsync",OsConstants.EIO);}}
-            @Override public void onRelease(){try{output.close();event("release id="+id);}catch(IOException e){event("release_error id="+id);}}
-        },handler); }catch(IOException e){try{output.close();}catch(IOException ignored){}throw new FileNotFoundException(e.toString());}
+            @Override public void onFsync() throws ErrnoException {try{output.getFD().sync();provider.event("fsync id="+id);}catch(IOException e){throw new ErrnoException("fixture-fsync",OsConstants.EIO);}}
+            @Override public void onRelease(){try{output.close();provider.event("release id="+id);}catch(IOException e){provider.event("release_error id="+id);}}
+        },provider.handler); }catch(IOException e){try{output.close();}catch(IOException ignored){}throw new FileNotFoundException(e.toString());}
+        }
     }
+
     @Override public void deleteDocument(String id) throws FileNotFoundException {
         File f=data(id);event("delete_attempt id="+id);
         if(new File(base,id+".blocked").exists()){event("delete_error id="+id);throw new FileNotFoundException("fixture persistent delete failure");}

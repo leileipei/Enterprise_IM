@@ -49,7 +49,7 @@
     "agp_version": "9.1.0",
     "kotlin_version": "2.4.0",
     "jdk_validation": "temurin_21.0.12.1+1_arm64_passed_2026-10-15",
-    "native_build": "release_apk_passed_2026-10-15",
+    "native_build": "release_apk_passed_2026-10-16",
     "minimum_api": 24,
     "compile_sdk": 36,
     "target_sdk": 36,
@@ -75,7 +75,18 @@
     "recovery_boundary": "before-next-export recovery after native ticket ACK; no pre-ACK picker handoff, OS reboot/power loss, arbitrary cloud commit or physical/minimum API acceptance",
     "directory_handoff_recovery": "pre_ACK_created_file_Activity_recreate_force_stop_SIGKILL_and_loading_listing_protection_passed_aosp36_2026-10-16",
     "directory_handoff_evidence": "p5-02-task8-android-directory-handoff-results.json",
-    "directory_handoff_boundary": "recover before next export; durable ALLOCATING before create RPC, zero/ambiguous/loading/error discovery stays blocked; no reboot/power loss, arbitrary cloud, actual minimum API or physical acceptance"
+    "directory_handoff_boundary": "recover before next export; durable ALLOCATING before create RPC, zero/ambiguous/loading/error discovery stays blocked; no reboot/power loss, arbitrary cloud, actual minimum API or physical acceptance",
+    "minimum_api_emulator_runtime_test": "passed_scoped_api24_arm64_2026-10-16",
+    "minimum_api_evidence": "p5-02-task8-android-api24-results.json",
+    "minimum_api_runtime": {
+      "android_version": "7.0",
+      "system_image": "system-images;android-24;google_apis;arm64-v8a",
+      "revision": 29,
+      "heapgrowthlimit": "48m",
+      "large_heap_enabled": false
+    },
+    "minimum_api_scope": "13 export cases, foreground lifecycle, retained Keystore two-process phases, 4 pre-ACK created-file/loading cases, 1 post-ACK RAM SIGKILL, native31+8; API36 same-source native31+8 regression",
+    "minimum_api_boundary": "ARM64 simulator only; no physical device, other ABI/OEM, reboot/power loss, arbitrary cloud asynchronous commit, customer signing, backend full chain or CI acceptance"
   },
   "generated_runners": [
     "windows",
@@ -95,7 +106,7 @@
   "platform_acceptance": {
     "windows": "not_executed",
     "macos": "not_executed",
-    "android": "partial_api36_arm64_emulator_checks_only",
+    "android": "partial_api24_and_api36_arm64_emulator_checks_only",
     "ios": "partial_simulator_checks_only"
   },
   "customer_acceptance": "not_executed",

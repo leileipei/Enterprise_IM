@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.enterpriseim.exporthandofftests">
-  <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
+  <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="36" />
   <application android:label="IM Export Session Checks" android:debuggable="true" android:allowBackup="false" />
   <instrumentation android:name="com.enterpriseim.client.tests.HandoffLifecycleInstrumentation" android:targetPackage="com.enterpriseim.client" android:functionalTest="true" />
 </manifest>

@@ -5,7 +5,7 @@ p=argparse.ArgumentParser();p.add_argument('--sdk',type=Path,required=True);p.ad
 def run(args):subprocess.run([str(n) for n in args],env=env,check=True)
 classes=a.out/'classes';classes.mkdir(exist_ok=True);dex=a.out/'dex';dex.mkdir(exist_ok=True)
 run([a.java_home/'bin/javac','-source','17','-target','17','-classpath',android,'-d',classes,source/'FaultDocumentsProvider.java'])
-run([tools/'d8','--lib',android,'--min-api','26','--output',dex,*sorted(classes.rglob('*.class'))])
+run([tools/'d8','--lib',android,'--min-api','24','--output',dex,*sorted(classes.rglob('*.class'))])
 unsigned=a.out/'unsigned.apk';run([tools/'aapt2','link','--manifest',source/'AndroidManifest.xml','-I',android,'-o',unsigned])
 with zipfile.ZipFile(unsigned,'a') as z:z.write(dex/'classes.dex','classes.dex')
 aligned=a.out/'aligned.apk';run([tools/'zipalign','-f','4',unsigned,aligned]);key=a.out/'fixture.jks'

@@ -6,11 +6,21 @@ import android.net.Uri;
 import com.enterpriseim.client.ExportJournal;
 import com.enterpriseim.client.ExportLedger;
 import java.io.*;
-import java.nio.file.Files;
 import java.util.*;
 
 /** Actual target-APK state machine and Android AtomicFile; fault only resource boundaries. */
 public final class RecoveryInstrumentation extends Instrumentation {
+    private static byte[] read(File file) throws IOException {
+        try (FileInputStream in = new FileInputStream(file); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] block = new byte[8192]; int count;
+            while ((count = in.read(block)) != -1) out.write(block, 0, count);
+            return out.toByteArray();
+        }
+    }
+    private static void write(File file, byte[] bytes) throws IOException {
+        try (FileOutputStream out = new FileOutputStream(file)) { out.write(bytes); }
+    }
+
     private String owner;
     private final List<String> passed = new ArrayList<>();
     @Override public void onCreate(Bundle args) { super.onCreate(args); owner=args.getString("owner", "");start(); }
@@ -21,7 +31,7 @@ public final class RecoveryInstrumentation extends Instrumentation {
     private static final String TICKET="40904c27-330c-4187-948f-b608d372d980";
     private static final class Filesystem implements ExportLedger.Resources {
         final File document; int held=0, deletes=0; boolean block=false, throwsDelete=false, releaseFailure=false, takeFailure=false, ambiguous=false;
-        Filesystem(File root) throws Exception { document=new File(root,"partial");Files.write(document.toPath(),new byte[]{5,8,13}); }
+        Filesystem(File root) throws Exception { document=new File(root,"partial");write(document,new byte[]{5,8,13}); }
         public int grants(Uri uri){check(uri.equals(URI));return held;}
         public void take(Uri uri,int flags)throws Exception{if(takeFailure)throw new IOException();held|=flags;}
         public void release(Uri uri,int flags)throws Exception{if(releaseFailure)throw new IOException();held&=~flags;}
@@ -36,7 +46,7 @@ public final class RecoveryInstrumentation extends Instrumentation {
             File dir=root(name);ExportJournal journal=new ExportJournal(dir);Filesystem resource=new Filesystem(dir);ExportLedger ledger=new ExportLedger(journal,resource);
             if(name.equals("corrupt")||name.equals("unknown-version")||name.equals("oversized")||name.equals("orphan-new")){
                 byte[] bytes=name.equals("oversized")?new byte[17000]:name.equals("unknown-version")?"{\"version\":99,\"ticket\":\"40904c27-330c-4187-948f-b608d372d980\",\"uri\":\"content://controlled.export/document/owned\",\"acquired\":3,\"phase\":\"PENDING\"}".getBytes():"partial-json".getBytes();
-                File metadata=new File(dir,"export-cleanup.json"+(name.equals("orphan-new")?".new":""));Files.write(metadata.toPath(),bytes);fails(ledger::recover);check(resource.document.exists()&&resource.deletes==0&&metadata.exists());
+                File metadata=new File(dir,"export-cleanup.json"+(name.equals("orphan-new")?".new":""));write(metadata,bytes);fails(ledger::recover);check(resource.document.exists()&&resource.deletes==0&&metadata.exists());
             }else{
                 if(name.equals("preexisting-grant"))resource.held=1;
                 if(name.equals("take-fails")){resource.takeFailure=true;resource.block=true;fails(()->ledger.prepare(TICKET,URI,67));check(journal.read().phase.equals("PREPARED"));fails(ledger::recover);check(resource.document.exists());resource.block=false;ledger.recover();check(!resource.document.exists());}
@@ -48,10 +58,10 @@ public final class RecoveryInstrumentation extends Instrumentation {
                     if(name.equals("release-fails")){resource.releaseFailure=true;fails(ledger::recover);check(!resource.document.exists()&&journal.read().phase.equals("DELETED"));resource.releaseFailure=false;}
                     if(name.equals("already-absent"))check(resource.document.delete());
                     if(name.equals("ambiguous-provider")){resource.throwsDelete=true;resource.ambiguous=true;fails(ledger::recover);check(resource.document.exists()&&journal.read()!=null);resource.throwsDelete=false;resource.ambiguous=false;}
-                    if(name.equals("atomic-interruption"))Files.write(new File(dir,"export-cleanup.json.new").toPath(),"incomplete replacement".getBytes());
+                    if(name.equals("atomic-interruption"))write(new File(dir,"export-cleanup.json.new"),"incomplete replacement".getBytes());
                     // A new object reloads the real on-disk metadata.
                     new ExportLedger(new ExportJournal(dir),resource).recover();check(journal.read()==null);
-                    if(name.equals("committed")||name.equals("deleted-receipt")){check(resource.document.exists()&&resource.deletes==0);check(Arrays.equals(Files.readAllBytes(resource.document.toPath()),new byte[]{5,8,13}));}
+                    if(name.equals("committed")||name.equals("deleted-receipt")){check(resource.document.exists()&&resource.deletes==0);check(Arrays.equals(read(resource.document),new byte[]{5,8,13}));}
                     else check(!resource.document.exists());
                     check(resource.held==(name.equals("preexisting-grant")?1:0));
                 }

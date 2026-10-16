@@ -89,6 +89,10 @@ public final class ExportJournal {
     }
     public void clear() throws IOException {
         file.delete(); File base = file.getBaseFile();
+        // Older AtomicFile implementations delete only the base and .bak.
+        // Clear our reserved .new sidecar only after a confirmed cleanup/commit.
+        File pending = new File(base + ".new");
+        if (pending.exists()) pending.delete();
         if (base.exists() || new File(base + ".new").exists() || new File(base + ".bak").exists())
             throw new IOException("Export metadata not removed");
     }

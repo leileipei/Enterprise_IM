@@ -1,6 +1,6 @@
 # Android 目录创建后、票据确认前的恢复验证
 
-仅用于全新、自有API36 AOSP ARM64模拟器和合成文件。用户已批准先选目录、由应用创建文件。产品使用真实ACTION_OPEN_DOCUMENT_TREE；实际文件为`im-<操作UUID>-<请求名>`，UTF8叶名最多255字节，保留常见扩展名，不重命名、不覆盖原文件。
+仅用于全新、自有API24 Google APIs／API36 AOSP ARM64模拟器和合成文件。用户已批准先选目录、由应用创建文件。产品使用真实ACTION_OPEN_DOCUMENT_TREE；实际文件为`im-<操作UUID>-<请求名>`，UTF8叶名最多255字节，保留常见扩展名，不重命名、不覆盖原文件。
 
 ## 顺序与保护
 
@@ -30,4 +30,10 @@ flutter build apk --debug --no-pub --target=integration_test/android_export_hand
 
 本地系统目录选择应进入内部存储Download下的专用子目录；Android限制不能将Download根直接作为树授权目录。取消时按观察到的实际DocumentsUI逐级Back，直到应用收到取消。界面驱动在Allow后停止访问应用可访问性树，避免框架SemanticsHandle竞态；产品断言及原生错误检查保持开启。
 
-本轮结果见仓库`docs/verification/p5-02-task8-android-directory-handoff-results.json`。仅证明受控API36 ARM64模拟器及本地提供程序；未验证任意云盘、提供程序改写所有权前缀或长期不提供完整查询、断电／OS重启、实际API24、真机、发行签名、CI或后端全链路。未确定归属时保留票据并阻断新导出，不自动清空元数据。
+本轮结果见仓库`docs/verification/p5-02-task8-android-directory-handoff-results.json`。仅证明受控API36 ARM64模拟器及本地提供程序；未验证任意云盘、提供程序改写所有权前缀或长期不提供完整查询、断电／OS重启、真机、发行签名、CI或后端全链路。未确定归属时保留票据并阻断新导出，不自动清空元数据。
+
+## API24 实测补充
+
+Android7.0 Google APIs ARM64 revision29：真实创建后、ACK前的Activity.recreate／force-stop／SIGKILL及loading保护均已运行；ACK后仅RAM接收40000字节再SIGKILL也独立验证。API24确认按钮为SELECT；目录项应按实际焦点用DPAD／ENTER进入，不能把新系统的Use this folder／Allow或固定坐标当作兼容性断言。
+
+API24默认应用heapgrowthlimit为48MiB，已复现连续缓冲扩容OOM并改为32KiB块，纯RAM仍限25MiB，finish／abort擦除并解除引用；未开启largeHeap或改堆大小。25MiB超限清理及完整25MiB导出已独立验内容。API24与API36同源原生契约均为31项状态／目录加8项资源契约。最低版本结果另见docs/verification/p5-02-task8-android-api24-results.json，不替代真机／云盘／断电验收。

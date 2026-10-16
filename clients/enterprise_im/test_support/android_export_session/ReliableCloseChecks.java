@@ -5,13 +5,23 @@ import android.os.ParcelFileDescriptor;
 import com.enterpriseim.client.ExportSession;
 import com.enterpriseim.client.ProviderOutput;
 import java.io.*;
-import java.nio.file.Files;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 // Real Android reliable descriptor status. The fixture waits for the reader's
 // explicit terminal error before close; it does not claim to await arbitrary cloud commits.
 public final class ReliableCloseChecks {
+    private static byte[] read(File file) throws IOException {
+        try (FileInputStream in = new FileInputStream(file); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] block = new byte[8192]; int count;
+            while ((count = in.read(block)) != -1) out.write(block, 0, count);
+            return out.toByteArray();
+        }
+    }
+    private static void write(File file, byte[] bytes) throws IOException {
+        try (FileOutputStream out = new FileOutputStream(file)) { out.write(bytes); }
+    }
+
     public static void run(File target)throws Exception {
         ParcelFileDescriptor[] pipe=ParcelFileDescriptor.createReliablePipe();
         AssetFileDescriptor asset=new AssetFileDescriptor(pipe[1],0,AssetFileDescriptor.UNKNOWN_LENGTH);
@@ -36,7 +46,7 @@ public final class ReliableCloseChecks {
             try{session.finish();}catch(Exception e){rejected=e;}
             reader.join(10000);if(reader.isAlive()||peerFailure[0]!=null)throw new AssertionError("provider fixture failed",peerFailure[0]);
             if(target.length()!=70000)throw new AssertionError("real peer bytes missing");
-            byte[] bytes=Files.readAllBytes(target.toPath());for(int i=0;i<bytes.length;i++)if(bytes[i]!=(byte)(i%251))throw new AssertionError("peer bytes changed");
+            byte[] bytes=read(target);for(int i=0;i<bytes.length;i++)if(bytes[i]!=(byte)(i%251))throw new AssertionError("peer bytes changed");
             if(rejected==null||!rejected.toString().contains("controlled-provider-terminal-error"))throw new AssertionError("reported provider close error falsely accepted",rejected);
             if(pipe[1].getFileDescriptor().valid())throw new AssertionError("writer descriptor leaked");
             session.abort();if(target.exists())throw new AssertionError("reported provider error residual");System.out.println("SESSION_PASS reliable-provider-terminal-error");
