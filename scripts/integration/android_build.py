@@ -36,8 +36,15 @@ def jdk_release_metadata(text):
 
 
 def preflight(repo, args):
-    if args.verify_simulator or args.simulator_runtime or args.simulator_device_type:
-        raise ValueError('android_simulator_verification_not_prepared')
+    simulator = None
+    if args.verify_simulator:
+        from .android_simulator import simulator_preflight
+        if not args.simulator_runtime or not args.simulator_device_type:
+            raise ValueError('explicit_android_simulator_runtime_and_type_required')
+        if args.android_sdk is not None:
+            simulator = simulator_preflight(args.android_sdk, args.simulator_runtime, args.simulator_device_type)
+    elif args.simulator_runtime or args.simulator_device_type:
+        raise ValueError('android_simulator_verification_flag_required')
     paths = (args.android_sdk, args.java_home, args.gradle_cache)
     if any(p is None for p in paths):
         raise ValueError('prepared_android_paths_required')
@@ -70,7 +77,9 @@ def preflight(repo, args):
     java = subprocess.run([str(args.java_home / 'bin/java'), '--version'], env={'PATH': '/usr/bin:/bin'}, capture_output=True, text=True, timeout=30)
     if java.returncode or '21.0.12' not in java.stdout:
         raise ValueError('prepared_java_cannot_run')
-    return {'status': 'ready', 'target': 'android', 'sdk_commit': head, 'fixtures_created': False, 'tool_sha256': {str(p): digest(p) for p in required}, 'java_actual_exit': java.returncode, 'java_version': java.stdout, 'jdk': jdk, 'tools_installed_or_licenses_accepted': False}
+    if simulator:
+        required.extend(Path(p) for p in simulator['tool_sha256'])
+    return {'simulator': simulator, 'status': 'ready', 'target': 'android', 'sdk_commit': head, 'fixtures_created': False, 'tool_sha256': {str(p): digest(p) for p in required}, 'java_actual_exit': java.returncode, 'java_version': java.stdout, 'jdk': jdk, 'tools_installed_or_licenses_accepted': False}
 
 
 def sdk_source_is_fixed(sdk, commit):
@@ -127,9 +136,9 @@ def run(repo, args, out, report, source_inventory):
     root.chmod(0o700)
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner; client = private / 'client'
-    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')
-    result = {'status': 'failed', 'target': 'android', 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Android Release APK build and artifact gates only; no device, emulator, backend or CI execution', 'root': str(root), 'implementation_sha256': {p: digest(repo / p) for p in implementation}, 'signing': 'fresh private Android Debug test certificate; not distribution signing'}
-    code = 1
+    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/android_simulator.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')
+    result = {'status': 'failed', 'target': 'android', 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch only; no backend, physical-device or CI execution', 'root': str(root), 'implementation_sha256': {p: digest(repo / p) for p in implementation}, 'signing': 'fresh private Android Debug test certificate; not distribution signing'}
+    code = 1; simulator = None
     def save():
         (out / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     try:
@@ -156,13 +165,23 @@ def run(repo, args, out, report, source_inventory):
         (out / 'apk-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
         destination = out / 'android-release-test.apk'; shutil.copyfile(apk, destination); destination.chmod(0o600)
         result['apk'].update(path=destination.name, sha256=digest(destination), size=destination.stat().st_size, manifest_sha256=digest(out / 'apk-manifest.json'), test_fixture_classes_absent=True)
+        if args.verify_simulator:
+            from .android_simulator import AndroidSimulator
+            step('shared', flutter + ['test', '--no-pub'])
+            step('analysis', flutter + ['analyze', '--fatal-infos', '--no-pub'])
+            result['simulator'] = {}
+            simulator = AndroidSimulator(args, private, out, owner, registry, env, report['simulator'], result['simulator'], save)
+            simulator.start(); simulator.verify(flutter, step, client); simulator.release(destination, result['apk']['sha256'])
+            if digest(client / 'pubspec.lock') != result['source_sha256']['clients/enterprise_im/pubspec.lock']:
+                raise ValueError('pubspec_lock_changed_during_native_verification')
         result['status'] = 'passed'; code = 0
     except BaseException as exc:
         result['error'] = type(exc).__name__ + ':' + str(exc)
         print(result['error'], flush=True)
     finally:
+        failures = simulator.close() if simulator else []
         cleanup = registry.cleanup(time.monotonic() + 45)
-        failures = list(cleanup.failures)
+        failures += list(cleanup.failures)
         (out / 'registry.jsonl').write_bytes(registry.path.read_bytes())
         audits = {'sdk_source': lambda: sdk_source_is_fixed(args.flutter_sdk, report['sdk_commit']),
                   'source': lambda: result.get('source_sha256') == source_inventory(),

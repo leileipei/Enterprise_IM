@@ -25,7 +25,7 @@ class AndroidBuildCliTests(unittest.TestCase):
             root = Path(tmp); out = root / 'evidence'
             p = subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / 'build-client-mobile.py'), '--target', 'android', '--flutter-sdk', str(root / 'flutter'), '--pub-cache', str(root / 'pub'), '--output', str(out), '--verify-simulator'], capture_output=True, text=True)
             self.assertEqual(p.returncode, 2)
-            self.assertEqual(json.loads((out / 'preflight.json').read_text())['blocked_reason'], 'android_simulator_verification_not_prepared')
+            self.assertEqual(json.loads((out / 'preflight.json').read_text())['blocked_reason'], 'explicit_android_simulator_runtime_and_type_required')
 
     def test_reused_output_cannot_overwrite_other_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -89,7 +89,7 @@ class AndroidArtifactGateTests(unittest.TestCase):
         from unittest.mock import patch
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            args = SimpleNamespace(java_home=root / 'jdk', android_sdk=root / 'sdk', gradle_cache=root / 'gradle', pub_cache=root / 'pub')
+            args = SimpleNamespace(verify_simulator=False, java_home=root / 'jdk', android_sdk=root / 'sdk', gradle_cache=root / 'gradle', pub_cache=root / 'pub')
             with patch.dict(os.environ, {'JAVA_TOOL_OPTIONS': '-Dforeign=true', '_JAVA_OPTIONS': '-Dforeign=true', 'ADB_SERVER_SOCKET': 'tcp:foreign:5037', 'GRADLE_OPTS': '-Dforeign=true'}):
                 env = android_environment(root / 'private', args)
             self.assertEqual(env['HOME'], str(root / 'private/home'))
@@ -140,7 +140,7 @@ class AndroidFailedBuildCleanupTests(unittest.TestCase):
         inputs = {source: hashlib.sha256((repo / source).read_bytes()).hexdigest()}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); out = root / 'evidence'; out.mkdir(); marker = root / 'tool'; marker.write_text('unchanged')
-            args = SimpleNamespace(java_home=root / 'jdk', android_sdk=root / 'sdk', gradle_cache=root / 'gradle', pub_cache=root / 'pub', flutter_sdk=root / 'flutter')
+            args = SimpleNamespace(verify_simulator=False, java_home=root / 'jdk', android_sdk=root / 'sdk', gradle_cache=root / 'gradle', pub_cache=root / 'pub', flutter_sdk=root / 'flutter')
             def fail(name, kind, commit, argv, cwd, env, log, deadline, registry):
                 return run_command(name, kind, commit, ['/bin/sh', '-c', 'exit 7'], cwd, env, log, deadline, registry)
             with patch('integration.commands.run_command', side_effect=fail), patch('integration.android_build.sdk_source_is_fixed', return_value=True):
@@ -168,7 +168,7 @@ class AndroidFailedBuildCleanupTests(unittest.TestCase):
         inputs = {source: hashlib.sha256((repo / source).read_bytes()).hexdigest()}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); out = root / 'evidence'; out.mkdir(); marker = root / 'tool'; marker.write_text('unchanged')
-            args = SimpleNamespace(java_home=root / 'jdk', android_sdk=root / 'sdk', gradle_cache=root / 'gradle', pub_cache=root / 'pub', flutter_sdk=root / 'flutter')
+            args = SimpleNamespace(verify_simulator=False, java_home=root / 'jdk', android_sdk=root / 'sdk', gradle_cache=root / 'gradle', pub_cache=root / 'pub', flutter_sdk=root / 'flutter')
             def fail(name, kind, commit, argv, cwd, env, log, deadline, registry):
                 return run_command(name, kind, commit, ['/bin/sh', '-c', 'exit 7'], cwd, env, log, deadline, registry)
             try:
