@@ -136,7 +136,7 @@ def run(repo, args, out, report, source_inventory):
     root.chmod(0o700)
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner; client = private / 'client'
-    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/android_simulator.py', 'scripts/integration/android_mobile_boundary.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')
+    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/android_simulator.py', 'scripts/integration/android_mobile_boundary.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')
     result = {'status': 'failed', 'target': 'android', 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch; opt-in actual cold/warm OAuth callback and HOME/MAIN boundary; no backend, physical-device or CI execution', 'root': str(root), 'implementation_sha256': {p: digest(repo / p) for p in implementation}, 'signing': 'fresh private Android Debug test certificate; not distribution signing'}
     code = 1; simulator = None
     def save():
@@ -178,9 +178,14 @@ def run(repo, args, out, report, source_inventory):
             if getattr(args, 'verify_mobile_resume', False):
                 from .mobile_resume import run_android
                 run_android(simulator, flutter, step, client)
+            if getattr(args, 'verify_real_backend', False):
+                from .mobile_backend import run_android as backend_run_android
+                backend_run_android(repo,args,simulator,flutter,step,client)
             simulator.release(destination, result['apk']['sha256'])
             if digest(client / 'pubspec.lock') != result['source_sha256']['clients/enterprise_im/pubspec.lock']:
                 raise ValueError('pubspec_lock_changed_during_native_verification')
+        if getattr(args, 'verify_real_backend', False):
+            result['scope'] += '; actual mobile send/delivered/read/revoked-device against owned production backend; synthetic refresh IdP, not interactive SSO'
         result['status'] = 'passed'; code = 0
     except BaseException as exc:
         result['error'] = type(exc).__name__ + ':' + str(exc)

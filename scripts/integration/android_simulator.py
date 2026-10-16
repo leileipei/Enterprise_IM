@@ -113,7 +113,19 @@ class AndroidSimulator:
     def _launch(self, name, argv, input_data=None):
         stream = (self.out / ('android-' + name + '.log')).open('wb')
         p = subprocess.Popen(argv, cwd=self.private, env=self.env, stdin=subprocess.PIPE if input_data is not None else subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
-        fp = process_fingerprint(p.pid)
+        end = time.monotonic() + 2
+        while True:
+            try:
+                fp = process_fingerprint(p.pid)
+                if fp is not None or p.poll() is not None:break
+                reason = 'identity_temporarily_absent'
+            except ValueError as exc:
+                if str(exc) != 'unknown_process_executable':raise
+                reason = str(exc)
+            self.state.setdefault('startup_identity_probes', []).append({'name':name,'pid':p.pid,'reason':reason})
+            self.save()
+            if time.monotonic() >= end:raise RuntimeError('android_startup_identity_unproven')
+            time.sleep(.02)
         entry = {'name':name, 'process':p, 'fingerprint':fp, 'stream':stream}; self.services.append(entry)
         if fp:self.registry.add(ResourceRef('process', self.registry.owner, str(p.pid), fp))
         self.state.setdefault('launched', []).append({'name':name,'pid':p.pid,'fingerprint':fp}); self.save()

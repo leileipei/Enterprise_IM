@@ -49,6 +49,15 @@ func finishMessageSend(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity
 	if err := auditMessageSend(ctx, tx, id, conversationID, outcome, reason, at); err != nil {
 		return errors.Join(ErrAuditUnavailable, err)
 	}
+	if outcome == "allow" {
+		guard, err := lockMessageDevice(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if err := guard.check(); err != nil {
+			return err
+		}
+	}
 	return tx.Commit(ctx)
 }
 
@@ -129,6 +138,10 @@ func (s Service) sendDirectMessageOnce(ctx context.Context, id access.TrustedIde
 	}
 	defer tx.Rollback(ctx)
 	if _, err := tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); err != nil {
+		return MessageACK{}, err
+	}
+	ctx, err = s.admitMessageDevice(ctx, tx, id)
+	if err != nil {
 		return MessageACK{}, err
 	}
 	at := s.now()

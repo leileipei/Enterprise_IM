@@ -37,7 +37,17 @@ func (s Service) finishAuthorizedMessageSend(ctx context.Context, tx pgx.Tx, id 
 	if err := auditMessageSend(ctx, tx, id, conversationID, "allow", reason, at); err != nil {
 		return errors.Join(ErrAuditUnavailable, err)
 	}
+	guard, err := lockMessageDevice(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	// The final device row lock may wait across a membership or policy boundary.
+	// Recheck business authorization after that wait, preserving lock order.
 	if err := recheck(s.now()); err != nil {
+		return err
+	}
+	// Recheck may perform database I/O; the lease must still be current now.
+	if err := guard.check(); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

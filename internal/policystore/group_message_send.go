@@ -271,6 +271,10 @@ func (s Service) sendGroupMessageOnce(ctx context.Context, id access.TrustedIden
 	if _, err := tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"); err != nil {
 		return MessageACK{}, err
 	}
+	ctx, err = s.admitMessageDevice(ctx, tx, id)
+	if err != nil {
+		return MessageACK{}, err
+	}
 	at := s.now()
 	actor, found, err := loadMembership(ctx, tx, id.TenantID, id.ActingMembershipID, id.UserID)
 	if err != nil {

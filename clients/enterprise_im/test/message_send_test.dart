@@ -176,6 +176,8 @@ void main() {
       final body = utf8.decode(r.body!);
       bodies.add(body);
       expect(r.headers['X-Acting-Membership-ID'], fixture.role);
+      expect(r.headers['X-IM-Device-ID'], fixture.grant()['device_id']);
+      expect(r.headers['X-IM-Device-Token'], fixture.grant()['device_token']);
       if (timeout) throw const ApiFailure('timeout');
       return oidc.response(ack());
     }

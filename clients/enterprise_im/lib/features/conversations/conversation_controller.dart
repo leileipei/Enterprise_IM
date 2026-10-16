@@ -160,6 +160,7 @@ final class ConversationController {
         '/api/v1/${conversation.kind == 'group' ? 'groups' : 'conversations'}/${context.conversationId}/messages',
         bearer: context.session.accessToken,
         actingMembershipId: context.actingMembershipId,
+        device: context.device,
         body: pending.body,
         cancellation: cancel,
       );

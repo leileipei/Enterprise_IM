@@ -181,14 +181,20 @@ func deviceDigest(credential DeviceCredential) ([]byte, error) {
 	return digest[:], nil
 }
 func lockDeviceCredentialTx(ctx context.Context, tx pgx.Tx, owner DeviceOwner, credential DeviceCredential, at time.Time, write bool) (time.Time, error) {
-	digest, err := deviceDigest(credential)
-	if err != nil {
-		return time.Time{}, err
-	}
 	lock := "FOR SHARE"
 	if write {
 		lock = "FOR UPDATE"
 	}
+	return deviceCredentialTx(ctx, tx, owner, credential, at, lock)
+}
+
+// lock is an internal SQL suffix; callers supply only fixed constants.
+func deviceCredentialTx(ctx context.Context, tx pgx.Tx, owner DeviceOwner, credential DeviceCredential, at time.Time, lock string) (time.Time, error) {
+	digest, err := deviceDigest(credential)
+	if err != nil {
+		return time.Time{}, err
+	}
+
 	var stored []byte
 	var expiry time.Time
 	var revoked *time.Time

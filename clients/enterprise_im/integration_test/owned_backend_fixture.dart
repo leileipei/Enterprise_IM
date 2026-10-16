@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:enterprise_im/platform/native_storage.dart';
 import 'package:enterprise_im/core/protocol/models.dart';
 
 Future<Map<String, dynamic>> readOwnedBackendFixture({
@@ -38,7 +38,7 @@ SecurityContext ownedBackendTrust(
 
 Future<Directory?> createOwnedNativeStorage({required bool host}) async {
   if (host) return null;
-  final support = await getApplicationSupportDirectory();
+  final support = await nativeStorageRoot();
   await support.create(recursive: true);
   final root = await support.createTemp('im-native-backend-');
   // Opaque recovery handle, no credentials or user filesystem path.

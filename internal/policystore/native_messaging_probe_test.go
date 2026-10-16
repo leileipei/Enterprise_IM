@@ -271,6 +271,10 @@ func TestNativeMessagingUIAgainstProductionAPI(t *testing.T) {
 }
 
 func nativeMessagingRefreshIssuer(t *testing.T, conn *pgx.Conn) ([]string, map[string]string) {
+	return nativeMessagingRefreshIssuerPlatform(t, conn, "macos")
+}
+
+func nativeMessagingRefreshIssuerPlatform(t *testing.T, conn *pgx.Conn, platform string) ([]string, map[string]string) {
 	t.Helper()
 	key, e := rsa.GenerateKey(rand.Reader, 2048)
 	if e != nil {
@@ -299,12 +303,12 @@ func nativeMessagingRefreshIssuer(t *testing.T, conn *pgx.Conn) ([]string, map[s
 				name = who
 			}
 		}
-		if r.Form.Get("grant_type") != "refresh_token" || r.Form.Get("client_id") != "im-macos" || name == "" || r.Form.Get("client_secret") != "" {
+		if r.Form.Get("grant_type") != "refresh_token" || r.Form.Get("client_id") != "im-"+platform || name == "" || r.Form.Get("client_secret") != "" {
 			w.WriteHeader(400)
 			io.WriteString(w, `{"error":"invalid_grant"}`)
 			return
 		}
-		claims := jwt.MapClaims{"iss": issuer, "sub": "native-messaging-" + name, "aud": "enterprise-im-api", "exp": time.Now().Add(time.Hour).Unix(), "iat": time.Now().Add(-time.Minute).Unix(), "jti": freshFile().ID, "client_id": "im-macos"}
+		claims := jwt.MapClaims{"iss": issuer, "sub": "native-messaging-" + name, "aud": "enterprise-im-api", "exp": time.Now().Add(time.Hour).Unix(), "iat": time.Now().Add(-time.Minute).Unix(), "jti": freshFile().ID, "client_id": "im-" + platform}
 		token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 		token.Header["kid"] = "test-key"
 		token.Header["typ"] = "at+jwt"

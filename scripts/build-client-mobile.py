@@ -46,6 +46,8 @@ def main():
     parser.add_argument('--verify-simulator', action='store_true')
     parser.add_argument('--verify-mobile-boundaries', action='store_true')
     parser.add_argument('--verify-mobile-resume', action='store_true')
+    parser.add_argument('--verify-real-backend', action='store_true')
+    parser.add_argument('--go', type=Path)
     parser.add_argument('--simulator-runtime')
     parser.add_argument('--simulator-device-type')
     args = parser.parse_args()
@@ -54,6 +56,11 @@ def main():
     args.output.mkdir(mode=0o700, parents=False, exist_ok=False)
     out = args.output
     try:
+        if args.verify_real_backend and not args.verify_simulator:
+            raise ValueError('real_backend_requires_simulator')
+        if args.verify_real_backend:
+            from integration.mobile_backend import preflight as backend_preflight
+            backend_tools = backend_preflight(args.go)
         if args.verify_mobile_resume and not args.verify_simulator:
             raise ValueError('mobile_resume_requires_simulator')
         if args.verify_mobile_boundaries and (args.target != 'android' or not args.verify_simulator):
@@ -65,6 +72,8 @@ def main():
             report = preflight(repo, args)
     except Exception as exc:
         report = {'status': 'not_run', 'target': args.target, 'fixtures_created': False, 'blocked_reason': str(exc) if isinstance(exc, ValueError) else type(exc).__name__}
+    if report['status'] == 'ready' and args.verify_real_backend:
+        report['backend_tools'] = backend_tools
     (out / 'preflight.json').write_text(json.dumps(report, indent=2) + '\n')
     if report['status'] != 'ready':
         print(json.dumps(report)); return 2
@@ -78,7 +87,7 @@ def main():
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner
     client = private / 'client'
-    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')}}
+    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')}}
     env = None; simulator = None; runtime = args.simulator_runtime
     simulator_name = 'IM-Mobile-' + owner
     simulator_reserved = False
@@ -150,6 +159,9 @@ def main():
         if args.verify_mobile_resume:
             from integration.mobile_resume import run_ios
             run_ios(simulator, private, out, env, step, result, save)
+        if args.verify_real_backend:
+            from integration.mobile_backend import run_ios as backend_run_ios
+            backend_run_ios(repo,args,simulator,private,out,env,step,result,save,registry)
         step('build', ['build', 'ios', '--simulator', '--debug', '--no-pub'])
         app = client / 'build/ios/iphonesimulator/Runner.app'
         info = plistlib.loads((app / 'Info.plist').read_bytes())
@@ -169,6 +181,8 @@ def main():
         if archived.returncode:
             raise GateFailure('archive_failed')
         result['archive_sha256'] = digest(archive)
+        if getattr(args, 'verify_real_backend', False):
+            result['scope'] += '; actual mobile send/delivered/read/revoked-device against owned production backend; synthetic refresh IdP, not interactive SSO'
         result['status'] = 'passed'; code = 0
     except BaseException as exc:
         result['error'] = type(exc).__name__ + ':' + str(exc)

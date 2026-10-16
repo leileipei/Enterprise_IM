@@ -13,6 +13,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
@@ -145,7 +146,7 @@ func TestNativeSharedCoreTwoDevicesAgainstProductionAPI(t *testing.T) {
 	t.Log("real Go/Dart gate: TLS and WS verified; 2 device deliveries; exact visibility reads; 1 recipient per message; 1 unread; database facts confirmed")
 }
 
-func nativeProbeTLS(t *testing.T, handler *httputil.ReverseProxy) (*httptest.Server, []byte) {
+func nativeProbeTLS(t *testing.T, handler http.Handler) (*httptest.Server, []byte) {
 	t.Helper()
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

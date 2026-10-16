@@ -335,6 +335,13 @@ func sendGroupTextMessage(w http.ResponseWriter, r *http.Request, identity acces
 
 func serveTextMessage(w http.ResponseWriter, r *http.Request, identity access.TrustedIdentity,
 	conversationID string, send func(context.Context, access.TrustedIdentity, string, string, string) (policystore.MessageACK, error), sendFile func(context.Context, access.TrustedIdentity, string, policystore.MessageSendRequest) (policystore.MessageACK, error)) {
+	if len(r.Header.Values("X-IM-Device-ID")) != 0 || len(r.Header.Values("X-IM-Device-Token")) != 0 {
+		device, ok := receiptDeviceHeader(w, r)
+		if !ok {
+			return
+		}
+		r = r.WithContext(policystore.WithMessageDeviceCredential(r.Context(), device))
+	}
 	if r.URL.RawQuery != "" || r.URL.ForceQuery || r.Body == nil {
 		rejectAdmin(w, r, http.StatusBadRequest, "invalid_request")
 		return
@@ -382,6 +389,8 @@ func serveTextMessage(w http.ResponseWriter, r *http.Request, identity access.Tr
 
 func writeMessageError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, policystore.ErrInvalidDevice):
+		writeDeviceAuthError(w, http.StatusUnauthorized, "invalid_device")
 	case errors.Is(err, policystore.ErrInvalidMessageRequest),
 		errors.Is(err, policystore.ErrInvalidTextMessage),
 		errors.Is(err, policystore.ErrInvalidClientMessageID):
