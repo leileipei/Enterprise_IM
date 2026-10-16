@@ -66,7 +66,10 @@
     "system_document_picker": "cancel_full_export_duplicate_and_prewrite_auth_failure_passed_aosp36_local_provider",
     "picker_evidence": "p5-02-task8-android-picker-results.json",
     "partial_export_cleanup": "source_error_cancel_and_size_rejection_after_native_ack_passed_aosp36_local_provider_2026-10-16",
-    "partial_export_evidence": "p5-02-task8-android-partial-export-results.json"
+    "partial_export_evidence": "p5-02-task8-android-partial-export-results.json",
+    "final_copy_fault_cleanup": "controlled_provider_write_delete_faults_and_native_sync_close_reliable_terminal_error_passed_api36_2026-10-16",
+    "provider_fault_evidence": "p5-02-task8-android-provider-fault-results.json",
+    "provider_fault_boundary": "available synchronous/terminal errors only; no generic cloud post-close commit or persisted cross-process cleanup acceptance"
   },
   "generated_runners": [
     "windows",

@@ -7,17 +7,13 @@ import android.provider.DocumentsContract
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import java.io.ByteArrayOutputStream
 import java.util.UUID
 
 class MainActivity : FlutterActivity() {
     private val exportRequest = 6102
     private var choosing: MethodChannel.Result? = null
     private var active: Export? = null
-    private class ExportBuffer : ByteArrayOutputStream(32768) {
-        fun discard() { buf.fill(0); reset() }
-    }
-    private data class Export(val ticket: String, val uri: Uri, val buffer: ExportBuffer = ExportBuffer(), var bytes: Long = 0)
+    private data class Export(val ticket: String, val session: ExportSession)
 
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
@@ -40,21 +36,12 @@ class MainActivity : FlutterActivity() {
                     "writeExport" -> {
                         val export = requireExport(call.argument<String>("ticket"))
                         val bytes = call.argument<ByteArray>("bytes") ?: throw IllegalArgumentException()
-                        if (bytes.size > 32768 || export.bytes + bytes.size > 26214400L) throw IllegalArgumentException()
-                        export.buffer.write(bytes)
-                        export.bytes += bytes.size
+                        export.session.write(bytes)
                         result.success(null)
                     }
                     "finishExport" -> {
                         val export = requireExport(call.argument<String>("ticket"))
-                        if (export.bytes < 1) throw IllegalArgumentException()
-                        // Publish only a complete source. Closing a partially written
-                        // Downloads stream and immediately deleting its document can
-                        // race the provider's asynchronous metadata update.
-                        val stream = contentResolver.openOutputStream(export.uri, "w")
-                            ?: throw IllegalStateException()
-                        stream.use { export.buffer.writeTo(it); it.flush() }
-                        export.buffer.discard()
+                        export.session.finish()
                         active = null
                         result.success(null)
                     }
@@ -67,8 +54,17 @@ class MainActivity : FlutterActivity() {
                 }
             } catch (_: Exception) {
                 choosing = null
-                active?.let { abort(it) }
-                result.error("export_unavailable", "File export failed", null)
+                if (call.method == "abortExport") {
+                    result.error("export_cleanup_failed", "Export destination cleanup failed; retry required", null)
+                } else {
+                    val owned = active?.takeIf { call.argument<String>("ticket") == it.ticket }
+                    try {
+                        owned?.let { abort(it) }
+                        result.error("export_unavailable", "File export failed", null)
+                    } catch (_: Exception) {
+                        result.error("export_cleanup_failed", "Export destination cleanup failed; retry required", null)
+                    }
+                }
             }
         }
     }
@@ -78,9 +74,8 @@ class MainActivity : FlutterActivity() {
         return export
     }
     private fun abort(export: Export) {
+        export.session.abort()
         active = null
-        export.buffer.discard()
-        try { DocumentsContract.deleteDocument(contentResolver, export.uri) } catch (_: Exception) {}
     }
     @Deprecated("Deprecated in Android API")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -94,7 +89,10 @@ class MainActivity : FlutterActivity() {
             // The selected document stays empty until finishExport. Partial
             // source errors, cancellation and size rejection only erase the
             // bounded private RAM buffer and delete the unopened document.
-            val export = Export(UUID.randomUUID().toString(), uri)
+            val export = Export(UUID.randomUUID().toString(), ExportSession(
+                { ProviderOutput.open(contentResolver, uri) },
+                { DocumentsContract.deleteDocument(contentResolver, uri) }
+            ))
             active = export
             reply.success(export.ticket)
         } catch (_: Exception) {
@@ -105,7 +103,9 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         choosing?.error("export_cancelled", "Activity closed", null)
         choosing = null
-        active?.let { abort(it) }
+        try { active?.let { abort(it) } } catch (_: Exception) {
+            android.util.Log.e("EnterpriseIM", "Export destination cleanup failed during Activity destruction")
+        }
         super.onDestroy()
     }
 }
