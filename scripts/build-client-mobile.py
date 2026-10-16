@@ -45,6 +45,7 @@ def main():
     parser.add_argument('--developer-dir', type=Path, default=Path('/Applications/Xcode.app/Contents/Developer'))
     parser.add_argument('--verify-simulator', action='store_true')
     parser.add_argument('--verify-mobile-boundaries', action='store_true')
+    parser.add_argument('--verify-mobile-resume', action='store_true')
     parser.add_argument('--simulator-runtime')
     parser.add_argument('--simulator-device-type')
     args = parser.parse_args()
@@ -53,6 +54,8 @@ def main():
     args.output.mkdir(mode=0o700, parents=False, exist_ok=False)
     out = args.output
     try:
+        if args.verify_mobile_resume and not args.verify_simulator:
+            raise ValueError('mobile_resume_requires_simulator')
         if args.verify_mobile_boundaries and (args.target != 'android' or not args.verify_simulator):
             raise ValueError('mobile_boundaries_require_android_simulator')
         if args.target == 'android':
@@ -75,7 +78,7 @@ def main():
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner
     client = private / 'client'
-    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')}}
+    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')}}
     env = None; simulator = None; runtime = args.simulator_runtime
     simulator_name = 'IM-Mobile-' + owner
     simulator_reserved = False
@@ -144,6 +147,9 @@ def main():
             result['vault_cleanup_verified'] = all(item['actual_exit'] == 0 and not item['failures'] and len(item['runtime_pids']) == 1 for item in phases) and result['vault_distinct_processes']
             if not result['vault_cleanup_verified']:
                 raise GateFailure('vault_restart_or_cleanup_unverified')
+        if args.verify_mobile_resume:
+            from integration.mobile_resume import run_ios
+            run_ios(simulator, private, out, env, step, result, save)
         step('build', ['build', 'ios', '--simulator', '--debug', '--no-pub'])
         app = client / 'build/ios/iphonesimulator/Runner.app'
         info = plistlib.loads((app / 'Info.plist').read_bytes())

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import '../platform/native_storage.dart';
 import '../core/auth/client_session.dart';
 import '../core/auth/account_reference.dart';
 import '../core/auth/account_selector.dart';
@@ -322,7 +322,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   static Future<SessionStore> _defaultStore() async {
-    final support = await getApplicationSupportDirectory();
+    final support = await nativeStorageRoot();
     final directory = Directory('${support.path}/accounts');
     await directory.create(recursive: true);
     return SessionStore(OsSecureVault(), directory: directory);

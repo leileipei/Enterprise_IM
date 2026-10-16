@@ -270,4 +270,45 @@ void main() {
       expect((await store.committedCursor(conversation)).toString(), '1');
     },
   );
+  test(
+    'historical replay still rejects membership and revision changes',
+    () async {
+      final root = await Directory.systemTemp.createTemp('im-page-scope-');
+      addTearDown(() => root.delete(recursive: true));
+      final store = await EncryptedStore.open(
+        'a' * 64,
+        List<int>.filled(32, 5),
+        directory: root,
+        generation: 1,
+      );
+      addTearDown(store.close);
+      final first = page(revision: 5), clock = grant();
+      await store.commitPage(
+        first,
+        receipt(first),
+        actingMembershipId: membership,
+        clock: clock,
+      );
+      await expectLater(
+        store.commitPage(
+          first,
+          receipt(first),
+          actingMembershipId: conversation,
+          clock: clock,
+        ),
+        throwsA(isA<StoreFailure>()),
+      );
+      final older = page(revision: 4);
+      await expectLater(
+        store.commitPage(
+          older,
+          receipt(older),
+          actingMembershipId: membership,
+          clock: clock,
+        ),
+        throwsA(isA<StoreFailure>()),
+      );
+      expect(await store.committedCursor(conversation), Seq.parse('1'));
+    },
+  );
 }

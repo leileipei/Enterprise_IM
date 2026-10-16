@@ -130,4 +130,41 @@ void main() {
       expect(old.messages.single.redacted, isTrue);
     },
   );
+  test('resume can reauthorize a page spanning the committed cursor', () async {
+    final (_, store) = await fixture.storage();
+    var gets = 0, deliveries = 0;
+    final transport = fixture.ScriptedTransport((request) {
+      if (request.method == 'GET') {
+        expect(request.uri.queryParameters['after_seq'], '0');
+        gets++;
+        if (gets == 1 || gets == 3) return fixture.response(fixture.syncPage());
+        final page = fixture.syncPage(seq: 2);
+        page['messages'] = [
+          (fixture.syncPage()['messages'] as List).single,
+          (page['messages'] as List).single,
+        ];
+        return fixture.response(page);
+      }
+      deliveries++;
+      return fixture.response(fixture.state(scanned: deliveries == 1 ? 1 : 2));
+    });
+    final api = ApiClient(Uri.parse('https://im.example'), transport);
+    addTearDown(api.close);
+    final engine = SyncEngine(api, store);
+    addTearDown(engine.stop);
+    final ctx = fixture.context();
+    final old = await engine.syncConversation(ctx);
+    final fresh = await engine.reauthorizeConversation(ctx);
+    expect(old.messages.every((m) => m.redacted), isTrue);
+    expect(fresh.messages.map((m) => m.seq.toString()), ['1', '2']);
+    expect(fresh.deliveredSeqs.map((s) => s.toString()), ['1', '2']);
+    expect(await store.committedCursor(fixture.conversation), Seq.parse('2'));
+    expect(await store.pendingReceipts(), isEmpty);
+    expect(deliveries, 2);
+    final shorter = await engine.reauthorizeConversation(ctx);
+    expect(shorter.nextAfterSeq, Seq.parse('1'));
+    expect(await store.committedCursor(fixture.conversation), Seq.parse('2'));
+    expect(fresh.messages.every((m) => m.redacted), isTrue);
+    expect(deliveries, 3);
+  });
 }

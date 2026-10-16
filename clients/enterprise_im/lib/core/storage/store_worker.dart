@@ -419,9 +419,10 @@ Future<void> storeWorkerMain(List<Object?> args) async {
                       payload['receipt_revision'],
                     ).compareTo(Seq.fromWire(current['receipt_revision'])) <
                     0 ||
-                after.compareTo(old) > 0 ||
-                (after != old && next.compareTo(old) > 0))
+                after.compareTo(old) > 0)
               throw StateError('gap or scope');
+            // Parsed pages are contiguous from after+1 through next. A replay
+            // may include old history and new messages in one authorized page.
             if (old.compareTo(next) > 0) retainedNext = old;
           }
           final writes = <List<Object?>>[];
