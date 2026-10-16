@@ -63,7 +63,7 @@
     "physical_minimum_api_runtime_test": "not_executed",
     "release_signature": "temporary Android Debug certificate; not customer distribution signing",
     "evidence": "p5-02-task8-android-results.json",
-    "system_document_picker": "cancel_full_export_duplicate_and_prewrite_auth_failure_passed_aosp36_local_provider",
+    "system_document_picker": "directory_first_ACTION_OPEN_DOCUMENT_TREE_operation_unique_filename_local_aosp36_passed_2026-10-16",
     "picker_evidence": "p5-02-task8-android-picker-results.json",
     "partial_export_cleanup": "source_error_cancel_and_size_rejection_after_native_ack_passed_aosp36_local_provider_2026-10-16",
     "partial_export_evidence": "p5-02-task8-android-partial-export-results.json",
@@ -72,7 +72,10 @@
     "provider_fault_boundary": "available synchronous/terminal errors only; no generic cloud post-close commit or persisted cross-process cleanup acceptance",
     "acknowledged_export_cleanup_recovery": "activity_same_pid_force_stop_sigkill_ram_ack_kill_and_new_exporter_retry_passed_aosp36_2026-10-16",
     "recovery_evidence": "p5-02-task8-android-recovery-results.json",
-    "recovery_boundary": "before-next-export recovery after native ticket ACK; no pre-ACK picker handoff, OS reboot/power loss, arbitrary cloud commit or physical/minimum API acceptance"
+    "recovery_boundary": "before-next-export recovery after native ticket ACK; no pre-ACK picker handoff, OS reboot/power loss, arbitrary cloud commit or physical/minimum API acceptance",
+    "directory_handoff_recovery": "pre_ACK_created_file_Activity_recreate_force_stop_SIGKILL_and_loading_listing_protection_passed_aosp36_2026-10-16",
+    "directory_handoff_evidence": "p5-02-task8-android-directory-handoff-results.json",
+    "directory_handoff_boundary": "recover before next export; durable ALLOCATING before create RPC, zero/ambiguous/loading/error discovery stays blocked; no reboot/power loss, arbitrary cloud, actual minimum API or physical acceptance"
   },
   "generated_runners": [
     "windows",

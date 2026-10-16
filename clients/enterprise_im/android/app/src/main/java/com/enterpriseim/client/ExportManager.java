@@ -50,6 +50,24 @@ public final class ExportManager {
                     return cursor.getCount() == 0;
                 }
             }
+            public void validateTree(Uri tree) throws Exception {
+                Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+                try (Cursor cursor = resolver.query(parent, new String[]{DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_FLAGS}, null, null, null)) {
+                    if (cursor == null || !cursor.moveToFirst() ||
+                        !DocumentsContract.Document.MIME_TYPE_DIR.equals(cursor.getString(0)) ||
+                        (cursor.getInt(1) & DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE) == 0) throw new IOException("Unsupported directory");
+                }
+            }
+            public void create(Uri tree, String name) throws Exception {
+                Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+                if (DocumentsContract.createDocument(resolver, parent, "application/octet-stream", name) == null) throw new IOException("Cannot allocate export");
+            }
+            public Uri findAllocated(Uri tree, String prefix) throws Exception {
+                Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+                try (Cursor cursor = resolver.query(children, new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_MIME_TYPE}, null, null, null)) {
+                    return ExportDirectory.findAllocated(cursor, tree, prefix);
+                }
+            }
         });
     }
     private void recover() throws CleanupException {
@@ -61,11 +79,12 @@ public final class ExportManager {
         recover(); reservation = owner;
     }
     public void cancel(String owner) { if (owner.equals(reservation)) reservation = null; }
-    public String accept(String owner, Uri uri, int flags) throws Exception {
+    public String accept(String owner, Uri tree, int flags, String name) throws Exception {
         if (!owner.equals(reservation)) throw new IllegalStateException("Export owner closed");
         reservation = null;
         String ticket = UUID.randomUUID().toString();
-        try { ledger.prepare(ticket, uri, flags); }
+        Uri uri;
+        try { uri = ledger.allocateTree(ticket, tree, name, flags); }
         catch (Exception error) { recover(); throw error; }
         active = new Active(owner, ticket, new ExportSession(
             () -> ProviderOutput.open(resolver, uri),

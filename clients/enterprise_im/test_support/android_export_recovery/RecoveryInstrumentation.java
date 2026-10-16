@@ -35,7 +35,7 @@ public final class RecoveryInstrumentation extends Instrumentation {
         for(String name:new String[]{"reload","delete-false","delete-throws","committed","deleted-receipt","release-fails","preexisting-grant","take-fails","already-absent","ambiguous-provider","atomic-interruption","corrupt","unknown-version","oversized","orphan-new"}){
             File dir=root(name);ExportJournal journal=new ExportJournal(dir);Filesystem resource=new Filesystem(dir);ExportLedger ledger=new ExportLedger(journal,resource);
             if(name.equals("corrupt")||name.equals("unknown-version")||name.equals("oversized")||name.equals("orphan-new")){
-                byte[] bytes=name.equals("oversized")?new byte[17000]:name.equals("unknown-version")?"{\"version\":2}".getBytes():"partial-json".getBytes();
+                byte[] bytes=name.equals("oversized")?new byte[17000]:name.equals("unknown-version")?"{\"version\":99,\"ticket\":\"40904c27-330c-4187-948f-b608d372d980\",\"uri\":\"content://controlled.export/document/owned\",\"acquired\":3,\"phase\":\"PENDING\"}".getBytes():"partial-json".getBytes();
                 File metadata=new File(dir,"export-cleanup.json"+(name.equals("orphan-new")?".new":""));Files.write(metadata.toPath(),bytes);fails(ledger::recover);check(resource.document.exists()&&resource.deletes==0&&metadata.exists());
             }else{
                 if(name.equals("preexisting-grant"))resource.held=1;
@@ -58,6 +58,7 @@ public final class RecoveryInstrumentation extends Instrumentation {
             }
             remove(dir);passed.add(name);
         }
-        result.putString("stream","RECOVERY_ALL_PASSED "+passed.size()+" "+passed+" target="+getTargetContext().getApplicationInfo().sourceDir+" classloader="+ExportLedger.class.getClassLoader());result.putInt("passed",passed.size());finish(-1,result);
+        int treePassed=TreeAllocationChecks.run(new File(getTargetContext().getNoBackupFilesDir(),"tree-allocation-"+owner));
+        result.putString("stream","TREE_ALLOCATION_ALL_PASSED "+treePassed+"\nRECOVERY_ALL_PASSED "+passed.size()+" "+passed+" target="+getTargetContext().getApplicationInfo().sourceDir+" classloader="+ExportLedger.class.getClassLoader());result.putInt("passed",passed.size());finish(-1,result);
     }catch(Throwable error){result.putString("stream",android.util.Log.getStackTraceString(error)+" passed="+passed);result.putInt("failed",1);finish(0,result);}}
 }

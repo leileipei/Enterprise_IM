@@ -63,7 +63,7 @@ void main() {
     expect(sourceOpened, 1);
   }, timeout: timeout);
 
-  testWidgets('system duplicate naming preserves the original Android export', (
+  testWidgets('operation unique naming preserves the original Android export', (
     tester,
   ) async {
     await screen(tester, 'duplicate');

@@ -6,7 +6,7 @@
 python3 test_support/android_export_provider/build.py --sdk <SDK绝对路径> --java-home <JDK绝对路径> --out <私有输出目录>
 ```
 
-安装 provider.apk 后，在真实系统选择器的侧栏选择 **IM Export Faults**。客户端入口为 integration_test/android_export_provider_test.dart，传入新32hex IM_ANDROID_EXPORT_PROBE_ID，IM_ANDROID_PROVIDER_CASE 为 write／delete／write-delete。
+安装 provider.apk 后，在真实系统选择器的侧栏选择 **IM Export Faults**。当前产品先选目录，请在夹具根目录按Use this folder／Allow；文件名增加随机操作前缀。客户端入口为 integration_test/android_export_provider_test.dart，传入新32hex IM_ANDROID_EXPORT_PROBE_ID，IM_ANDROID_PROVIDER_CASE 为 write／delete／write-delete。
 
 - write：ProxyFileDescriptorCallback 将真实文件的前4096字节写入后返回 EIO；要求应用报错、目标被删、后续导出成功。
 - delete：源拒绝读取，提供程序持续拒绝删除空文档；要求 export_cleanup_failed、原票据重试仍失败且不打开新选择器／源。
@@ -33,3 +33,7 @@ flutter drive --driver=test_driver/integration_test.dart --target=integration_te
 ```
 
 必须同时核对CLI退出码、实际用例结果与独立提供程序文件事实。driver输出中的tearDownAll会增加运行器计数，不应计入业务场景数。
+
+## 创建返回前的销毁窗口
+
+夹具还支持 `../android_export_handoff/README.md`：含 `-handoff-` 的合成文件在真实文件及name映射落地后建立 `<UUID>.return-wait`，阻塞createDocument返回（上限120秒）。主机独立确认文件和门禁后才销毁所属Activity／进程，再仅删除已观察到的该门禁，使创建RPC返回；不注入URI、回调或原生票据。delete门禁仍保留，验证清理失败时禁止新选择器／正文，然后解除delete门禁由应用恢复删除。`files/directory-loading` 是显式查询故障夹具，返回带EXTRA_LOADING=true的空MatrixCursor；在成功验证前必须移除此测试开关。

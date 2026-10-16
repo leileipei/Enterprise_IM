@@ -15,7 +15,7 @@ flutter build apk --debug --no-pub --target=integration_test/android_export_reco
 
 | 阶段 | 操作及实际断言 |
 |---|---|
-| prepare | 真实系统选择器进入 IM Export Faults，Save 后写入4096字节并EIO，delete仍受阻；新 FileExport 实例也必须返回 cleanup_failed、源零次 |
+| prepare | 真实系统选择器进入 IM Export Faults，使用Use this folder／Allow后写入4096字节并EIO，delete仍受阻；新 FileExport 实例也必须返回 cleanup_failed、源零次 |
 | prepare-activity | 与prepare相同，写出阶段结果后等待 close-activity；通过公开 SystemNavigator.pop 请求真实 Activity.finish |
 | prepare-active | 真实选择后取得票据；正常active再次begin必须 export_busy；两次20000字节原生write ACK，目标仍为空，随后等待主机强杀 |
 | blocked | 销毁后启动同一APK，新FileExport必须在选择器／源打开前返回cleanup_failed，源零次 |
@@ -31,7 +31,7 @@ Activity测试必须等待 Android `wm_on_destroy_called`，确认旧 Activity �
 
 ## 设备 instrumentation
 
-`build.py` 需要固定 SDK36、JDK21、已编译的生产 ExportJournal／ExportLedger classes目录和目标APK的临时Debug keystore。生产类只作为编译classpath，不能进入测试dex；运行时从已安装目标APK加载。先核验目标APK哈希与sourceDir，期间不要让其它driver替换目标APK。
+`build.py` 需要固定 SDK36、JDK21、已编译的生产 ExportJournal／ExportLedger／ExportDirectory classes目录和目标APK的临时Debug keystore。生产类只作为编译classpath，不能进入测试dex；运行时从已安装目标APK加载。先核验目标APK哈希与sourceDir，期间不要让其它driver替换目标APK。
 
 ```text
 python3 test_support/android_export_recovery/build.py --sdk <SDK> --java-home <JDK> --target-classes <生产classes> --debug-keystore <所属Debug-key> --out <独立输出>
@@ -39,6 +39,8 @@ adb -s <所属serial> install <输出>/recovery-tests.apk
 adb -s <所属serial> shell am instrument -w -e owner <本轮32hex> com.enterpriseim.exportrecoverytests/com.enterpriseim.client.tests.RecoveryInstrumentation
 ```
 
-必须观察 `RECOVERY_ALL_PASSED 15`，而不是只看ADB退出0；失败会带failed及堆栈。检查实际Android AtomicFile、真实文件副作用，资源边界注入删除／授权失败；不宣称15个真实云盘故障。测试目录成功后自行删除。
+必须观察 `RECOVERY_ALL_PASSED 15` 和 `TREE_ALLOCATION_ALL_PASSED 16`，而不是只看ADB退出0；失败会带failed及堆栈。检查实际Android AtomicFile、真实文件副作用，资源边界注入删除／授权失败；不宣称31个真实云盘故障。测试目录成功后自行删除。
 
-范围从原生票据ACK后开始。选择器创建目标到回调／ACK之前的销毁、断电／OS重启、真实最低API24、物理设备及云盘异步提交未覆盖。票据恢复在下一次导出前重试，不自动重放业务正文；无法确认目标不存在时保留票据并阻止新导出。
+本节旧版生命周期入口从原生票据ACK后开始；当前目录模式的创建后、ACK前验证见 `../android_export_handoff/README.md`。断电／OS重启、真实最低API24、物理设备及云盘异步提交未覆盖。票据恢复在下一次导出前重试，不自动重放业务正文；无法确认目标不存在时保留票据并阻止新导出。
+
+目录契约使用真实 MatrixCursor、生产 ExportDirectory 解析和真实磁盘文件。16项覆盖：创建后返回丢失、延迟创建、delete返回false／抛错、既有目录权限、前缀碰撞、多匹配、COMMITTED保护、DELETED重试、部分取权失败、不支持创建目录、UTF8文件名、错误URI记录、loading空列表、loading单行部分列表和error结果。查询不完整时文件、票据和授权必须全部保留；不能通过空列表或单行推断不存在／唯一。旧版15项仍读写v1并检查未知版本、损坏及AtomicFile中断。

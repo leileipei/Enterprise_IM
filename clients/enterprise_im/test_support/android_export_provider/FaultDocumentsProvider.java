@@ -39,9 +39,12 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
         try { return new String(java.nio.file.Files.readAllBytes(new File(base,id+".name").toPath()), java.nio.charset.StandardCharsets.UTF_8); }
         catch(IOException e) { throw new FileNotFoundException("missing metadata"); }
     }
+    @Override public boolean isChildDocument(String parent, String child) {
+        return parent.equals("root") && child.matches("[a-f0-9-]{36}") && new File(base,child+".name").exists();
+    }
     @Override public Cursor queryRoots(String[] projection) {
         MatrixCursor c = new MatrixCursor(projection != null ? projection : new String[]{Root.COLUMN_ROOT_ID,Root.COLUMN_DOCUMENT_ID,Root.COLUMN_TITLE,Root.COLUMN_FLAGS,Root.COLUMN_MIME_TYPES,Root.COLUMN_AVAILABLE_BYTES});
-        c.newRow().add(Root.COLUMN_ROOT_ID,"root").add(Root.COLUMN_DOCUMENT_ID,"root").add(Root.COLUMN_TITLE,"IM Export Faults").add(Root.COLUMN_FLAGS,Root.FLAG_SUPPORTS_CREATE|Root.FLAG_LOCAL_ONLY).add(Root.COLUMN_MIME_TYPES,"*/*").add(Root.COLUMN_AVAILABLE_BYTES,100000000L); return c;
+        c.newRow().add(Root.COLUMN_ROOT_ID,"root").add(Root.COLUMN_DOCUMENT_ID,"root").add(Root.COLUMN_TITLE,"IM Export Faults").add(Root.COLUMN_FLAGS,Root.FLAG_SUPPORTS_CREATE|Root.FLAG_LOCAL_ONLY|Root.FLAG_SUPPORTS_IS_CHILD).add(Root.COLUMN_MIME_TYPES,"*/*").add(Root.COLUMN_AVAILABLE_BYTES,100000000L); return c;
     }
     private void row(MatrixCursor c,String id) throws FileNotFoundException {
         boolean root=id.equals("root"); File f=root?base:data(id);
@@ -50,12 +53,29 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
     private MatrixCursor cursor(String[] projection) { return new MatrixCursor(projection != null ? projection:new String[]{Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE,Document.COLUMN_FLAGS,Document.COLUMN_SIZE,Document.COLUMN_LAST_MODIFIED}); }
     @Override public Cursor queryDocument(String id,String[] projection) throws FileNotFoundException { MatrixCursor c=cursor(projection);row(c,id);return c; }
     @Override public Cursor queryChildDocuments(String parent,String[] projection,String sortOrder) throws FileNotFoundException {
-        if(!parent.equals("root")) throw new FileNotFoundException(); MatrixCursor c=cursor(projection);File[] files=base.listFiles((d,n)->n.endsWith(".name"));if(files!=null) for(File f:files)row(c,f.getName().replace(".name",""));return c;
+        if(!parent.equals("root")) throw new FileNotFoundException(); MatrixCursor c=cursor(projection);File[] files=base.listFiles((d,n)->n.endsWith(".name"));if(files!=null) for(File f:files)row(c,f.getName().replace(".name",""));
+        File loading=new File(getContext().getFilesDir(),"directory-loading");
+        if(loading.exists()){
+            android.os.Bundle extras=new android.os.Bundle();extras.putBoolean(android.provider.DocumentsContract.EXTRA_LOADING,true);c=cursor(projection);c.setExtras(extras);event("directory_loading empty=true");
+        }
+        return c;
     }
     @Override public String createDocument(String parent,String mime,String displayName) throws FileNotFoundException {
-        if(!parent.equals("root") || !displayName.matches("im-[a-f0-9]{32}-(write|delete|write-delete|recovery)\\.bin")) throw new FileNotFoundException("fixture name required");
+        if(!parent.equals("root") || !displayName.matches("(?:im-[a-f0-9-]{36}-)?im-[a-f0-9]{32}-(write|delete|write-delete|recovery|handoff-delete)\\.bin")) throw new FileNotFoundException("fixture name required");
         String id=UUID.randomUUID().toString();try { if(!data(id).createNewFile())throw new IOException();java.nio.file.Files.write(new File(base,id+".name").toPath(),displayName.getBytes(java.nio.charset.StandardCharsets.UTF_8));if(displayName.endsWith("delete.bin"))new File(base,id+".blocked").createNewFile(); }catch(IOException e){throw new FileNotFoundException(e.toString());}
-        event("create id="+id+" name="+displayName);return id;
+        event("create id="+id+" name="+displayName);
+        if(displayName.contains("-handoff-")) {
+            File gate=new File(base,id+".return-wait");
+            try {gate.createNewFile();}catch(IOException e){throw new FileNotFoundException();}
+            event("create_held id="+id);
+            long deadline=android.os.SystemClock.elapsedRealtime()+120000;
+            while(gate.exists()&&android.os.SystemClock.elapsedRealtime()<deadline) {
+                try {Thread.sleep(20);}catch(InterruptedException e){Thread.currentThread().interrupt();throw new FileNotFoundException();}
+            }
+            if(gate.exists())throw new FileNotFoundException("fixture return gate timed out");
+            event("create_return id="+id);
+        }
+        return id;
     }
     @Override public ParcelFileDescriptor openDocument(String id,String mode,CancellationSignal signal) throws FileNotFoundException {
         File f=data(id);String n=name(id);if(mode.equals("r"))return ParcelFileDescriptor.open(f,ParcelFileDescriptor.MODE_READ_ONLY);
