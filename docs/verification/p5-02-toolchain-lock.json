@@ -69,7 +69,10 @@
     "partial_export_evidence": "p5-02-task8-android-partial-export-results.json",
     "final_copy_fault_cleanup": "controlled_provider_write_delete_faults_and_native_sync_close_reliable_terminal_error_passed_api36_2026-10-16",
     "provider_fault_evidence": "p5-02-task8-android-provider-fault-results.json",
-    "provider_fault_boundary": "available synchronous/terminal errors only; no generic cloud post-close commit or persisted cross-process cleanup acceptance"
+    "provider_fault_boundary": "available synchronous/terminal errors only; no generic cloud post-close commit or persisted cross-process cleanup acceptance",
+    "acknowledged_export_cleanup_recovery": "activity_same_pid_force_stop_sigkill_ram_ack_kill_and_new_exporter_retry_passed_aosp36_2026-10-16",
+    "recovery_evidence": "p5-02-task8-android-recovery-results.json",
+    "recovery_boundary": "before-next-export recovery after native ticket ACK; no pre-ACK picker handoff, OS reboot/power loss, arbitrary cloud commit or physical/minimum API acceptance"
   },
   "generated_runners": [
     "windows",
