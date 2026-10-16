@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build an owned iOS simulator copy; optional real simulator checks are partial acceptance."""
+"""Build an owned iOS simulator or Android APK copy; platform acceptance remains partial."""
 import argparse
 import hashlib
 import json
@@ -40,6 +40,8 @@ def main():
     parser.add_argument('--target', default='ios-simulator')
     for name in ('flutter-sdk', 'pub-cache', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    for name in ('android-sdk', 'java-home', 'gradle-cache'):
+        parser.add_argument('--' + name, type=Path)
     parser.add_argument('--developer-dir', type=Path, default=Path('/Applications/Xcode.app/Contents/Developer'))
     parser.add_argument('--verify-simulator', action='store_true')
     parser.add_argument('--simulator-runtime')
@@ -50,12 +52,19 @@ def main():
     args.output.mkdir(mode=0o700, parents=False, exist_ok=False)
     out = args.output
     try:
-        report = preflight(repo, args)
+        if args.target == 'android':
+            from integration.android_build import preflight as android_preflight
+            report = android_preflight(repo, args)
+        else:
+            report = preflight(repo, args)
     except Exception as exc:
         report = {'status': 'not_run', 'target': args.target, 'fixtures_created': False, 'blocked_reason': str(exc) if isinstance(exc, ValueError) else type(exc).__name__}
     (out / 'preflight.json').write_text(json.dumps(report, indent=2) + '\n')
     if report['status'] != 'ready':
         print(json.dumps(report)); return 2
+    if args.target == 'android':
+        from integration.android_build import run as android_run
+        return android_run(repo, args, out, report, client_sources)
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip()
     owner = secrets.token_hex(16)
     root = Path(tempfile.mkdtemp(prefix='im-mobile-', dir='/private/tmp')).resolve()

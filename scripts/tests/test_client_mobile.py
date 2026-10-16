@@ -85,7 +85,7 @@ class MobileCliTests(unittest.TestCase):
             root = Path(tmp); process, output = self.run_cli(root, ['--target', 'android'])
             self.assertEqual(process.returncode, 2)
             report = json.loads((output / 'preflight.json').read_text())
-            self.assertEqual(report['blocked_reason'], 'mobile_target_not_prepared')
+            self.assertEqual(report['blocked_reason'], 'prepared_android_paths_required')
             self.assertFalse(report['fixtures_created'])
             self.assertFalse((output / 'registry.jsonl').exists())
 
