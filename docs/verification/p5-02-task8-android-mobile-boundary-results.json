@@ -1,0 +1,2191 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-16",
+  "parent_commit": "6e42f5a4227e3508cf9e06631ee45c6c598cd3ac",
+  "status": "scoped_passed_android_os_callback_and_activity_boundary",
+  "platform_acceptance": "partial",
+  "scope": "new owned API24/API36 ARM64 AVD, actual cold/warm VIEW/BROWSABLE, cancellation/stale-state rejection and same-PID HOME/MAIN lifecycle; synthetic OAuth values, production adapters, standard driver attached after OS cold start",
+  "cold_start_boundary": "fixture-known synthetic current state verifies cached initial URI delivery and later stale cache rejection; no in-flight OAuth state persistence/restoration or real IdP exchange claim",
+  "platforms": {
+    "24": {
+      "status": "passed",
+      "result": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/result.json",
+      "result_sha256": "85a1dbd0efa0377b3cf314e2f56f501a13b77dfb5bcf6f2e2f4600729dde511b",
+      "image": {
+        "package": "system-images;android-24;google_apis;arm64-v8a",
+        "api": 24,
+        "abi": "arm64-v8a",
+        "revision": "29",
+        "device_type": "pixel_7",
+        "tool_sha256": {
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/source.properties": "ba13085f647fb8389a4d06a1de0e4104ac4e841733e50f67223ac230e1ce685a",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb": "1811e253b21b12cbfda7201ebaf86c10e7ddcb5c606a7a81f7c82b4c429c2d3b",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/source.properties": "2dccd788c0234d8cf7f7457377e57f57527a86a629c6ed54feb8af0f549dac38",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/cmdline-tools/23.0/bin/avdmanager": "09199f7bca5dc7eb4e4b4ff459dc125579c3e08c61ddc078dcd2c6e8e61efbb6",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/system-images/android-24/google_apis/arm64-v8a/source.properties": "00bb7434abf93ccbf3880bcdbca35808f42883e0f9e53dacdb0e5a33275956a5"
+        },
+        "image_archive_hash_claimed": false
+      },
+      "commands_actual_exit": {
+        "pub": 0,
+        "build": 0,
+        "badging": 0,
+        "signature": 0,
+        "shared": 0,
+        "analysis": 0,
+        "debug-pub": 0,
+        "activity": 0,
+        "vault-write": 0,
+        "vault-verify": 0,
+        "boundary-build": 0,
+        "boundary-driver": 0
+      },
+      "shared_passed": 242,
+      "analysis_issues": 0,
+      "native_case_count": 4,
+      "native_cases": "activity1 + vault write/verify2 + OS callback/lifecycle1 (9 stages inside one case)",
+      "mobile_boundaries": {
+        "probe": "95d47ea336be32772f1cf48bd0d47453",
+        "pid": 4176,
+        "phases": [
+          "wrong-state",
+          "wrong-path",
+          "duplicate-state",
+          "warm-valid",
+          "stale-after-cancel",
+          "new-valid",
+          "home-ready",
+          "background",
+          "done"
+        ],
+        "commands": [
+          {
+            "label": "pid-0",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "wrong-state",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=old-95d47ea336be32772f1cf48bd0d47453&code=wrong'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "aad344285ae20d1aed354cb59bb0c9ebcebfe2bcddb654fa68ee66a50a24bcea"
+          },
+          {
+            "label": "pid-1",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "wrong-path",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/wrong?state=warm-95d47ea336be32772f1cf48bd0d47453&code=wrong'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "011796cfb39915cfc8c2cdd314897280ff2023dd1f416df86c2a86ed237789a7"
+          },
+          {
+            "label": "pid-2",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "duplicate-state",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=warm-95d47ea336be32772f1cf48bd0d47453&state=warm-95d47ea336be32772f1cf48bd0d47453&code=wrong'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "6dfcd7ed8d19a87509d72d20f5d0a232aab21e2406e3112534c0b3df06c8a395"
+          },
+          {
+            "label": "pid-3",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "warm-valid",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=warm-95d47ea336be32772f1cf48bd0d47453&code=warm'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "933f2dfd8646a9c69c6a38a645f5d3e7456c2dea634abcab160634b7d9e10163"
+          },
+          {
+            "label": "pid-4",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "stale-after-cancel",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=cancel-95d47ea336be32772f1cf48bd0d47453&code=stale'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "3682cdf11196708a6fd30b76c7bbf8aa8c21af25fb1acf625b477c02866c299a"
+          },
+          {
+            "label": "pid-5",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "new-valid",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=next-95d47ea336be32772f1cf48bd0d47453&code=next'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "5a06fa2302cb4eff609c3f9bdba4eb1df18eb51cf0cd67bc7bcab3180c604117"
+          },
+          {
+            "label": "pid-6",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "home-ready",
+            "arguments": [
+              "shell",
+              "input",
+              "keyevent",
+              "KEYCODE_HOME"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "label": "pid-7",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          },
+          {
+            "label": "background",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n com.enterpriseim.client/.MainActivity"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "81bacb628b1a388115dc0bfbed80ce42f83984a5a401037f47646cf6b702f280"
+          },
+          {
+            "label": "pid-8",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f"
+          }
+        ],
+        "acceptance": "OS callback/lifecycle boundary only; synthetic OAuth values; no IdP/backend",
+        "native_report": {
+          "phase": "done",
+          "status": "passed",
+          "pid": 4176,
+          "cold_initial": true,
+          "cancelled": true,
+          "lifecycle": [
+            "paused",
+            "resumed"
+          ],
+          "background_ms": 1101
+        },
+        "passed": true,
+        "controller_joined": true
+      },
+      "vault_phases": [
+        {
+          "phase": "write",
+          "runtime_pid": 3896,
+          "uid": "10074",
+          "first_install": "2026-10-16 19:08:14"
+        },
+        {
+          "phase": "verify",
+          "runtime_pid": 4040,
+          "uid": "10074",
+          "first_install": "2026-10-16 19:08:14"
+        }
+      ],
+      "APK": {
+        "package": "com.enterpriseim.client",
+        "minimum_api": 24,
+        "target_api": 36,
+        "compile_api": 36,
+        "abis": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86_64"
+        ],
+        "signature_kind": "temporary_debug_certificate",
+        "certificate_sha256": "19474d3ad4fa1061ac56f48518ff76aabcf6ba50d4e72239552e8500fb7d6dec",
+        "distribution_acceptance": false,
+        "path": "android-release-test.apk",
+        "sha256": "5694983f444787f26ea22738008bd2e5fe2f3e0fcceda54c6ca1a40576347a93",
+        "size": 58752697,
+        "manifest_sha256": "d02e20a3f2570f27a21d2e329be6ad96cff2fc7420d0ce48ad1c71e100f0cc4e",
+        "test_fixture_classes_absent": true
+      },
+      "installed_release_sha256": "5694983f444787f26ea22738008bd2e5fe2f3e0fcceda54c6ca1a40576347a93",
+      "release_pid": 4462,
+      "login_screenshot": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-login.png",
+      "visual_review": "Chinese normal login screen reviewed; no visible blocking dialog or clipped main controls",
+      "terminal_checks": {
+        "source_unchanged": true,
+        "implementation_unchanged": true,
+        "tool_inputs_unchanged": true,
+        "sdk_source_unchanged": true
+      },
+      "cleanup": {
+        "removed": true,
+        "failures": []
+      },
+      "service_exits": [
+        {
+          "name": "emulator",
+          "pid": 83942,
+          "actual_exit": 0
+        },
+        {
+          "name": "adb-server",
+          "pid": 83937,
+          "actual_exit": -15
+        },
+        {
+          "name": "avd-create",
+          "pid": 83899,
+          "actual_exit": 0
+        }
+      ]
+    },
+    "36": {
+      "status": "passed",
+      "result": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/result.json",
+      "result_sha256": "6cac301782bc67c1fc914bdebd446f5a633be0323e7a820116cb922806e0915d",
+      "image": {
+        "package": "system-images;android-36;default;arm64-v8a",
+        "api": 36,
+        "abi": "arm64-v8a",
+        "revision": "2",
+        "device_type": "pixel_7",
+        "tool_sha256": {
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/source.properties": "ba13085f647fb8389a4d06a1de0e4104ac4e841733e50f67223ac230e1ce685a",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb": "1811e253b21b12cbfda7201ebaf86c10e7ddcb5c606a7a81f7c82b4c429c2d3b",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/source.properties": "2dccd788c0234d8cf7f7457377e57f57527a86a629c6ed54feb8af0f549dac38",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/cmdline-tools/23.0/bin/avdmanager": "09199f7bca5dc7eb4e4b4ff459dc125579c3e08c61ddc078dcd2c6e8e61efbb6",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/system-images/android-36/default/arm64-v8a/source.properties": "78181fe85df7b9dfc77c2dc89958bd3af35d4293a847683648fb2fc964a3395b"
+        },
+        "image_archive_hash_claimed": false
+      },
+      "commands_actual_exit": {
+        "pub": 0,
+        "build": 0,
+        "badging": 0,
+        "signature": 0,
+        "shared": 0,
+        "analysis": 0,
+        "debug-pub": 0,
+        "activity": 0,
+        "vault-write": 0,
+        "vault-verify": 0,
+        "boundary-build": 0,
+        "boundary-driver": 0
+      },
+      "shared_passed": 242,
+      "analysis_issues": 0,
+      "native_case_count": 4,
+      "native_cases": "activity1 + vault write/verify2 + OS callback/lifecycle1 (9 stages inside one case)",
+      "mobile_boundaries": {
+        "probe": "03fd97a269afa36f717eee90fd6b7e76",
+        "pid": 2741,
+        "phases": [
+          "wrong-state",
+          "wrong-path",
+          "duplicate-state",
+          "warm-valid",
+          "stale-after-cancel",
+          "new-valid",
+          "home-ready",
+          "background",
+          "done"
+        ],
+        "commands": [
+          {
+            "label": "pid-0",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "wrong-state",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=old-03fd97a269afa36f717eee90fd6b7e76&code=wrong'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "fd08a5bfd9389778305f15969af03b2a631e3099176d2bb4097568cfc5b2d39f"
+          },
+          {
+            "label": "pid-1",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "wrong-path",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/wrong?state=warm-03fd97a269afa36f717eee90fd6b7e76&code=wrong'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "103c369189e433199609ffc948373297a796034c264401eb598bfcb118de91da"
+          },
+          {
+            "label": "pid-2",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "duplicate-state",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=warm-03fd97a269afa36f717eee90fd6b7e76&state=warm-03fd97a269afa36f717eee90fd6b7e76&code=wrong'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "e06ab27ef18960a66274f090ab73cc33f86b6b938d5d8d00406c46f6cd2563da"
+          },
+          {
+            "label": "pid-3",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "warm-valid",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=warm-03fd97a269afa36f717eee90fd6b7e76&code=warm'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "383078af9057290703b9695075f86f76d438853cb21216acecb11b5a6f69bac5"
+          },
+          {
+            "label": "pid-4",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "stale-after-cancel",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=cancel-03fd97a269afa36f717eee90fd6b7e76&code=stale'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "3c191c770908df2914e06c1c96099d2c3b7bbbeba8af45b32e4b743128a9503b"
+          },
+          {
+            "label": "pid-5",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "new-valid",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d 'com.enterpriseim.client:/oauth/callback?state=next-03fd97a269afa36f717eee90fd6b7e76&code=next'"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "383078af9057290703b9695075f86f76d438853cb21216acecb11b5a6f69bac5"
+          },
+          {
+            "label": "pid-6",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "home-ready",
+            "arguments": [
+              "shell",
+              "input",
+              "keyevent",
+              "KEYCODE_HOME"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "label": "pid-7",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          },
+          {
+            "label": "background",
+            "arguments": [
+              "shell",
+              "am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n com.enterpriseim.client/.MainActivity"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "c9996c34dfa1b5c51865697390b27c0c34fd74e1d9016b83ac291bd554e77fd1"
+          },
+          {
+            "label": "pid-8",
+            "arguments": [
+              "shell",
+              "pidof",
+              "com.enterpriseim.client"
+            ],
+            "actual_exit": 0,
+            "stdout_sha256": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702"
+          }
+        ],
+        "acceptance": "OS callback/lifecycle boundary only; synthetic OAuth values; no IdP/backend",
+        "native_report": {
+          "phase": "done",
+          "status": "passed",
+          "pid": 2741,
+          "cold_initial": true,
+          "cancelled": true,
+          "lifecycle": [
+            "paused",
+            "resumed"
+          ],
+          "background_ms": 1113
+        },
+        "passed": true,
+        "controller_joined": true
+      },
+      "vault_phases": [
+        {
+          "phase": "write",
+          "runtime_pid": 2563,
+          "uid": "10150",
+          "first_install": "2026-10-16 19:03:43"
+        },
+        {
+          "phase": "verify",
+          "runtime_pid": 2656,
+          "uid": "10150",
+          "first_install": "2026-10-16 19:03:43"
+        }
+      ],
+      "APK": {
+        "package": "com.enterpriseim.client",
+        "minimum_api": 24,
+        "target_api": 36,
+        "compile_api": 36,
+        "abis": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86_64"
+        ],
+        "signature_kind": "temporary_debug_certificate",
+        "certificate_sha256": "3028a34f5aa402a021f96709efc6845fd962944c86654cbe0c9d3278f496b2e5",
+        "distribution_acceptance": false,
+        "path": "android-release-test.apk",
+        "sha256": "737d8ff094420a43b99e054dd8da2e4220414007df6b42b88391ed99b9a714ad",
+        "size": 58752697,
+        "manifest_sha256": "b4f4308a3de358819ace1ccc2e787b91cd87b9ad0ffdb4a10e0f47faf3c977ec",
+        "test_fixture_classes_absent": true
+      },
+      "installed_release_sha256": "737d8ff094420a43b99e054dd8da2e4220414007df6b42b88391ed99b9a714ad",
+      "release_pid": 2957,
+      "login_screenshot": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-login.png",
+      "visual_review": "Chinese normal login screen reviewed; no visible blocking dialog or clipped main controls",
+      "terminal_checks": {
+        "source_unchanged": true,
+        "implementation_unchanged": true,
+        "tool_inputs_unchanged": true,
+        "sdk_source_unchanged": true
+      },
+      "cleanup": {
+        "removed": true,
+        "failures": []
+      },
+      "service_exits": [
+        {
+          "name": "emulator",
+          "pid": 81972,
+          "actual_exit": 0
+        },
+        {
+          "name": "adb-server",
+          "pid": 81967,
+          "actual_exit": -15
+        },
+        {
+          "name": "avd-create",
+          "pid": 81927,
+          "actual_exit": 0
+        }
+      ]
+    }
+  },
+  "host_tests": {
+    "android_contracts": 26,
+    "new_boundary_contracts": 3,
+    "full_python_total": 171,
+    "full_python_passed": 170,
+    "full_python_failed": 1,
+    "failure": "test_project_integration_scanner.ScannerTests.test_browser_closes_private_profile_without_host_home: browser_probe_incomplete; fixed Chrome154.0.8037.98 vs installed155.0.8059.82; no browser lock/config changes"
+  },
+  "preserved_runs": [
+    {
+      "result": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/result.json",
+      "status": "failed",
+      "actual_exit": 1,
+      "error": "ValueError:android_boundary_intent_unverified",
+      "scope": "owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch; opt-in actual cold/warm OAuth callback and HOME/MAIN boundary; no backend, physical-device or CI execution",
+      "automatic_cleanup": {
+        "removed": true,
+        "failures": []
+      }
+    },
+    {
+      "result": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/result.json",
+      "status": "failed",
+      "actual_exit": 1,
+      "error": "RuntimeError:android_vault-write-stop_failed",
+      "scope": "owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch; opt-in actual cold/warm OAuth callback and HOME/MAIN boundary; no backend, physical-device or CI execution",
+      "automatic_cleanup": {
+        "removed": false,
+        "failures": [
+          "RuntimeError:android_cleanup-package-absent_failed"
+        ]
+      }
+    },
+    {
+      "result": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/result.json",
+      "status": "failed",
+      "actual_exit": 1,
+      "error": "ValueError:android_boundary_intent_unverified",
+      "scope": "cold callback diagnostic only; foundation and ordinary Release not run",
+      "automatic_cleanup": {
+        "removed": true,
+        "failures": []
+      }
+    },
+    {
+      "result": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/result.json",
+      "status": "failed",
+      "actual_exit": 1,
+      "error": "RuntimeError:boundary-driver_failed",
+      "scope": "cold callback diagnostic only; foundation and ordinary Release not run",
+      "automatic_cleanup": {
+        "removed": true,
+        "failures": []
+      }
+    },
+    {
+      "result": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/result.json",
+      "status": "failed",
+      "actual_exit": 1,
+      "error": "RuntimeError:shared_failed",
+      "scope": "owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch; opt-in actual cold/warm OAuth callback and HOME/MAIN boundary; no backend, physical-device or CI execution",
+      "automatic_cleanup": {
+        "removed": true,
+        "failures": []
+      }
+    }
+  ],
+  "preserved_failure_explanation": {
+    "run01": "cold VIEW Status timeout; strict gate failed before driver/phase",
+    "run02": "private ADB device offline during vault-write, no body completion; exact root recovered separately after all registered processes gone; transport root cause not established",
+    "run03": "targeted diagnostic shows teardown-only false All tests passed plus Bad state late test registration; gate refused it",
+    "run04": "fixture fix enters real business test; driver1 on six default-router unknown-route exceptions; actual Android production manifest configuration RED, not whole-SSO acceptance",
+    "run05": "shared testDesktopMinimizeStopsReadAndRefocusResyncs expected1 read, actual0, suite1; native not run; Python suite concurrent, root cause not established; same-source later qualified run does not erase failure"
+  },
+  "independent_review": "one fresh read-only reviewer, then targeted registration-fix/diagnostic recheck; no unresolved actionable issues; static review does not replace actual native results",
+  "product_changes": {
+    "only_changed_parent_client_input": [
+      "clients/enterprise_im/android/app/src/main/AndroidManifest.xml"
+    ],
+    "unchanged_parent_inputs": 268,
+    "new_input": "one Debug integration fixture",
+    "fix": "Activity flutter_deeplinking_enabled=false prevents Flutter default page navigation duplicating production app_links OAuth handling",
+    "official_reference": "https://docs.flutter.dev/cookbook/navigation/set-up-app-links",
+    "native_red": "API36run04 driver1 six actual unknown-route exceptions; same fixture final GREEN changes only AndroidManifest.xml among client inputs"
+  },
+  "tested_client_source_sha256": {
+    "clients/enterprise_im/.gitignore": "441eaa1de5b3db9fae056e7503567e9f8dd94173e1389c60f76956abf729015a",
+    "clients/enterprise_im/.metadata": "e828f34e7b02000d36db8d739a0e839fbc0c59197f750d41b20dd36f96bedb8e",
+    "clients/enterprise_im/README.md": "15df50a79898108a94b28b9473af18f6b620a793059e5758434430ca00809201",
+    "clients/enterprise_im/analysis_options.yaml": "68ad26a5ae82e3eac43e6977e14f41194f8791511ac8edd516ff52854358430e",
+    "clients/enterprise_im/android/.gitignore": "b027c9de1011765c015e5819bf857c0d75bfcd0886fb01721c091159012e50f1",
+    "clients/enterprise_im/android/app/build.gradle.kts": "6444f3fdf35ceaace06d7ae0130cb742e8e34fca054803123a72028efe26ced1",
+    "clients/enterprise_im/android/app/src/debug/AndroidManifest.xml": "30b0832ed8b92dfbd6ae2abfa939ccf26333d37600056b1572bd4a397a18a74b",
+    "clients/enterprise_im/android/app/src/main/AndroidManifest.xml": "d8d00dfd083dc04778b629798869cbb7f8f62ce9f7d35d30b01bbc9d7854c738",
+    "clients/enterprise_im/android/app/src/main/java/com/enterpriseim/client/ExportDirectory.java": "3d726c27e05662725af1e3c0d13451cc92f69379ef64634e98cd74ba5d6de439",
+    "clients/enterprise_im/android/app/src/main/java/com/enterpriseim/client/ExportGrantReleases.java": "478175c1bc5f501172c289c0f54b86335f5c1719426387363fb9830a7876d979",
+    "clients/enterprise_im/android/app/src/main/java/com/enterpriseim/client/ExportJournal.java": "7dc29c6b528e3184fa53b33e47ec46cc95a8c2cd4b0856cd128ab06c2bcd11dc",
+    "clients/enterprise_im/android/app/src/main/java/com/enterpriseim/client/ExportLedger.java": "d9461d688104fdac44f6ddd81a32a55c1bae80eb6f0aee2eeafd76153176aa69",
+    "clients/enterprise_im/android/app/src/main/java/com/enterpriseim/client/ExportManager.java": "6d4d6966ecb76d3ff87c9f00a0da87b174846c6c14102bfe0c361c761f1607a9",
+    "clients/enterprise_im/android/app/src/main/java/com/enterpriseim/client/ExportSession.java": "7d928dd620fcbe8f1c45a05e686dff4e304ed7eda0001d37bf13fdf8067880a0",
+    "clients/enterprise_im/android/app/src/main/java/com/enterpriseim/client/ProviderOutput.java": "606063c8b8588e0884df6443a513263be3966afd4f9c820594a74e17ee49f7f4",
+    "clients/enterprise_im/android/app/src/main/kotlin/com/enterpriseim/client/MainActivity.kt": "b24f8ad6240251c04190c39b3a53412ed1a4eb7cbc59c68f006ebd302a2dfd13",
+    "clients/enterprise_im/android/app/src/main/res/drawable-v21/launch_background.xml": "7ca6d5cec2169c5a98661a119db23a6f3399c8fef2256ff04f3a642831282478",
+    "clients/enterprise_im/android/app/src/main/res/drawable/launch_background.xml": "94433756fe10005ddd6fc55cc5c0b1e9f3c10b66a08ceac795ece6713d34e28a",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": "6a7c8f0d703e3682108f9662f813302236240d3f8f638bb391e32bfb96055fef",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": "c7c0c0189145e4e32a401c61c9bdc615754b0264e7afae24e834bb81049eaf81",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": "e14aa40904929bf313fded22cf7e7ffcbf1d1aac4263b5ef1be8bfce650397aa",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": "4d470bf22d5c17d84edc5f82516d1ba8a1c09559cd761cefb792f86d9f52b540",
+    "clients/enterprise_im/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": "3c34e1f298d0c9ea3455d46db6b7759c8211a49e9ec6e44b635fc5c87dfb4180",
+    "clients/enterprise_im/android/app/src/main/res/values-night/styles.xml": "8c5bad5152f217e837519f9c15211d19f39bd45f5f67faf6dd81cb4b299e518f",
+    "clients/enterprise_im/android/app/src/main/res/values/styles.xml": "937d7c82f539c72eb94fd3a3773f29b3d3fef1997213c92cb632298cedf4bda9",
+    "clients/enterprise_im/android/app/src/profile/AndroidManifest.xml": "30b0832ed8b92dfbd6ae2abfa939ccf26333d37600056b1572bd4a397a18a74b",
+    "clients/enterprise_im/android/build.gradle.kts": "6a26dba2cb8dfba1e74f540b0d17a89d96c1301d3c3bfda14348bed257fddcba",
+    "clients/enterprise_im/android/gradle.properties": "0f82b18017fba6bb5ce3aa4b2d1a00c9382fc8aae7b1d9326e44b18abd66d80b",
+    "clients/enterprise_im/android/gradle/wrapper/gradle-wrapper.properties": "67ce033cdd43a5af2686f7ecae3b527d70041824260d6f15a7c2c3a100a8d1c2",
+    "clients/enterprise_im/android/settings.gradle.kts": "016759283e88ade6eba92910583feeef88b962839b957aa414296afd2952d122",
+    "clients/enterprise_im/integration_test/android_export_handoff_test.dart": "d731cd249d712fb6bc9518527e635bef566b9f1ba1309fae5927822ef3e5ab52",
+    "clients/enterprise_im/integration_test/android_export_partial_test.dart": "a4b7da6d6fc1dc9631dfcca6302691cab97a439290b5182256535b44103b9dc0",
+    "clients/enterprise_im/integration_test/android_export_picker_test.dart": "093a4c4f5a96aeff70ab461e431d67dd0a46301da4cd3a12cd5aaaff8034d23b",
+    "clients/enterprise_im/integration_test/android_export_provider_test.dart": "29fc2a8d2cb06b8fda499b97edec9dccd21f30f23236ff8e6834779b11bbf5de",
+    "clients/enterprise_im/integration_test/android_export_reboot_test.dart": "8ed56085f83f9467aa2d3eadb820999cfb960db07d79cd38f6069582908903a6",
+    "clients/enterprise_im/integration_test/android_export_recovery_test.dart": "883b54e338c0793cee569d910deae1a64ed78bea21564159aa584bc3b77011cb",
+    "clients/enterprise_im/integration_test/android_export_test.dart": "cb432837a16e4fdb4bca58f4e1b9b2614e20a6a5be41efbf8bdeba86a78f082c",
+    "clients/enterprise_im/integration_test/android_mobile_boundary_test.dart": "3464d4052c26395e941b0f8b08f89096edea70cbfe260b9ee26768f107ece223",
+    "clients/enterprise_im/integration_test/desktop_lifecycle_test.dart": "e49afe25ece6fae7c44c5c683027ea71330b702d06b94200cb7b6bd10307d68d",
+    "clients/enterprise_im/integration_test/files_and_devices_test.dart": "cd74464ac5302e8770d892e38502e7bd9d2c0acd5bfa9b21e4e4dd174ae502fa",
+    "clients/enterprise_im/integration_test/ios_export_picker_test.dart": "5579e4eb3dc0bc17855659eca80fd1c5df530f9c08dfeaa35281ece5c2b2b567",
+    "clients/enterprise_im/integration_test/ios_export_test.dart": "8869a95b30ab0ab754ce83e1cdf7d6bc45df41e28c0102ed90e8e635ced09d51",
+    "clients/enterprise_im/integration_test/messaging_test.dart": "aa69dff97321e69b639ee8c7e9e7d89a999f5f2bb2362427cb5d095986e1f7f7",
+    "clients/enterprise_im/integration_test/mobile_lifecycle_test.dart": "3ab529be1e7fd68bb5d2d1e694b53728ba64f46040a9ae3cde8b09b76d13f648",
+    "clients/enterprise_im/integration_test/owned_backend_fixture.dart": "61463d083f44f7dc31fda063ed49b061088ab3db96b140045cfd29e488d116f9",
+    "clients/enterprise_im/integration_test/real_backend_test.dart": "430acd67a38f46007ca42a30a0b605a4045839c143247c4d8df6016d354f003a",
+    "clients/enterprise_im/integration_test/secure_storage_test.dart": "8b29e0ff369c7d7552feb2a65d4cee11f8fd1e51d75677d03395ffcf7c3cd468",
+    "clients/enterprise_im/ios/.gitignore": "37380775aeb2499662b7aca80f4ac4c95ae827c3ba2bfa179aa3e9af4812c623",
+    "clients/enterprise_im/ios/Flutter/AppFrameworkInfo.plist": "da12038f9b2688a8a26160fea2609fa8fcb11421448c109f09c0f573efe7698d",
+    "clients/enterprise_im/ios/Flutter/Debug.xcconfig": "a82d7765b37116ee4821d2cd1d65942febf8032353757ffb0826eabde785b4a6",
+    "clients/enterprise_im/ios/Flutter/Release.xcconfig": "a82d7765b37116ee4821d2cd1d65942febf8032353757ffb0826eabde785b4a6",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.pbxproj": "5035e98f9e0c32e285ffbfc349336cde627e304236d62ee9957035a20ca0f54e",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata": "7f3b00b5c3fdb45242d7b87e1e5c4e25d1fa8129a16c94295ecc4e8ea2235c5f",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings": "11b247bc6796892d67c9a821d18604db4dd6a880981b34f38460b9866e6b247f",
+    "clients/enterprise_im/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme": "9fbce429f56243561dd437a527136c9f9ed77165e3b271b923faf236cfcd0484",
+    "clients/enterprise_im/ios/Runner.xcworkspace/contents.xcworkspacedata": "46c3c9702ff7c5584e11c954d943cfb6e07fb26e3fbd072ddbc0f388aa352de1",
+    "clients/enterprise_im/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings": "11b247bc6796892d67c9a821d18604db4dd6a880981b34f38460b9866e6b247f",
+    "clients/enterprise_im/ios/Runner/AppDelegate.swift": "85b2e9fd445e02f5156328403eeb94adaa9138772a7a10fcc78df18d3c81d2b2",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": "3b1e214f466ffedff74baa5598ad5c4421130eea6bc8d57b8fe23435e8280ae4",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "7770183009e914112de7d8ef1d235a6a30c5834424858e0d2f8253f6b8d31926",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": "cab10a0d391ec5bc09ef50ce49e8ad401cee7ef03707ec0923a222c5c2b3d212",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": "b9ad02cf6576a04d1b6806ac02a2431481b448dd0c2e505ce25842d1f7c4730b",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": "c6e6d3b215ae744a9c391f4c4d44157eff5e739d6ad6c39f9bfa5df66dddd267",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": "5dee24dc104ac76dc162e42ae0beb163d426bf365562ee28ba7b3ad368559a60",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": "a9b21eb6f4271385655a8771f76e29eef8c1107d7879cbcfc567e6619d1f716a",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": "e677d701ffe4af7bc2935098d6b3984cc9ab7ace573e6900955a5535b12410cf",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": "b9ad02cf6576a04d1b6806ac02a2431481b448dd0c2e505ce25842d1f7c4730b",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": "7c61c42fc7b657d9cf314d32a4ec458f0647c3aaf360be1b9377857266ec2499",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": "19be171481dc71a0b2803ebcd01dd8b0c5fd5778dee34c0a3cabc948c225f24e",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": "19be171481dc71a0b2803ebcd01dd8b0c5fd5778dee34c0a3cabc948c225f24e",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": "4209a49e44a92ec40a327d3455eb1b1c153ee83d75de1c2be0a12ab18b2ff9de",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": "836c918cb613249eba0483a6b02fa3df3c1c0a89a315ee4d3b88509b83c7ab73",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": "41c7d42f6e61f8fe7f30b1ffa2256aecbc9682be06d18c4a3062043e1a2e547c",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": "5d7e5bdf01b93802bc973345b3a78c038907147625035952a08a115a563b7f81",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json": "ccc7950fd5f5b82067c85f667940a9d59189151460761ece8098ca78daa19469",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+    "clients/enterprise_im/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md": "a985b626c4f7546a8ba392d135e9226c3547c8e2b46895f5f2bdf40d7b14ef9f",
+    "clients/enterprise_im/ios/Runner/Base.lproj/LaunchScreen.storyboard": "857e61203b3deafb05766d8fcda898b86a7cb6f3d5e385ecc9926c4d698215e9",
+    "clients/enterprise_im/ios/Runner/Base.lproj/Main.storyboard": "fd367b6c43006d61b730f674970dd48b9f662c8f2264e52ffc1558102a2c9f2d",
+    "clients/enterprise_im/ios/Runner/IOSFileExport.swift": "6cc2cab6010741c2f8f2cbcbb1adbf047a6326235fd10d6047a9900d51aeffea",
+    "clients/enterprise_im/ios/Runner/Info.plist": "a533bf13dc1d98dc29871d5ac68850c6017a39f53c0207d8796432dcd7e9950c",
+    "clients/enterprise_im/ios/Runner/NativeExportSession.swift": "1730a5915fa745905719411e3559514ecf97bc2891aff23e4d016bd05859e41c",
+    "clients/enterprise_im/ios/Runner/Runner-Bridging-Header.h": "1a8d11d01d1cc92c650c9c9ed35299240052d4683a15a719a2315ef44185e074",
+    "clients/enterprise_im/ios/Runner/SceneDelegate.swift": "add68b905971dedfcc0d0b5b7118030de5925ba8c081ad9815463699e3a444ad",
+    "clients/enterprise_im/ios/RunnerTests/RunnerTests.swift": "5e8f4908dacea6f29b2a790e4d38bf5fded69096063f9a27a2f21584d62b30c0",
+    "clients/enterprise_im/lib/core/auth/account_reference.dart": "8013ab7cc5e185ba6ec626925228e7b315f61d7d1529cb45242b2d0d29fbf22f",
+    "clients/enterprise_im/lib/core/auth/account_selector.dart": "c9c2e40fdff42ac55da9c959c0486d439c747d44d96c65d2f911f72a0937ecf5",
+    "clients/enterprise_im/lib/core/auth/auth_session.dart": "41e484fedf6be971d2576d9b0282c633b02e6ed5c7db0a577f57439c407791c4",
+    "clients/enterprise_im/lib/core/auth/client_session.dart": "b57a73a5fe6588fa36fd6b92a178900c975c8b5a97e7f1b66ab55cbcdf6fed1c",
+    "clients/enterprise_im/lib/core/auth/native_auth.dart": "106040dbdb1009a04d4a1dc55d22abdd0ca24773f81aebe0ec0cc11b32adec3e",
+    "clients/enterprise_im/lib/core/auth/pkce.dart": "30f32a78dbb279fc1a519c2e4c88bce627dee4a77b9a60428e0a76a0d5089ac7",
+    "clients/enterprise_im/lib/core/auth/session_store.dart": "fe385905d37fb10ddc0b4b44f82d29b4ff61d1ed3fa9a87745f839c963a519b3",
+    "clients/enterprise_im/lib/core/protocol/api_client.dart": "7552d29685cf8229e4bdbfc75b0cf51997e59c473335cdf8da7ab14e5fac0aa0",
+    "clients/enterprise_im/lib/core/protocol/api_error.dart": "b5964443e281e6781bd1fc06e5a45f4398f674525d197e500da2ef9e874d4e92",
+    "clients/enterprise_im/lib/core/protocol/client_id.dart": "ccafd09bd26b5e4d01239df550b68a6fb8bedae44cd894ca4afe8b2189d34d31",
+    "clients/enterprise_im/lib/core/protocol/models.dart": "37f55c148b791af29e36c6e107966f7be66cd1fa736713a1125d93ad78c70c69",
+    "clients/enterprise_im/lib/core/protocol/seq.dart": "f6be75a70de57ef6c6efed25d525e80fa7bac95dd53ee5ad573271dfe097089d",
+    "clients/enterprise_im/lib/core/storage/encrypted_store.dart": "ffc219e830e739c45f20ad3b80f88bfa6a61fe714feaf6f9947bbba520f3808d",
+    "clients/enterprise_im/lib/core/storage/records.dart": "825cfdd40bf5f12b91d9ef546e7366cf038f430b86cd386e1d10c26b728c149f",
+    "clients/enterprise_im/lib/core/storage/secure_vault.dart": "1490415ca8fa74606048d646e2c9eb84a431e4966c2eef12f54000acc698fd3a",
+    "clients/enterprise_im/lib/core/storage/store_worker.dart": "d53e0173cc09c0c7fc138ca7c513a9cd82644900d93f0a8431757a28e4bad8c8",
+    "clients/enterprise_im/lib/core/sync/client_context.dart": "2f132d2222a7440a6bdd2e4e28d9b4f5363e213ef2335e3ad55802175df887ae",
+    "clients/enterprise_im/lib/core/sync/realtime_channel.dart": "1e4f9bf5c0ab27645227bf0f75d4aaf2fe26bc0e2d455b54f8b589d0d39c7f24",
+    "clients/enterprise_im/lib/core/sync/receipt_queue.dart": "46319074fa65d9727c400c028641bca0a51ee03249db7017cf6418f3079060d4",
+    "clients/enterprise_im/lib/core/sync/retry_policy.dart": "c07b56b8cef124ddc6fc66454f622783e027810b24a84d9eebcab9f64c42d7ae",
+    "clients/enterprise_im/lib/core/sync/sync_coordinator.dart": "a06e5fceee740cf404d94bbaf4c874dea9614a2a759ab965d2d3d6e9467dba0d",
+    "clients/enterprise_im/lib/core/sync/sync_engine.dart": "edec76adf469e2143553e8bffacce745d1975c9e6c5e57fef6f9c75501c3f70b",
+    "clients/enterprise_im/lib/features/conversations/conversation_controller.dart": "4fb7253ad794b0262b4601112bdd1dc4ca37643d0ada4dc23340dc7159aaae9d",
+    "clients/enterprise_im/lib/features/conversations/conversation_list.dart": "766a7c9cba78b0917c871a51baa1f83937a50f0787ba88402313c5346fb455f5",
+    "clients/enterprise_im/lib/features/conversations/conversation_view.dart": "2779a814f2c0c86eca8b0c564ff96fe50f67ce579649ba5fc4fdb686709ead93",
+    "clients/enterprise_im/lib/features/devices/device_controller.dart": "9190def6081423599ef2ed6fa7358be59fcf3227c37faddd9a5d438c6af352ab",
+    "clients/enterprise_im/lib/features/devices/device_page.dart": "c334b6d9b14f032b4d17b07455c2481fa27c174c9aeeab5e125cb1352bbe7050",
+    "clients/enterprise_im/lib/features/directory/directory_controller.dart": "313878beb13587d092f247be4c02ffd7164abdc7dbfd29c5e5f6769249ba01d7",
+    "clients/enterprise_im/lib/features/files/file_download.dart": "07b4c52ba8dee0a6e3987dc97645a81a414e612958d226496ab70a1b60f3bfcc",
+    "clients/enterprise_im/lib/features/files/file_message_card.dart": "5a54f989ba3cd691d18a1298488535979850ea8d8f0346c260299ea77d7241d5",
+    "clients/enterprise_im/lib/features/files/file_transfer.dart": "76e0f923bc857a85cc5082ec38a2f0dea7d176b630361ed94ce14817eaaf5001",
+    "clients/enterprise_im/lib/features/files/file_upload_panel.dart": "bbaccf0e80ac63225a1e9b81f55b76338106f0fd52d713b72d9d0e47d10499b0",
+    "clients/enterprise_im/lib/features/files/file_wire.dart": "f2a7bedb0fad0a1b314bd0d5f0ffb5bfff5ace03e2c69632de93a98bbf4352f8",
+    "clients/enterprise_im/lib/features/groups/group_controller.dart": "4d81dea537f9723f0a5b558bf5d1816a7d83db03652c0661e8369a3c3ad90461",
+    "clients/enterprise_im/lib/features/memberships/membership_controller.dart": "88da5b208d4338b464b4991a4cc4711d9e0d3f8588df4ab1e9742b6f81e4670d",
+    "clients/enterprise_im/lib/features/memberships/membership_model.dart": "82c358019aa618d0c44c9a3fe4ac2c78865a086491faba2772c31aec8b9b0deb",
+    "clients/enterprise_im/lib/features/memberships/workspace_requests.dart": "104286561db86438b1203f7d7fb3bfed1e10e2cac588138379a6ac8111b2805f",
+    "clients/enterprise_im/lib/main.dart": "f79de3eec126b246fb87ea57fc73af880126106f8cec4b48953e5447a8f83f8e",
+    "clients/enterprise_im/lib/platform/app_activity.dart": "4cf8c9f05e8450df03979d2f7fb3a7b35ba94c6ef7523226180bd414288af23a",
+    "clients/enterprise_im/lib/platform/browser_launcher.dart": "e83f36ab2da997f6ed1ab315e4248e9b7e42709513f63a43b4ed2a67159ef4ca",
+    "clients/enterprise_im/lib/platform/file_export.dart": "43c8f63da267ec9b43eb61e27a246800658f97cfa3b149a91a9c0f272e14b35e",
+    "clients/enterprise_im/lib/platform/file_picker.dart": "99953ba0995ed742b3b62779b144fe23ea0064f5f5a268ec94209b4c68eee3df",
+    "clients/enterprise_im/lib/platform/login_callback.dart": "d46302d6c48379cdfd95501776538c5caaa0efa8053bc4fd7f4333e13af5747d",
+    "clients/enterprise_im/lib/platform/mobile_activity.dart": "1adc317500dd1123227fefbb9465d33d42f3409aa66f891b461bb59f04b68f9f",
+    "clients/enterprise_im/lib/platform/native_activity.dart": "a3d79c5849581d8c80882eba90215a2dc7c000341bac4f9c41da137b74ca6206",
+    "clients/enterprise_im/lib/platform/notifications.dart": "c303642fa0542c264420793b08ab68d00f118d99ecd9f0bc13b79a76fa72aaba",
+    "clients/enterprise_im/lib/ui/client_shell.dart": "9f8fc699dd1c3b433f2caffed7882d9ea92cb43ad0aa0ed70ffda1bef6980431",
+    "clients/enterprise_im/lib/ui/directory_page.dart": "9d26d0f345579e7f644ee8671dbc238222bcd432e554836cc853881ff7ea967b",
+    "clients/enterprise_im/lib/ui/group_page.dart": "e614a84439e2e3a4c54f7fe851e6941edfccaa45bd9921e11cd638ad8a04dae3",
+    "clients/enterprise_im/lib/ui/login_page.dart": "a9770d7a81b8b0b462192da23530a83453c8a0166e7a5a0bdd943c24ee941d37",
+    "clients/enterprise_im/lib/ui/message_composer.dart": "e4aa81e4158c0ad9f6558162af54f1a2e9f56ed4f67417b93b00daa7a4209bdb",
+    "clients/enterprise_im/lib/ui/message_list.dart": "446eafd3de482c1246c99517c86d37253728040c87d0e513627c39a38814d107",
+    "clients/enterprise_im/lib/ui/message_page.dart": "7fe30b5847dd408b463cda845ee3e53070e7e969f0b492ed1d21c806f658be3c",
+    "clients/enterprise_im/lib/ui/receipt_badge.dart": "6027ee95b85025c3481990cc7e765bc0dc9ebd07944c43e28a6e963f43f788f1",
+    "clients/enterprise_im/lib/ui/workspace_action_page.dart": "2c9d55d339c063e1a79b19d364f7f5ab2d22471735a3da9c2a0123143db0fb43",
+    "clients/enterprise_im/macos/.gitignore": "ffec1a0bbd70547186b82ad4e49089bafab2de309b89de97c776d70debb179fa",
+    "clients/enterprise_im/macos/Flutter/Flutter-Debug.xcconfig": "62290ad8e938bf410206d8c7e131262696b58a6df110d39faf3399396ffe61b1",
+    "clients/enterprise_im/macos/Flutter/Flutter-Release.xcconfig": "62290ad8e938bf410206d8c7e131262696b58a6df110d39faf3399396ffe61b1",
+    "clients/enterprise_im/macos/Flutter/GeneratedPluginRegistrant.swift": "fdca9e0f1ec9f31d311829cc3d9886c14b8313e2a48b957e63bfd1454e2084df",
+    "clients/enterprise_im/macos/Runner.xcodeproj/project.pbxproj": "5f7804a2f90659ed9bc7befd57ec13465fd41e29999e7cf92a83260128c330d6",
+    "clients/enterprise_im/macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme": "0488f2c93f44971cebc2e5d72acd209a0497d2b655a66a53834209f14a263ea9",
+    "clients/enterprise_im/macos/Runner.xcworkspace/contents.xcworkspacedata": "46c3c9702ff7c5584e11c954d943cfb6e07fb26e3fbd072ddbc0f388aa352de1",
+    "clients/enterprise_im/macos/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist": "dfa0f9bb85b95ccba9c6811adadf8cb407fb5d52088e89db83ebc308ec448542",
+    "clients/enterprise_im/macos/Runner/AppDelegate.swift": "ce9dbe45a57c59e85519da50a26c471615b9c8cdd85a8f4a39d2e480e62a4af4",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": "bc6ba8105ca69651aeeb77358851590de295dca04681a1d58c0f449641c242f3",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png": "6232e5815af17e25e0268b2fec7aea9e068cc92ec709e9605c2b31df4ff2a313",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png": "15591f03f31313af6fd644ed0512106cc04365130b8b73244f1cfa6dddfb4400",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png": "cc6928b5adfc00dbf526192e2705dd9af641cdf20ab4c6c7ca7cd4936dca59f0",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png": "416efd77cde932d42ef34168da24dd428a495b1f4f34bbbd125a18d2add186a2",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png": "ae8c4458e41f1e28b1e851ed87d3268d4a0351ceea427fa2a84cc94ddfb6d4c5",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png": "0a91c6c1bf242e54ee179e34629e9ef3e8a6d286c0fce01e302280a8be9277e6",
+    "clients/enterprise_im/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png": "6ad229623498e5f1277800db3ab7cb11faf85eb2569e1213f7d8e55003c07b42",
+    "clients/enterprise_im/macos/Runner/Base.lproj/MainMenu.xib": "be9e9ef8469d3262370e0f0b855ed163cbf9c8362c59e330b2ffe63b86fa42f4",
+    "clients/enterprise_im/macos/Runner/Configs/AppInfo.xcconfig": "611a3b35169ef67179fd7df0ae6565c4aa5e9f936ac875506bff291e4f59461c",
+    "clients/enterprise_im/macos/Runner/Configs/Debug.xcconfig": "8067d533ef6593760baad9a9855a786a7a77470fcc3f0925ec04fe43bc1ac4b0",
+    "clients/enterprise_im/macos/Runner/Configs/Release.xcconfig": "7a6a4b4d973a23052fa0a0388dd261e32d311d7b66ba1bfc3b914b361808ac61",
+    "clients/enterprise_im/macos/Runner/Configs/Warnings.xcconfig": "0e341a392b16ad302d12890aa3dac9257a6c10ece685437604259a85341645a3",
+    "clients/enterprise_im/macos/Runner/DebugProfile.entitlements": "4bf8fccb0e90203979194856cd9fb10a5b0689ae9cb39219cf81fa6f4a534cde",
+    "clients/enterprise_im/macos/Runner/Info.plist": "f253e89c512b3a9a81bc5cdd7a14bf932470f835f261654a808ea4549cd94aad",
+    "clients/enterprise_im/macos/Runner/MainFlutterWindow.swift": "65c9613c11bcedfa51416b16c975d8ba6ff12b405fc19d60db8755d92e86d9fe",
+    "clients/enterprise_im/macos/Runner/Release.entitlements": "47014aaf66980b128b8112f510ce1f050e99a4f96c7bc6d1bde58b39777144b2",
+    "clients/enterprise_im/macos/RunnerTests/RunnerTests.swift": "6bc180bc77c7def7a21d197233e25dff42cc493ab9d294632edafc18fdf0ac44",
+    "clients/enterprise_im/pubspec.lock": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669",
+    "clients/enterprise_im/pubspec.yaml": "b9e74791b2c56b3bbfef4466eb541794f946017784f93e5e466dde26f0d2997c",
+    "clients/enterprise_im/test/account_selector_test.dart": "859f766312019d84da509a01074a703750542d63c77ccff1a4cd54fc7a31d9e1",
+    "clients/enterprise_im/test/auth_test.dart": "711ad9617e4d80f0f5c615cb7fd9002a8c6ef305ffd264d85d747bff9af591ec",
+    "clients/enterprise_im/test/client_notifications_ui_test.dart": "f45ad13bfcd126417a45f2d866b1ed4cad42089e74bf55acbec93a556b3d61b2",
+    "clients/enterprise_im/test/client_session_test.dart": "a74742042c5a2c387318a6dadbf527bf4e8396a777a83fe7e474c1c85218dc84",
+    "clients/enterprise_im/test/client_startup_test.dart": "d21bc27466b259330935d01f816c43b49feb18b5fd4f21dd27e76f49b29e21c2",
+    "clients/enterprise_im/test/desktop_notifications_test.dart": "4dbf8388c9787ee35fb849a6659db595d45e721ef468277becceb5f575b364f0",
+    "clients/enterprise_im/test/device_test.dart": "864c189ebc6d9b5d37559487406fbef4a3d1dd88aad0149270931da6544655c6",
+    "clients/enterprise_im/test/device_ui_test.dart": "79e1e98956d12c3d086ba1da9561239de1212ba25710b70762538cdace9cdb35",
+    "clients/enterprise_im/test/directory_group_test.dart": "5a25910e3d25c4bd37ab5220240355485307b7a3c7cda3e6c2f4087cb2469450",
+    "clients/enterprise_im/test/directory_group_ui_test.dart": "0c7e8516dbb5cb8a444cf04c6c360ec677c9fcf7d27daf7405ddbb5f09a500a2",
+    "clients/enterprise_im/test/file_download_test.dart": "d463c1b55a35393722525606299c0e3b876b20fc7457a9ae143bfdbfaad0a7bb",
+    "clients/enterprise_im/test/file_export_test.dart": "09c878a5207a233e0738611f9cb88bf43764ed85b41255ade29a3789e7c10d26",
+    "clients/enterprise_im/test/file_transfer_test.dart": "59f43027748f52507bb4f54ff8cf4078eff77d3772e9ce224d424fc952285857",
+    "clients/enterprise_im/test/file_upload_ui_test.dart": "d48af2f8c8852f77ebf20dff9854c69e4deb06ba9dd9b907af1e89bfa00d9b8a",
+    "clients/enterprise_im/test/file_view_test.dart": "17dc98a6f31bc78ab7a860852b7acbbcc8c5a00563765246f74f7f0052f69f2c",
+    "clients/enterprise_im/test/group_accessibility_test.dart": "c45ca6f9f942d84cd02933f2a2403f8854e7de9e9f6b0d0362823a26cd05fe4b",
+    "clients/enterprise_im/test/group_reliability_test.dart": "0e45c01777334246bf511703e05ce684f082263e03d14db7583aa185cf97179a",
+    "clients/enterprise_im/test/login_callback_test.dart": "ddf2e1bb714a1e1ffe2265c1607675ab35531679a2c4b3503683f8600ee49bfc",
+    "clients/enterprise_im/test/login_page_test.dart": "e23cf0f75f28d33ed34f9620778f9267935c11595cae5b5f680571fb98ba3ecb",
+    "clients/enterprise_im/test/login_session_test.dart": "a19e7130fc1d77c858a6e5ade30f8d9a0f679f756bf2e7eeca8a9986103541fd",
+    "clients/enterprise_im/test/login_startup_test.dart": "f0d4cda25ee0576261e363d99226aa4db208fa6ebcc527e9974e671fba78947d",
+    "clients/enterprise_im/test/membership_admission_test.dart": "728d7b19b238d6626366cf8d1d5d98c12f5d4ecdd6949fd956da6ad05f5ff957",
+    "clients/enterprise_im/test/membership_switch_test.dart": "c31d0888db0d0c3124c654bd2960a99a794302a17a15fd33fea96c1c7096ce87",
+    "clients/enterprise_im/test/message_composer_test.dart": "bb2f1fd61b17eccc7374f7bbdf46a9f76e1c377ad25af419578d5b999fbdd09e",
+    "clients/enterprise_im/test/message_send_test.dart": "6a29f2b0d94f3d49bffb554588a7c621eb563f896dc056804d01625fc27a70e3",
+    "clients/enterprise_im/test/message_view_test.dart": "5688ea32243f2a4763dbdbd0359476123700923373551ca1f8bc5252c617eafe",
+    "clients/enterprise_im/test/messaging_navigation_test.dart": "2b24716067079087b102bf17f801af919e3a61aa8cfb9de5d91699c7afd5062d",
+    "clients/enterprise_im/test/mobile_activity_test.dart": "bf50e4d46bc975f1766cb823d527632761885ea583eb0fae1943ba1d912b63ed",
+    "clients/enterprise_im/test/native_activity_test.dart": "24a0ff6661bc095f4133a77ea70054349d77098ebfcb65e50fe35fb97231bc5a",
+    "clients/enterprise_im/test/native_files_backend_probe.dart": "ab27fd759e6592696e9a002ee541ca6913c88ae8b851ac9721e0f7cb659af625",
+    "clients/enterprise_im/test/native_messaging_backend_probe.dart": "9298d94d3c914a7a3f92c339a2c72e5b955034ff76da78a04429d2fe67fa2a85",
+    "clients/enterprise_im/test/navigation_test.dart": "4b26c180d3194b14f86f4f64a550b3755e3d984ebe52b5f050a963c31757bd5f",
+    "clients/enterprise_im/test/page_transaction_test.dart": "7aee9afecc67c819f9dba2a176715d48a95ff8abc195c898e1702a0c8ab89e7f",
+    "clients/enterprise_im/test/pending_send_test.dart": "e3b55bf44f2b325f9462483d9f3b66a34ddf6ee5c570e5131d7c37007bba22f9",
+    "clients/enterprise_im/test/protocol_test.dart": "0c2301acb807c7f9d0495e3e543d0317aa857641ec9b423b708792411ab07b1c",
+    "clients/enterprise_im/test/realtime_channel_test.dart": "ceaa9914fa5ed8c5fa6ed221ce40b2594b02b50c28516fbfea2299c12917e3ff",
+    "clients/enterprise_im/test/realtime_transport_test.dart": "626bd41203092f63ba20b9abe0d5bbbe14514771c5a7dc9c31eb748118d8b54d",
+    "clients/enterprise_im/test/receipt_badge_test.dart": "646ebe8838b0214ec53d80d40f8b62a4d7f958ddc6832191b89d4dcc1cb3db1d",
+    "clients/enterprise_im/test/receipt_query_models_test.dart": "d1c431100f9e7d100a453dc98fab8631b576dcd7d8a384389a3b090b7bc54ed7",
+    "clients/enterprise_im/test/receipt_queue_test.dart": "52ecb248e166861621e08a2ff3d8f1b9327841b469a9e55c8ac47570e3f2826b",
+    "clients/enterprise_im/test/recovery_test.dart": "6bb9d45faf0f842ebbc036cc306e829b67f333024febc7dd38849bfad816b5de",
+    "clients/enterprise_im/test/retry_policy_test.dart": "f3c48d1ba4bd925c71e17129d9bee71660836d9ae63a8db0dc7d02c210d8ff03",
+    "clients/enterprise_im/test/secure_vault_test.dart": "42fcaa8ba48caf4894a5ec18f58e6444fff4efcedd0038ab283e0bb88505f4d5",
+    "clients/enterprise_im/test/session_bootstrap_test.dart": "321427f7db58bd52ab12c037911a0be1228e2c5e956249cf0b1530ea0316947a",
+    "clients/enterprise_im/test/session_restore_test.dart": "0547ccda47a8eddc0f867359ce13f4f598ba54af8ab67b1ed67bbe47f82d26ac",
+    "clients/enterprise_im/test/session_store_test.dart": "96a590d41b8be39965138d5f5b29ed08fe96fa12115c264f20d2d521b391de1e",
+    "clients/enterprise_im/test/storage_test.dart": "7a1df8ab679173e15380aa3417b92d4942bebe288278d040a0620c95550f2549",
+    "clients/enterprise_im/test/store_worker_exit_test.dart": "73ce6dcebf9ec3cd4c523ed2c825d47d3633ffe0bb187b75ebd08526d1b47dc5",
+    "clients/enterprise_im/test/sync_coordinator_test.dart": "b0134afd437ee578f9c9d8cfbdca21280dd422b33c5e71e7d06bc05a86d2352f",
+    "clients/enterprise_im/test/sync_test.dart": "3b904ca2d148d44b29a9d2ca74d8d91f468b79b8956c809e30c861a6ddadce84",
+    "clients/enterprise_im/test/windows_runner/startup_arguments_test.cpp": "bcf0113a9407cec297657def7f860fc9a05e0c8b7da458c01045b40a8708a19b",
+    "clients/enterprise_im/test/windows_runner/stubs/flutter/dart_project.h": "4481adaac9cfa639a50ed60253a3cdf833281904474c9d11efea0c5cbbf65f5e",
+    "clients/enterprise_im/test/windows_runner/stubs/flutter/flutter_view_controller.h": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
+    "clients/enterprise_im/test/windows_runner/stubs/shellapi.h": "dbf27368c88a534740ccf48eb7ed9afbbdb0df158650507892f84fb091bbb669",
+    "clients/enterprise_im/test/windows_runner/stubs/windows.h": "96fccace38aacac6e1e91439196b17942019c2a7e339051838a7ee8360cede0e",
+    "clients/enterprise_im/test_driver/integration_test.dart": "a5a12d7c4c31aae84b1a6debfd88e6dc08f4521b1d4a0ff99ef085c98a6b1980",
+    "clients/enterprise_im/test_support/android_export_handoff/AndroidManifest.xml": "2850015e233b613a37b4971c43c27505708eb02cb6606de55d9c48fc6af93df0",
+    "clients/enterprise_im/test_support/android_export_handoff/HandoffLifecycleInstrumentation.java": "771f9e8f7395ed55833a5bbcddb2edaa992f6baafb052a01ce3bb23ba47ba03d",
+    "clients/enterprise_im/test_support/android_export_handoff/README.md": "53a30d6b320397549df645aa7865c328faf3f3b517862b23f866420280b26964",
+    "clients/enterprise_im/test_support/android_export_handoff/ReauthorizationLifecycleInstrumentation.java": "487f627a7df3cc296017558d755895f2944baabfadcc015633fdee9605784a1e",
+    "clients/enterprise_im/test_support/android_export_handoff/build.py": "4fcf696fadde6346bc413b616510913e1a08ed4437a14c85e392a015474f5a77",
+    "clients/enterprise_im/test_support/android_export_provider/AndroidManifest.xml": "cf40a9e0b6b707ff98b34aeb1a1f43e9157aa28c040d712422994e979c70fa08",
+    "clients/enterprise_im/test_support/android_export_provider/FaultDocumentsProvider.java": "adc0a93e64a5493de7dea4f6e62a315f3e458e10cba5bc0438681b045f7980a5",
+    "clients/enterprise_im/test_support/android_export_provider/README.md": "1d2ccf8eff4b4256d651301f3d79c0916032f39145316694723591a336709050",
+    "clients/enterprise_im/test_support/android_export_provider/build.py": "e958ab7d63ac76fd69e13face0708688cb536e59973fd160f3373c7f6fab760d",
+    "clients/enterprise_im/test_support/android_export_recovery/AndroidManifest.xml": "e5fa977ea74ef05e1486ec6b24d584fb465d7149173b32e3333bf7601d7653ee",
+    "clients/enterprise_im/test_support/android_export_recovery/ManagerRecoveryChecks.java": "9b02dae095c5f2c1acf5bf872cd8f4299955570d2dabe87064c7e079befdc2e5",
+    "clients/enterprise_im/test_support/android_export_recovery/README.md": "2dead40c995cf3ce1fdbbfaea21f2f53ab45e1dc55f7a2c4567aaf64ff8dcdff",
+    "clients/enterprise_im/test_support/android_export_recovery/RecoveryInstrumentation.java": "27b6d83b76fc7820def642bdc9d5a6ef5871c2b39d999480c0a7242d08da0ac9",
+    "clients/enterprise_im/test_support/android_export_recovery/ReleaseReceiptChecks.java": "cab28d98c953e455c188af972f45e7002a54fa29af5764fad138783f1ab10f02",
+    "clients/enterprise_im/test_support/android_export_recovery/TreeAllocationChecks.java": "08c8ede82df6202198d8a2be2a060c34533da92c99b238e9132c64cfe39ae91c",
+    "clients/enterprise_im/test_support/android_export_recovery/build.py": "34ede711214883e3205a30c457b7fbb3a3b20633e7213036128209025a7aa987",
+    "clients/enterprise_im/test_support/android_export_session/AndroidManifest.xml": "01a4a080576e5efc8342b705114cd3ded7b766f2918604afa6c0ec2ee8858bfa",
+    "clients/enterprise_im/test_support/android_export_session/ExportSessionChecks.java": "8604a43c2d9d97fa612aae06d534fd92be9c2961a7468c6415b5c38e00c6e67d",
+    "clients/enterprise_im/test_support/android_export_session/ExportSessionInstrumentation.java": "f555b11a7e48aa9a1298ec717ccffba9647bde7fdd9bfde38ed322f4d59968b2",
+    "clients/enterprise_im/test_support/android_export_session/ReliableCloseChecks.java": "98e5b217c2584882b018dda23f5ece2814a5edb2dad41200972205acaa9c0926",
+    "clients/enterprise_im/test_support/android_export_session/build.py": "822196c8f3ab4010797666bfc3a7fc78a09a696352045f0538e47e4a85757b74",
+    "clients/enterprise_im/tool/receipt_backend_probe.dart": "baf9251604254741c95bf020e960185e0bfa4980612ed3240fd929eb3c1bef97",
+    "clients/enterprise_im/windows/.gitignore": "96345475f1a3c66bd32d28178fba151ab1506b35b1f7857b8f7651863093ea11",
+    "clients/enterprise_im/windows/CMakeLists.txt": "99a105bf6f250f516cc9f7a522519e9abbfd44ce40a5e5018b94d28ca8582898",
+    "clients/enterprise_im/windows/flutter/CMakeLists.txt": "1fe418971b6f41bb35ceb3d64113a835f3f6f171ecaa707bf232492b57a588d6",
+    "clients/enterprise_im/windows/flutter/generated_plugin_registrant.cc": "c5b5460ce7db0e021a1250d95c9e8bde6996279a095b305eb3d038e628199a6e",
+    "clients/enterprise_im/windows/flutter/generated_plugin_registrant.h": "dbc11635d7b1ba1887adf40df5b83d634e9c3ab0bee34510c71528bb4d73602a",
+    "clients/enterprise_im/windows/flutter/generated_plugins.cmake": "eeb7f75f18bfda1ed715020ee548c0fd32b4b2de5ef902c2e037effa9aa68cc1",
+    "clients/enterprise_im/windows/runner/CMakeLists.txt": "6f4c064ed4d2bb59e1b6ca4351306778bb150af1ae920fba494d1ab59ee6f392",
+    "clients/enterprise_im/windows/runner/Runner.rc": "c718070de6796715ab26e0c0a712e7652782a6f6276a6fd815b522686c0bee3c",
+    "clients/enterprise_im/windows/runner/flutter_window.cpp": "dd185884c0b5301d400b58f12ebb36b1c8b326531597e531b40e44a6eeb0e943",
+    "clients/enterprise_im/windows/runner/flutter_window.h": "38e0fcd3a0b83895852ec295cb70d90179c0dcd40d58f065eb5232a4ecd84898",
+    "clients/enterprise_im/windows/runner/main.cpp": "0bae1edc0a7a4f7593c7e4439fb468b12ce953c93fd88e32f4b5902d2909061c",
+    "clients/enterprise_im/windows/runner/resource.h": "1fa98588b04561590ba1cf0521ab86a9db4a878312f21c9d5861d965ddd8d1ae",
+    "clients/enterprise_im/windows/runner/resources/app_icon.ico": "c098d3fc85cacff98b8e69811b48e9f0d852fcee278132d794411d978869cbf8",
+    "clients/enterprise_im/windows/runner/runner.exe.manifest": "825d243e9fa1542619909c1b72d09b3ed7c1f3b225bb8367c125835e5dc3f8aa",
+    "clients/enterprise_im/windows/runner/utils.cpp": "6c2c87106b4b29d534c7edcafb3b7f7b9079caa3cdafa7e56671ad2adf5a2543",
+    "clients/enterprise_im/windows/runner/utils.h": "95a7f7dddb832997cefa937a96f89472332277e75734a5de553610760b744b03",
+    "clients/enterprise_im/windows/runner/win32_window.cpp": "9065f31ccf746cf8b390121f958f9e959033af864aed779597066625ed56bc36",
+    "clients/enterprise_im/windows/runner/win32_window.h": "7dd03746b19dcf3542829b2f6e8ed40a2714ce5f2cb3b0e23f0118a2fcf62d62"
+  },
+  "tested_implementation_sha256": {
+    "scripts/build-client-mobile.py": "c84e68a67d024213eaa5119f7ed515e129aade719237c4c0fc475b5806e9188d",
+    "scripts/integration/android_build.py": "0c36600a8521587ae8cd54c4fb01beddaae3f9099d1cec729d4397d4973ba704",
+    "scripts/integration/android_simulator.py": "fe4da548b290d7c0b12a8bce1f40920d06031e35d44b8af1aea71dfc023fb598",
+    "scripts/integration/android_mobile_boundary.py": "a905c2294ee4b91790ea730733915bb577b65ffa588d64e17e1587aab3e28bac",
+    "scripts/integration/mobile.py": "29dee89fbd1cc91ead4ec3510eca5e5066cc1c8f49511f57ad39651a11b2d815",
+    "scripts/integration/registry.py": "343645284c181221423e3a02bb210bbdc364d83660cb6ee7defab7e584a20fbf",
+    "scripts/integration/commands.py": "4faa433cfb2f3ba6127a1a3de6bba790f4c797af21212a51f6aadc1164507acc"
+  },
+  "previous_checkpoints_unchanged": {
+    "android-simulator-cli": {
+      "raw_count": 211,
+      "mismatches": [],
+      "report_matches_parent_blob": true,
+      "report_sha256": "43417ff90b084113d056f2369b85148d42baf7c57a2948d0da6d0cc852b9526a"
+    },
+    "android-cli": {
+      "raw_count": 53,
+      "mismatches": [],
+      "report_matches_parent_blob": true,
+      "report_sha256": "66a487428636c566be43d66c6edb96928c32a1ee2f289101f28cb3f0a479970b"
+    },
+    "android-release-receipts": {
+      "raw_count": 1911,
+      "mismatches": [],
+      "report_matches_parent_blob": true,
+      "report_sha256": "736dbf3b2da1150b1b7f8a0a1c83ad2e8e584542b1b439ec97391a22db0a438b"
+    }
+  },
+  "resource_cleanup": {
+    "qualified": true,
+    "registered_process_records": [
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83241,
+        "old_start": "Fri Oct 16 11:05:48 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83264,
+        "old_start": "Fri Oct 16 11:05:48 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83671,
+        "old_start": "Fri Oct 16 11:06:52 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83681,
+        "old_start": "Fri Oct 16 11:06:53 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83872,
+        "old_start": "Fri Oct 16 11:07:21 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83899,
+        "old_start": "Fri Oct 16 11:07:28 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83937,
+        "old_start": "Fri Oct 16 11:07:29 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83942,
+        "old_start": "Fri Oct 16 11:07:29 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 84009,
+        "old_start": "Fri Oct 16 11:07:36 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 84033,
+        "old_start": "Fri Oct 16 11:07:37 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 84320,
+        "old_start": "Fri Oct 16 11:08:19 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 84476,
+        "old_start": "Fri Oct 16 11:08:48 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 84644,
+        "old_start": "Fri Oct 16 11:09:16 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 84882,
+        "old_start": "Fri Oct 16 11:09:49 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 83942,
+        "old_start": "Fri Oct 16 11:07:29 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "pid": 84996,
+        "old_start": "Fri Oct 16 11:10:02 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 69332,
+        "old_start": "Fri Oct 16 10:42:19 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 69356,
+        "old_start": "Fri Oct 16 10:42:20 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73004,
+        "old_start": "Fri Oct 16 10:43:53 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73022,
+        "old_start": "Fri Oct 16 10:43:53 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73206,
+        "old_start": "Fri Oct 16 10:44:17 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73249,
+        "old_start": "Fri Oct 16 10:44:25 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73298,
+        "old_start": "Fri Oct 16 10:44:26 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73305,
+        "old_start": "Fri Oct 16 10:44:26 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73540,
+        "old_start": "Fri Oct 16 10:44:58 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73562,
+        "old_start": "Fri Oct 16 10:44:58 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73897,
+        "old_start": "Fri Oct 16 10:45:40 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 74081,
+        "old_start": "Fri Oct 16 10:46:10 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 74261,
+        "old_start": "Fri Oct 16 10:46:40 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 73305,
+        "old_start": "Fri Oct 16 10:44:26 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "pid": 74487,
+        "old_start": "Fri Oct 16 10:47:21 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 74795,
+        "old_start": "Fri Oct 16 10:48:41 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 74820,
+        "old_start": "Fri Oct 16 10:48:42 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 75290,
+        "old_start": "Fri Oct 16 10:49:47 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 75300,
+        "old_start": "Fri Oct 16 10:49:47 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 75938,
+        "old_start": "Fri Oct 16 10:50:12 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 75969,
+        "old_start": "Fri Oct 16 10:50:20 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 76006,
+        "old_start": "Fri Oct 16 10:50:21 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 76011,
+        "old_start": "Fri Oct 16 10:50:21 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 76208,
+        "old_start": "Fri Oct 16 10:50:53 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 76229,
+        "old_start": "Fri Oct 16 10:50:54 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 76554,
+        "old_start": "Fri Oct 16 10:51:36 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 76011,
+        "old_start": "Fri Oct 16 10:50:21 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "pid": 76779,
+        "old_start": "Fri Oct 16 10:52:06 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run03",
+        "pid": 77337,
+        "old_start": "Fri Oct 16 10:53:59 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run03",
+        "pid": 77360,
+        "old_start": "Fri Oct 16 10:54:00 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run03",
+        "pid": 77397,
+        "old_start": "Fri Oct 16 10:54:01 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run03",
+        "pid": 77402,
+        "old_start": "Fri Oct 16 10:54:01 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run03",
+        "pid": 77614,
+        "old_start": "Fri Oct 16 10:54:31 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run03",
+        "pid": 77402,
+        "old_start": "Fri Oct 16 10:54:01 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "pid": 78119,
+        "old_start": "Fri Oct 16 10:55:52 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "pid": 78144,
+        "old_start": "Fri Oct 16 10:55:53 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "pid": 78184,
+        "old_start": "Fri Oct 16 10:55:54 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "pid": 78189,
+        "old_start": "Fri Oct 16 10:55:54 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "pid": 78410,
+        "old_start": "Fri Oct 16 10:56:25 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "pid": 78764,
+        "old_start": "Fri Oct 16 10:57:10 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "pid": 78189,
+        "old_start": "Fri Oct 16 10:55:54 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run05",
+        "pid": 79155,
+        "old_start": "Fri Oct 16 10:58:31 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run05",
+        "pid": 79180,
+        "old_start": "Fri Oct 16 10:58:32 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run05",
+        "pid": 80366,
+        "old_start": "Fri Oct 16 10:59:40 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run05",
+        "pid": 80379,
+        "old_start": "Fri Oct 16 10:59:40 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81130,
+        "old_start": "Fri Oct 16 11:00:57 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81153,
+        "old_start": "Fri Oct 16 11:00:58 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81696,
+        "old_start": "Fri Oct 16 11:02:05 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81708,
+        "old_start": "Fri Oct 16 11:02:05 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81896,
+        "old_start": "Fri Oct 16 11:02:28 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81927,
+        "old_start": "Fri Oct 16 11:02:35 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81967,
+        "old_start": "Fri Oct 16 11:02:36 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81972,
+        "old_start": "Fri Oct 16 11:02:36 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 82152,
+        "old_start": "Fri Oct 16 11:03:07 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 82174,
+        "old_start": "Fri Oct 16 11:03:07 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 82526,
+        "old_start": "Fri Oct 16 11:03:47 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 82692,
+        "old_start": "Fri Oct 16 11:04:17 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 82867,
+        "old_start": "Fri Oct 16 11:04:46 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 83042,
+        "old_start": "Fri Oct 16 11:05:19 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "pid": 81972,
+        "old_start": "Fri Oct 16 11:02:36 2026",
+        "exact_process_still_alive": false,
+        "pid_current": null
+      }
+    ],
+    "process_record_count": 76,
+    "roots": [
+      {
+        "run": "android-mobile-boundary-api24-run01",
+        "root": "/private/tmp/im-mobile-android-d53t4wud",
+        "absent": true,
+        "test_key_absent": true,
+        "reported_cleanup": {
+          "removed": true,
+          "failures": []
+        }
+      },
+      {
+        "run": "android-mobile-boundary-api36-run01",
+        "root": "/private/tmp/im-mobile-android-2c0zpjmy",
+        "absent": true,
+        "test_key_absent": true,
+        "reported_cleanup": {
+          "removed": true,
+          "failures": []
+        }
+      },
+      {
+        "run": "android-mobile-boundary-api36-run02",
+        "root": "/private/tmp/im-mobile-android-ld7abj6j",
+        "absent": true,
+        "test_key_absent": true,
+        "reported_cleanup": {
+          "removed": false,
+          "failures": [
+            "RuntimeError:android_cleanup-package-absent_failed"
+          ]
+        }
+      },
+      {
+        "run": "android-mobile-boundary-api36-run03",
+        "root": "/private/tmp/im-mobile-android-hdnvbf9b",
+        "absent": true,
+        "test_key_absent": true,
+        "reported_cleanup": {
+          "removed": true,
+          "failures": []
+        }
+      },
+      {
+        "run": "android-mobile-boundary-api36-run04",
+        "root": "/private/tmp/im-mobile-android-5onxud_9",
+        "absent": true,
+        "test_key_absent": true,
+        "reported_cleanup": {
+          "removed": true,
+          "failures": []
+        }
+      },
+      {
+        "run": "android-mobile-boundary-api36-run05",
+        "root": "/private/tmp/im-mobile-android-_9fr4yiv",
+        "absent": true,
+        "test_key_absent": true,
+        "reported_cleanup": {
+          "removed": true,
+          "failures": []
+        }
+      },
+      {
+        "run": "android-mobile-boundary-api36-run06",
+        "root": "/private/tmp/im-mobile-android-p6qspowu",
+        "absent": true,
+        "test_key_absent": true,
+        "reported_cleanup": {
+          "removed": true,
+          "failures": []
+        }
+      }
+    ],
+    "ports": [
+      {
+        "port": 5037,
+        "listening": false
+      },
+      {
+        "port": 5554,
+        "listening": false
+      },
+      {
+        "port": 5555,
+        "listening": false
+      },
+      {
+        "port": 5556,
+        "listening": false
+      },
+      {
+        "port": 5557,
+        "listening": false
+      },
+      {
+        "port": 54980,
+        "listening": false
+      },
+      {
+        "port": 55185,
+        "listening": false
+      },
+      {
+        "port": 55881,
+        "listening": false
+      },
+      {
+        "port": 56055,
+        "listening": false
+      },
+      {
+        "port": 56145,
+        "listening": false
+      },
+      {
+        "port": 56230,
+        "listening": false
+      },
+      {
+        "port": 56311,
+        "listening": false
+      },
+      {
+        "port": 56375,
+        "listening": false
+      },
+      {
+        "port": 56486,
+        "listening": false
+      },
+      {
+        "port": 58084,
+        "listening": false
+      },
+      {
+        "port": 58795,
+        "listening": false
+      },
+      {
+        "port": 58997,
+        "listening": false
+      },
+      {
+        "port": 59204,
+        "listening": false
+      },
+      {
+        "port": 59621,
+        "listening": false
+      },
+      {
+        "port": 60011,
+        "listening": false
+      },
+      {
+        "port": 60785,
+        "listening": false
+      },
+      {
+        "port": 61169,
+        "listening": false
+      },
+      {
+        "port": 61697,
+        "listening": false
+      },
+      {
+        "port": 63344,
+        "listening": false
+      },
+      {
+        "port": 64436,
+        "listening": false
+      }
+    ],
+    "real_home_android_absent": true,
+    "default_sdk_absent": true,
+    "port_scope": "explicit private ADB/console pairs, recorded Flutter/VM forwarded ports and default5037; not a scan of all host sockets",
+    "retained": "fixed SDK/JDK/Flutter/images/Pub/Gradle caches and raw evidence intentionally retained; Android run resources only"
+  },
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/activity.log": "daeff9a00cf5a648e181514e4b78375d69f3a7a3b9965c8cc2cced110947783b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/activity.log.stderr": "5aa1a5522427c8d69217d6f2d9d36e136f00179fc23ab15c30cdac74b129362a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/analysis.log": "030b323ac180881792c21a43d14ea333dff09a806baef1261cf3d4be8a964514",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-activity-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-activity-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-adb-server.log": "121ae2eb2d5dba7b6543d129ccbb97a63101819a3f1ae793cd0e6cdc94fd351c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-avd-create.log": "e93aa7360ab400715444dfd2dc042f0ca55dcfb63c12d9fc458a4b03fbcc39b8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boot-id.log": "cf9d63f93efce0860244817502ffaf32867c76b3171fe6781619dbd735098981",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-before-cold-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-before-cold-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-cold-diagnostics.log": "af8a7825814dadad3dac0b9777a147c589bce0059882052208544b97fb8c1fe7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-cold-pid.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-cold-view.log": "94e39dbb8c7c71bd33d57f2724681fc5dbc9ddee095a7727b5d1cbb8fd9ed549",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-final-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-final-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-forward-remove.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-forward.log": "c7338a2242d6f293acf78660e5043e19903af3f9c345c16b0faba49da26ac360",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-log-clear.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-boundary-vm-log.log": "cb728ea8720c6539e21467675247b1271c3b8a253e934612190f4d7e6d90de93",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-canonical-ro.boot.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-canonical-ro.build.version.sdk.log": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-canonical-ro.kernel.qemu.avd_name.log": "2aa2ac3bf10e944db41489dc5673fee1a81eae2f87b9deaa58f7db68c67c068d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-cleanup-owned-avd.log": "345bbe2d087ce814cce89b1401170992801461f30ce7b0869112f97e22903c18",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-emulator.log": "fe427fa01d3fefd41218524393522a36e51541b6038f5b0bda8eb898a9689f70",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-identity-ro.boot.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-identity-ro.build.version.sdk.log": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-identity-ro.kernel.qemu.avd_name.log": "2aa2ac3bf10e944db41489dc5673fee1a81eae2f87b9deaa58f7db68c67c068d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-crash-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-crash-before.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-launch.log": "4b0bcbd41b28fa1888d038e680297fdadf5649d8592c642c94d9516fa537a1f9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-login.png": "7883808197295a7f165808e46c5387e21e4bb1f2c6b39684956175738a9a69c6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-path.log": "4941574a13237965d735c10cc6200294816b0b2f6265db1bf4e233db0b04a883",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-pid.log": "75a0fde71684f650a4c4789cce8ee24ff7b21ee00999c298db747ff0b9f5fb53",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-release-test.apk": "5694983f444787f26ea22738008bd2e5fe2f3e0fcceda54c6ca1a40576347a93",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-user-unlocked.log": "ecf33b0f208dd70af931673632524b840febcf73a95e77de2378b99ff25c4688",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-vault-verify-package.log": "bbd7310617ebe7fc17be569e93c1f7e5078e8f7d2e9a7042b54f867d89da256a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-vault-verify-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-vault-verify-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-vault-write-package.log": "a79e437dfe4c07169d0595e89206fdeb223be1dd2f44e60a7a080328c22a7324",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-vault-write-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/android-vault-write-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/apk-manifest.json": "d02e20a3f2570f27a21d2e329be6ad96cff2fc7420d0ce48ad1c71e100f0cc4e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-build.log": "01e2b0fbe16cce331b2e06cf659a4373d557c991162f875b9a75d3d172ed694f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-build.log.stderr": "5e005c01a5263b6bf4f41aee356f0483b1015eda0202934409c8a9a9e17a3754",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-background.log": "81bacb628b1a388115dc0bfbed80ce42f83984a5a401037f47646cf6b702f280",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-duplicate-state.log": "6dfcd7ed8d19a87509d72d20f5d0a232aab21e2406e3112534c0b3df06c8a395",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-home-ready.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-new-valid.log": "5a06fa2302cb4eff609c3f9bdba4eb1df18eb51cf0cd67bc7bcab3180c604117",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-0.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-1.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-2.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-3.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-4.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-5.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-6.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-7.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-pid-8.log": "f07b78b4d4838ca2118e6fb1bab181cb78b0e99ad954491af31df2194ab2732f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-stale-after-cancel.log": "3682cdf11196708a6fd30b76c7bbf8aa8c21af25fb1acf625b477c02866c299a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-warm-valid.log": "933f2dfd8646a9c69c6a38a645f5d3e7456c2dea634abcab160634b7d9e10163",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-wrong-path.log": "011796cfb39915cfc8c2cdd314897280ff2023dd1f416df86c2a86ed237789a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-controller-wrong-state.log": "aad344285ae20d1aed354cb59bb0c9ebcebfe2bcddb654fa68ee66a50a24bcea",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-driver.log": "c39ae206d0a5a365657746ea16e4880c67e888327f803f66b919083a09f3c996",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-driver.log.stderr": "f9f0106f47906d66355e36d140b8dddd2c9b5a197894d15989934ef19344b66a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-background.json": "5f079b3674e3823583c68d9f454347745128a5e4dbda628fd16ceca8ea173c61",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-done.json": "ceae5a441c3207974ff24174c876aacd045160669305572f8ac30511ffd016fa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-duplicate-state.json": "d431a2895d5a65a00ed6fabdb21a5fb721ffb343b6b5332a84fd180d6bbe9d6e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-home-ready.json": "b4f8ccf04be14152065f4770433df2c887cb1e1672ab20f066dd9803f906aaff",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-new-valid.json": "47b85660717427199d5d2edaef6a5c90d1fcf29dbda9ab2a79b189efe155fe6a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-stale-after-cancel.json": "741a59da1887b7173ee5312cd1ce593d334c4403760f7ce219b9f3aa4033be10",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-warm-valid.json": "e66ec0d1c735fdeb13c92ed302b94d4e5af88e4f3763bf7752665c2e5ad3b59d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-wrong-path.json": "d54bece194edae5a5c4ad9437aad0d2ac4ba3b8ff5713da4bba5f908c85c40ac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/boundary-phase-wrong-state.json": "013577bdb1cbdeefe4b3d04850213cd6658c0357415faced9e7eeca271bdf522",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/build.log": "748639c85dd97f95f47aa0a7003db1a35e8a28188a03cdd12f70fa333044acbe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/build.log.stderr": "97ce34177c192b77736a4020f302f193568b46a20e3fea3a13ba563ece881d9d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/preflight.json": "bd1d44edd17659d701c85489465c899a82dcfc09d0f6d9fcd3a37058f913f893",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/registry.jsonl": "7b3707b63fe74e18ee08729447025eb61d0b5f9d6c5792c129b6da2a653d1e16",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/result.json": "85a1dbd0efa0377b3cf314e2f56f501a13b77dfb5bcf6f2e2f4600729dde511b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/shared.log": "e7d26cff5653b8392962371e3b3373e0e6d717b5f1b4b789952a8f4aed877f8b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/signature.log": "25d88a59b805b10c0a64b8337e740fa97b69b923242596cddafd8063df0b0a08",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/signature.log.stderr": "d5f6ef68b38443352420db7a98e01493db35f2a7d6f076d9cd19d972020ccd30",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/vault-verify.log": "4fad70723aa0bb6dcc745a50a964fef7c13aeb4b916f6caa226389c2768ee0aa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/vault-verify.log.stderr": "9dbbdd4c924b8a57497e7e9025eeb147dbc8241ca0d7dce1052e70ce13aaf45a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/vault-write.log": "afffb11a8fa49f4fcc2ad046663678a3a8a6e7a5082d88de6b3ab64360efd2ce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api24-run01/vault-write.log.stderr": "fd486241a349b2ea96b2aab2e99fe15c29a06da5a4cb0be9353feb58d1b837ef",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/activity.log": "6f80434030a98e41a70357c7b51e4175f379e8a22384a910fdbf9f81b65d2531",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/activity.log.stderr": "74a744cc7e996df1f0400bb7ffedf83b3505914871180cc8dca260048b62a0e9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/analysis.log": "030b323ac180881792c21a43d14ea333dff09a806baef1261cf3d4be8a964514",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-activity-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-activity-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-adb-server.log": "ce09cce55a0f0d80f21822725304a9bd9b63d5eff61872e9d9bcd1a213a46da5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-avd-create.log": "3b74a461afb4d361159b21cdf1466a9f4f86024bc6646cdc97697f0d373de960",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-boot-id.log": "14e4240c6887704a19c089e94055014372dde13b458ed162cec8838e428d3fdc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-boundary-before-cold-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-boundary-before-cold-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-boundary-cold-view.log": "14766eb937b34f15a73c5cbb434c1edee6b15f8d7cff92e174412a810422346c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-boundary-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-boundary-log-clear.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-canonical-ro.boot.qemu.avd_name.log": "9d026497e29e7b7213c08e78f79db4a7740da7534b74716a860508347ef4add5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-cleanup-owned-avd.log": "52f6bb2ae4904d29edca14fb0b2bf2d62311c46c9e760e0de95f9660b5a21e1a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-emulator.log": "b5729dea15fc53811a176bed8c87e9c821cc0f285f6e49d6ec668af816c90cc8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-identity-ro.boot.qemu.avd_name.log": "9d026497e29e7b7213c08e78f79db4a7740da7534b74716a860508347ef4add5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-release-test.apk": "f8aae0832af63637509946c7d0c3bd91731d00edd83dd30515c3c53fe3f4bf3b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-user-unlocked.log": "afd41867c33fcbd6a590c64f0d20517d8ee968641d62ebc4ce051d60d288db38",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-vault-verify-package.log": "1aa5194fbb871d38b69f927cc6bb6091851a8fa96f68cd8c34048279805e35d2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-vault-verify-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-vault-verify-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-vault-write-package.log": "d71f6a61ba5e938a706c9649af92267f5f79d6ffc78dc3dba9248acf8c7ad474",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-vault-write-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/android-vault-write-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/apk-manifest.json": "5c356ab58ad443cb633c45e1f32af985555f506a554c148d3fe3646f032c5856",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/boundary-build.log": "1bc2a3f88d20c2e5620fefda3b0564f4926b56a6927dfd556b1a024e3517bb86",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/boundary-build.log.stderr": "706273d79eb93bde987f1002624ce9d37feca404b612852fe3f947cf01f3b410",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/build.log": "174fa627f7031e079a435172d05b27458b6e2c69e469629548cdcf5734db7531",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/build.log.stderr": "aa59bcf6647c187475695dbbf27d953295722e1a55773ee201a79f9d4c10a98a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/preflight.json": "16db64fb93d1b62865fead1f22baf5706b2bddc446d27db34a15ea0c574e8544",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/registry.jsonl": "1118f3f734e3a6c9737ec7021a72a6912fe2626ad238b6027d025e2d8995b672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/result.json": "8aa20910dc58243e15a33670f9df00fd8b097ba47852ed80045fea448a123210",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/shared.log": "44359c598f663ca79747a4bab6fc9ea12b985d78f07d24eeda43f09a2e983865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/signature.log": "722a949210e23685bf6709934443d9cd8c6e35ee91055ce9c9e914d7aab2da5a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/signature.log.stderr": "2ed8fa35b33cf661be4b7724af374e08e6ab3c5304b14d8db56cc1ac5d3ddb97",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/vault-verify.log": "352bc890cd26ece14274b563fe90f46cad94e3ae59f931d34d5b7bdde254a589",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/vault-verify.log.stderr": "bb21d1e3637782ee67fa06af6c93baf0b1da2ea647c1bc7580b9a6f97b57d25e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/vault-write.log": "77dc760c0f90db4d39b0e75638f98bb37234babcc73f3ddda533f4f02b4cff8c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run01/vault-write.log.stderr": "01eb1f58802ec03a4d1622d970bc37d41270d03b636c4ebf3c1acfcf9f0c79fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/activity.log": "78d309c1d47c89e62db33041f0078fd4b0814dccd3edeee1fc6163cca230601e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/activity.log.stderr": "100e932b092604c28a2f28a58e38022333213e79ea8fa8141d49c43dbe9f3df9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/analysis.log": "d24a6bc6ed01b2a4f831a87ea1c33d49d59afb41c1b8676b5e191d783bf9c160",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-activity-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-activity-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-adb-server.log": "2863126253c7ca42cd058a090bd1886a25133235907dd5c55cee0cc250bd9ca9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-avd-create.log": "8f9f7e4a87c2f74042e136b66beb29d2ef28d1ee5db72cf23343a33c3ff25ed4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-boot-id.log": "1a85439049d1085f4e01bb0b6efe6b1ccb2dadfc4d3d95040d8bdc5474e3f0d8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-canonical-ro.boot.qemu.avd_name.log": "ee718429a3c5fcaa36f10ab3ad5df039c276bac5243626a930cef0823968293e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-cleanup-owned-avd.log": "1f41b976404413c5b0f1bd856567d92073daad0d4b1df25b5f3f3c0dad49157c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-cleanup-package-absent.log": "a7d0391f2b9ecc7dc302d6ca042251f413b26e1f1ee29d396e7db3df0701640f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-cleanup-uninstall.log": "a7d0391f2b9ecc7dc302d6ca042251f413b26e1f1ee29d396e7db3df0701640f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-emulator.log": "defb2df48544b69baedf88035538f2f1e8b5bb00b2710ee20a6c5cec648a24a3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-identity-ro.boot.qemu.avd_name.log": "ee718429a3c5fcaa36f10ab3ad5df039c276bac5243626a930cef0823968293e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-release-test.apk": "cb78d77d5f3d450b12dd625cb9adb3f8ce21e860800a649868aa5f5c9cba03f5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-user-unlocked.log": "cf56183daf2b228a540344d5429083a91f8236968cc2fac543736804100fef24",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/android-vault-write-stop.log": "a7d0391f2b9ecc7dc302d6ca042251f413b26e1f1ee29d396e7db3df0701640f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/apk-manifest.json": "4a7447f555b0025c712b66e6f1fe88cbb57c6c465de24ad5d60412150f2611ca",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/build.log": "372a3e8918f73f98001b464e8bacd698c0e361af14364598c7d0458b7d2ef4ce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/build.log.stderr": "ba6cf1673e2cd6f39217792da810927629ba543b63fc52c312ae2b0be1a63fd2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/preflight.json": "16db64fb93d1b62865fead1f22baf5706b2bddc446d27db34a15ea0c574e8544",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/registry.jsonl": "ae649ab3561e51fc72e71d4205fe8f94e47434003b9a96b5d4ff2ff486adacb9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/result.json": "fdd3694ad1bbb8d327738b1ca7b8b4920e8eb93b1cace77ad2403e44855a42e4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/shared.log": "435203f1d78df91ce51135c5e3bb83229eb68ab3d2740b95adbac548a4d0b7a1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/signature.log": "84bab5a84fe63b0bbc8dcf1bb30b040ce3eb6cf9969e06a3f848e2d58d3ddf39",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/signature.log.stderr": "5823e43ce7cce10eef26da976d7b681b2816981256ea4adbbab362953012f3d9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/vault-write.log": "2dbd6f27c62f26cc08cb65a2be6bdc8937812d7a1ad4b39ae281d633d47c6108",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02/vault-write.log.stderr": "31d73f81394e7317e7dbb34d99911a2294fc8aebedac96467b1d47a53e97666d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run02-recovery.json": "b2d79acf98a8f85e490541e85c38aa9a7456d99a6be60f564b9f81540ee9c91b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-adb-server.log": "7621ed5555b47058344e35b050bad140ece7cf7eab2a6eebafbc87fe5760652b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-avd-create.log": "9d1f4af20458e0aaf2a6cc9bf0515a66a22fdc1f4da7099dcf91f561bce5f3c2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-boot-id.log": "75b28e63ba50d765b651bc702faf2006f30e55a6e401b1ca20e9fc21ace7b39c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-boundary-before-cold-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-boundary-before-cold-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-boundary-cold-diagnostics.log": "b95d7a3d5d91a61b35af21f5395a0970ce70c1c3891f7c18dfc584ba365ba713",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-boundary-cold-view.log": "1a6de9906cd56ebd3fb24a021d8ac411c1ca9be7369e6935774eccdc9001da4b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-boundary-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-boundary-log-clear.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-canonical-ro.boot.qemu.avd_name.log": "efdc29a36d3879b2ab35cf12aa5b2f02acae90a762715482bdfa505cb35a2c41",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-cleanup-owned-avd.log": "7ce9d500ba3130137f387809f4817eaf230bdf5934a8886efcb5930a1f31c310",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-emulator.log": "217e136b87d0133c6814e40fb24b244d044486a47b12205e101ef85006962cd0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-identity-ro.boot.qemu.avd_name.log": "efdc29a36d3879b2ab35cf12aa5b2f02acae90a762715482bdfa505cb35a2c41",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/android-user-unlocked.log": "6ff36c8ec11b520e5ceb47e813c7ad917eceaa3cd994b440059ea90fef05faef",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/boundary-build.log": "d26394ff6d80f92881e91cdea92eb038c60ed6029153995bc050e6e509ace7b7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/boundary-build.log.stderr": "cc6a2417dbc83e741a564a2a25f5119b1ef4b6043a298e456b73ceb03bdb1c22",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/registry.jsonl": "fa3513613a735f82b1b9f5ee1416a4d10e0e7ba0215858ad42928f18dbfd2ee4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run03/result.json": "f8c7fe4cfccff50ffcabdbad35aebb9751d77302270919820d35659c37dc3bb6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-adb-server.log": "fd81bda36e88382e57765026ab283395c467d406b00de81c1f1a5f6fb5ad9300",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-avd-create.log": "d8c83424cccef0a42ed8a30aee4262fb47e3df83692c97bde4fcda1da9d28b94",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boot-id.log": "349ebafe2db5a9d4fdbd8bcca2c733d6795eec577e4da69dcf4a7cc55bc60de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-before-cold-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-before-cold-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-cold-diagnostics.log": "7bed3e8ed1265bd01882400a15ad630f1e6b1be543f32dca40550201e1c88216",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-cold-pid.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-cold-view.log": "01aa45d9c2e0a826a837ed6df92028d13886e86737bacf59dec0177509989a2f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-final-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-final-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-forward-remove.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-forward.log": "c2a3986ac168a1b1a0a3031c35862b3381a1470d3a27eb9fa00d03905dd6b561",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-log-clear.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-boundary-vm-log.log": "492c5351b0ecacd548ca35d3fd93752bf2f508ff496358a8f7763bb403b33cc2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-canonical-ro.boot.qemu.avd_name.log": "260c4ff83aa962f01f4e61ccd83c4c5b11bc59d7d94f3f64e654bbfcc149fb63",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-cleanup-owned-avd.log": "1292f1a5b4b04e4c304ff640ab9ba4efaf599b839bae688cd9f3c7eeaf08bcde",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-emulator.log": "ba1b4f1a13b9d0d2fc7c9abc156daffe02e54f3c13eb7e2dec549fc9f462ff76",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-identity-ro.boot.qemu.avd_name.log": "260c4ff83aa962f01f4e61ccd83c4c5b11bc59d7d94f3f64e654bbfcc149fb63",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/android-user-unlocked.log": "06a096595ae7040288ed995c7b23d1c18715a739248307b59aaf0b81f2b4dbe0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-build.log": "e5350ea9ec2ba62bd27048ce765817db26178b503d985c307d80d75cf7d72bc6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-build.log.stderr": "30428a71976f8a2ac67a060dbe9cf45a24277de1b0c7a65d9d3eb63a78058aa1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-background.log": "f3138be4f089a409d62042b570578d8c75bf86c80f5f6632694ebfa0a68e8895",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-duplicate-state.log": "fd08a5bfd9389778305f15969af03b2a631e3099176d2bb4097568cfc5b2d39f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-home-ready.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-new-valid.log": "fabc438a4059e2e678985e68fda2070e05c84a225fe45beeebfd6f35b5ad0917",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-0.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-1.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-2.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-3.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-4.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-5.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-6.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-pid-7.log": "f69f2dfd9a5cd83bafe2c47be3e4488fd856f41a6eb4a13dede2621f71098ab4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-stale-after-cancel.log": "fd08a5bfd9389778305f15969af03b2a631e3099176d2bb4097568cfc5b2d39f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-warm-valid.log": "3c191c770908df2914e06c1c96099d2c3b7bbbeba8af45b32e4b743128a9503b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-wrong-path.log": "103c369189e433199609ffc948373297a796034c264401eb598bfcb118de91da",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-controller-wrong-state.log": "fd08a5bfd9389778305f15969af03b2a631e3099176d2bb4097568cfc5b2d39f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-driver.log": "1eab9f0821519423c49b4cd168dca7c09b1d8b3df49a6c82d586d71c71a5b2e1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-driver.log.stderr": "24f9986ccf4192c03234f533d65b19df56c9847bdd76ab9b4f06fc2cd54a170b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-background.json": "4508426c3d504f4fb89bd21dccfa48c876f1b17bd043dc0771cf44e5f2aeffb8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-duplicate-state.json": "f094cc8ca5d9d044aa31f422b233ff03528a88f537d470898552be87ad3de8b0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-home-ready.json": "da8a090f34ac1a2d2bd5de55d30fcc8513e0918a6e2b9a16132853dcc85332ef",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-new-valid.json": "db6b305ed75bb121bf4e035018e2188377dac96a4050675a90e1b7c7b9bceec7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-stale-after-cancel.json": "014238ae38dc89b28965557a1b8dbb90e260623da4f5ceaba1394769fc713bce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-warm-valid.json": "b591e9f76bde7e04d6e9b98ab8cc7db6d666b41504c96ef7d391f86c118a85c5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-wrong-path.json": "4405776cc0f006c5359aaf669ca22e9d3dbe17b7893fa77b3fa76a91f9acb466",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/boundary-phase-wrong-state.json": "ff5c6921c233ff8eec9d490bd14f84aacab24f7313b8404a65dd2a5826de7b37",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/registry.jsonl": "172f97dac1a80db2432c0e9b6bebe1a1c3b3b7365ffd043b4f9612d4a36f7754",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run04/result.json": "38298de64ae5c784cf2099db8a9526683248535fa1a88668c53da4cb6a036864",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/android-release-test.apk": "e95bc9c5c0534a6419425941cc2e1d48dfdb93202a2c6c1bb3107c343dcbce90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/apk-manifest.json": "3991013a29229523f9c0d4adc18ffd1536d96f730b0deafe8df4067211f656bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/build.log": "52df60766672d846dd1f79c0c485782302ce7de4f4a32fa781fd341a9233ef61",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/build.log.stderr": "f91428721bd4235e165b9eb79ca3df16e304e47ec062fde5036b44925848522a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/preflight.json": "16db64fb93d1b62865fead1f22baf5706b2bddc446d27db34a15ea0c574e8544",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/registry.jsonl": "d48b99e64a4c2e99902f4274dc70c581214098c2934247ec0cc1bf74cf335422",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/result.json": "8ed2fb71428a7594fb70d5336c23b6036efffda0e9065008853546760cf1cb80",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/shared.log": "17d455eb54fd8434a8c459e071deb0f00c78499ae96a16ed73dacdfcb1d648a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/signature.log": "e0fc888eb0ba1f4c3290f2cf6ce93d7377686889ee25ca1779686a7b2f8b995f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run05/signature.log.stderr": "434ebb13f0863e91630d10ea9f69674859b1759449ee7ee830e77f6a69ce590b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/activity.log": "bf68ce21e1a1337b67086b7db90f68562daf2d17042ef8e6eaae35c230916a90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/activity.log.stderr": "8e5803f60d9066a6efaf2ae38818ac2cceeb1d8b28ead0a40fdf7072112c064f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/analysis.log": "1bae8f10546b6b9f3338511ddaf2dcc7765a14c7f5d2ad9ac4583b32b1ff479b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-activity-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-activity-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-adb-server.log": "a1c4ef9b87a7d5dbe429cbdb98d54065ab3debdc829c855dd344d47f6ec2a157",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-avd-create.log": "5364d13da63424c12bd54e115038302435a48e61a19785c3ef0fa33bb349bdae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boot-id.log": "6dd3cdac46ea7ffe99284b8a5886c9f705a450619867698b3336af99c21b4df6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-before-cold-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-before-cold-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-cold-diagnostics.log": "bdfede1c18823029ef1c55836b151ee9e788dcdec03ee8c3ad471242b36ffce1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-cold-pid.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-cold-view.log": "0f7c8267be0acd25894845dd83f103881b1aade32f0369c8285e32d1000ba0d9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-final-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-final-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-forward-remove.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-forward.log": "e4dc9992b566db03529718b7d6f3de00073ed91f9ae40ea6a96ac883cc9c2438",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-log-clear.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-boundary-vm-log.log": "09878dd391b043f8447ec24f086aafc50c4c91203cfebaa558663203c06c5142",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-canonical-ro.boot.qemu.avd_name.log": "845a71945795dc0e31ed1cd2cfe6f6d0fe3cf49bb16cb3809aace008ca67b902",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-cleanup-owned-avd.log": "41b563c87e50d6e74410eb1dbd382d73d2d26dd3ec02717cad9aab9f867486bf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-emulator.log": "f1ece1f488d5575e9286e4fc9d0b12ab79df7b4bcf39cc64d4c85080d054f37a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-identity-ro.boot.qemu.avd_name.log": "845a71945795dc0e31ed1cd2cfe6f6d0fe3cf49bb16cb3809aace008ca67b902",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-crash-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-crash-before.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-launch.log": "6be8565ddcaaeaf0d0467f8cc8cca4642c1672cd75a7a2e95774c607ecca9723",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-login.png": "0c53e58faf79685ad75e63b58325903ec4bc71f18f5d6696fd374bdf525db39d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-path.log": "5551043c80054729541b0a0c6f576bb4715f1971d16e18b179e36c73942500cd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-pid.log": "f047f8e745f9996c6e386064e06cb2007b8e6bc0a968a334fc0d2b2d64012066",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-release-test.apk": "737d8ff094420a43b99e054dd8da2e4220414007df6b42b88391ed99b9a714ad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-user-unlocked.log": "f35b87fa46fe4cb39ab86e6f34133d6146ffb0972fc21f545fcbc04408b5a311",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-vault-verify-package.log": "872e6e0dedd585e99f90e6ff460832f8cf9271aeff2665545da32907ec5fe5dd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-vault-verify-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-vault-verify-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-vault-write-package.log": "cf70dd98a6c8e0d85979b07217852b50177099023ab015f3896b6236f7d6ad9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-vault-write-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/android-vault-write-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/apk-manifest.json": "b4f4308a3de358819ace1ccc2e787b91cd87b9ad0ffdb4a10e0f47faf3c977ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-build.log": "240c00673f9a24ae7ed136913dfeeaae504aa609c650f4832f241e5074cfa22f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-build.log.stderr": "1b5ee7fece154aa6215778c293870ff13ac53c3af64005be1196f28662dd873a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-background.log": "c9996c34dfa1b5c51865697390b27c0c34fd74e1d9016b83ac291bd554e77fd1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-duplicate-state.log": "e06ab27ef18960a66274f090ab73cc33f86b6b938d5d8d00406c46f6cd2563da",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-home-ready.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-new-valid.log": "383078af9057290703b9695075f86f76d438853cb21216acecb11b5a6f69bac5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-0.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-1.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-2.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-3.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-4.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-5.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-6.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-7.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-pid-8.log": "cfd3ce68c6daf40f17d73ef5167bd838c29587a24df250be219b04eb73eb2702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-stale-after-cancel.log": "3c191c770908df2914e06c1c96099d2c3b7bbbeba8af45b32e4b743128a9503b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-warm-valid.log": "383078af9057290703b9695075f86f76d438853cb21216acecb11b5a6f69bac5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-wrong-path.log": "103c369189e433199609ffc948373297a796034c264401eb598bfcb118de91da",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-controller-wrong-state.log": "fd08a5bfd9389778305f15969af03b2a631e3099176d2bb4097568cfc5b2d39f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-driver.log": "1e39dd13c5a6db3bdc60faf4c666ebea843b82120e9de633e01831dcfa38f391",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-driver.log.stderr": "7f33af8b7289c5c990edff6e123512ab3e68cb735ad6eb758d42503b07842d18",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-background.json": "b18666164fe9c97f0b30457710adc6e45db3a16fc54ea9df52d2737fd33ae0d8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-done.json": "16bbfb453a5dc91dc7b5e881145385400ceb15fb7cf95d17aaca6e1f2c21d220",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-duplicate-state.json": "b93a7ee42a09d7ad4c7f148a0b64118bd07ecb6d5be27065e754c51befc493a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-home-ready.json": "079cab9e64214f32a5a244f44ea0981eb57c4def24fa5582c71b409b3994e270",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-new-valid.json": "e368400aeb5b950a5d4f3a6faf3da6730c6bc4e50df56b8af7833f5551bdda7d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-stale-after-cancel.json": "862ccac805ae9a85fdd2d3645c72416190354195eb889ad497674e37641ffdfe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-warm-valid.json": "1ded9d9cbaec22512d42fc3af60ec2655c1272c42a06ec994954837b6537bfc6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-wrong-path.json": "9266c4f7785219b4a4895e963ee052c7d79c63bc98b0252eeb37a5540698b14f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/boundary-phase-wrong-state.json": "00ec56f024551ec56fcf2bc32d6497a83366521b406deca0cda9c66d1cc1f575",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/build.log": "8cbecfd96f5d518dbd0650259a70d64812cb3a5eeff7875687f318127f17c1e2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/build.log.stderr": "2dca245bd696212ed3996287a5ca97b5691a94ba0b35a41db81126f05db103db",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/preflight.json": "16db64fb93d1b62865fead1f22baf5706b2bddc446d27db34a15ea0c574e8544",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/registry.jsonl": "377da209a89011db3e416afce97128abad890aefd0ce1f1c5c9a22d836e0fa3b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/result.json": "6cac301782bc67c1fc914bdebd446f5a633be0323e7a820116cb922806e0915d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/shared.log": "eb2ccc5ed05b860566099d77752b55150ab0c77276c7ea951c39439d227e27d7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/signature.log": "9000828af71e1d3fe810eed9a3cc9ca3b66133abc3de02d10bc55700886187a2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/signature.log.stderr": "c1c13938c54ec22b6d83f7a325f31d75e2c9429aec5cb378d13cc65c6ee54370",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/vault-verify.log": "d8efc8d7659a6cc634c8c33d433089f59e93287d760691755546a7103e063b73",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/vault-verify.log.stderr": "a614874b16b3ce75b2615e1ab7af1f0c73102e4a868db081495ebaa4999f2350",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/vault-write.log": "57f01899e30eae088a17d313530d605c7def60a2c5def3bd134a95a377e6c2d3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-api36-run06/vault-write.log.stderr": "6c585a854eb475707f0b50ac6a6810c99a10d1e0453f08b69e4d0c4ebbe8bef3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-debug-notes.txt": "677fc96c53e62b379110fad819a9354c8a8a099bcad7477d2e8489ac18b99825",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-host-green.log": "ca1cfd2baa4354a300ede1e09554ffdcc8003776662d3de289463564781a23ad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-host-red.log": "8f32a03cd3270f105b4561cc2a856edd369111b1e6fbed6d395111505d42c9b0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-host-suite.log": "e61ba3e77a1367a31ba05bca8f97ca955a7fb65b1c96eb235d94effa98ac2961",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-official-reference.json": "a1b79f88ff79adce41227c2a3d05ccee3a5886fd109b5317a278e50f951e41b1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-prior-audit.json": "eaafd8964f521f7bd20cd2a5556453aa0f94f770bf8e6097ebdeacaf6e41c3ae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-python-final.log": "c6ea5de5c9ecf2c36826a94cf4acbbf07cba98a73980122044f0ae6d1cd3fa74",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-python-full-context.json": "94a27fc991ecdf79cba9a30edec279ab628ba030bd3f702811efd06be3a8e4e6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-python-full.log": "a2c48e110ab4f68142d201ed8a9304385386e84c1fd9fc7666483a86a7cb1b96",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-resource-audit-original.py": "2984f2bcb524f0b22194c8d4f07717ffa9ecf24e121c00b78e07c8fc665aa367",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-resource-audit.json": "4625daae4082a4e8133603c5ae395d9c27c63a0ba9a54462bcf1d804244270e5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-resource-green.log": "9744629078cf2da532bacfdb884b3b8c77dc3a3ad4e8a55ab723b38b097c19e5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-resource-red.log": "9a8285c3aef98734323c00924f4f0c4ba2c2972df319fa0be8661276ada52e1c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/android-mobile-boundary-review.txt": "e84dfe72d45e54bcd266249c3038c8aaec248f28cc86ad206fef18d61fbc9b81",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/audit-android-mobile-boundary-resources.py": "808ea80aa68e85313ba4e6cbdc9c66a4a2f0b3ec9cc65a550d1af023b6045ea9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/run-android-mobile-boundary-diagnostic.py": "c842deef355c2871ca8ca6e5d88a9abc1a5b96ab89be462ab0a87f8737c02d0f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/write-android-mobile-boundary-evidence.py": "8255d957f63adb988cd2ce01d3d76a8847a6c6abb36a95691fdfc7e3da0f98c6"
+  },
+  "raw_evidence_count": 436,
+  "changed_paths_sha256": {
+    "scripts/build-client-mobile.py": "c84e68a67d024213eaa5119f7ed515e129aade719237c4c0fc475b5806e9188d",
+    "scripts/integration/android_build.py": "0c36600a8521587ae8cd54c4fb01beddaae3f9099d1cec729d4397d4973ba704",
+    "scripts/integration/android_mobile_boundary.py": "a905c2294ee4b91790ea730733915bb577b65ffa588d64e17e1587aab3e28bac",
+    "scripts/tests/test_android_mobile_boundary.py": "ee5b71dc0c03498cf352b68c2cdf0e48a9542263761610298dde5a751a9097f2",
+    "clients/enterprise_im/integration_test/android_mobile_boundary_test.dart": "3464d4052c26395e941b0f8b08f89096edea70cbfe260b9ee26768f107ece223",
+    "clients/enterprise_im/android/app/src/main/AndroidManifest.xml": "d8d00dfd083dc04778b629798869cbb7f8f62ce9f7d35d30b01bbc9d7854c738",
+    "docs/P5-02-移动端验证操作.md": "e78c5304f6fb437b0466f5da0d466fd12bfdf9c7cf394baf1ec71bb098939388",
+    "docs/P5-02-原生客户端实施记录.md": "368f66c625f684cedef6a3e4c4261052b9d99f5d67e984485805df431f949072"
+  },
+  "task_status": {
+    "5": "in_progress",
+    "6": "in_progress",
+    "7": "in_progress",
+    "8": "in_progress"
+  },
+  "task_original_baselines": {
+    "5": "2ec34734e50627392cbda7d340bb14f658a97216",
+    "6": "2314d7077068d7af253ee94b136418e642f5cc07",
+    "7": "265540be9c1a228853236e586be1ccdd52958b4e",
+    "8": "069e55ff3ba58d09262d96beed7cfaaaafa61614"
+  },
+  "native_app_leaf_os_exit_independently_observed": false,
+  "remaining_gates": [
+    "real IdP authorization-code exchange and mobile SSO end-to-end",
+    "suspend read interruption and resume device revalidation/fresh pull",
+    "killed-process in-flight OAuth state/authenticated session restoration and backup without key",
+    "iOS callback/lifecycle OS events",
+    "notifications",
+    "real mobile backend send/delivered/read and multi-device",
+    "physical devices/OEM/other ABIs/cloud providers/power loss",
+    "distribution signing and real CI/four-platform complete acceptance"
+  ],
+  "no_remote_actions": [
+    "no push",
+    "no merge",
+    "no deploy",
+    "no CI execution"
+  ]
+}

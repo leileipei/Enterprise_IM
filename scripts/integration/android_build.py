@@ -136,8 +136,8 @@ def run(repo, args, out, report, source_inventory):
     root.chmod(0o700)
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner; client = private / 'client'
-    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/android_simulator.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')
-    result = {'status': 'failed', 'target': 'android', 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch only; no backend, physical-device or CI execution', 'root': str(root), 'implementation_sha256': {p: digest(repo / p) for p in implementation}, 'signing': 'fresh private Android Debug test certificate; not distribution signing'}
+    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/android_simulator.py', 'scripts/integration/android_mobile_boundary.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')
+    result = {'status': 'failed', 'target': 'android', 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch; opt-in actual cold/warm OAuth callback and HOME/MAIN boundary; no backend, physical-device or CI execution', 'root': str(root), 'implementation_sha256': {p: digest(repo / p) for p in implementation}, 'signing': 'fresh private Android Debug test certificate; not distribution signing'}
     code = 1; simulator = None
     def save():
         (out / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
@@ -171,7 +171,11 @@ def run(repo, args, out, report, source_inventory):
             step('analysis', flutter + ['analyze', '--fatal-infos', '--no-pub'])
             result['simulator'] = {}
             simulator = AndroidSimulator(args, private, out, owner, registry, env, report['simulator'], result['simulator'], save)
-            simulator.start(); simulator.verify(flutter, step, client); simulator.release(destination, result['apk']['sha256'])
+            simulator.start(); simulator.verify(flutter, step, client)
+            if args.verify_mobile_boundaries:
+                from .android_mobile_boundary import run as boundary_run
+                boundary_run(simulator, flutter, step, client)
+            simulator.release(destination, result['apk']['sha256'])
             if digest(client / 'pubspec.lock') != result['source_sha256']['clients/enterprise_im/pubspec.lock']:
                 raise ValueError('pubspec_lock_changed_during_native_verification')
         result['status'] = 'passed'; code = 0

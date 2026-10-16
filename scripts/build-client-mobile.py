@@ -44,6 +44,7 @@ def main():
         parser.add_argument('--' + name, type=Path)
     parser.add_argument('--developer-dir', type=Path, default=Path('/Applications/Xcode.app/Contents/Developer'))
     parser.add_argument('--verify-simulator', action='store_true')
+    parser.add_argument('--verify-mobile-boundaries', action='store_true')
     parser.add_argument('--simulator-runtime')
     parser.add_argument('--simulator-device-type')
     args = parser.parse_args()
@@ -52,6 +53,8 @@ def main():
     args.output.mkdir(mode=0o700, parents=False, exist_ok=False)
     out = args.output
     try:
+        if args.verify_mobile_boundaries and (args.target != 'android' or not args.verify_simulator):
+            raise ValueError('mobile_boundaries_require_android_simulator')
         if args.target == 'android':
             from integration.android_build import preflight as android_preflight
             report = android_preflight(repo, args)
