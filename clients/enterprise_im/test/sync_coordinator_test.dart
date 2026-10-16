@@ -1,3 +1,4 @@
+import 'dart:io' show sleep;
 import 'dart:async';
 import 'dart:ui';
 import 'package:enterprise_im/platform/native_activity.dart';
@@ -54,94 +55,119 @@ final class ManualScheduler {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  test('testDesktopMinimizeStopsReadAndRefocusResyncs', () async {
-    final (_, store) = await fixture.storage();
-    final pending = Completer<ApiResponse>();
-    var gets = 0, reads = 0;
-    final api = ApiClient(
-      Uri.parse('https://im.example'),
-      fixture.ScriptedTransport((r) {
-        if (r.uri.path.endsWith('/tickets'))
-          return fixture.response({
-            'ticket': realtime.ticket,
-            'expires_in_seconds': 30,
-          });
-        if (r.uri.path.endsWith('/read')) {
-          reads++;
-          return fixture.response(fixture.state(read: 1));
+  for (final stalled in [false, true]) {
+    test(
+      stalled
+          ? 'testDesktopMinimizeStopsReadAndRefocusResyncs with stalled event loop'
+          : 'testDesktopMinimizeStopsReadAndRefocusResyncs',
+      () async {
+        final (_, store) = await fixture.storage();
+        final pending = Completer<ApiResponse>();
+        final readAcknowledged = Completer<void>();
+        var gets = 0, reads = 0;
+        final api = ApiClient(
+          Uri.parse('https://im.example'),
+          fixture.ScriptedTransport((r) {
+            if (r.uri.path.endsWith('/tickets'))
+              return fixture.response({
+                'ticket': realtime.ticket,
+                'expires_in_seconds': 30,
+              });
+            if (r.uri.path.endsWith('/read')) {
+              reads++;
+              expect(fixture.requestBody(r)['seqs'], ['1']);
+              return fixture.response(fixture.state(read: 1));
+            }
+            if (r.method == 'PUT') return fixture.response(fixture.state());
+            gets++;
+            return gets == 2
+                ? pending.future
+                : fixture.response(fixture.syncPage());
+          }),
+        );
+        addTearDown(api.close);
+        final adapter = NativeActivityAdapter(viewId: 0),
+            ctx = fixture.context();
+        final activity = adapter.activity;
+        adapter.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        adapter.didChangeViewFocus(
+          const ViewFocusEvent(
+            viewId: 0,
+            state: ViewFocusState.focused,
+            direction: ViewFocusDirection.undefined,
+          ),
+        );
+        activity.update(
+          foreground: true,
+          focused: true,
+          activeConversation: fixture.conversation,
+        );
+        final engine = SyncEngine(api, store),
+            queue = ReceiptQueue(
+              api,
+              activity,
+              onState: (_) {
+                if (!readAcknowledged.isCompleted) readAcknowledged.complete();
+              },
+            ),
+            channel = RealtimeChannel(api, realtime.DialFixture());
+        final results = <SyncResult>[];
+        final coordinator = SyncCoordinator(
+          engine,
+          channel,
+          queue,
+          activity,
+          onResult: results.add,
+        );
+        addTearDown(() async {
+          await coordinator.dispose();
+          queue.dispose();
+          await channel.dispose();
+          adapter.dispose();
+        });
+        await coordinator.start(ctx);
+        queue.observe(Seq.parse('1'), 1, ctx);
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        adapter.didChangeAppLifecycleState(AppLifecycleState.hidden);
+        await Future<void>.delayed(const Duration(milliseconds: 850));
+        expect(reads, 0);
+        adapter.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        for (var i = 0; i < 100 && gets < 2; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
         }
-        if (r.method == 'PUT') return fixture.response(fixture.state());
-        gets++;
-        return gets == 2
-            ? pending.future
-            : fixture.response(fixture.syncPage());
-      }),
+        expect(gets, 2);
+        expect(activity.focused, isFalse);
+        queue.observe(Seq.parse('1'), 1, ctx);
+        await Future<void>.delayed(const Duration(milliseconds: 550));
+        expect(reads, 0);
+        expect(results, hasLength(1));
+        pending.complete(fixture.response(fixture.syncPage()));
+        for (var i = 0; i < 100 && results.length < 2; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(results, hasLength(2));
+        adapter.didChangeViewFocus(
+          const ViewFocusEvent(
+            viewId: 0,
+            state: ViewFocusState.focused,
+            direction: ViewFocusDirection.undefined,
+          ),
+        );
+        queue.observe(Seq.parse('1'), 1, ctx);
+        if (stalled) {
+          final stall = Timer(const Duration(milliseconds: 100), () {
+            sleep(const Duration(milliseconds: 1100));
+          });
+          addTearDown(stall.cancel);
+        }
+        // Exposure and batching are consecutive timers. A late exposure
+        // callback starts a new batch delay; elapsed wall time is not an ACK.
+        await readAcknowledged.future.timeout(const Duration(seconds: 5));
+        expect(reads, 1);
+        expect(queue.locallyReadSeqs, [Seq.parse('1')]);
+      },
     );
-    addTearDown(api.close);
-    final adapter = NativeActivityAdapter(viewId: 0), ctx = fixture.context();
-    final activity = adapter.activity;
-    adapter.didChangeAppLifecycleState(AppLifecycleState.resumed);
-    adapter.didChangeViewFocus(
-      const ViewFocusEvent(
-        viewId: 0,
-        state: ViewFocusState.focused,
-        direction: ViewFocusDirection.undefined,
-      ),
-    );
-    activity.update(
-      foreground: true,
-      focused: true,
-      activeConversation: fixture.conversation,
-    );
-    final engine = SyncEngine(api, store),
-        queue = ReceiptQueue(api, activity),
-        channel = RealtimeChannel(api, realtime.DialFixture());
-    final results = <SyncResult>[];
-    final coordinator = SyncCoordinator(
-      engine,
-      channel,
-      queue,
-      activity,
-      onResult: results.add,
-    );
-    addTearDown(() async {
-      await coordinator.dispose();
-      queue.dispose();
-      await channel.dispose();
-      adapter.dispose();
-    });
-    await coordinator.start(ctx);
-    queue.observe(Seq.parse('1'), 1, ctx);
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    adapter.didChangeAppLifecycleState(AppLifecycleState.hidden);
-    await Future<void>.delayed(const Duration(milliseconds: 850));
-    expect(reads, 0);
-    adapter.didChangeAppLifecycleState(AppLifecycleState.resumed);
-    for (var i = 0; i < 100 && gets < 2; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    }
-    expect(gets, 2);
-    expect(activity.focused, isFalse);
-    queue.observe(Seq.parse('1'), 1, ctx);
-    await Future<void>.delayed(const Duration(milliseconds: 550));
-    expect(reads, 0);
-    expect(results, hasLength(1));
-    pending.complete(fixture.response(fixture.syncPage()));
-    for (var i = 0; i < 100 && results.length < 2; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    }
-    expect(results, hasLength(2));
-    adapter.didChangeViewFocus(
-      const ViewFocusEvent(
-        viewId: 0,
-        state: ViewFocusState.focused,
-        direction: ViewFocusDirection.undefined,
-      ),
-    );
-    queue.observe(Seq.parse('1'), 1, ctx);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    expect(reads, 1);
-  });
+  }
 
   test(
     'notification burst coalesces refresh and connected polling; stop cancels all',
