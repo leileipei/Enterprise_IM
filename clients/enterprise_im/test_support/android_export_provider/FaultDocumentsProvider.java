@@ -30,9 +30,12 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
         try (FileOutputStream out = new FileOutputStream(file)) { out.write(bytes); }
     }
     private File base;
+    private File foreign;
     private Handler handler;
     @Override public boolean onCreate() {
         base = new File(getContext().getFilesDir(), "documents"); base.mkdirs();
+        foreign = new File(getContext().getFilesDir(), "foreign"); foreign.mkdirs();
+        try { File sentinel = new File(foreign,"sentinel"); if (!sentinel.exists()) write(sentinel,new byte[]{55,66,77}); } catch(IOException e) { throw new IllegalStateException(e); }
         HandlerThread thread = new HandlerThread("export-fixture-io"); thread.start(); handler = new Handler(thread.getLooper());
         try { File sentinel = new File(base, "sentinel"); if (!sentinel.exists()) try (FileOutputStream out = new FileOutputStream(sentinel)) { out.write(new byte[]{31,41,59,26}); } } catch (IOException e) { throw new IllegalStateException(e); }
         return true;
@@ -54,15 +57,17 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
     }
     @Override public Cursor queryRoots(String[] projection) {
         MatrixCursor c = new MatrixCursor(projection != null ? projection : new String[]{Root.COLUMN_ROOT_ID,Root.COLUMN_DOCUMENT_ID,Root.COLUMN_TITLE,Root.COLUMN_FLAGS,Root.COLUMN_MIME_TYPES,Root.COLUMN_AVAILABLE_BYTES});
-        c.newRow().add(Root.COLUMN_ROOT_ID,"root").add(Root.COLUMN_DOCUMENT_ID,"root").add(Root.COLUMN_TITLE,"IM Export Faults").add(Root.COLUMN_FLAGS,Root.FLAG_SUPPORTS_CREATE|Root.FLAG_LOCAL_ONLY|Root.FLAG_SUPPORTS_IS_CHILD).add(Root.COLUMN_MIME_TYPES,"*/*").add(Root.COLUMN_AVAILABLE_BYTES,100000000L); return c;
+        c.newRow().add(Root.COLUMN_ROOT_ID,"root").add(Root.COLUMN_DOCUMENT_ID,"root").add(Root.COLUMN_TITLE,"IM Export Faults").add(Root.COLUMN_FLAGS,Root.FLAG_SUPPORTS_CREATE|Root.FLAG_LOCAL_ONLY|Root.FLAG_SUPPORTS_IS_CHILD).add(Root.COLUMN_MIME_TYPES,"*/*").add(Root.COLUMN_AVAILABLE_BYTES,100000000L);
+        c.newRow().add(Root.COLUMN_ROOT_ID,"foreign").add(Root.COLUMN_DOCUMENT_ID,"foreign").add(Root.COLUMN_TITLE,"IM Export Foreign").add(Root.COLUMN_FLAGS,Root.FLAG_SUPPORTS_CREATE|Root.FLAG_LOCAL_ONLY|Root.FLAG_SUPPORTS_IS_CHILD).add(Root.COLUMN_MIME_TYPES,"*/*").add(Root.COLUMN_AVAILABLE_BYTES,100000000L);return c;
     }
     private void row(MatrixCursor c,String id) throws FileNotFoundException {
-        boolean root=id.equals("root"); File f=root?base:data(id);
-        c.newRow().add(Document.COLUMN_DOCUMENT_ID,id).add(Document.COLUMN_DISPLAY_NAME,root?"IM Export Faults":name(id)).add(Document.COLUMN_MIME_TYPE,root?Document.MIME_TYPE_DIR:"application/octet-stream").add(Document.COLUMN_FLAGS,root?Document.FLAG_DIR_SUPPORTS_CREATE:Document.FLAG_SUPPORTS_WRITE|Document.FLAG_SUPPORTS_DELETE).add(Document.COLUMN_SIZE,root?0:f.length()).add(Document.COLUMN_LAST_MODIFIED,f.lastModified());
+        boolean root=id.equals("root")||id.equals("foreign"); File f=root?(id.equals("foreign")?foreign:base):data(id);
+        c.newRow().add(Document.COLUMN_DOCUMENT_ID,id).add(Document.COLUMN_DISPLAY_NAME,root?(id.equals("foreign")?"IM Export Foreign":"IM Export Faults"):name(id)).add(Document.COLUMN_MIME_TYPE,root?Document.MIME_TYPE_DIR:"application/octet-stream").add(Document.COLUMN_FLAGS,root?Document.FLAG_DIR_SUPPORTS_CREATE:Document.FLAG_SUPPORTS_WRITE|Document.FLAG_SUPPORTS_DELETE).add(Document.COLUMN_SIZE,root?0:f.length()).add(Document.COLUMN_LAST_MODIFIED,f.lastModified());
     }
     private MatrixCursor cursor(String[] projection) { return new MatrixCursor(projection != null ? projection:new String[]{Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE,Document.COLUMN_FLAGS,Document.COLUMN_SIZE,Document.COLUMN_LAST_MODIFIED}); }
     @Override public Cursor queryDocument(String id,String[] projection) throws FileNotFoundException { MatrixCursor c=cursor(projection);row(c,id);return c; }
     @Override public Cursor queryChildDocuments(String parent,String[] projection,String sortOrder) throws FileNotFoundException {
+        if(parent.equals("foreign"))return cursor(projection);
         if(!parent.equals("root")) throw new FileNotFoundException(); MatrixCursor c=cursor(projection);File[] files=base.listFiles((d,n)->n.endsWith(".name"));if(files!=null) for(File f:files)row(c,f.getName().replace(".name",""));
         File loading=new File(getContext().getFilesDir(),"directory-loading");
         if(loading.exists()){
@@ -89,6 +94,16 @@ public final class FaultDocumentsProvider extends DocumentsProvider {
     }
     @Override public ParcelFileDescriptor openDocument(String id,String mode,CancellationSignal signal) throws FileNotFoundException {
         File f=data(id);String n=name(id);if(mode.equals("r"))return ParcelFileDescriptor.open(f,ParcelFileDescriptor.MODE_READ_ONLY);
+        // Diagnostic gate: hold the real write-open while the host observes OS grant persistence.
+        File openGate = new File(getContext().getFilesDir(), "open-wait");
+        if (openGate.exists()) {
+            event("open_held id="+id);long deadline=android.os.SystemClock.elapsedRealtime()+120000;
+            while(openGate.exists()&&android.os.SystemClock.elapsedRealtime()<deadline) {
+                try {Thread.sleep(20);}catch(InterruptedException e){Thread.currentThread().interrupt();throw new FileNotFoundException();}
+            }
+            if(openGate.exists())throw new FileNotFoundException("fixture write-open gate timed out");
+            event("open_unblocked id="+id);
+        }
         if (android.os.Build.VERSION.SDK_INT < 26) {
             if (n.contains("-write")) throw new FileNotFoundException("Proxy write fault fixture requires API26");
             event("open id="+id+" name="+n);

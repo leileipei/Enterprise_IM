@@ -42,6 +42,7 @@ public final class RecoveryInstrumentation extends Instrumentation {
     private void remove(File file)throws Exception{if(file.isDirectory())for(File child:file.listFiles())remove(child);check(file.delete());}
     @Override public void onStart(){Bundle result=new Bundle();try {
         check(owner.matches("[a-f0-9]{32}"));
+        int actualBoot=android.provider.Settings.Global.getInt(getTargetContext().getContentResolver(),android.provider.Settings.Global.BOOT_COUNT,-1);check(actualBoot>=0);result.putInt("target_uid_boot_count",actualBoot);
         for(String name:new String[]{"reload","delete-false","delete-throws","committed","deleted-receipt","release-fails","preexisting-grant","take-fails","already-absent","ambiguous-provider","atomic-interruption","corrupt","unknown-version","oversized","orphan-new"}){
             File dir=root(name);ExportJournal journal=new ExportJournal(dir);Filesystem resource=new Filesystem(dir);ExportLedger ledger=new ExportLedger(journal,resource);
             if(name.equals("corrupt")||name.equals("unknown-version")||name.equals("oversized")||name.equals("orphan-new")){
@@ -69,6 +70,8 @@ public final class RecoveryInstrumentation extends Instrumentation {
             remove(dir);passed.add(name);
         }
         int treePassed=TreeAllocationChecks.run(new File(getTargetContext().getNoBackupFilesDir(),"tree-allocation-"+owner));
-        result.putString("stream","TREE_ALLOCATION_ALL_PASSED "+treePassed+"\nRECOVERY_ALL_PASSED "+passed.size()+" "+passed+" target="+getTargetContext().getApplicationInfo().sourceDir+" classloader="+ExportLedger.class.getClassLoader());result.putInt("passed",passed.size());finish(-1,result);
+        int managerPassed=ManagerRecoveryChecks.run(getTargetContext(),new File(getTargetContext().getNoBackupFilesDir(),"manager-recovery-"+owner));
+        int releasePassed=ReleaseReceiptChecks.run(new File(getTargetContext().getNoBackupFilesDir(),"release-receipts-"+owner));
+        result.putString("stream","RELEASE_RECEIPTS_ALL_PASSED "+releasePassed+"\nMANAGER_RECOVERY_ALL_PASSED "+managerPassed+"\nTREE_ALLOCATION_ALL_PASSED "+treePassed+"\nRECOVERY_ALL_PASSED "+passed.size()+" "+passed+" target="+getTargetContext().getApplicationInfo().sourceDir+" classloader="+ExportLedger.class.getClassLoader());result.putInt("passed",passed.size());finish(-1,result);
     }catch(Throwable error){result.putString("stream",android.util.Log.getStackTraceString(error)+" passed="+passed);result.putInt("failed",1);finish(0,result);}}
 }

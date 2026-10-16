@@ -86,7 +86,11 @@
       "large_heap_enabled": false
     },
     "minimum_api_scope": "13 export cases, foreground lifecycle, retained Keystore two-process phases, 4 pre-ACK created-file/loading cases, 1 post-ACK RAM SIGKILL, native31+8; API36 same-source native31+8 regression",
-    "minimum_api_boundary": "ARM64 simulator only; no physical device, other ABI/OEM, reboot/power loss, arbitrary cloud asynchronous commit, customer signing, backend full chain or CI acceptance"
+    "minimum_api_boundary": "ARM64 simulator only; no physical device, other ABI/OEM, reboot/power loss, arbitrary cloud asynchronous commit, customer signing, backend full chain or CI acceptance",
+    "system_reboot_release_receipts": "scoped_passed_api24_api36_arm64_local_controlled_provider",
+    "system_reboot_evidence": "docs/verification/p5-02-task8-android-release-receipts-results.json",
+    "system_reboot_scope": "foreground startup owned-grant reconciliation, 32-directory bounded metadata receipts, same-boot retention and later-boot pruning; no completed-file deletion",
+    "system_reboot_boundary": "not power loss, physical devices, cloud asynchronous commit, OEM/other ABI, release signing, CI or complete mobile backend acceptance; legacy grants without ownership evidence not inferred"
   },
   "generated_runners": [
     "windows",

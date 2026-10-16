@@ -37,3 +37,13 @@ flutter build apk --debug --no-pub --target=integration_test/android_export_hand
 Android7.0 Google APIs ARM64 revision29：真实创建后、ACK前的Activity.recreate／force-stop／SIGKILL及loading保护均已运行；ACK后仅RAM接收40000字节再SIGKILL也独立验证。API24确认按钮为SELECT；目录项应按实际焦点用DPAD／ENTER进入，不能把新系统的Use this folder／Allow或固定坐标当作兼容性断言。
 
 API24默认应用heapgrowthlimit为48MiB，已复现连续缓冲扩容OOM并改为32KiB块，纯RAM仍限25MiB，finish／abort擦除并解除引用；未开启largeHeap或改堆大小。25MiB超限清理及完整25MiB导出已独立验内容。API24与API36同源原生契约均为31项状态／目录加8项资源契约。最低版本结果另见docs/verification/p5-02-task8-android-api24-results.json，不替代真机／云盘／断电验收。
+
+## 重授权排队与Activity重建
+
+`ReauthorizationLifecycleInstrumentation`与旧Handoff入口分开：通过真实Application生命周期回调捕获MainActivity，先由公开串行worker挂起队列，真实系统选择器返回原目录后，再调用Activity.recreate；必须同PID、created／destroyed计数变化、新旧实例身份不同。放行并排空worker后，核对旧文件与票据仍在、正文回调为0；不能只据REAUTHORIZATION_LIFECYCLE_PASSED把文件清理判为通过，主机还需独立检查磁盘及journal。控制前缀为cache/im-reauth-life-<设备owner>，门禁为hold／recreate／release／finish；所有门禁都有超时，夹具不进入产品包。
+
+API24／API36在最终030 APK上已通过该实际重建检查。该检查点曾确认系统重启后授权回现；已由下述持久释放收据修复并另行验收，历史失败保留。见仓库docs/P5-02-Android系统重启恢复验证.md。
+
+## 系统重启与持久释放收据续作（2026-10-16）
+
+创建后ACK前的真实系统重启、原目录精确重新授权、取消／错选／排队结果后真实Activity.recreate已在API24与API36受控本地提供程序验证。新增持久owned授权释放收据后，完成文件保护、快速重启授权回现后的前台启动再释放、后代次核销也通过。生产040-final APK保持同一哈希；最新独立提供程序观察门禁见相邻provider README，不能将夹具变化混成产品变更。各71项原生契约不替代实际场景。最新证据为仓库docs/verification/p5-02-task8-android-release-receipts-results.json；断电、云盘异步提交、真机、发行签名与移动后端完整链路仍未验收。

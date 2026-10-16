@@ -32,14 +32,15 @@ final class TreeAllocationChecks {
     private interface Action {void run()throws Exception;}
     private static void fails(Action action)throws Exception{boolean failed=false;try{action.run();}catch(Exception error){failed=true;}check(failed,"expected explicit failure");}
     private static final class Disk implements ExportLedger.Resources {
-        final File dir,foreign,sentinel;File document;String name;int held;boolean loading,emptyListing,partialListing,queryError,afterCreate,defer,block,throwDelete,releaseFailure,takeFailure,unsupported;
+        final File dir,foreign,sentinel;File document;String name;int held;int partialTake;boolean requireAccess,loading,emptyListing,partialListing,queryError,afterCreate,defer,block,throwDelete,releaseFailure,takeFailure,unsupported;
         Disk(File dir)throws Exception{this.dir=dir;foreign=new File(dir,"unrelated.bin");sentinel=new File(dir,"sentinel");write(foreign,new byte[]{55});write(sentinel,new byte[]{31,41,59,26});}
         public int grants(Uri uri){check(uri.equals(TREE),"grant must be directory URI");return held;}
-        public void take(Uri uri,int flags)throws Exception{held|=flags;if(takeFailure)throw new IOException("grant fault");}
+        public void take(Uri uri,int flags)throws Exception{held|=partialTake!=0?partialTake:flags;if(takeFailure)throw new IOException("grant fault");}
         public void release(Uri uri,int flags)throws Exception{if(releaseFailure)throw new IOException("release fault");held&=~flags;}
         public void validateTree(Uri tree)throws Exception{if(unsupported)throw new IOException("not creatable");}
         public void create(Uri tree,String name)throws Exception{this.name=name;document=new File(dir,name);if(defer)throw new IOException("creation outcome unknown");write(document,new byte[0]);if(afterCreate)throw new IOException("caller lost before create return");}
         public Uri findAllocated(Uri tree,String prefix)throws Exception{
+            if(requireAccess&&(held&3)!=3)throw new SecurityException("directory access lost");
             File[] matches=dir.listFiles((d,n)->n.startsWith(prefix));Arrays.sort(matches);
             try(MatrixCursor cursor=new MatrixCursor(new String[]{"document_id","_display_name","mime_type"})){
                 if(!emptyListing)for(int i=0;i<matches.length;i++){
@@ -50,7 +51,7 @@ final class TreeAllocationChecks {
                 return ExportDirectory.findAllocated(cursor,tree,prefix);
             }
         }
-        public boolean delete(Uri uri)throws Exception{if(throwDelete)throw new IOException("delete fault");if(block)return false;if(uri.equals(FOREIGN))return foreign.delete();if(!uri.equals(DOC))throw new IOException("unknown URI");return document!=null&&document.delete();}
+        public boolean delete(Uri uri)throws Exception{if(requireAccess&&(held&3)!=3)throw new SecurityException("directory access lost");if(throwDelete)throw new IOException("delete fault");if(block)return false;if(uri.equals(FOREIGN))return foreign.delete();if(!uri.equals(DOC))throw new IOException("unknown URI");return document!=null&&document.delete();}
         public boolean absent(Uri uri){return uri.equals(FOREIGN)?!foreign.exists():document==null||!document.exists();}
         void protect()throws Exception{check(Arrays.equals(read(foreign),new byte[]{55}),"unrelated file changed");check(Arrays.equals(read(sentinel),new byte[]{31,41,59,26}),"sentinel changed");}
     }
@@ -58,7 +59,7 @@ final class TreeAllocationChecks {
     static int run(File parent)throws Exception {
         check(parent.mkdir(),"fresh test directory");List<String> passed=new ArrayList<>();
         try {
-            for(String mode:new String[]{"created-before-return","deferred-creation","delete-false","delete-throws","preexisting-directory-grant","prefix-collision","multiple-matches","committed-file","deleted-release-retry","partial-grant-failure","unsupported-directory","utf8-leaf-name","foreign-uri-record","loading-empty","loading-partial-one","error-result"}){
+            for(String mode:new String[]{"created-before-return","deferred-creation","delete-false","delete-throws","preexisting-directory-grant","prefix-collision","multiple-matches","committed-file","deleted-release-retry","partial-grant-failure","unsupported-directory","utf8-leaf-name","foreign-uri-record","loading-empty","loading-partial-one","error-result","reauth-allocating","reauth-pending","reauth-wrong-directory","reauth-stale-ticket","reauth-partial-read","reauth-partial-write","reauth-existing-read","reauth-terminal","reauth-offer"}){
                 File dir=new File(parent,mode);check(dir.mkdir(),"fresh case");Disk disk=new Disk(dir);File metadata=new File(dir,"metadata");check(metadata.mkdir(),"metadata dir");ExportJournal journal=new ExportJournal(metadata);ExportLedger ledger=new ExportLedger(journal,disk);
                 if(mode.equals("preexisting-directory-grant"))disk.held=1;
                 if(mode.equals("created-before-return"))disk.afterCreate=true;
@@ -67,6 +68,43 @@ final class TreeAllocationChecks {
                 if(mode.equals("unsupported-directory"))disk.unsupported=true;
                 File collision=new File(dir,PREFIX+"preexisting.bin");
                 if(mode.equals("prefix-collision"))write(collision,new byte[]{21});
+                if(mode.startsWith("reauth-")){
+                    if(mode.equals("reauth-allocating"))disk.afterCreate=true;
+                    if(mode.startsWith("reauth-partial-")||mode.equals("reauth-existing-read"))disk.held=3;
+                    if(disk.afterCreate)fails(()->ledger.allocateTree(TICKET,TREE,"report.bin",67));else ledger.allocateTree(TICKET,TREE,"report.bin",67);
+                    disk.held=mode.equals("reauth-existing-read")?1:0;disk.requireAccess=true;
+                    fails(ledger::recover);ExportJournal.Entry original=journal.read();ExportLedger.Reauthorization request=ledger.authorizationRequired();
+                    check(request!=null&&request.ticket.equals(TICKET)&&request.tree.equals(TREE),"missing original recovery identity");
+                    byte[] saved=read(new File(metadata,"export-cleanup.json"));
+                    if(mode.equals("reauth-wrong-directory")){
+                        fails(()->ledger.reauthorize(request,Uri.parse("content://controlled.export/tree/other"),67));
+                        check(Arrays.equals(saved,read(new File(metadata,"export-cleanup.json")))&&disk.held==0&&disk.document.exists(),"wrong directory changed ownership");
+                    }
+                    if(mode.equals("reauth-stale-ticket")){
+                        String other="788b13e7-e49d-4e7e-97b6-69304a47d173";
+                        journal.write(new ExportJournal.Entry(other,Uri.EMPTY,TREE,0,"ALLOCATING","im-"+other+"-","im-"+other+"-other.bin"));
+                        byte[] newer=read(new File(metadata,"export-cleanup.json"));fails(()->ledger.reauthorize(request,TREE,67));
+                        check(Arrays.equals(newer,read(new File(metadata,"export-cleanup.json")))&&disk.held==0&&disk.document.exists(),"stale selection changed another operation");journal.write(original);
+                    }
+                    if(mode.equals("reauth-offer")){
+                        for(int flags:new int[]{3,65,66})fails(()->ledger.reauthorize(request,TREE,flags));
+                        check(Arrays.equals(saved,read(new File(metadata,"export-cleanup.json")))&&disk.held==0&&disk.document.exists(),"incomplete offer changed recovery metadata");
+                    }
+                    if(mode.equals("reauth-terminal")){
+                        write(disk.document,new byte[]{5,8,13});ledger.commit(TICKET);check(ledger.authorizationRequired()==null,"committed file requested authorization");
+                        fails(()->ledger.reauthorize(request,TREE,67));ledger.recover();check(Arrays.equals(read(disk.document),new byte[]{5,8,13})&&disk.held==0&&journal.read()==null,"terminal recovery altered completed file");
+                    }else{
+                        if(mode.startsWith("reauth-partial-")){
+                            disk.partialTake=mode.equals("reauth-partial-read")?1:2;disk.takeFailure=true;fails(()->ledger.reauthorize(request,TREE,67));
+                            check(journal.read().acquired==3&&disk.held==disk.partialTake&&disk.document.exists(),"partial take not durably owned");disk.takeFailure=false;disk.partialTake=0;ledger.reauthorize(request,TREE,67);
+                        }else ledger.reauthorize(request,TREE,67);
+                        check(journal.read().ticket.equals(TICKET)&&disk.document.exists(),"reauthorization must not allocate or delete");
+                        check(ledger.authorizationRequired()==null,"confirmed grant still requests authorization");
+                        new ExportLedger(new ExportJournal(metadata),disk).recover();check(!disk.document.exists()&&journal.read()==null,"restored access failed cleanup");
+                        check(disk.held==(mode.equals("reauth-existing-read")?1:0),"recovery released preexisting rights or leaked new rights");
+                    }
+                    disk.protect();remove(dir);passed.add(mode);continue;
+                }
                 String requested=mode.equals("utf8-leaf-name")?new String(new char[80]).replace('\0', '文')+".xlsx":"report.bin";
                 if(disk.afterCreate||disk.defer||disk.takeFailure||disk.unsupported||collision.exists())fails(()->ledger.allocateTree(TICKET,TREE,requested,67));
                 else check(ledger.allocateTree(TICKET,TREE,requested,67).equals(DOC),"allocated URI");

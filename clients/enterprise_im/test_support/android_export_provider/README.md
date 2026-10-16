@@ -43,3 +43,11 @@ flutter drive --driver=test_driver/integration_test.dart --target=integration_te
 夹具minSdk24，仍用固定SDK36／JDK21编译。API24使用真实普通ParcelFileDescriptor和关闭监听；API26+才加载独立嵌套类中的ProxyFileDescriptorCallback。名称含-write的代理EIO夹具在API24明确不支持，不能把API36的代理写入故障验收套用到API24。API24的同步write／close故障与可靠管道终态检查来自单独instrumentation，共7项文件／25MiB契约加1项可靠管道，生产类从目标APK加载。
 
 API24真实目录创建前返回阻塞、拒绝删除、加载中查询与RAM ACK后SIGKILL恢复均可使用；先选目录界面的确认文案是SELECT。最终结果及边界见仓库docs/verification/p5-02-task8-android-api24-results.json。
+
+重授权验证新增同一独立提供程序中的IM Export Foreign目录，真实系统选择器可选但产品应因URI与旧票据不一致而拒绝；其中3字节sentinel独立核验不变，不得为错目录保存持久授权。该目录不提供导出创建能力，仅用于真实错选检验。
+
+## 释放收据快速重启观察门禁（2026-10-16）
+
+仅独立测试提供程序增加files/open-wait：write-open记录open_held后最多等待120秒，主机解除该门禁才返回真实文件描述符，记录open_unblocked。API24为普通FD，API36为ProxyFD；超时抛FileNotFound，应用按真实失败路径清理。此门禁用于在实际目录授权已落入OS持久存储时才允许完成复制，再立即系统重启。release后不等待OS持久化；主机不写生产journal、不注入URI／系统回调／授权。产品APK不包含此夹具或门禁。
+
+API36的系统urigrants.xml可能为ABX。测试root只读诊断使用abx2xml INPUT UNIQUE_OUTPUT，将输出写入本轮唯一/data/local/tmp文件、读取后删除；禁止-i和修改输入。该诊断用于核实重现前置条件，不是产品能力或正式权限依赖。085两平台真实观察到授权回现，再由同一040-final产品启动核对释放；091在独立后续重启验证核销。原始超时、ABX误读及宿主失败均保留。精确URI＋targetPkg的全部persisted位已独立复核95份快照，不能只匹配0x3就宣称无残留。

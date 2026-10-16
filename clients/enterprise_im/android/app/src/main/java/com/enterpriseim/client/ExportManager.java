@@ -6,13 +6,18 @@ import android.net.Uri;
 import android.provider.DocumentsContract;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Application lifetime coordinator; all calls are serialized off the UI thread. */
 public final class ExportManager {
-    public static final class CleanupException extends IOException {
+    public static class CleanupException extends IOException {
         CleanupException(Exception cause) { super("Export cleanup pending", cause); }
+    }
+    public static final class ReauthorizationException extends CleanupException {
+        public final ExportLedger.Reauthorization request;
+        ReauthorizationException(ExportLedger.Reauthorization request, Exception cause) { super(cause); this.request = request; }
     }
     public static final class BusyException extends IOException {
         BusyException() { super("Another export is active"); }
@@ -34,6 +39,10 @@ public final class ExportManager {
     private ExportManager(Context context) {
         resolver = context.getContentResolver();
         ledger = new ExportLedger(new ExportJournal(context.getNoBackupFilesDir()), new ExportLedger.Resources() {
+            public int bootCount() {
+                try { return android.provider.Settings.Global.getInt(resolver, android.provider.Settings.Global.BOOT_COUNT, -1); }
+                catch (SecurityException unavailable) { return -1; }
+            }
             public int grants(Uri uri) {
                 int flags = 0;
                 for (UriPermission grant : resolver.getPersistedUriPermissions()) if (grant.getUri().equals(uri)) {
@@ -70,13 +79,29 @@ public final class ExportManager {
             }
         });
     }
+    public void reconcileStartup() {
+        try { ledger.reconcileReleasedGrants(); }
+        catch (Exception error) { android.util.Log.e("EnterpriseIM", "Export permission release reconciliation pending"); }
+    }
     private void recover() throws CleanupException {
-        try { ledger.recover(); } catch (Exception error) { throw new CleanupException(error); }
+        try { ledger.recover(); } catch (Exception error) {
+            ExportLedger.Reauthorization request = null;
+            try { request = ledger.authorizationRequired(); } catch (Exception unreadable) { /* Invalid metadata stays blocked. */ }
+            if (request != null) throw new ReauthorizationException(request, error);
+            throw new CleanupException(error);
+        }
     }
     public void reserve(String owner) throws Exception {
         if (active != null && active.cleanupPending) abort(active.owner, active.ticket);
         if (reservation != null || active != null) throw new BusyException();
         recover(); reservation = owner;
+    }
+    public void reauthorizeAndReserve(String owner, ExportLedger.Reauthorization request, Uri selected, int flags, BooleanSupplier ownerOpen) throws Exception {
+        if (!ownerOpen.getAsBoolean()) throw new CleanupException(new IOException("Export owner closed"));
+        if (reservation != null || active != null && !active.cleanupPending) throw new BusyException();
+        try { ledger.reauthorize(request, selected, flags); } catch (Exception error) { throw new CleanupException(error); }
+        if (!ownerOpen.getAsBoolean()) throw new CleanupException(new IOException("Export owner closed"));
+        reserve(owner);
     }
     public void cancel(String owner) { if (owner.equals(reservation)) reservation = null; }
     public String accept(String owner, Uri tree, int flags, String name) throws Exception {
@@ -115,6 +140,9 @@ public final class ExportManager {
     public void destroy(String owner) {
         cancel(owner);
         if (active == null || !active.owner.equals(owner)) return;
+        // A failed abort already erased RAM. Retain its journal for an explicit retry;
+        // destruction must not retry with access restored by an interrupted picker.
+        if (active.cleanupPending) { active = null; return; }
         try { active.session.abort(); }
         catch (Exception error) { android.util.Log.e("EnterpriseIM", "Export destination cleanup failed during Activity destruction"); }
         finally { active = null; }

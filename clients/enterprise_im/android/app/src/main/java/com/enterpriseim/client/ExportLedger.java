@@ -7,6 +7,7 @@ import java.io.IOException;
 public final class ExportLedger {
     public interface Resources {
         int grants(Uri uri);
+        default int bootCount() { return -1; }
         void take(Uri uri, int flags) throws Exception;
         void release(Uri uri, int flags) throws Exception;
         boolean delete(Uri uri) throws Exception;
@@ -17,14 +18,17 @@ public final class ExportLedger {
     }
     private final ExportJournal journal;
     private final Resources resources;
-    public ExportLedger(ExportJournal journal, Resources resources) { this.journal = journal; this.resources = resources; }
+    private final ExportGrantReleases releases;
+    public ExportLedger(ExportJournal journal, Resources resources) { this.journal = journal; this.resources = resources; this.releases = new ExportGrantReleases(journal.directory(), resources); }
     public void prepare(String ticket, Uri uri, int offered) throws Exception {
         if (journal.read() != null) throw new IOException("Unresolved export");
         int wanted = offered & 3;
         int acquired = wanted & ~resources.grants(uri);
+        releases.ensureCapacity(uri, acquired);
         ExportJournal.Entry entry = new ExportJournal.Entry(ticket, uri, acquired, "PREPARED");
         journal.write(entry);
         if ((wanted & 2) == 0 || (offered & 64) == 0) throw new IOException("Durable URI access unavailable");
+        releases.acquiring(uri, acquired);
         resources.take(uri, wanted);
         if ((resources.grants(uri) & wanted) != wanted) throw new IOException("Durable URI access not confirmed");
         journal.write(entry.phase("PENDING"));
@@ -36,9 +40,11 @@ public final class ExportLedger {
         String prefix = "im-" + ticket + "-";
         String name = allocatedName(prefix, requested);
         int wanted = offered & 3, acquired = wanted & ~resources.grants(tree);
+        releases.ensureCapacity(tree, acquired);
         ExportJournal.Entry entry = new ExportJournal.Entry(ticket, Uri.EMPTY, tree, acquired, "TREE_PREPARED", prefix, name);
         journal.write(entry);
         if (wanted != 3 || (offered & 64) == 0) throw new IOException("Durable directory access unavailable");
+        releases.acquiring(tree, acquired);
         resources.take(tree, wanted);
         if ((resources.grants(tree) & wanted) != wanted) throw new IOException("Durable directory access not confirmed");
         resources.validateTree(tree);
@@ -75,12 +81,40 @@ public final class ExportLedger {
         if (end == 0) throw new IOException("Invalid filename");
         return prefix + stem.substring(0, end) + extension;
     }
+    /** Only an unfinished, validated tree operation can request renewed access. */
+    public static final class Reauthorization {
+        public final String ticket;
+        public final Uri tree;
+        private Reauthorization(String ticket, Uri tree) { this.ticket = ticket; this.tree = tree; }
+    }
+    public Reauthorization authorizationRequired() throws Exception {
+        ExportJournal.Entry entry = journal.read();
+        if (entry == null || !entry.treeBased() ||
+            !(entry.phase.equals("ALLOCATING") || entry.phase.equals("PENDING"))) return null;
+        return (resources.grants(entry.grantUri) & 3) == 3 ? null : new Reauthorization(entry.ticket, entry.grantUri);
+    }
+    /** Selection only restores the original operation; it never creates or deletes a document. */
+    public void reauthorize(Reauthorization request, Uri selected, int offered) throws Exception {
+        ExportJournal.Entry entry = journal.read();
+        if (request == null || entry == null || !entry.treeBased() ||
+            !entry.ticket.equals(request.ticket) || !entry.grantUri.equals(request.tree) || !entry.grantUri.equals(selected) ||
+            !(entry.phase.equals("ALLOCATING") || entry.phase.equals("PENDING")) ||
+            (offered & 3) != 3 || (offered & 64) == 0) throw new IOException("Original export directory required");
+        int newlyAcquired = 3 & ~resources.grants(entry.grantUri);
+        int acquired = entry.acquired | newlyAcquired;
+        releases.ensureCapacity(entry.grantUri, acquired);
+        // Record any newly owned bits before taking them, including a partial take failure.
+        journal.write(new ExportJournal.Entry(entry.ticket, entry.uri, entry.grantUri, acquired, entry.phase, entry.prefix, entry.displayName));
+        releases.acquiring(entry.grantUri, acquired);
+        resources.take(entry.grantUri, 3);
+        if ((resources.grants(entry.grantUri) & 3) != 3) throw new IOException("Durable directory access not confirmed");
+    }
     public void commit(String ticket) throws Exception {
         ExportJournal.Entry entry = require(ticket);
         journal.write(entry.phase("COMMITTED"));
     }
     public void recover() throws Exception {
-        ExportJournal.Entry entry = journal.read(); if (entry == null) return;
+        ExportJournal.Entry entry = journal.read(); if (entry == null) { releases.reconcile(null); return; }
         if (entry.phase.equals("TREE_PREPARED")) {
             // No create call can be issued until ALLOCATING has been durably saved.
             entry = entry.phase("DELETED"); journal.write(entry);
@@ -110,11 +144,17 @@ public final class ExportLedger {
                 entry = entry.phase("DELETED"); journal.write(entry);
             }
         }
-        int held = resources.grants(entry.grantUri) & entry.acquired;
-        if (held != 0) resources.release(entry.grantUri, held);
-        if ((resources.grants(entry.grantUri) & entry.acquired) != 0) throw new IOException("URI release not confirmed");
+        releases.release(entry.grantUri, entry.acquired);
         journal.clear();
+        releases.reconcile(null);
     }
+    /** Startup never deletes files and must preserve access needed by a durable unfinished operation. */
+    public void reconcileReleasedGrants() throws Exception {
+        ExportJournal.Entry entry = journal.read();
+        boolean pending = entry != null && !(entry.phase.equals("COMMITTED") || entry.phase.equals("DELETED"));
+        releases.reconcile(pending ? entry.grantUri : null);
+    }
+
     private boolean absent(ExportJournal.Entry entry) throws Exception {
         if (!entry.treeBased()) return resources.absent(entry.uri);
         return resources.findAllocated(entry.grantUri, entry.prefix) == null;

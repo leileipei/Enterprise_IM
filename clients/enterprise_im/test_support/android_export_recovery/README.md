@@ -39,10 +39,26 @@ adb -s <所属serial> install <输出>/recovery-tests.apk
 adb -s <所属serial> shell am instrument -w -e owner <本轮32hex> com.enterpriseim.exportrecoverytests/com.enterpriseim.client.tests.RecoveryInstrumentation
 ```
 
-必须观察 `RECOVERY_ALL_PASSED 15` 和 `TREE_ALLOCATION_ALL_PASSED 16`，而不是只看ADB退出0；失败会带failed及堆栈。检查实际Android AtomicFile、真实文件副作用，资源边界注入删除／授权失败；不宣称31个真实云盘故障。测试目录成功后自行删除。
+必须观察 `RECOVERY_ALL_PASSED 15` 和 `TREE_ALLOCATION_ALL_PASSED 25` 和 `MANAGER_RECOVERY_ALL_PASSED 3`、`RELEASE_RECEIPTS_ALL_PASSED 20`，而不是只看ADB退出0；失败会带failed及堆栈。检查实际Android AtomicFile、真实文件副作用，资源边界注入删除／授权失败；不宣称63个真实云盘故障。测试目录成功后自行删除。
 
-本节旧版生命周期入口从原生票据ACK后开始；当前目录模式的创建后、ACK前验证见 `../android_export_handoff/README.md`。本次最低API24 ARM64模拟器结果见仓库docs/verification/p5-02-task8-android-api24-results.json；断电／OS重启、物理设备及云盘异步提交未覆盖。票据恢复在下一次导出前重试，不自动重放业务正文；无法确认目标不存在时保留票据并阻止新导出。
+本节旧版生命周期入口从原生票据ACK后开始；当前目录模式的创建后、ACK前验证见 `../android_export_handoff/README.md`。本次最低API24 ARM64模拟器结果见仓库docs/verification/p5-02-task8-android-api24-results.json；该旧检查点未覆盖断电／OS重启、物理设备及云盘异步提交；最新系统重启范围见下文。票据恢复在下一次导出前重试，不自动重放业务正文；无法确认目标不存在时保留票据并阻止新导出。
 
 目录契约使用真实 MatrixCursor、生产 ExportDirectory 解析和真实磁盘文件。16项覆盖：创建后返回丢失、延迟创建、delete返回false／抛错、既有目录权限、前缀碰撞、多匹配、COMMITTED保护、DELETED重试、部分取权失败、不支持创建目录、UTF8文件名、错误URI记录、loading空列表、loading单行部分列表和error结果。查询不完整时文件、票据和授权必须全部保留；不能通过空列表或单行推断不存在／唯一。旧版15项仍读写v1并检查未知版本、损坏及AtomicFile中断。
 
 API24注意：不要在测试中使用API26才引入的File.toPath／java.nio.file.Files；使用流IO。Android7 AtomicFile.delete只处理base和bak，本产品在已确认清理／提交并释放授权后还核验并删除保留的.new侧文件；未知或孤立元数据仍保留并阻断。旧版15项包含此真实AtomicFile中断回归。
+
+## 原目录重新授权与系统重启（2026-10-16）
+
+当前增加9项授权契约：ALLOCATING／PENDING恢复、错目录、旧票据、仅read／仅write取权后失败、原有read权限保护、终态拒绝重新取权及不完整授权offer。额外3项Manager检查在目标APK实际Manager上覆盖普通销毁、取权前关闭及取权期间关闭；后两者保留票据，下一次明确请求可恢复。资源边界受控，磁盘和Android AtomicFile真实。
+
+原目录重新授权检查点在API24／API36各通过15＋25＋3状态与管理契约，以及8项资源契约。真实系统重启测试入口为`integration_test/android_export_reboot_test.dart`，先前已批准仅对原目录URI精确匹配重新授权；取消、错选、Activity重建不读取新正文。原先实际系统重启发现的授权回现缺陷已采用下述收据机制修复；保留原始失败记录。最新实际测试见仓库`docs/P5-02-Android系统重启恢复验证.md`。
+
+## 持久授权释放收据（2026-10-16）
+
+新增20项ReleaseReceiptChecks，API24／API36各合计15＋25＋3＋20＋8＝71项通过。它们使用目标APK的生产类、真实Android AtomicFile及磁盘；授权／启动代次／失败边界可受控注入，不表示71个真实提供程序故障。Instrumentation还在真实目标应用UID下读取BOOT_COUNT，两个API均可读。
+
+生产no_backup/export-grant-releases.json版本1包含entries，每项仅uri、owned、lastReleaseAttemptBoot，不含正文。最多32个不同目录、98304字节，目录标识最多2048 UTF8字节。容量在take和reauthorize前核对，新增owned在take前原子持久记录，保留既有权限位。同一次系统启动即使release后为0仍保留；每次重新release前更新启动代次，在后续启动代次确认owned位无才核销。未知代次不核销；损坏、未知版本、孤立.new或无法持久确认时保留责任并阻断新导出。
+
+应用前台启动和下一次导出前在同一worker核对；启动只处理释放责任，不删除文档，并避开磁盘未完成journal所用目录。COMMITTED文件永不因释放收据删除。旧版本已清空journal且未保存owned收据的遗留授权无法自动认定归属。该机制不是开机广播服务，不能保证用户启动应用前授权已释放。
+
+独立实际系统重启验证在同一040-final产品APK上完成：创建后ACK前、RAM ACK40000、API36实际4096字节EIO；两平台均重现完成后快速重启的授权回现，并验证启动重释放、同代次保留、后代次核销、完成文件哈希不变。证据为仓库docs/verification/p5-02-task8-android-release-receipts-results.json。原子中断等20项资源契约与这些实际系统场景分别计数。

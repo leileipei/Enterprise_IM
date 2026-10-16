@@ -2,4 +2,5 @@
   <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="36" />
   <application android:label="IM Export Session Checks" android:debuggable="true" android:allowBackup="false" />
   <instrumentation android:name="com.enterpriseim.client.tests.HandoffLifecycleInstrumentation" android:targetPackage="com.enterpriseim.client" android:functionalTest="true" />
+  <instrumentation android:name="com.enterpriseim.client.tests.ReauthorizationLifecycleInstrumentation" android:targetPackage="com.enterpriseim.client" android:functionalTest="true" />
 </manifest>

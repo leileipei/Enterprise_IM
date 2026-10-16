@@ -26,6 +26,7 @@ public final class ExportJournal {
     }
     private final AtomicFile file;
     public ExportJournal(File directory) { file = new AtomicFile(new File(directory, "export-cleanup.json")); }
+    File directory() { return file.getBaseFile().getParentFile(); }
     public Entry read() throws Exception {
         File base = file.getBaseFile();
         if (!base.exists() && !new File(base + ".bak").exists()) {
