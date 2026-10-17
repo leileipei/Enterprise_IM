@@ -26,15 +26,15 @@ class ApplyGateTests(unittest.TestCase):
  def test_provenance_accepts_p5_additions_but_keeps_import_and_history_frozen(self):
   names=['db/migrations/000022_import_batches.'+direction+'.sql' for direction in ['up','down']]
   actual={name:hashlib_sha(name) for name in names}
-  extra={str(p.relative_to(Path(__file__).resolve().parents[1])):hashlib_sha(str(p)) for p in Path(__file__).resolve().parents[1].joinpath('db/migrations').glob('00002[345]*.sql')}
+  extra={str(p.relative_to(Path(__file__).resolve().parents[1])):hashlib_sha(str(p)) for p in Path(__file__).resolve().parents[1].joinpath('db/migrations').glob('00002[3456]*.sql')}
   self.assertTrue(extra)
   result=gates.validate_migration_provenance(names+list(extra),{**actual,**extra},required_only=True)
   self.assertEqual(set(result),set(names+list(extra)))
-  for changed in [{**actual,**extra,names[0]:'0'*64},{**actual,**extra,next(iter(extra)):'0'*64}]:
+  for changed in [{**actual,**extra,name:'0'*64} for name in names+list(extra)]:
    with self.assertRaises(ValueError):gates.validate_migration_provenance(names+list(extra),changed,required_only=True)
   with self.assertRaises(ValueError):gates.validate_migration_provenance(names+list(extra),{**actual,**extra},required_only=False)
   with self.assertRaises(ValueError):gates.validate_migration_provenance(names+['db/migrations/000001_group_foundation.up.sql'],actual,required_only=True)
-  with self.assertRaises(ValueError):gates.validate_migration_provenance(names+['db/migrations/000026_future.up.sql'],actual,required_only=True)
+  with self.assertRaises(ValueError):gates.validate_migration_provenance(names+['db/migrations/000027_future.up.sql'],actual,required_only=True)
   one_extra=next(iter(extra))
   with self.assertRaises(ValueError):gates.validate_migration_provenance(names+[one_extra],{**actual,**extra},required_only=True)
   self.assertEqual(set(gates.validate_migration_provenance(names,actual,required_only=False)),set(names))
