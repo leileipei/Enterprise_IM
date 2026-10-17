@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/leileipei/Enterprise_IM/internal/objectstore"
-	"time"
 )
 
 // Worker serializes one owner's bounded steps. A recovery step can only consume
@@ -115,7 +114,17 @@ func (w *Worker) reconcile(ctx context.Context, c Commitment, recovery bool) err
 	return w.settle(ctx, c)
 }
 func (w *Worker) settle(ctx context.Context, c Commitment) error {
-	return w.repo.SettleFileDeleteVersion(ctx, c, AbsenceProof{VersionID: c.VersionID, Absent: true, CheckedAt: time.Now().UTC()})
+	// The object probe has already established exact absence. Timestamp its
+	// receipt using the repository clock, rather than comparing two node clocks.
+	at, e := w.repo.FileDeleteProofTime(ctx)
+	if e != nil {
+		return e
+	}
+	proof := AbsenceProof{VersionID: c.VersionID, Absent: true, CheckedAt: at}
+	if e = ValidateAbsenceProof(c, proof); e != nil {
+		return e
+	}
+	return w.repo.SettleFileDeleteVersion(ctx, c, proof)
 }
 func (w *Worker) inventory(ctx context.Context, t Ticket, in Inventory, pages *int) (Inventory, error) {
 	if in.Reason != "" && in.Reason != "inventory_incomplete" {

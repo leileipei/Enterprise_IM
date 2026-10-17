@@ -119,7 +119,7 @@ func (s Service) searchFileMessagesOnce(ctx context.Context, id access.TrustedId
 	if e != nil {
 		return FileSearchPage{}, e
 	}
-	staged, e := loadFileSearchProofs(ctx, tx, id, batches, owners)
+	staged, batches, e := loadFileSearchProofs(ctx, tx, id, batches, owners, b.Query, limit)
 	if e != nil {
 		return FileSearchPage{}, e
 	}
@@ -164,30 +164,76 @@ func (s Service) searchFileMessagesOnce(ctx context.Context, id access.TrustedId
 	}
 	return page, nil
 }
-func loadFileSearchProofs(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, batches []fileSearchBatch, owners map[string]string) (map[string]fileVisibilityFacts, error) {
+
+// Prelock has already protected every candidate's file metadata. Names are only
+// an internal work filter; the complete visibility proof still gates every name
+// returned, using the caller's final database time.
+func loadFileSearchProofs(ctx context.Context, tx pgx.Tx, id access.TrustedIdentity, batches []fileSearchBatch, owners map[string]string, query string, limit int) (map[string]fileVisibilityFacts, []fileSearchBatch, error) {
+	fileIDs := make(map[string]bool, len(owners))
+	for fid := range owners {
+		fileIDs[fid] = true
+	}
+	names := make(map[string]string, len(owners))
+	rows, e := tx.Query(ctx, `SELECT id::text,COALESCE(original_filename,'') FROM file_objects WHERE tenant_id=$1 AND id=ANY($2::uuid[]) ORDER BY id`, id.TenantID, sortedFileSearchIDs(fileIDs))
+	if e != nil {
+		return nil, nil, e
+	}
+	for rows.Next() {
+		var fid, name string
+		if e = rows.Scan(&fid, &name); e != nil {
+			rows.Close()
+			return nil, nil, e
+		}
+		names[fid] = name
+	}
+	e = rows.Err()
+	rows.Close()
+	if e != nil {
+		return nil, nil, e
+	}
 	staged := map[string]fileVisibilityFacts{}
-	for _, b := range batches {
-		for _, c := range b.candidates {
-			if c.file == "" || owners[c.file] != c.conversation {
-				continue
+	// This count only bounds preparation. Previously invisible facts stay staged:
+	// a scheduled rule can change before the final clock, which rechecks all facts.
+	visibleCount := 0
+	scanned := make([]fileSearchBatch, 0, len(batches))
+	for i, b := range batches {
+		observed := b
+		observed.candidates = make([]fileSearchCandidate, 0, len(b.candidates))
+		for j, c := range b.candidates {
+			observed.candidates = append(observed.candidates, c)
+			if c.file != "" && owners[c.file] == c.conversation && strings.Contains(strings.ToLower(names[c.file]), query) {
+				f, e := loadFileVisibilityFactsTx(ctx, tx, id, c.file)
+				if errors.Is(e, filedownload.ErrNotFound) || errors.Is(e, filedownload.ErrInvalidIdentity) {
+					continue
+				}
+				if e != nil {
+					return nil, nil, e
+				}
+				if f.messageID == c.message && f.seq == c.seq && f.metadata.ConversationID == c.conversation {
+					staged[c.message] = f
+					at, e := fileClock(ctx, tx)
+					if e != nil {
+						return nil, nil, e
+					}
+					_, visible, e := fileSearchVisibleMatch(c, f, at, query)
+					// Identity rejection and its audit remain the final caller's decision.
+					if e != nil && !errors.Is(e, ErrForbidden) {
+						return nil, nil, e
+					}
+					if e == nil && visible {
+						visibleCount++
+					}
+				}
 			}
-			f, e := loadFileVisibilityFactsTx(ctx, tx, id, c.file)
-			if errors.Is(e, filedownload.ErrNotFound) {
-				continue
-			}
-			if errors.Is(e, filedownload.ErrInvalidIdentity) {
-				// The protected common actor is checked at the final time and denied with audit.
-				continue
-			}
-			if e != nil {
-				return nil, e
-			}
-			if f.messageID == c.message && f.seq == c.seq && f.metadata.ConversationID == c.conversation {
-				staged[c.message] = f
+			if visibleCount >= limit {
+				observed.more = b.more || j+1 < len(b.candidates) || i+1 < len(batches)
+				scanned = append(scanned, observed)
+				return staged, scanned, nil
 			}
 		}
+		scanned = append(scanned, observed)
 	}
-	return staged, nil
+	return staged, scanned, nil
 }
 func fileSearchVisibleMatch(c fileSearchCandidate, f fileVisibilityFacts, at time.Time, q string) (FileSearchMatch, bool, error) {
 	if f.messageID == "" {

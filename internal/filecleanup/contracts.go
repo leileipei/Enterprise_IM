@@ -44,6 +44,8 @@ type Repository interface {
 	GetFileDeleteInventory(context.Context, Ticket) (Inventory, error)
 	CommitFileDeleteVersion(context.Context, Ticket, string) (Commitment, error)
 	ClaimFileDeleteRecovery(context.Context, string) (Commitment, bool, error)
+	// FileDeleteProofTime uses the same authoritative clock as settlement.
+	FileDeleteProofTime(context.Context) (time.Time, error)
 	SettleFileDeleteVersion(context.Context, Commitment, AbsenceProof) error
 	FinalizeFileDelete(context.Context, Ticket) error
 }

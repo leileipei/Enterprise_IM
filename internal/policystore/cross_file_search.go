@@ -70,7 +70,7 @@ func (s Service) searchAllFileMessagesOnce(ctx context.Context, id access.Truste
 	if e != nil {
 		return FileSearchPage{}, e
 	}
-	staged, e := loadFileSearchProofs(ctx, tx, id, batches, owners)
+	staged, batches, e := loadFileSearchProofs(ctx, tx, id, batches, owners, b.Query, limit)
 	if e != nil {
 		return FileSearchPage{}, e
 	}

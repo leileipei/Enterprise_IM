@@ -3,6 +3,7 @@ package filecleanup
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -16,6 +17,11 @@ type cleanupWorkerRepo struct {
 	committed, settled, finalized bool
 	calls                         []string
 	recordErr, errorOnGet         error
+	proofTime                     time.Time
+	proofTimeErr                  error
+	proofTimeReads                int
+	probedAbsent                  bool
+	requireProofTime              bool
 }
 
 func (r *cleanupWorkerRepo) ClaimFileDelete(_ context.Context, owner string) (Ticket, bool, error) {
@@ -46,9 +52,16 @@ func (r *cleanupWorkerRepo) ClaimFileDeleteRecovery(context.Context, string) (Co
 	}
 	return Commitment{}, false, nil
 }
+func (r *cleanupWorkerRepo) FileDeleteProofTime(context.Context) (time.Time, error) {
+	r.proofTimeReads++
+	if !r.probedAbsent {
+		return time.Time{}, errors.New("clock queried before exact absence")
+	}
+	return r.proofTime, r.proofTimeErr
+}
 func (r *cleanupWorkerRepo) SettleFileDeleteVersion(_ context.Context, c Commitment, p AbsenceProof) error {
 	r.calls = append(r.calls, "settle")
-	if !p.Absent || p.VersionID != c.VersionID {
+	if !p.Absent || p.VersionID != c.VersionID || (r.requireProofTime && p.CheckedAt != r.proofTime) {
 		return errors.New("wrong proof")
 	}
 	r.settled = true
@@ -94,10 +107,12 @@ func (o *cleanupWorkerObjects) ProbeVersion(_ context.Context, v objectstore.Ver
 		return objectstore.VersionUnknown, o.probeErr
 	}
 	if len(o.probes) == 0 {
+		o.repo.probedAbsent = true
 		return objectstore.VersionAbsent, nil
 	}
 	p := o.probes[0]
 	o.probes = o.probes[1:]
+	o.repo.probedAbsent = p == objectstore.VersionAbsent
 	return p, nil
 }
 func (o *cleanupWorkerObjects) DeleteVersion(_ context.Context, v objectstore.VersionRef) error {
@@ -111,7 +126,7 @@ func cleanupWorkerFixture(t *testing.T) (*cleanupWorkerRepo, *cleanupWorkerObjec
 	t.Helper()
 	ticket := cleanupTicket()
 	ticket.LeaseExpiresAt = time.Now().Add(120 * time.Second)
-	r := &cleanupWorkerRepo{ticket: ticket}
+	r := &cleanupWorkerRepo{ticket: ticket, proofTime: time.Now().UTC()}
 	o := &cleanupWorkerObjects{t: t, repo: r, pages: []objectstore.VersionPage{{Versions: []objectstore.InventoryVersion{{Ref: objectstore.VersionRef{Location: objectstore.Location{TenantID: ticket.TenantID, FileID: ticket.FileID}, VersionID: "fixed-v1"}}}, Exhausted: true}}}
 	return r, o
 }
@@ -194,6 +209,49 @@ func TestFileDeleteWorkerInventoryBounds(t *testing.T) {
 			_, e := w.Step(context.Background())
 			if e == nil || r.committed || r.settled || r.finalized || len(o.deletes) != 0 || o.lists > 10 {
 				t.Fatal("incomplete listing acquired permit", e, r.calls, o.lists)
+			}
+		})
+	}
+}
+
+// Repository and worker wall clocks may differ. An exact probe must be followed
+// by a timestamp from the same authority that validates the commitment.
+func TestFileDeleteWorkerUsesRepositoryProofTime(t *testing.T) {
+	for _, recovery := range []bool{false, true} {
+		t.Run(fmt.Sprint(recovery), func(t *testing.T) {
+			r, o := cleanupWorkerFixture(t)
+			r.proofTime = time.Now().UTC().Add(-30 * time.Second)
+			r.requireProofTime = true
+			if recovery {
+				r.recovery = &Commitment{Ticket: r.ticket, CommitmentID: "00000000-0000-4000-8000-000000000008", VersionID: "fixed-v1"}
+			}
+			w, _ := NewWorker(r, o, r.ticket.OwnerID)
+			found, e := w.Step(context.Background())
+			if e != nil || !found || !r.settled || r.proofTimeReads != 1 {
+				t.Fatal("did not bind exact absence to repository time", found, e, r.proofTimeReads, r.calls)
+			}
+		})
+	}
+}
+func TestFileDeleteWorkerClockFailureCannotSettle(t *testing.T) {
+	for _, why := range []string{"unavailable", "zero", "out_of_range"} {
+		t.Run(why, func(t *testing.T) {
+			r, o := cleanupWorkerFixture(t)
+			switch why {
+			case "unavailable":
+				r.proofTimeErr = errors.New("database clock unavailable")
+			case "zero":
+				r.proofTime = time.Time{}
+			case "out_of_range":
+				r.proofTime = time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC)
+			}
+			w, _ := NewWorker(r, o, r.ticket.OwnerID)
+			found, e := w.Step(context.Background())
+			if !found || e == nil || r.settled || r.finalized || r.proofTimeReads != 1 {
+				t.Fatal("missing valid clock still settled deletion", found, e, r.settled, r.finalized, r.proofTimeReads)
+			}
+			if r.proofTimeErr != nil && !errors.Is(e, r.proofTimeErr) {
+				t.Fatal("clock error lost", e)
 			}
 		})
 	}

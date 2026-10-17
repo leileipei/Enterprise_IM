@@ -3,11 +3,46 @@ package policystore_test
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leileipei/Enterprise_IM/internal/policystore"
 	"sort"
 	"testing"
 	"time"
 )
+
+// Count actual transaction round trips for the specified normal-ready fixture.
+// This is not a bound for arbitrary denied or malformed candidate populations.
+type fileSearchBudgetDB struct {
+	conn  *pgx.Conn
+	calls *int
+}
+
+func (d fileSearchBudgetDB) Begin(ctx context.Context) (pgx.Tx, error) {
+	tx, e := d.conn.Begin(ctx)
+	if e != nil {
+		return nil, e
+	}
+	return &fileSearchBudgetTx{Tx: tx, calls: d.calls}, nil
+}
+
+type fileSearchBudgetTx struct {
+	pgx.Tx
+	calls *int
+}
+
+func (d *fileSearchBudgetTx) QueryRow(ctx context.Context, q string, args ...any) pgx.Row {
+	*d.calls++
+	return d.Tx.QueryRow(ctx, q, args...)
+}
+func (d *fileSearchBudgetTx) Query(ctx context.Context, q string, args ...any) (pgx.Rows, error) {
+	*d.calls++
+	return d.Tx.Query(ctx, q, args...)
+}
+func (d *fileSearchBudgetTx) Exec(ctx context.Context, q string, args ...any) (pgconn.CommandTag, error) {
+	*d.calls++
+	return d.Tx.Exec(ctx, q, args...)
+}
 
 func TestFileSearchReadyCandidateBudget(t *testing.T)      { readyFileSearchBudget(t, false) }
 func TestCrossFileSearchReadyCandidateBudget(t *testing.T) { readyFileSearchBudget(t, true) }
@@ -67,6 +102,8 @@ func readyFileSearchBudget(t *testing.T, cross bool) {
 		t.Fatal("normal ready proofs", count, e)
 	}
 	call := func(q, cursor string, limit int) policystore.FileSearchPage {
+		calls := 0
+		s.DB = fileSearchBudgetDB{conn: c, calls: &calls}
 		start := time.Now()
 		var p policystore.FileSearchPage
 		var e error
@@ -76,7 +113,10 @@ func readyFileSearchBudget(t *testing.T, cross bool) {
 			p, e = s.SearchFileMessages(ctx, publisher(), directA, kind, q, cursor, limit)
 		}
 		elapsed := time.Since(start)
-		t.Logf("ready-search cross=%t candidates=500 limit=%d elapsed-ms=%d", cross, limit, elapsed.Milliseconds())
+		t.Logf("ready-search cross=%t candidates=500 limit=%d elapsed-ms=%d transaction-queries=%d", cross, limit, elapsed.Milliseconds(), calls)
+		if calls >= 200 {
+			t.Fatal("normal-ready search repeatedly loaded per-file proof beyond required results", calls)
+		}
 		if e != nil || elapsed >= 5*time.Second {
 			t.Fatal("original 5s budget", e, elapsed)
 		}
