@@ -19,7 +19,7 @@ def verify_snapshot(data: Dict[str,str]) -> SourceSnapshot:
     module.validate_export(data)
     if module.digest(entry)!=data['entry_sha256']:raise ValueError('entry_hash_mismatch')
     return SourceSnapshot(data['commit'],Path(data['repository_root']),Path(data['root']),
-                          Path(data['archive']),data['archive_sha256'])
+                          Path(data['archive']),data['archive_sha256'],module.definition_source_path(data.get('definition_source')))
 
 
 def _json_objects(text):

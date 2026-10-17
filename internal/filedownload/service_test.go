@@ -66,6 +66,7 @@ func (r *downloadRepo) FinishFileDownload(_ context.Context, _ Ticket, result Re
 }
 
 type downloadObjects struct {
+	delay   time.Duration // controlled slow preparation in cancellation regression
 	data    []byte
 	err     error
 	seen    objectstore.VersionRef
@@ -82,6 +83,9 @@ func (o *downloadObjects) FindAttemptVersions(context.Context, objectstore.Locat
 	return nil, errors.New("unused")
 }
 func (o *downloadObjects) ReadVersion(ctx context.Context, ref objectstore.VersionRef) (io.ReadCloser, error) {
+	if o.delay > 0 {
+		time.Sleep(o.delay)
+	}
 	if o.entered != nil {
 		o.entered <- struct{}{}
 		select {
@@ -315,13 +319,20 @@ func TestFileDownloadSpoolBoundsMaxRead(t *testing.T) {
 	}
 }
 func TestFileDownloadSpoolCloseCancellation(t *testing.T) {
+	testSpoolCloseCancellation(t, 0)
+}
+func TestFileDownloadSpoolCloseCancellationAfterSlowPreparation(t *testing.T) {
+	testSpoolCloseCancellation(t, 80*time.Millisecond)
+}
+func testSpoolCloseCancellation(t *testing.T, delay time.Duration) {
+	t.Helper()
 	r := &downloadRepo{data: []byte("x")}
 	dir := filepath.Join(t.TempDir(), "spool")
-	s, e := NewService(r, &downloadObjects{data: r.data}, dir, downloadTestID)
+	s, e := NewService(r, &downloadObjects{data: r.data, delay: delay}, dir, downloadTestID)
 	if e != nil {
 		t.Fatal(e)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	p, e := s.Prepare(ctx, downloadTestActor, downloadTestID)
 	if e != nil {
@@ -329,13 +340,16 @@ func TestFileDownloadSpoolCloseCancellation(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() { done <- s.Close() }()
+	// Cancel only after Prepare succeeded. Preparation latency must not spend
+	// the cancellation phase's budget or turn this into a Prepare timeout test.
+	cancel()
 	select {
 	case e := <-done:
 		if e != nil {
 			t.Fatal(e)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("expired preparation retained node")
+		t.Fatal("cancelled preparation retained node")
 	}
 	if e = p.Close(); e != nil {
 		t.Fatal(e)

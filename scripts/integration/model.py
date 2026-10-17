@@ -11,6 +11,7 @@ class SourceSnapshot:
     root: Path
     archive: Path
     archive_sha256: str
+    definition_source: Optional[Path] = None
 
 
 @dataclass

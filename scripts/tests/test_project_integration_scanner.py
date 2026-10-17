@@ -11,6 +11,7 @@ import time
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from integration.tools import _lock
 
 class ScannerTests(unittest.TestCase):
     def setUp(self):
@@ -66,7 +67,13 @@ class ScannerTests(unittest.TestCase):
             (Path(runtime['definitions'])/'daily.cvd').write_bytes(b'changed after launch')
             with self.assertRaises(ValueError):self.validate(runtime)
 
+    def test_browser_rejects_mismatched_version_and_cleans_its_processes(self):
+        self._browser_smoke(mismatch=True)
+
     def test_browser_closes_private_profile_without_host_home(self):
+        self._browser_smoke(mismatch=False)
+
+    def _browser_smoke(self,mismatch):
         try:
             from integration.scanner import probe_browser
         except ImportError:self.fail('Task5 browser interface is not implemented')
@@ -74,11 +81,17 @@ class ScannerTests(unittest.TestCase):
         from integration.registry import Registry
         runtime=Path('/Users/leo.cui/.cache/codex-runtimes/codex-primary-runtime/dependencies/node')
         tools=Toolchain({'node':runtime/'bin/node','node_modules':runtime/'node_modules','chrome':Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')},
-                        {'playwright':'1.62.1','chrome':'154.0.8037.98'},{},{},'darwin','arm64')
+                        {key:value for key,value in _lock(Path(__file__).resolve().parents[2]/'testdata/project-integration/versions.lock').items() if key in {'playwright','chrome'}},{},{},'darwin','arm64')
+        if mismatch:tools.versions['chrome']='0.0.0.0'
         registry=Registry(self.root/'registry.jsonl','b'*32,'c'*40)
         bundle=FixtureBundle({},set(),registry.path,{'b'*32},{'source_commit':'c'*40})
         with patch.dict(os.environ,{'HOME':'/foreign','USERPROFILE':'/foreign'}):
             event=probe_browser(bundle,tools,registry,self.root/('b'*32),time.monotonic()+45)
+        if mismatch:
+            self.assertEqual(event.exit_code,1)
+            self.assertNotIn('browser_version_verified',event.checks)
+            self.assertTrue(registry.cleanup(time.monotonic()+10).removed)
+            return
         self.assertEqual(event.exit_code,0,event.failures)
         self.assertIn('browser_launched',event.checks)
         self.assertIn('browser_closed',event.checks)

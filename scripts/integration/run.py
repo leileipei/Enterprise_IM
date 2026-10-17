@@ -92,7 +92,9 @@ def execute(snapshot,output):
             tools.paths['mc']=retained/'mc'
         tool_event=_check('toolchain',snapshot,private,['locked_versions','binary_hashes','local_docker','immutable_images','native_platform']);tool_event.started_at=started;tool_event.ended_at=time.time();tool_event.seconds=round(tool_event.ended_at-started,3);events.append(tool_event)
         active='fixture_preflight';started=time.time();print(active,'START',flush=True)
-        bundle=prepare_services(snapshot,tools,registry,private/'services',deadline());bundle=prepare_iam(bundle,tools,private/'iam',deadline());bundle=prepare_scanner(bundle,tools,registry,private/'scanner',deadline())
+        bundle=prepare_services(snapshot,tools,registry,private/'services',deadline());bundle=prepare_iam(bundle,tools,private/'iam',deadline())
+        if snapshot.definition_source is not None:bundle.metadata['definition_source']=str(snapshot.definition_source)
+        bundle=prepare_scanner(bundle,tools,registry,private/'scanner',deadline())
         complete_profile(bundle,private)
         service=probe_services(bundle,tools,deadline());scanner=probe_scanner(bundle,tools,deadline());browser=probe_browser(bundle,tools,registry,private/'browser',deadline())
         env=test_environment(tools,private/'env',bundle.environment)

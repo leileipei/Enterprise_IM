@@ -42,6 +42,23 @@ class SourceTests(unittest.TestCase):
         self.git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-qm','fixture')
         return self.git('rev-parse','HEAD')
 
+    def test_explicit_definition_seed_is_read_only_external_input(self):
+        seed=self.root/'definition-seed';seed.mkdir()
+        marker=seed/'daily.cvd';marker.write_bytes(b'unchanged seed')
+        data=self.entry.bootstrap(self.repo,self.sha,self.root/'with-seed',definition_source=seed)
+        snapshot=self.source.verify_snapshot(data)
+        self.assertEqual(snapshot.definition_source,seed)
+        self.assertEqual(marker.read_bytes(),b'unchanged seed')
+        self.assertNotIn('definition-seed', {str(p.relative_to(snapshot.root)) for p in snapshot.root.rglob('*')})
+
+    def test_definition_seed_links_and_missing_directories_rejected_before_output(self):
+        seed=self.root/'definition-seed';seed.mkdir()
+        linked=self.root/'linked-seed';linked.symlink_to(seed,target_is_directory=True)
+        for i,path in enumerate([linked,self.root/'missing-seed',Path('relative-seed')]):
+            out=self.root/('rejected-'+str(i))
+            with self.assertRaises(ValueError):self.entry.bootstrap(self.repo,self.sha,out,definition_source=path)
+            self.assertFalse(out.exists())
+
     def test_dirty_module_never_executes(self):
         (self.repo/'scripts/integration/probe.py').write_text("MARKER='dirty'\n")
         data=self.entry.bootstrap(self.repo,self.sha,self.root/'out')

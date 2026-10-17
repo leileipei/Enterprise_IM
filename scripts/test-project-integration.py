@@ -67,7 +67,16 @@ def validate_export(data: Dict[str,str]) -> None:
     if actual!=expected: raise ValueError('export_file_inventory_mismatch')
 
 
-def bootstrap(repository_root: Path, commit: str, out: Path) -> Dict[str,str]:
+def definition_source_path(value):
+    if value is None:return None
+    path=Path(value)
+    if not path.is_absolute() or any(p.is_symlink() for p in (path,*path.parents)) or not path.is_dir():
+        raise ValueError('definition_source_requires_absolute_nonlink_directory')
+    return path
+
+
+def bootstrap(repository_root: Path, commit: str, out: Path, definition_source=None) -> Dict[str,str]:
+    definition_source=definition_source_path(definition_source)
     if not re.fullmatch('[a-f0-9]{40}',commit):raise ValueError('full_commit_required')
     repository_root=Path(repository_root).resolve();out=Path(out)
     if not out.is_absolute() or any(p.is_symlink() for p in (out,*out.parents)):
@@ -92,6 +101,7 @@ def bootstrap(repository_root: Path, commit: str, out: Path) -> Dict[str,str]:
         raise ValueError('entry_hash_mismatch')
     data=dict(commit=commit,repository_root=str(repository_root),root=str(root),
               archive=str(archive),archive_sha256=digest(archive),entry_sha256=digest(entry))
+    if definition_source is not None:data['definition_source']=str(definition_source)
     validate_export(data)
     return data
 
@@ -122,9 +132,10 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-commit',required=True)
     parser.add_argument('--output-dir',required=True,type=Path)
+    parser.add_argument('--definition-source',type=Path,help='Read-only seed directory; signed definitions are copied and refreshed only in this attempt')
     args=parser.parse_args(argv)
     try:
-        data=bootstrap(Path(__file__).resolve().parents[1],args.source_commit,args.output_dir)
+        data=bootstrap(Path(__file__).resolve().parents[1],args.source_commit,args.output_dir,args.definition_source)
         return load_archived_runner(data)(data,args.output_dir)
     except (ValueError,OSError,ImportError,subprocess.SubprocessError):
         # Detailed errors belong to the private report, never to an inherited environment dump.
