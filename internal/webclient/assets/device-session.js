@@ -42,7 +42,12 @@
     }
     async list(cursor="") {
       if(!this.#enabled())return {devices:[],has_more:false};
-      return this.#api(`/api/v1/devices?limit=20${cursor?`&cursor=${encodeURIComponent(cursor)}`:""}`,{},this.#context(),false);
+      const context=this.#context(),generation=this.#generation,pending=this.#pending;
+      // Include the device currently being registered. Quota failures still allow
+      // listing old devices so the user can revoke one and retry registration.
+      if(pending)try{await pending;}catch(error){if(error?.stale)throw error;}
+      if(generation!==this.#generation || context.accountKey!==this.#context().accountKey)throw stale();
+      return this.#api(`/api/v1/devices?limit=20${cursor?`&cursor=${encodeURIComponent(cursor)}`:""}`,{},context,false);
     }
     async revoke(id) {
       if(!uuid(id))throw new Error("设备编号无效");
