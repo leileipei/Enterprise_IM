@@ -308,24 +308,27 @@ void main() {
                   findsWidgets,
                 );
             case 'probe_offline':
-              var denied = false;
-              try {
-                await tester.runAsync(
-                  () => api!.json(
+              // runAsync reports uncaught exceptions to Flutter and returns null.
+              // Capture this expected network failure within its real async zone.
+              final failure = await tester.runAsync(() async {
+                try {
+                  await api!.json(
                     'GET',
                     '/api/v1/conversations/${context!.conversationId}/sync?after_seq=1&limit=100',
                     bearer: context!.session.accessToken,
                     actingMembershipId: context!.actingMembershipId,
                     device: context!.device,
-                  ),
-                );
-              } on ApiFailure catch (error) {
-                expect(error.code, 'unavailable');
-                expect(error.status, isNull);
-                denied = true;
-                details['network_error'] = error.code;
-              }
-              expect(denied, isTrue);
+                  );
+                  return null;
+                } on ApiFailure catch (error) {
+                  return error;
+                }
+              });
+              details['network_error'] = failure?.code;
+              details['network_status'] = failure?.status;
+              expect(failure, isNotNull);
+              expect(failure!.code, 'unavailable');
+              expect(failure.status, isNull);
               expect(
                 view!.messages.any((m) => m.seq == Seq.parse('2')),
                 isFalse,
