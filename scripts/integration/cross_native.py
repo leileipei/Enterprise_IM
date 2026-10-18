@@ -22,6 +22,24 @@ FILES={'cross-input.json','cross-command.json','cross-state.json'}
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def installed_apk_hash(sim,path,expected):
+    # Hash inside the guest: avoid an unframed large exec-out stream being
+    # truncated when the first-boot ADB transport reconnects. Never accept a
+    # different checksum or a replacement VM boot as a retry success.
+    for attempt in range(12):
+        response=sim.adb('installed-sha256-'+str(attempt),['shell','sha256sum',path],required=False)
+        if response.returncode==0:
+            fields=response.stdout.decode().split()
+            if len(fields)!=2 or fields[1]!=path or fields[0]!=expected:raise ValueError('actor_apk_mismatch')
+            boot=sim.adb('installed-boot-'+str(attempt),['shell','cat','/proc/sys/kernel/random/boot_id'],required=False)
+            if boot.returncode==0:
+                if boot.stdout.decode().strip()!=sim.state['boot_id']:raise ValueError('actor_vm_boot_replaced')
+                return fields[0]
+        sim.adb('installed-reconnect-'+str(attempt),['reconnect','offline'],required=False)
+        time.sleep(.5)
+    raise ValueError('actor_installed_apk_transport_unavailable')
+
+
 class Actor:
     def __init__(self,role,out,state,save):
         self.role=role;self.out=Path(out);self.state=state;self.save=save;self.expected=None;self.number=0
@@ -53,10 +71,10 @@ class AndroidActor(Actor):
         super().__init__(role,out,state,save);Path(private).mkdir(mode=0o700);self.env=android_environment(private,args)
         self.sim=AndroidSimulator(args,private,out,owner,registry,self.env,configuration,state,save);self.start_ticks=None
     def start(self,apk,origin_port,config):
-        self.sim.start();self.sim.adb('install',['install','-r',str(apk)])
+        self.sim.start();self.sim.adb('install',['install','--no-streaming','-r',str(apk)])
         installed=self.sim.adb('installed-path',['shell','pm','path',PACKAGE]).stdout.decode().strip().removeprefix('package:')
         if not installed.startswith('/data/app/') or not installed.endswith('/base.apk'):raise ValueError('actor_apk_path_invalid')
-        installed_hash=hashlib.sha256(self.sim.adb('installed-bytes',['exec-out','cat',installed],binary=True).stdout).hexdigest()
+        installed_hash=installed_apk_hash(self.sim,installed,digest(apk))
         if installed_hash!=digest(apk):raise ValueError('actor_apk_mismatch')
         self.state['apk_sha256']=installed_hash;self.state['installation']=package_installation(self.sim.adb('package',['shell','dumpsys','package',PACKAGE]).stdout.decode())
         self.sim.adb('backend-reverse',['reverse','tcp:'+str(origin_port),'tcp:'+str(origin_port)])

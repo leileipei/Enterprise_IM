@@ -73,3 +73,19 @@ class ReviewRegression(unittest.TestCase):
   self.assertEqual(actor.calls,[(('summary',),{'seq':'2','status':'read'})])
   actor=Actor({'details':{'summaries':{'2':'read'}}});m.confirm_recovery_sender(actor)
   self.assertEqual(actor.calls,[(('summary',),{'seq':'2','status':'read'}),'recovered-sender-read'])
+
+from types import SimpleNamespace
+from integration import cross_native as native
+class TransportRegression(unittest.TestCase):
+ def test_installed_hash_requires_same_boot_and_exact_hash_after_transport_retry(self):
+  class Sim:
+   def __init__(self,wrong=False):self.state={'boot_id':'own-boot'};self.calls=[];self.wrong=wrong
+   def adb(self,label,args,**kw):
+    self.calls.append(args)
+    if len(self.calls)==1:return SimpleNamespace(returncode=1,stdout=b'',stderr=b'offline')
+    if 'sha256sum' in args:return SimpleNamespace(returncode=0,stdout=('a'*64+'  /data/app/base.apk\n').encode())
+    if 'cat' in args:return SimpleNamespace(returncode=0,stdout=b'foreign-boot' if self.wrong else b'own-boot')
+    return SimpleNamespace(returncode=0,stdout=b'')
+  sim=Sim();self.assertEqual(native.installed_apk_hash(sim,'/data/app/base.apk','a'*64),'a'*64)
+  with self.assertRaises(ValueError):native.installed_apk_hash(Sim(True),'/data/app/base.apk','a'*64)
+  with self.assertRaises(ValueError):native.installed_apk_hash(Sim(),'/data/app/base.apk','b'*64)
