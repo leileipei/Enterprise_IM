@@ -163,3 +163,8 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 已实现 `--export-acceptance` 和只读 `--runner-output`：同一固定提交的Android build／普通Release launch及iOS Debug模拟器build可导出；其他原生业务专项仍需各自实际产物与证据。源码／工具／摘要／参数／清理不满足时拒绝，旧报告不重写或换源。固定源码 `f4041320241232f775a24fcd25633074e3b28777` 上Python277执行无失败／跳过；Android API36及iOS构建结果见新增runner-adapter报告。Debug安全存储场景未映射到Release产物。首轮iOS元数据附带文件导致导出失败，保留后通过真实归档RED→GREEN及新源重跑修复。
 
 上方“真实后端资源复用及native platform runner协调”尚未整体勾选；本增量仅完成移动构建／启动适配。跨端独立进程／账号／设备协调、全部平台门禁、真机／Windows／客户条件及最终交付继续保持未完成。Tasks5—8原BASE／状态保持，本地检查点不触发远端动作。
+
+
+### Task9 iOS同归档普通启动增量（2026-10-18）
+
+固定源 `9be0ccc09eb7dd9e4d832a089633e1af82b295fd 的已有 `--verify-simulator` 在专项后构建／归档正常main应用，安装时核对文件清单及可执行文件摘要，验证原生PID、UTC进程观察、首屏、停止后的消失及所属模拟器删除，并接入同产物launch证据。iOS26.5／iPhone17Pro实际runner0、共享248／分析0／活动与两进程安全存储／普通包build+launch通过；Python287执行零失败／跳过，新增10项覆盖启动合同与评审问题。原生leaf OS退出码unknown，真机及业务／跨端门禁不补填。Task9协调子项仍不整体勾选；Tasks5—8原BASE不变，旧证据保留，无远端动作。

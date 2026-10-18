@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "ios_same_artifact_build_and_launch_verified_partial",
+  "tested_source_commit": "9be0ccc09eb7dd9e4d832a089633e1af82b295fd",
+  "scope": "normal Debug iOS simulator app install/launch bound to the exact archive; no new backend/physical/desktop/customer/CI execution",
+  "host": "macOS arm64",
+  "runtime": {
+    "initial_sandbox_inventory_exit": 1,
+    "initial_reason": "CoreSimulator service access denied by sandbox; not platform product failure",
+    "authorized_inventory_actual_exit": 0,
+    "selected_runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "selected_version": "26.5",
+    "selected_build": "23F77",
+    "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+    "new_owned_device_only": true
+  },
+  "full_python": {
+    "actual_exit": 0,
+    "discovered": 287,
+    "unique_discovered": 280,
+    "failures": [],
+    "errors": [],
+    "skips": [],
+    "validation_failures": [],
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    },
+    "source_archive_sha256": "82acf4e4867c0a901912d75b2d611880932d00345bbb9e211c314aaf647441f3",
+    "source_archive_unchanged": true,
+    "validation_root_removed": true
+  },
+  "adapter_test_count": 39,
+  "new_test_count": 10,
+  "counts_overlap_full_python": true,
+  "precommit_related_tests": 112,
+  "ios": {
+    "runner_exit": 0,
+    "source_commit": "9be0ccc09eb7dd9e4d832a089633e1af82b295fd",
+    "commands": {
+      "pub": 0,
+      "shared": 0,
+      "analysis": 0,
+      "activity": 0,
+      "vault-write": 0,
+      "vault-verify": 0,
+      "build": 0
+    },
+    "shared_tests": 248,
+    "analysis_issues": 0,
+    "vault_distinct_processes": true,
+    "vault_cleanup_verified": true,
+    "archive_sha256": "5399cb92c86cffcada192426df68c2654bb441dc15f4aa9ccfb932547ede5e4e",
+    "bundle_files": 91,
+    "installed_manifest_equal_to_archive": true,
+    "runtime_pid": 84233,
+    "runtime_identity": {
+      "pid": 84233,
+      "uid": 501,
+      "start_time": "Sun Oct 18 14:32:21 2026",
+      "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/D371F82C-CD58-4453-95A5-FF5BA3372175/data/Containers/Bundle/Application/9A091AF6-E59C-4F9D-A90D-FF2882F2D4EE/Runner.app/Runner",
+      "executable_sha256": "1332acf67890e800288b381223ac870ffadea4685a87fbe23327742e3d05a0eb",
+      "workdir": "/",
+      "pgid": 84233
+    },
+    "normal_commands": [
+      {
+        "name": "install",
+        "actual_exit": 0
+      },
+      {
+        "name": "bundle-path",
+        "actual_exit": 0
+      },
+      {
+        "name": "launch",
+        "actual_exit": 0
+      },
+      {
+        "name": "alive-before",
+        "actual_exit": 0
+      },
+      {
+        "name": "alive-after",
+        "actual_exit": 0
+      },
+      {
+        "name": "screenshot",
+        "actual_exit": 0
+      },
+      {
+        "name": "terminate",
+        "actual_exit": 0
+      },
+      {
+        "name": "stopped",
+        "actual_exit": 1
+      }
+    ],
+    "screenshot_sha256": "e6b19020228201ff08adca1124cc932f53c47d75c2972142c0fc25a2ccc03451",
+    "manual_visual_review": "actual enterprise login screen visible",
+    "host_absence_after_terminate": true,
+    "native_leaf_os_exit_independently_observed": false,
+    "native_leaf_os_exit": null,
+    "owned_simulator_removed": true,
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    },
+    "private_root_removed": true,
+    "all_source_and_tool_checks_unchanged": true,
+    "test_only_adhoc_signing": true
+  },
+  "assessment": {
+    "path": "docs/verification/p5-02-ios-normal-launch-results.json",
+    "sha256": "7a78e088a6f5199cf61c4e1169ee85da7d210e01b334a4b5bd61674435471230",
+    "actual_exit": 2,
+    "status": "incomplete",
+    "exported_cases": [
+      "build",
+      "launch"
+    ],
+    "count_basis": "runner_checks, not framework tests",
+    "debug_driver_cases_not_promoted": true,
+    "other_platform_sources_not_rebased": true,
+    "four_platform_complete": false,
+    "customer_acceptance": false,
+    "production_acceptance": false
+  },
+  "review": {
+    "reviewer": "review_ios_normal_launch",
+    "p1": 0,
+    "p2": 3,
+    "one_fix_pass": true,
+    "second_independent_review": false,
+    "deferred_minors": [],
+    "findings": [
+      "UTC/C process observations align with registry fingerprint",
+      "normal launch requires owned_simulator_removed true",
+      "exact command chronology retained"
+    ],
+    "red": "review-red.log",
+    "green": "review-green.log",
+    "prefreeze_tests": 112,
+    "prefreeze_exit": 0,
+    "considered_and_retained": [
+      "foreign simulator and arbitrary PID cleanup prohibited; cleanup through checked owned device",
+      "old build-only reports remain build-only",
+      "archive/installed manifest and digest/link checks retained",
+      "native leaf OS exit remains unknown; host absence is separate",
+      "new real platform execution still required"
+    ]
+  },
+  "failure_history": {
+    "initial_synthetic_fixture_error": "red.log: Android apk fixture field used by iOS case; preparation only",
+    "meaningful_feature_red": "red02.log: 7 assertion failures",
+    "review_red": "review-red.log: 3 assertion failures",
+    "review_green": "review-green.log",
+    "initial_sandbox_runtime_inventory": "runtime-preparation.json; authorized read succeeded",
+    "no_original_failure_overwritten": true
+  },
+  "resource_and_preservation_audit": {
+    "source_commit": "9be0ccc09eb7dd9e4d832a089633e1af82b295fd",
+    "processes": [
+      {
+        "pid": 78742,
+        "expected_start": "Sun Oct 18 14:30:05 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 78758,
+        "expected_start": "Sun Oct 18 14:30:05 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 78843,
+        "expected_start": "Sun Oct 18 14:30:10 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 78848,
+        "expected_start": "Sun Oct 18 14:30:11 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 79492,
+        "expected_start": "Sun Oct 18 14:30:24 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 80766,
+        "expected_start": "Sun Oct 18 14:30:45 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 82695,
+        "expected_start": "Sun Oct 18 14:31:23 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 83134,
+        "expected_start": "Sun Oct 18 14:31:40 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 83558,
+        "expected_start": "Sun Oct 18 14:31:57 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      },
+      {
+        "pid": 84233,
+        "expected_start": "Sun Oct 18 14:32:21 2026",
+        "old_identity_running": false,
+        "ps_actual_exit": 1
+      }
+    ],
+    "directories": [
+      {
+        "path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/D371F82C-CD58-4453-95A5-FF5BA3372175",
+        "absent": true
+      },
+      {
+        "path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/D371F82C-CD58-4453-95A5-FF5BA3372175/data/Containers/Bundle/Application/9A091AF6-E59C-4F9D-A90D-FF2882F2D4EE/Runner.app",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-ios-launch-python-5dqlu2w3",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-ios-launch-python-5dqlu2w3/python-validation-f7f060145ddb5c8be9e4e4724a4630d8",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-ios-launch-python-5dqlu2w3/python-validation-f7f060145ddb5c8be9e4e4724a4630d8/f7f060145ddb5c8be9e4e4724a4630d8",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-0m9oqcu4",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-0m9oqcu4/f27ae061ca3d72207cc243d7efc2e4b7",
+        "absent": true
+      }
+    ],
+    "owned_simulator": {
+      "udid": "D371F82C-CD58-4453-95A5-FF5BA3372175",
+      "name": "IM-Mobile-f27ae061ca3d72207cc243d7efc2e4b7",
+      "inventory_actual_exit": 0,
+      "identity_absent": true
+    },
+    "passed": true,
+    "protected_reports_unchanged": 66,
+    "previous_raw_unchanged": 252,
+    "main_status_unchanged": true,
+    "product_sources_unchanged": true,
+    "native_leaf_os_exit_independently_observed": false,
+    "host_absence_rechecked": true,
+    "private_bootstrap_root_removed": true
+  },
+  "previous_source_compatibility": {
+    "actual_exit": 2,
+    "equal_to_previous_report": true
+  },
+  "task_status": {
+    "5": "in_progress",
+    "6": "in_progress",
+    "7": "in_progress",
+    "8": "in_progress"
+  },
+  "task_original_baselines": {
+    "5": "2ec34734e50627392cbda7d340bb14f658a97216",
+    "6": "2314d7077068d7af253ee94b136418e642f5cc07",
+    "7": "265540be9c1a228853236e586be1ccdd52958b4e",
+    "8": "069e55ff3ba58d09262d96beed7cfaaaafa61614"
+  },
+  "task9_status": "in_progress",
+  "remaining_gates": [
+    "independent native multi-client coordination against production backend",
+    "remaining business/storage/recovery/group/revocation/retention cases with matching artifacts",
+    "physical devices deferred",
+    "Windows real execution and full installed desktop acceptance",
+    "customer SSO, notifications, distribution signing, remote CI, customer and production acceptance"
+  ],
+  "go_full_race_rerun_this_turn": false,
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/assessment-exit.json": "0460627b5b9eb6d35fc8c094cb55b8ba90c008e82367508f488f41d244c4f80d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/assessment.log": "87163380cdf4a80ba6d28dbfa2a06d7df7fd355f76733ace434a99560966e99d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/baseline-tests-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/baseline-tests.log": "8b01aa5d1364bec7a414a78407efba94092e04e77acdc1af63616383c554f5df",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/baseline.json": "422a08f3b355105fd1a1b1658e56e17228b5a15c432e9a493ed93e664ccec766",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/inventory.log": "99e4b8f53d8423ebe1235cef9fab8eb6b39f9c006bbafe65b9be7f5e381e23bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/python.log": "e3f37daef0cad1be53b2d1cf5c42f0bdafa0593067a5f19c99df59489fa15309",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/python.log.stderr": "8a170b88c1af2763e3a9e9211612e8696d9e921a762f9e996b1e01c0c566d34f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/registry.jsonl": "d6cb18982d5d12de6c0f7cd6f4717acf8718548559c0fd566956824c9d90bc02",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/result.json": "eb6341e6ada3ee2914d5c37760cb8c810acde2fe1013aea6d818ac0478bd2a77",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01-results/standard-result.json": "d0b61f7b45cfdf793328416e95426417662d96987599d113bbd4cd17c4a7b8b6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/full-python01.json": "f75ee45bf9cace96a9f3c5f74fac03c67a5328235de1183c840661b9df48f036",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/green01-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/green01.log": "64da6d6b17bc3893dd5b36c65c9ddbfeb49d95993027da4a92c3c9858a02f50c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/im-ios-launch-audit.py": "78c874bee7f3b1bbb0c4c0424e68a47ab03086d4d1fdc0d1372654c3cf19bffa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/im-ios-launch-full-python.py": "c60bc256fee606846a106f9f911924b36b49f6400b71d4e99b2e7a2ab0130c2d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/im-ios-launch-prepare-python.py": "dc68690cbf70d1ad402fe7d9133f0d571e20e528e7be6fe060b17d67713de316",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/im-ios-launch-publish.py": "c4f659ef79d137babe94d586ad62efced08b95fb02b200c3b16015040cc595c2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/im-ios-launch-tests.py": "cda0c2612250194e7cb466ff67e5450bc7540f78fb4457958edd73a50871e943",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/im-ios-review-fix.py": "97cd922bd3e6b9f6b07c19525fb4e2fa545227c0f0669680cf764df4e349de8c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/acceptance/ios-build.json": "ce6656e3d7b4d24ce25d1aa9a2b5fd85b1beaa7901401fb5ce775acc1b9498d7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/acceptance/ios-launch.json": "33ab97d5322de86483dc8532867ba194fb1481d6f8db93418cbfcb09be78ee52",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/acceptance/manifest.json": "0a804f85483f63d95119022cea953f5b6f75b40f3b746229911497cae85b0b9c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/acceptance/receipt.json": "c2ec831e9dd16018861178cf1d401f2c5fbe1c66e3fb517048a5a58b31ef1607",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/activity.log": "453760de8fe3f2f6d2b5324f11c0f0a75f20168cff5f00dc672957c82ea5ccd6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/activity.log.stderr": "cffd9696b18bc5adba8ffc68cdb1f27b55ba0f525da1472253decaf391d6b3ab",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/analysis.log": "5b5fba2e0752c53b545e14730e4cddc2fde76965568ed77a303db9efd4c33b0b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/build.log": "b1fc7fd7a77d8e9236ac5b8f510613c6beeae92cc2f0e1f547693caa3d7068fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/bundle-manifest.json": "89ca7f5a260a835ae85fbd440aa9f39b1f6fceadf680560f3fec5085c0a1ac4f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-alive-after.log": "550cdb6277cb8dd68d941341d2eef86b779f3bf8c01cc1a17bc2e5d3615cb8ba",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-alive-after.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-alive-before.log": "550cdb6277cb8dd68d941341d2eef86b779f3bf8c01cc1a17bc2e5d3615cb8ba",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-alive-before.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-bundle-path.log": "26cda994a9594bc0a9c130d610b1abb33d7a2c1c49aa400b3ef864159d6b514c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-bundle-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-installed-manifest.json": "89ca7f5a260a835ae85fbd440aa9f39b1f6fceadf680560f3fec5085c0a1ac4f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-launch.log": "54f17d23f6829adf09a51dd9f8e14994fc78a1044668275f349567c6f0bb15a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-login.png": "e6b19020228201ff08adca1124cc932f53c47d75c2972142c0fc25a2ccc03451",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-screenshot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-screenshot.log.stderr": "e43abf718f851b463cea956540ae3cf1a1fac04dcfc40c4281d029850ba3d518",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-stopped.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-terminate.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-normal-terminate.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/ios-simulator-debug.zip": "5399cb92c86cffcada192426df68c2654bb441dc15f4aa9ccfb932547ede5e4e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/preflight.json": "577405f0c0c0058df8e9abf06d7fe582f283d70cbe5038cae29b1a70a735d7d0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/registry.jsonl": "ba030def039a3482178934b70573d7d5a9540741de9f43940702510cc2a61990",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/result.json": "bc64c46e224b6e2e527863d66e58fc80cb888fa7f724128d9c58789a99593df0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/shared.log": "b3aa073253e51cac70220a3cdacc2be15699dc125610d0d3aee3d27f2b7e5b72",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/vault-verify.log": "5a9322f9ca3035c80002147697b6a369760d9366e52cde1647c7dc6941def4b1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/vault-verify.log.stderr": "cffd9696b18bc5adba8ffc68cdb1f27b55ba0f525da1472253decaf391d6b3ab",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/vault-write.log": "3215877183f81efcab4e2c089d3836ec6b259673811aaed216f64916b77f27f0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01/vault-write.log.stderr": "cffd9696b18bc5adba8ffc68cdb1f27b55ba0f525da1472253decaf391d6b3ab",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01-host-exit.json": "e37bd8038934a0afc3eac74e98597b661cc305d26f45000ab845738830768a32",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/ios-run01-host.log": "af609be3a0373213b1b50e11bed17647f8c1a43fd75d78ab04a79cfd3b63264f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/prefreeze-regression-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/prefreeze-regression.log": "e1be496afe2b3f3cd104c4b500cbe1e240ab6643cd69a351e8b2966949fe58e6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/previous-source-compatibility-exit.json": "efb46b6117addecbf567a1eb5bdfffde9a74d399f618f723f9109c0281dfdf34",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/previous-source-compatibility.json": "c66d383ab4e5b4e9cc3870b91cb4af42c04e9fbaf5d3b609ad6d17633868ff78",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/previous-source-compatibility.log": "87163380cdf4a80ba6d28dbfa2a06d7df7fd355f76733ace434a99560966e99d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/red-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/red.log": "05ee21d46e4899af23b32f8c2845fb2ed5bc1bc9131a353a1850d8a19a389023",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/red02-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/red02.log": "1bab3410f3bdeef13b49250962674fb1c235c1e622c195efa67e3eea8636df94",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/resource-and-preservation-audit.json": "9832c790e8ac1949e36c1b2d8233c2aeb5b062aaa0d80e833dedbefd76c40016",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/review-green-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/review-green.log": "ed6b2ef1422a8815526a2386a3d62c71abf25059c1f485f12f9192daf0025ae3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/review-red-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/review-red.log": "9ea2f27df6a6fb9263ae7f04839cefbb40be90c8ee11f4106e02291dc8898d98",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/review-resolution.json": "a8864d2e1f5cc6784ebe0f1ba79db3672081afe5fbbdfa6966b81d553ffcb72d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/runtime-preparation.json": "dc9df0d6987fb909ff9c04db8fdb6e672280cf4dafbebc194ef935e82a298b79",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/source-checkpoint.json": "2b67eb01114a8f4c74ef24b69a86cf5265ba6889953de599988bca9a12d76a48",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/visual-review.json": "10e2f9bb75f9e5846aa918ea86f030620c7e5f9e838d84740f29178e6d18b058"
+  },
+  "raw_evidence_count": 83,
+  "postcommit_audit_path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-ios-launch/postcommit-audit.json",
+  "no_remote_actions": true
+}
