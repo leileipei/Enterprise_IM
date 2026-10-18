@@ -91,6 +91,7 @@ def _safe_summary(proof, ref):
     removed = cleanup.get('removed') if isinstance(cleanup, dict) and type(cleanup.get('removed')) is bool else None
     failures = cleanup.get('failures') if isinstance(cleanup, dict) else None
     return {'evidence': dict(ref), 'actual_exits': exits, 'test_counts': counts,
+            'count_basis': proof.get('count_basis') if proof.get('count_basis') in ('runner_checks', 'framework_tests') else 'unspecified',
             'cleanup': {'removed': removed, 'failure_count': len(failures) if isinstance(failures, list) else None},
             'cleanup_verified': removed is True and failures == []}
 

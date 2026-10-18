@@ -136,7 +136,7 @@ def run(repo, args, out, report, source_inventory):
     root.chmod(0o700)
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner; client = private / 'client'
-    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/android_simulator.py', 'scripts/integration/android_mobile_boundary.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')
+    implementation = ('scripts/build-client-mobile.py', 'scripts/integration/android_build.py', 'scripts/integration/android_simulator.py', 'scripts/integration/android_mobile_boundary.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/mobile.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py', 'scripts/integration/native_runner_adapter.py', 'scripts/integration/native_runner_artifacts.py', 'scripts/integration/native_results.py')
     result = {'status': 'failed', 'target': 'android', 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Android Release APK build; optional new owned simulator active-scene, retained two-process vault, normal Release launch; opt-in actual cold/warm OAuth callback and HOME/MAIN boundary; no backend, physical-device or CI execution', 'root': str(root), 'implementation_sha256': {p: digest(repo / p) for p in implementation}, 'signing': 'fresh private Android Debug test certificate; not distribution signing'}
     code = 1; simulator = None
     def save():

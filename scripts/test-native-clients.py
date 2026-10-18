@@ -11,12 +11,18 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo',type=Path,default=Path(__file__).resolve().parents[1])
     parser.add_argument('--source',required=True,help='full immutable Git commit')
-    parser.add_argument('--manifest',type=Path,required=True)
+    inputs=parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument('--manifest',type=Path)
+    inputs.add_argument('--runner-output',type=Path,action='append',help='completed mobile output containing acceptance sidecars; repeat for another platform')
     parser.add_argument('--output',type=Path,required=True,help='new JSON file; never overwritten')
     parser.add_argument('--defer-physical',action='store_true',help='label absent physical cases deferred; never waives them')
     args=parser.parse_args()
     try:
-        manifest=read_json(args.manifest)
+        if args.runner_output:
+            from integration.native_runner_adapter import collect_mobile_exports
+            manifest=collect_mobile_exports(args.repo,args.runner_output,args.source)
+        else:
+            manifest=read_json(args.manifest)
         report=assess(args.repo,manifest,args.source,defer_physical=args.defer_physical)
     except EvidenceError:
         report={'schema':'native_acceptance_results_v1','status':'invalid','four_platform_complete':False,'customer_acceptance':False,'production_acceptance':False,'reason':'input_json_invalid'}

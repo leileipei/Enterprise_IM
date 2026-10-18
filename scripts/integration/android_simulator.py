@@ -104,7 +104,7 @@ class AndroidSimulator:
     def adb(self, label, arguments, required=True, binary=False):
         if self.serial is None:raise RuntimeError('owned_android_serial_not_ready')
         p = subprocess.run(self.adb_base + ['-s', self.serial, *arguments], cwd=self.private, env=self.env, capture_output=True, timeout=90)
-        self.state['commands'].append({'label': label, 'arguments': arguments, 'actual_exit': p.returncode, 'stdout_sha256': hashlib.sha256(p.stdout).hexdigest()})
+        self.state['commands'].append({'label': label, 'arguments': arguments, 'argv': self.adb_base + ['-s', self.serial, *arguments], 'actual_exit': p.returncode, 'stdout_sha256': hashlib.sha256(p.stdout).hexdigest(), 'stderr_sha256': hashlib.sha256(p.stderr).hexdigest(), 'combined_sha256': hashlib.sha256(p.stdout + p.stderr).hexdigest()})
         if not binary:(self.out / ('android-' + label + '.log')).write_bytes(p.stdout + p.stderr)
         self.save()
         if required and p.returncode:raise RuntimeError('android_' + label + '_failed')
@@ -226,7 +226,7 @@ class AndroidSimulator:
         (self.out / 'android-release-login.png').write_bytes(self.adb('release-screenshot',['exec-out','screencap','-p'],binary=True).stdout)
         after = self.adb('release-crash-after',['logcat','-b','crash','-d']).stdout
         if not after.startswith(before) or b'FATAL EXCEPTION' in after[len(before):] or b'Fatal signal' in after[len(before):]:raise RuntimeError('android_release_crash_interval')
-        self.stop_app('release'); self.state.update(release_installed_sha256=expected,release_pid=int(pid),release_launch_passed=True,new_release_crash_interval_clean=True); self.save()
+        self.stop_app('release'); self.state.update(release_installed_sha256=expected,release_pid=int(pid),release_screenshot_sha256=hashlib.sha256((self.out / 'android-release-login.png').read_bytes()).hexdigest(),release_launch_passed=True,new_release_crash_interval_clean=True); self.save()
 
     def close(self):
         failures=[]

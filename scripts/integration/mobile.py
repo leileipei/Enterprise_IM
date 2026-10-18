@@ -74,6 +74,20 @@ def xcrun_environment(private, developer, pub_cache):
     return env
 
 
+def ios_tool_inputs(sdk):
+    """Hash the executed Flutter tool and the complete Debug iOS engine cache."""
+    sdk=Path(sdk);snapshot=sdk/'bin/cache/flutter_tools.snapshot'
+    engine=sdk/'bin/cache/artifacts/engine/ios'
+    if not snapshot.is_file() or snapshot.is_symlink() or not engine.is_dir():
+        raise ValueError('prepared_ios_cache_missing')
+    files={}
+    for path in sorted(engine.rglob('*')):
+        if path.is_symlink():raise ValueError('linked_ios_cache_input')
+        if path.is_file():files[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    if not files:raise ValueError('prepared_ios_cache_missing')
+    return {'tool_sha256':{str(snapshot):hashlib.sha256(snapshot.read_bytes()).hexdigest()},'ios_engine_sha256':files}
+
+
 def preflight(repo, args):
     import json
     import platform
@@ -105,7 +119,10 @@ def preflight(repo, args):
     first_launch = subprocess.run(['/usr/bin/xcodebuild', '-checkFirstLaunchStatus'], env=env, capture_output=True, timeout=30)
     if first_launch.returncode:
         raise ValueError('operator_xcode_first_launch_required')
-    result = {'status': 'ready', 'target': args.target, 'sdk_commit': head, 'xcode_first_launch_actual_exit': first_launch.returncode, 'fixtures_created': False}
+    result = {'status': 'ready', 'target': args.target, 'sdk_commit': head, 'xcode_first_launch_actual_exit': first_launch.returncode, 'fixtures_created': False, 'tool_sha256': {str(dart): hashlib.sha256(dart.read_bytes()).hexdigest()}}
+    inputs=ios_tool_inputs(args.flutter_sdk)
+    result['tool_sha256'].update(inputs['tool_sha256'])
+    result['ios_engine_sha256']=inputs['ios_engine_sha256']
     if args.verify_simulator:
         inventory = subprocess.check_output(['/usr/bin/xcrun', 'simctl', 'list', 'runtimes', '--json'], env=env, text=True, timeout=45)
         result['simulator'] = simulator_choice(json.loads(inventory), args.simulator_runtime, args.simulator_device_type)

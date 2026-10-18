@@ -47,6 +47,7 @@ def main():
     parser.add_argument('--verify-mobile-boundaries', action='store_true')
     parser.add_argument('--verify-mobile-resume', action='store_true')
     parser.add_argument('--verify-real-backend', action='store_true')
+    parser.add_argument('--export-acceptance', action='store_true', help='derive limited acceptance sidecars after successful cleanup; output must be inside repo')
     parser.add_argument('--go', type=Path)
     parser.add_argument('--simulator-runtime')
     parser.add_argument('--simulator-device-type')
@@ -56,6 +57,9 @@ def main():
     args.output.mkdir(mode=0o700, parents=False, exist_ok=False)
     out = args.output
     try:
+        if args.export_acceptance:
+            from integration.native_runner_adapter import validate_export_output
+            validate_export_output(repo, out)
         if args.verify_real_backend and not args.verify_simulator:
             raise ValueError('real_backend_requires_simulator')
         if args.verify_real_backend:
@@ -79,7 +83,9 @@ def main():
         print(json.dumps(report)); return 2
     if args.target == 'android':
         from integration.android_build import run as android_run
-        return android_run(repo, args, out, report, client_sources)
+        code = android_run(repo, args, out, report, client_sources)
+        from integration.native_runner_adapter import finish_mobile_run
+        return finish_mobile_run(repo, out, code, args.export_acceptance)
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip()
     owner = secrets.token_hex(16)
     root = Path(tempfile.mkdtemp(prefix='im-mobile-', dir='/private/tmp')).resolve()
@@ -87,7 +93,7 @@ def main():
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner
     client = private / 'client'
-    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py')}}
+    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py', 'scripts/integration/native_runner_adapter.py', 'scripts/integration/native_runner_artifacts.py', 'scripts/integration/native_results.py')}}
     env = None; simulator = None; runtime = args.simulator_runtime
     simulator_name = 'IM-Mobile-' + owner
     simulator_reserved = False
@@ -215,6 +221,17 @@ def main():
         result['implementation_unchanged'] = all(digest(repo / path) == value for path, value in result['implementation_sha256'].items())
         if not result['implementation_unchanged']:
             failures.append('implementation_changed')
+        try:
+            from integration.mobile import ios_tool_inputs
+            cache=ios_tool_inputs(args.flutter_sdk)
+            result['ios_engine_inputs_unchanged'] = cache['ios_engine_sha256'] == report['ios_engine_sha256']
+            result['tool_inputs_unchanged'] = all(digest(Path(p)) == h for p, h in report['tool_sha256'].items())
+            result['sdk_source_unchanged'] = subprocess.check_output(['git','-C',str(args.flutter_sdk),'rev-parse','HEAD'],text=True).strip() == report['sdk_commit'] and not subprocess.check_output(['git','-C',str(args.flutter_sdk),'status','--porcelain','--untracked-files=no'])
+        except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+            result['ios_engine_inputs_unchanged'] = False
+            result['tool_inputs_unchanged'] = result['sdk_source_unchanged'] = False
+        if not result['tool_inputs_unchanged'] or not result['sdk_source_unchanged'] or not result['ios_engine_inputs_unchanged']:
+            failures.append('sdk_inputs_changed')
         result['cleanup'] = {'removed': not failures, 'failures': failures}
         if not failures:
             shutil.rmtree(root); result['private_root_removed'] = not root.exists()
@@ -224,7 +241,8 @@ def main():
         result['runner_exit'] = code
         save()
     print(json.dumps({key: result.get(key) for key in ('status', 'runner_exit', 'cleanup', 'private_root_removed', 'owned_simulator_removed')}), flush=True)
-    return code
+    from integration.native_runner_adapter import finish_mobile_run
+    return finish_mobile_run(repo, out, code, args.export_acceptance)
 
 
 if __name__ == '__main__':
