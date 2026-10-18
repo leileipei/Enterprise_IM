@@ -291,6 +291,27 @@ class RunTests(unittest.TestCase):
   report=json.loads((self.output/'verification.json').read_text())
   self.assertTrue(any('missing_required_subtest' in x or 'missing_required_pass' in x for x in report['failures']))
 
+ def test_shorter_attempt_limit_drives_real_timer_and_scanner_window(self):
+  windows=[];timers=[];actual_timer=signal.setitimer
+  def timer(which,seconds,*args):
+   if seconds>0:timers.append(seconds)
+   return actual_timer(which,seconds,*args)
+  def prepare(snapshot,tools,registry,private,deadline):return FixtureBundle({},set(),registry.path,{registry.owner},{'source_commit':snapshot.commit})
+  def scanner(bundle,tools,registry,private,deadline,*,required_validity_seconds=0):
+   windows.append(required_validity_seconds)
+   raise ValueError('controlled_stop_after_window')
+  with self.patches(prepare),patch.multiple(self.run,prepare_iam=lambda b,*a:b,complete_profile=lambda *a:None,prepare_scanner=scanner),patch.object(signal,'setitimer',timer):
+   self.assertNotEqual(self.run.execute(self.snapshot,self.output,attempt_timeout_seconds=14400),0)
+  self.assertEqual(len(windows),1);self.assertGreater(windows[0],14390);self.assertLessEqual(windows[0],14400)
+  self.assertTrue(timers);self.assertEqual(timers[0],14340)
+  report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
+
+ def test_invalid_attempt_limit_creates_no_registry(self):
+  for value in [True,60,21601,14400.0,'14400']:
+   with self.assertRaisesRegex(ValueError,'attempt_timeout_invalid'):
+    self.run.execute(self.snapshot,self.output,attempt_timeout_seconds=value)
+   self.assertFalse((self.output/'registry.jsonl').exists())
+
  def test_global_deadline_interrupts_blocked_setup(self):
   self.assertTrue(hasattr(self.run,'TOTAL_SECONDS'),'global deadline timer missing')
   def prepare(*args):time.sleep(5);self.fail('deadline failed to interrupt blocked setup')

@@ -59,6 +59,22 @@ class SourceTests(unittest.TestCase):
             with self.assertRaises(ValueError):self.entry.bootstrap(self.repo,self.sha,out,definition_source=path)
             self.assertFalse(out.exists())
 
+    def test_shorter_attempt_limit_round_trips_without_changing_export(self):
+        (self.repo/'scripts/integration/run.py').write_text("def execute_bootstrap(data,output):\n (output/'limit').write_text(str(data['attempt_timeout_seconds']))\n return 0\n")
+        self.sha=self.commit();out=self.root/'shorter-limit'
+        result=subprocess.run([sys.executable,str(self.repo/'scripts/test-project-integration.py'),'--source-commit',self.sha,'--output-dir',str(out),'--attempt-timeout-seconds','14400'],capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual((out/'limit').read_text(),'14400')
+        data=self.entry.bootstrap(self.repo,self.sha,self.root/'shorter-bootstrap',attempt_timeout_seconds=14400)
+        self.assertEqual(data['attempt_timeout_seconds'],14400);self.entry.validate_export(data)
+
+    def test_invalid_attempt_limits_rejected_before_output(self):
+        for i,value in enumerate([True,0,60,21601,14400.0,'14400']):
+            out=self.root/('invalid-limit-'+str(i))
+            with self.assertRaisesRegex(ValueError,'attempt_timeout_invalid'):
+                self.entry.bootstrap(self.repo,self.sha,out,attempt_timeout_seconds=value)
+            self.assertFalse(out.exists())
+
     def test_dirty_module_never_executes(self):
         (self.repo/'scripts/integration/probe.py').write_text("MARKER='dirty'\n")
         data=self.entry.bootstrap(self.repo,self.sha,self.root/'out')

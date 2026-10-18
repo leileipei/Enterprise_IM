@@ -56,23 +56,26 @@ def _helper_proofs(registry,gate):
 def execute_bootstrap(data,output):
     sys.dont_write_bytecode=True
     snapshot=verify_snapshot(data)
-    return execute(snapshot,output)
+    return execute(snapshot,output,attempt_timeout_seconds=data.get('attempt_timeout_seconds'))
 
 
-def execute(snapshot,output):
+def execute(snapshot,output,*,attempt_timeout_seconds=None):
+    if attempt_timeout_seconds is not None and (type(attempt_timeout_seconds) is not int or not CLEANUP_SECONDS<attempt_timeout_seconds<=TOTAL_SECONDS):
+        raise ValueError('attempt_timeout_invalid')
+    total_seconds=TOTAL_SECONDS if attempt_timeout_seconds is None else attempt_timeout_seconds
     output=Path(output).resolve();owner=secrets.token_hex(16);registry=Registry(output/'registry.jsonl',owner,snapshot.commit)
     private=registry.root/owner;events=[];inventory=Inventory(set(),{},set());bundle=FixtureBundle({},set(),registry.path,{owner},{'source_commit':snapshot.commit})
     # Contract tests precede the actual toolchain gate. These paths cannot count as verified tools.
     tools=Toolchain({'python':python_cli(),'node':RUNTIME/'bin/node','node_modules':RUNTIME/'node_modules',
                     'chrome':Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')},{},{},{},'darwin','arm64')
-    cleanup=CleanupResult(False,['not_finished']);total_deadline=time.monotonic()+TOTAL_SECONDS;cancelled=False
+    cleanup=CleanupResult(False,['not_finished']);total_deadline=time.monotonic()+total_seconds;cancelled=False
     handlers={sig:signal.getsignal(sig) for sig in (signal.SIGINT,signal.SIGTERM,signal.SIGALRM)}
     prior_timer=signal.getitimer(signal.ITIMER_REAL)
     def cancel(signum,frame):raise Cancelled()
     for sig in (signal.SIGINT,signal.SIGTERM):signal.signal(sig,cancel)
     def expire(signum,frame):raise ValueError('attempt_deadline')
     signal.signal(signal.SIGALRM,expire)
-    signal.setitimer(signal.ITIMER_REAL,max(.01,TOTAL_SECONDS-CLEANUP_SECONDS))
+    signal.setitimer(signal.ITIMER_REAL,max(.01,total_seconds-CLEANUP_SECONDS))
     def deadline():
         if time.monotonic()>=total_deadline-CLEANUP_SECONDS:raise ValueError('attempt_deadline')
         return min(total_deadline-CLEANUP_SECONDS,time.monotonic()+GATE_SECONDS)

@@ -75,7 +75,9 @@ def definition_source_path(value):
     return path
 
 
-def bootstrap(repository_root: Path, commit: str, out: Path, definition_source=None) -> Dict[str,str]:
+def bootstrap(repository_root: Path, commit: str, out: Path, definition_source=None, *, attempt_timeout_seconds=None) -> Dict[str,str]:
+    if attempt_timeout_seconds is not None and (type(attempt_timeout_seconds) is not int or not 60<attempt_timeout_seconds<=21600):
+        raise ValueError('attempt_timeout_invalid')
     definition_source=definition_source_path(definition_source)
     if not re.fullmatch('[a-f0-9]{40}',commit):raise ValueError('full_commit_required')
     repository_root=Path(repository_root).resolve();out=Path(out)
@@ -102,6 +104,7 @@ def bootstrap(repository_root: Path, commit: str, out: Path, definition_source=N
     data=dict(commit=commit,repository_root=str(repository_root),root=str(root),
               archive=str(archive),archive_sha256=digest(archive),entry_sha256=digest(entry))
     if definition_source is not None:data['definition_source']=str(definition_source)
+    if attempt_timeout_seconds is not None:data['attempt_timeout_seconds']=attempt_timeout_seconds
     validate_export(data)
     return data
 
@@ -133,9 +136,10 @@ def main(argv=None):
     parser.add_argument('--source-commit',required=True)
     parser.add_argument('--output-dir',required=True,type=Path)
     parser.add_argument('--definition-source',type=Path,help='Read-only seed directory; signed definitions are copied and refreshed only in this attempt')
+    parser.add_argument('--attempt-timeout-seconds',type=int,help='Shorter hard total deadline, including cleanup: 61..21600 seconds (default 21600)')
     args=parser.parse_args(argv)
     try:
-        data=bootstrap(Path(__file__).resolve().parents[1],args.source_commit,args.output_dir,args.definition_source)
+        data=bootstrap(Path(__file__).resolve().parents[1],args.source_commit,args.output_dir,args.definition_source,attempt_timeout_seconds=args.attempt_timeout_seconds)
         return load_archived_runner(data)(data,args.output_dir)
     except (ValueError,OSError,ImportError,subprocess.SubprocessError):
         # Detailed errors belong to the private report, never to an inherited environment dump.

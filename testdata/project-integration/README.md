@@ -37,3 +37,6 @@ python3 scripts/test-project-integration.py --source-commit <40位已提交SHA> 
 扫描准备按全轮剩余期限固定要求覆盖时点；副本虽未超过24小时、但不能覆盖剩余窗口时，也先在本轮目录更新。更新后仍不足则在daemon启动前拒绝；原24小时签名新鲜度和运行绑定限制不变。`sigtool`构建时间沿用分钟精度作保守判断。
 
 `validity-window-start.json`、`validity-window.json`及存在的`freshclam.log`在成功、失败、超时或取消路径均通过原脱敏／哈希／原件处置流程留证。诊断采集本身失败会使总验收失败，并仍执行所属资源清理。
+
+
+可选`--attempt-timeout-seconds <61..21600整数>`可收紧整轮硬截止（默认21600秒，包含清理预留），不能延长。错误值在创建输出和资源前拒绝。签名库必须覆盖所选整轮剩余期限；每项业务断言及测试集合保持，超过所选截止仍失败。例：显式选择`--attempt-timeout-seconds 14400`即4小时硬截止。
