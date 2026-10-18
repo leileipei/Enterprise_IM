@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -228,15 +229,14 @@ func crossRefreshIssuer(t *testing.T, conn *pgx.Conn) ([]string, map[string]stri
 		t.Fatal(e)
 	}
 	run(t, conn, "INSERT INTO external_identities(issuer,subject,tenant_id,user_id) VALUES($1,'native-cross-alice',$2,$3),($1,'native-cross-bob',$2,$4)", issuer, tenantA, adminA, personA)
-	env := []string{"SSL_CERT_FILE=" + ca, "IM_OIDC_ENABLED=true", "IM_OIDC_ISSUER=" + issuer, "IM_OIDC_AUDIENCE=enterprise-im-api", "IM_OIDC_JWKS_URL=" + issuer + "/keys", "IM_OIDC_ALLOWED_CLIENT_IDS=im-android,im-ios", "IM_NATIVE_ENABLED=true", "IM_NATIVE_AUTHORIZATION_URL=" + issuer + "/authorize", "IM_NATIVE_TOKEN_URL=" + issuer + "/token"}
-	for _, platform := range []string{"android", "ios"} {
-		prefix := "IM_NATIVE_"
-		if platform == "android" {
-			prefix += "ANDROID_"
-		} else {
-			prefix += "IOS_"
+	env := []string{"SSL_CERT_FILE=" + ca, "IM_OIDC_ENABLED=true", "IM_OIDC_ISSUER=" + issuer, "IM_OIDC_AUDIENCE=enterprise-im-api", "IM_OIDC_JWKS_URL=" + issuer + "/keys", "IM_OIDC_ALLOWED_CLIENT_IDS=im-windows,im-macos,im-android,im-ios", "IM_NATIVE_ENABLED=true", "IM_NATIVE_AUTHORIZATION_URL=" + issuer + "/authorize", "IM_NATIVE_TOKEN_URL=" + issuer + "/token"}
+	for _, platform := range []string{"windows", "macos", "android", "ios"} {
+		prefix := "IM_NATIVE_" + strings.ToUpper(platform) + "_"
+		redirect := "com.enterpriseim.client:/oauth/callback"
+		if platform == "windows" || platform == "macos" {
+			redirect = "http://127.0.0.1/oauth/callback"
 		}
-		env = append(env, prefix+"CLIENT_ID=im-"+platform, prefix+"REDIRECT_URI=com.enterpriseim.client:/oauth/callback", prefix+"REFRESH_ENABLED=true")
+		env = append(env, prefix+"CLIENT_ID=im-"+platform, prefix+"REDIRECT_URI="+redirect, prefix+"REFRESH_ENABLED=true")
 	}
 	return env, initial
 }

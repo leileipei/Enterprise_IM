@@ -41,3 +41,23 @@ def checkpoint(phase,facts):
         actual.extend(facts['users'][k] for k in ('alice','bob'))
         if type(facts['devices']) is not int or facts['devices']!=3 or any(type(x) is not int for x in actual) or tuple(actual)!=MATRIX[phase]:raise ValueError('cross_database_checkpoint_mismatch')
     except (KeyError,TypeError):raise ValueError('cross_database_checkpoint_malformed') from None
+
+
+def verify_integrity(repo,sources,tools):
+    """Integrity failures are verdicts; they must never bypass owned cleanup."""
+    from pathlib import Path
+    import hashlib
+    result={'integrity_errors':[]}
+    for name,base,files in [('source',Path(repo),sources),('tools',Path('/'),tools)]:
+        try:
+            result[name+'_unchanged']=all(hashlib.sha256((base/p).read_bytes()).hexdigest()==h for p,h in files.items())
+        except Exception as exc:
+            result[name+'_unchanged']=False
+            result['integrity_errors'].append(name+':'+type(exc).__name__)
+    return result
+
+
+def confirm_recovery_sender(alice):
+    state=alice.command('summary',seq='2',status='read')
+    if state.get('details',{}).get('summaries',{}).get('2')!='read':raise ValueError('cross_recovered_sender_read_unproven')
+    alice.screenshot('recovered-sender-read')

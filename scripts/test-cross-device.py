@@ -22,7 +22,7 @@ from integration.commands import run_command
 from integration.registry import Registry
 from integration.model import ResourceRef
 from integration.mobile_backend import Backend, preflight as backend_preflight
-from integration.cross_device import actor_config, validate_participants, checkpoint, network_rule
+from integration.cross_device import actor_config, validate_participants, checkpoint, network_rule, verify_integrity, confirm_recovery_sender
 from integration.cross_native import AndroidActor, IOSActor, digest
 
 class CrossBackend(Backend):
@@ -125,7 +125,7 @@ def main():
         result['network']['rule_removed']=True
         recovered=android.command('auto_catchup')
         if recovered['details'].get('automatic_catchup') is not True or recovered['details'].get('cursor')!='2':raise ValueError('cross_automatic_catchup_unproven')
-        dbphase('recovered_delivered');android.command('read',seqs=['1','2']);dbphase('recovered_read');android.screenshot('recovered-read')
+        dbphase('recovered_delivered');android.command('read',seqs=['1','2']);dbphase('recovered_read');android.screenshot('recovered-read');confirm_recovery_sender(alice)
         ios.command('send',text='跨端回复三',seq='3');alice.command('received_read',seq='3');ios.command('summary',seq='3',status='read');dbphase('reply_read')
         alice.screenshot('reply-read');ios.screenshot('reply-sent')
         for actor in actors.values():
@@ -145,8 +145,7 @@ def main():
         if backend:
             try:backend.close()
             except Exception as exc:cleanup.append('backend:'+type(exc).__name__)
-        result['source_unchanged']=inventory()==sources
-        result['tools_unchanged']=all(digest(Path(p))==h for platform in ('android','ios') for p,h in pre[platform]['tool_sha256'].items())
+        result.update(verify_integrity(repo,sources,{p:h for platform in ('android','ios') for p,h in pre[platform]['tool_sha256'].items()}))
         if not cleanup:
             st=private.stat();reg.add(ResourceRef('directory',owner,str(private),{'device':st.st_dev,'inode':st.st_ino}))
         cleaned=reg.cleanup(time.monotonic()+90);cleanup.extend(cleaned.failures)

@@ -51,3 +51,25 @@ class CrossDeviceTests(unittest.TestCase):
         m.validate_ack(state,expected,4)
         for key,value in [('id',3),('pid',222),('nonce','b'*32),('role','alice'),('status','failed')]:
             with self.assertRaises(ValueError):m.validate_ack(dict(state,**{key:value}),expected,4)
+
+
+import tempfile
+import hashlib
+from integration import cross_device as m
+class ReviewRegression(unittest.TestCase):
+ def test_integrity_read_error_is_a_failed_verdict_and_does_not_raise(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d);good=root/'present';good.write_bytes(b'ok');h=hashlib.sha256(b'ok').hexdigest()
+   verdict=m.verify_integrity(root,{'missing':h},{str(good):h})
+   self.assertFalse(verdict['source_unchanged']);self.assertTrue(verdict['tools_unchanged']);self.assertEqual(verdict['integrity_errors'],['source:FileNotFoundError'])
+   good.unlink();verdict=m.verify_integrity(root,{}, {str(good):h});self.assertFalse(verdict['tools_unchanged'])
+ def test_recovery_requires_exact_second_message_sender_read_and_screenshot(self):
+  class Actor:
+   def __init__(self,state):self.state=state;self.calls=[]
+   def command(self,*a,**kw):self.calls.append((a,kw));return self.state
+   def screenshot(self,label):self.calls.append(label)
+  actor=Actor({'details':{'summaries':{'1':'read'}}})
+  with self.assertRaises(ValueError):m.confirm_recovery_sender(actor)
+  self.assertEqual(actor.calls,[(('summary',),{'seq':'2','status':'read'})])
+  actor=Actor({'details':{'summaries':{'2':'read'}}});m.confirm_recovery_sender(actor)
+  self.assertEqual(actor.calls,[(('summary',),{'seq':'2','status':'read'}),'recovered-sender-read'])
