@@ -293,3 +293,12 @@ class NativeRunnerAdapterTests(unittest.TestCase):
         archive.write_bytes(data);self.result['apk']['sha256']=sha(data);self.save();out=self.repo/'invalid-compression.json'
         p=subprocess.run([sys.executable,str(SCRIPTS/'test-native-clients.py'),'--repo',str(self.repo),'--source',self.source,'--runner-output',str(self.out),'--output',str(out)],capture_output=True,text=True)
         self.assertEqual(p.returncode,1);self.assertTrue(out.exists(),p.stderr);self.assertEqual(json.loads(out.read_text())['status'],'invalid')
+
+    @unittest.skipUnless(sys.platform=='darwin','actual macOS bundle archiver regression')
+    def test_actual_ios_archive_has_exact_files_without_resource_fork_sidecars(self):
+        from integration.mobile import archive_ios_bundle
+        app=self.repo/'Runner.app';app.mkdir();data=app/'data';data.write_bytes(b'normal app content');subprocess.run(['/usr/bin/xattr','-w','com.apple.ResourceFork','controlled resource metadata',str(data)],check=True,capture_output=True)
+        self.assertEqual(subprocess.check_output(['/usr/bin/xattr','-p','com.apple.ResourceFork',str(data)]).strip(),b'controlled resource metadata')
+        archive=self.repo/'bundle.zip';p=archive_ios_bundle(app,archive);self.assertEqual(p.returncode,0,p.stderr)
+        with zipfile.ZipFile(archive) as z:
+            self.assertEqual([n for n in z.namelist() if not n.endswith('/')],['Runner.app/data']);self.assertEqual(z.read('Runner.app/data'),b'normal app content')

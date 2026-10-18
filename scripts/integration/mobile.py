@@ -134,3 +134,8 @@ def simulator_id(value):
     if not re.fullmatch(r'[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}', value):
         raise ValueError('invalid_created_simulator_id')
     return value.upper()
+
+
+def archive_ios_bundle(app, archive):
+    import subprocess
+    return subprocess.run(['/usr/bin/ditto','-c','-k','--norsrc','--noextattr','--noqtn','--noacl','--keepParent',str(app),str(archive)],capture_output=True,timeout=120)

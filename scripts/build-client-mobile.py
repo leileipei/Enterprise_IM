@@ -182,7 +182,8 @@ def main():
             raise GateFailure('signature_inspection_failed')
         result['bundle'] = {'file_count': len(manifest), 'manifest_sha256': digest(out / 'bundle-manifest.json'), 'executable_sha256': digest(app / info['CFBundleExecutable']), 'minimum_os_version': info['MinimumOSVersion'], 'codesign_actual_exit': signing.returncode, 'signature': signing.stderr}
         archive = out / 'ios-simulator-debug.zip'
-        archived = subprocess.run(['/usr/bin/ditto', '-c', '-k', '--keepParent', str(app), str(archive)], capture_output=True, timeout=120)
+        from integration.mobile import archive_ios_bundle
+        archived = archive_ios_bundle(app, archive)
         result['archive_actual_exit'] = archived.returncode
         if archived.returncode:
             raise GateFailure('archive_failed')
