@@ -156,3 +156,10 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 ## 2026-10-18 Task9阶段推进
 
 用户明确暂缓双真机验证，继续不依赖硬件的工作。本轮完成离线证据合同核验入口、36项合同／CLI测试及测试指南；历史结果只核验原件完整性，不补当前平台用例。真机暂缓仍保持缺项，四平台完成为false。统一runner适配、cross_device实际协调、全部平台最终运行、客户／签名／CI仍未完成，Task9保持进行中。Task5—8原BASE和状态不变。
+
+
+### Task9移动runner接入增量（2026-10-18）
+
+已实现 `--export-acceptance` 和只读 `--runner-output`：同一固定提交的Android build／普通Release launch及iOS Debug模拟器build可导出；其他原生业务专项仍需各自实际产物与证据。源码／工具／摘要／参数／清理不满足时拒绝，旧报告不重写或换源。固定源码 `f4041320241232f775a24fcd25633074e3b28777` 上Python277执行无失败／跳过；Android API36及iOS构建结果见新增runner-adapter报告。Debug安全存储场景未映射到Release产物。首轮iOS元数据附带文件导致导出失败，保留后通过真实归档RED→GREEN及新源重跑修复。
+
+上方“真实后端资源复用及native platform runner协调”尚未整体勾选；本增量仅完成移动构建／启动适配。跨端独立进程／账号／设备协调、全部平台门禁、真机／Windows／客户条件及最终交付继续保持未完成。Tasks5—8原BASE／状态保持，本地检查点不触发远端动作。

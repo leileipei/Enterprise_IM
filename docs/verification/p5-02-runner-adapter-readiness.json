@@ -1,0 +1,713 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "partial_mobile_runner_adapter_verified",
+  "host": "macOS arm64; includes actual Darwin-only archive regression",
+  "tested_source_commit": "f4041320241232f775a24fcd25633074e3b28777",
+  "intermediate_source_commit": "be4637484a711588c932ae02dbbd6ec7c9481d99",
+  "scope": "same-source mobile build and Android normal release launch normalization only; no new backend/physical/desktop or remote execution",
+  "full_python": {
+    "actual_exit": 0,
+    "discovered": 277,
+    "unique_discovered": 270,
+    "failures": [],
+    "errors": [],
+    "skips": [],
+    "validation_failures": [],
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    },
+    "source_archive_sha256": "29fc161d8484b07b384388344472cfd01c5ee57e09f0b2da90884aa11ab62e03",
+    "source_archive_unchanged": true,
+    "validation_root_removed": true
+  },
+  "new_adapter_tests": 29,
+  "existing_contract_tests": 36,
+  "counts_overlap_full_python": true,
+  "android": {
+    "target": "API36 AOSP ARM64 emulator",
+    "runner_exit": 0,
+    "commands": {
+      "pub": 0,
+      "build": 0,
+      "badging": 0,
+      "signature": 0,
+      "shared": 0,
+      "analysis": 0,
+      "debug-pub": 0,
+      "activity": 0,
+      "vault-write": 0,
+      "vault-verify": 0
+    },
+    "shared_tests": 248,
+    "analysis_issues": 0,
+    "activity_passed": true,
+    "vault_distinct_processes": true,
+    "release_launch_passed": true,
+    "artifact_sha256": "d655ce671d7c4ab61d8c29619b5c35c02fc926405c6b2dc127c80402d8c5dd9e",
+    "test_only_signing": true,
+    "exported_cases": [
+      "build",
+      "launch"
+    ],
+    "service_exits": [
+      {
+        "name": "emulator",
+        "pid": 69050,
+        "actual_exit": 0
+      },
+      {
+        "name": "adb-server",
+        "pid": 69045,
+        "actual_exit": -15
+      },
+      {
+        "name": "avd-create",
+        "pid": 69006,
+        "actual_exit": 0
+      }
+    ],
+    "expected_stop_observation_exit": 1,
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    }
+  },
+  "ios": {
+    "target": "Debug iOS simulator build only",
+    "runner_exit": 0,
+    "commands": {
+      "pub": 0,
+      "build": 0
+    },
+    "archive_actual_exit": 0,
+    "archive_sha256": "124ae4026942325f3ffdc38252e16775ed0f5f60d43a36148812b33fa46a46a4",
+    "bundle_files": 91,
+    "debug_engine_cache_inputs": 114,
+    "engine_inputs_unchanged": true,
+    "simulator_launched_this_run": false,
+    "test_only_adhoc_signature": true,
+    "exported_cases": [
+      "build"
+    ],
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    }
+  },
+  "normalized_assessment": {
+    "path": "docs/verification/p5-02-runner-adapter-results.json",
+    "sha256": "c66d383ab4e5b4e9cc3870b91cb4af42c04e9fbaf5d3b609ad6d17633868ff78",
+    "actual_exit": 2,
+    "status": "incomplete",
+    "four_platform_complete": false,
+    "customer_acceptance": false,
+    "production_acceptance": false,
+    "count_basis": "runner_checks; not framework test counts",
+    "debug_runtime_not_promoted_to_release_cases": true
+  },
+  "review": {
+    "p1": 0,
+    "p2": 3,
+    "one_fix_pass": true,
+    "second_independent_review": false,
+    "regression_verified": true,
+    "additional_runtime_defect": "iOS default ditto metadata sidecars rejected by exact manifest; actual resource-fork RED then corrected archive flags GREEN",
+    "minor_fixed": "unsupported ZIP compression structured invalid"
+  },
+  "failure_history": {
+    "initial_red": "red.log",
+    "test_loading_and_path_alias_preparation": [
+      "green01.log",
+      "green02.log",
+      "review-green01.log"
+    ],
+    "boundary_red": "boundary-red.log",
+    "review_red": "review-red.log",
+    "intermediate_ios_runner_actual_exit": 1,
+    "intermediate_ios_evidence": "ios-run01/result.json",
+    "archive_fixture_preparation_errors": [
+      "ios-archive-preparation-error.json",
+      "ios-archive-red.log",
+      "ios-archive-green.log"
+    ],
+    "actual_archive_red": "ios-archive-red02.log",
+    "actual_archive_green": "ios-archive-green02.log",
+    "resource_observer_preparation": "audit-attempt01-failure.json; existing global Android keys predate owned runs; preserved",
+    "no_failed_result_overwritten": true
+  },
+  "preservation_and_resources": {
+    "source_commit": "f4041320241232f775a24fcd25633074e3b28777",
+    "processes": [
+      {
+        "pid": 58839,
+        "expected_start": "Sun Oct 18 13:31:02 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 58862,
+        "expected_start": "Sun Oct 18 13:31:03 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 58929,
+        "expected_start": "Sun Oct 18 13:31:12 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 58934,
+        "expected_start": "Sun Oct 18 13:31:12 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 60943,
+        "expected_start": "Sun Oct 18 13:32:00 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 60965,
+        "expected_start": "Sun Oct 18 13:32:00 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 61589,
+        "expected_start": "Sun Oct 18 13:32:21 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 61600,
+        "expected_start": "Sun Oct 18 13:32:26 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 61640,
+        "expected_start": "Sun Oct 18 13:32:27 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 61645,
+        "expected_start": "Sun Oct 18 13:32:27 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 61789,
+        "expected_start": "Sun Oct 18 13:32:51 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 61810,
+        "expected_start": "Sun Oct 18 13:32:51 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 62081,
+        "expected_start": "Sun Oct 18 13:33:21 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 62193,
+        "expected_start": "Sun Oct 18 13:33:44 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 62338,
+        "expected_start": "Sun Oct 18 13:34:11 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 62413,
+        "expected_start": "Sun Oct 18 13:34:26 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 62429,
+        "expected_start": "Sun Oct 18 13:34:27 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 65211,
+        "expected_start": "Sun Oct 18 13:38:23 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 65216,
+        "expected_start": "Sun Oct 18 13:38:24 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 65286,
+        "expected_start": "Sun Oct 18 13:38:27 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 65346,
+        "expected_start": "Sun Oct 18 13:38:28 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 68494,
+        "expected_start": "Sun Oct 18 13:39:52 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 68517,
+        "expected_start": "Sun Oct 18 13:39:52 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 68846,
+        "expected_start": "Sun Oct 18 13:40:35 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 68856,
+        "expected_start": "Sun Oct 18 13:40:35 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 68989,
+        "expected_start": "Sun Oct 18 13:40:53 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69006,
+        "expected_start": "Sun Oct 18 13:40:59 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69045,
+        "expected_start": "Sun Oct 18 13:40:59 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69050,
+        "expected_start": "Sun Oct 18 13:40:59 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69146,
+        "expected_start": "Sun Oct 18 13:41:21 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69168,
+        "expected_start": "Sun Oct 18 13:41:22 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69405,
+        "expected_start": "Sun Oct 18 13:41:49 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69534,
+        "expected_start": "Sun Oct 18 13:42:09 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      },
+      {
+        "pid": 69662,
+        "expected_start": "Sun Oct 18 13:42:35 2026",
+        "ps_exit": 1,
+        "old_identity_running": false
+      }
+    ],
+    "directories": [
+      {
+        "path": "/private/tmp/im-adapter-python-6kiwz26z",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-adapter-python-6kiwz26z/python-validation-ad57477413e76617ee510c2ef8c3e743",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-adapter-python-6kiwz26z/python-validation-ad57477413e76617ee510c2ef8c3e743/ad57477413e76617ee510c2ef8c3e743",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-adapter-python-m04qtxvn",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-adapter-python-m04qtxvn/python-validation-c18200bed38591e6865868474fa805d7",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-adapter-python-m04qtxvn/python-validation-c18200bed38591e6865868474fa805d7/c18200bed38591e6865868474fa805d7",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-5bs1l3fd",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-5bs1l3fd/a7f9f0f0522cb1a763ec29dbc814f9ef",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-_f15xt0p",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-_f15xt0p/f12d502adf20050555beebbbeb9188bc",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-android-lm_9gwfe",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-android-lm_9gwfe/c18a0f957168fb800ca39229dc26804a",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-android-miuhsmnk",
+        "absent": true
+      },
+      {
+        "path": "/private/tmp/im-mobile-android-miuhsmnk/c549926cf5eb68764f2c10377bf0f805",
+        "absent": true
+      }
+    ],
+    "ports": [
+      {
+        "port": 5554,
+        "lsof_exit": 1,
+        "listeners_absent": true
+      },
+      {
+        "port": 5555,
+        "lsof_exit": 1,
+        "listeners_absent": true
+      },
+      {
+        "port": 50364,
+        "lsof_exit": 1,
+        "listeners_absent": true
+      },
+      {
+        "port": 63575,
+        "lsof_exit": 1,
+        "listeners_absent": true
+      }
+    ],
+    "owned_path_process_matches": [],
+    "default_android_home": {
+      "exists": true,
+      "first_owned_run_time": 1792330262.710955,
+      "metadata": [
+        {
+          "path": "/Users/leo.cui/.android",
+          "birth_time": 1792311393.0878413,
+          "modified_time": 1792311393.2343726,
+          "predates_first_owned_run": true
+        },
+        {
+          "path": "/Users/leo.cui/.android/adbkey.pub",
+          "birth_time": 1792311393.2343676,
+          "modified_time": 1792311393.234439,
+          "predates_first_owned_run": true
+        },
+        {
+          "path": "/Users/leo.cui/.android/adbkey",
+          "birth_time": 1792311393.2325983,
+          "modified_time": 1792311393.2344737,
+          "predates_first_owned_run": true
+        }
+      ],
+      "ownership": "unattributed pre-existing; never read private key contents, modified, or deleted"
+    },
+    "protected_reports_unchanged": 64,
+    "old_task9_raw_unchanged": 25,
+    "main_status_unchanged": true,
+    "product_source_unchanged_from_base": true,
+    "passed": true
+  },
+  "task_status": {
+    "5": "in_progress",
+    "6": "in_progress",
+    "7": "in_progress",
+    "8": "in_progress"
+  },
+  "task_original_baselines": {
+    "5": "2ec34734e50627392cbda7d340bb14f658a97216",
+    "6": "2314d7077068d7af253ee94b136418e642f5cc07",
+    "7": "265540be9c1a228853236e586be1ccdd52958b4e",
+    "8": "069e55ff3ba58d09262d96beed7cfaaaafa61614"
+  },
+  "task9_status": "in_progress",
+  "remaining_gates": [
+    "desktop and remaining mobile business runner adapters",
+    "independent multi-client production-backend coordination and cross-device scenarios",
+    "physical devices deferred by user",
+    "Windows real execution and installed desktop acceptance",
+    "customer SSO, notification, distribution signing, remote CI, customer and production acceptance"
+  ],
+  "go_full_race_rerun_this_turn": false,
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/acceptance/android-build.json": "49500e68265e92e07a47e6e8bccda39dbfb1c2d25a02e5416431980e66408566",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/acceptance/android-launch.json": "b627c5acb83ca0e6b4dd2e6367ec38d8d31cd6a91e9120dad8bd3af8bf890f4c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/acceptance/manifest.json": "1c66a7671ac558a890e181a8b31a12a812d4745399feec37e3166b6571e5e35f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/acceptance/receipt.json": "3730c58a639726e144241b4eef5b44230fc30c2bb7d08a5e18235c385413234a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/activity.log": "ea61871ffe04fc0f347b8cc1eb95449ba60c22279db616887320741f5fa71300",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/activity.log.stderr": "522803444fea5ba742b6b3be58258f925de706fc98af4190aa185a2269d63eb8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/analysis.log": "68d2ae03f8b2972f55a8644171c6cc50e8ee28d52bdce2834b4dc948b8f31702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-activity-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-activity-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-adb-server.log": "5649d4425c6a70fa84e9dd271e7ec439b594202f1f6a1a376d5e9e38d52f13dc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-avd-create.log": "9a551bd58bde67c8e1a86a9638f144a5fd9be7023224573d18b2f4489bcbb0c9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-boot-id.log": "8bbf1c944e642d0424b9e27b1e521ca99e5d63fe25fc4a45d5a19b617c9c1d33",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-canonical-ro.boot.qemu.avd_name.log": "c1e1a7f29fc984d3945531bc548a46d52ca7d42ab151c99678a2e74ff17c246b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-cleanup-owned-avd.log": "663e80a72206250d52a4cff4bb7e29233edba13c6eb228ee343dda036b2e78d5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-emulator.log": "80e6f1b8858c9ee1ac0577fccedfb6891339eaaff6ab11b421f2306a55894241",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-identity-ro.boot.qemu.avd_name.log": "c1e1a7f29fc984d3945531bc548a46d52ca7d42ab151c99678a2e74ff17c246b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-crash-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-crash-before.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-launch.log": "7e89dc3b225387e7db3e147ffd0902b9e8a1569d0346dc2bba38e253521cbba7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-login.png": "82b46715dce8627de6c069e41519d5502f7a6a03e5ccbc3e71a1629dd699cfcd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-path.log": "44a33e7fb98b6dd8d18e7e5530ed5e90304f90f72974ba52a2298e1b19f6f787",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-pid.log": "bc45e54ee591029039cca244d0aff49cd5a79113a7197d6e784ce314582f09c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-release-test.apk": "75e50680584b9f764ad590e09f815bdb74e12298fb1b82772a0a18025a5e6cd3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-user-unlocked.log": "20593274e48768b9e7167590fa7a8641656de66e3e2a88622048f9a927d8d1fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-vault-verify-package.log": "15ce183358f0e12707afcc7e75a330a49b4d0f909c68c6aed7ad6a82f8f856b5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-vault-verify-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-vault-verify-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-vault-write-package.log": "0f54f51496ce99a85dbd404d02a1f96d710cc699992dc5cb55a5641ca47f8e22",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-vault-write-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/android-vault-write-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/apk-manifest.json": "0d86af4399467f4ecfd92811dba0bd7282dc6d3cb71abf3beeb4d8ac90879302",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/build.log": "68b5e9f2188ac2e022f62dd4e1c78a3ebedf622be30b7a2c6304ae7061b5171b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/build.log.stderr": "c3b712a378b1dca6b584a97b64cca505b7a3c10bbea000af885098b2337ac9c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/preflight.json": "16db64fb93d1b62865fead1f22baf5706b2bddc446d27db34a15ea0c574e8544",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/registry.jsonl": "f0d71531019fe6b995fe42580acdb7ba8ba95fc008d2f9044e695d6d65a513c3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/result.json": "23f998ccdfdc04ddf962efc6ddf16b561737bf7993b63095e8317f95d42fbb80",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/shared.log": "dc4a5fad9bf4f59f60705fdf50ecdd0264815006198198f372d145f90e6bc269",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/signature.log": "ad119479cef37a12fc6b2494ef24dc19c4a74ce9c7b367ceebde0f8c20e27b14",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/signature.log.stderr": "bec47e95837804cae6f4cac5c5b52c3c19c64e88a061f9a9035c6bc301c5020c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/vault-verify.log": "2019b2f80aa4beb82a89ecad5d9e8d4f7adb92139124cd5ae02195ab5e712312",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/vault-verify.log.stderr": "2d70704f5c4eac5ef5505f5c6919ba46a256ec40312458e8a6e69b3757c67f02",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/vault-write.log": "bbc864ed2545410649b3132ec44820f095ea428f6f87f14ee7e85e02d596871a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01/vault-write.log.stderr": "bcab852163869a71c253cb7242e2efe90f7c733399f036151713722bb1bf2d83",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01-host-exit.json": "3beb46424c570805338bef263fe42c06b6deacd150d87bbbac0cb95f6c5f68b5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run01-host.log": "0eaf4027c3f79c11f60c33f9495926680ee4d8924592bc8df04339787597507f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/acceptance/android-build.json": "88e3be5ac3839d3379682f94c956119a49a92df99f8a9e729e68111be80b9b2b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/acceptance/android-launch.json": "0b84d96ba458445ab0f86aa9c752c0d68c3eda5485436b4aa0e41f0f466ec422",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/acceptance/manifest.json": "9e3ae050c1063445a7e9fb19b61294e95c0bd8fedf0e529e74254d860c4e49b1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/acceptance/receipt.json": "938c6a6045267fb4fa931d83b5b7539f1aa393683dbb5241cb8b65112ed85f39",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/activity.log": "7d87c9c5ef20dd1d0a6f413d76ffc2433c6abe034f46284ba4236bce14d94526",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/activity.log.stderr": "7b1c53f2ade397d06945a89b06d6b3ca620b9cf300b07357f37f6b44a52a3d52",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/analysis.log": "11dcded6ca5335f059a1ee72af897db9e71d49f165b41cfccc14cbadbfdd9541",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-activity-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-activity-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-adb-server.log": "7b59b4cb2088c9ff824cf1a835aec09796b8185b82830b38408ef034f1398ff0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-avd-create.log": "72946eb99d8cca7a74062887fa285d129a64186429f5947d269c1deeab1cbb2d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-boot-id.log": "610b15f79e198d483c83c6363a3571671d761bce0f6cf73c019eb00a13f02e6b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-canonical-ro.boot.qemu.avd_name.log": "6ef9fcfeb6427b31c8842c44943dd7b0c89e198e5fdb57e2a8b74b78ad4a175f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-cleanup-owned-avd.log": "a6ebf5d554684f9a13b90d6ffc063a743816fbfa6104d535aa2ec3febf87dd29",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-emulator.log": "1a2aa1581772d4f41e2f6220e3847a79bfe7f31776bbee20d121a1474d0f15d1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-identity-ro.boot.qemu.avd_name.log": "6ef9fcfeb6427b31c8842c44943dd7b0c89e198e5fdb57e2a8b74b78ad4a175f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-crash-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-crash-before.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-launch.log": "9cb8f2c98aee9d30aa50e642bab0b58fa8df579c51a9ae953a54d63216843f5f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-login.png": "b79c6c05d156fda3a1d03846168c822237e7af1fefc2da57ac0cbd12097052de",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-path.log": "5d431d55391c7b25ea401ec1b1c3dd68c3c7f0d2d1dca4f58f0c7e0c9117ed23",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-pid.log": "9756864c134054bef8db6f2698596756e460a11ce0b4afd482c2562406402e3a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-release-test.apk": "d655ce671d7c4ab61d8c29619b5c35c02fc926405c6b2dc127c80402d8c5dd9e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-user-unlocked.log": "6606067c8450b8a72b1ee8815f6b3ec164de4ac9028eaeea6775e56f159614f8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-vault-verify-package.log": "757437df99cbb6213f763cb278c3a0314faf685e8259d0be42a3b05b1898ffd0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-vault-verify-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-vault-verify-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-vault-write-package.log": "e0339bc554a88973ce16804c2cb01955b5fcb428f9cb1199fe1d3e3494c2a5fc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-vault-write-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/android-vault-write-stopped.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/apk-manifest.json": "89946697e8810cadb3adbf781ab1b8be6eb54e126c46254c21b0a7c04e79b297",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/build.log": "0a996ad450b4519ccff7c08c07bfaca15e19194886eca8e4392b5fa2bceb4f10",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/build.log.stderr": "81e9d1b729966b8fc15eb709f88317bd80e430f82281d82bd89b88875f58ca2e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/debug-pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/debug-pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/preflight.json": "16db64fb93d1b62865fead1f22baf5706b2bddc446d27db34a15ea0c574e8544",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/registry.jsonl": "65d834a8063f43868cbdae216ba85ea5c4963d79b0f3bd11fbcbac9607b603cc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/result.json": "052ea58e59d918edf7f0978c1a057a93beb3558371754b5671bf79f12e57e83e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/shared.log": "5e78c21d2364e69833991af35ced3d405ff1fad97f8a7eb0ea9f8e33f7f5feed",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/signature.log": "bde1ffa4c85f191e4ce6fc4f9461212e2205325a9a44bcb9e26b6f2aa231434f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/signature.log.stderr": "d41f4fb5dfb110aeb528dac1a24b96180818ad772b88a226a7c12599548a7716",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/vault-verify.log": "0c75bbbd3d9f93930262bad82c1edd506be89703d11efe541b9cfeaf1508cc32",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/vault-verify.log.stderr": "dfd7764c6a9a5e33f4a09b916be7d4066579c9b9aacf913dd571a83ee2c7cd52",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/vault-write.log": "984b0ee28a208cdb480962facbbf26fab558b4e5821af185d5701d0468abf072",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/vault-write.log.stderr": "8015435c57cc5836ff6aa7b309a40febe3ed670f467ce24605b3edf3bd5bea59",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02-host-exit.json": "fa7028289b7ded40ae579673c4315780ccbd30658a1665d153cc3303f86c32a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02-host.log": "0eaf4027c3f79c11f60c33f9495926680ee4d8924592bc8df04339787597507f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/audit-attempt01-failure.json": "5e2f6d25409ec23c75a0bd45d08af1a64755b4fb81ad8a32226606eb48dd6cc1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/audit-attempt01.py": "563fae9226d80ffe3f2b12f83d6574f109dcc14eb0d84ca3a861166a54dfc04a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/boundary-red-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/boundary-red.log": "090cd34ff606c0dd748b79d916eaba20c10aaff2adad34bc0e11c0c128971c8d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/contract-regression-exit.json": "ac402e57cc9c2e0ca0a3fe16d4959090bfaa023c6fa1b4dd328b65bad8ee9cf5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/contract-regression.log": "ac93e53ba2f5494dcd7d25c2efa51d7f45e4cb038dfba214cea9450d1ca0bae9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/inventory.log": "e3ce51ff93ce3f48ff77a305c2f4dd609f492e07aa302b44824244303169db73",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/python.log": "0f8a603375631f77c9995198aa52441d134a664b47012ab722f7fda5da9c197a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/python.log.stderr": "67ea61ed30862ffb28ed9aac04d2efcdca6e72da9ef2336a84c7d5ef490d2633",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/registry.jsonl": "e1fc3ae4f78167d801db12ec270e39fcfd7e6ba75aaa055b11d5724c7079907e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/result.json": "d9cd436cb219dd4c3c238ff378e3ca2c18d725eb5871fe27dc229c08462172fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01-results/standard-result.json": "7b866e602e447d2b5a45c3bc2477504c4d83f6d207108a0ce74a06294ca0c44d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python01.json": "a66ae901ad51d3cf43ad73bdbf2d960238a3162c773a57d8e9a5f11612f14f01",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/inventory.log": "27e8f97cb4bfa37105fe3323b5da07053a7ca929cf150426bf938a99768ed75f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/python.log": "24e616a4ee6fe7ae012f82b841df1c4a6ee2cf2567562620163ff7bb0e1386ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/python.log.stderr": "7279839722f9eb6c2c00cac4bb88f1bf74cbafb32e325904cff19593be77c42d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/registry.jsonl": "d26191505eb533ef9640e33f5d4cc1c62b4330eab809a1801702594d9cc2623f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/result.json": "b5a7a0d1d9ecded0637fd4e2c1050290ab5c8750810dea695b6c9c787d01e8be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02-results/standard-result.json": "ae845765548e69f2f7582950d34b25baf704ad7335958eeb0190dc8897feed63",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/full-python02.json": "1999dfb2c2f22538b4b1eae6a0b0c649feca93a3f0c2078494475c72e4db7dee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green01-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green01.log": "3fcfbc0ff68cd989bfacbe6f866b240892241219c56894d0b7b20e3ccb000beb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green02-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green02.log": "f4b278cf9bd680a8c85c2d60340f263b2a0321749cd6462c191aed5e74ccbd85",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green03-exit.json": "ac402e57cc9c2e0ca0a3fe16d4959090bfaa023c6fa1b4dd328b65bad8ee9cf5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green03.log": "e975610be9b62082f016d8803f039a86511318908a134f78d286b0dc275f83cb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green04-exit.json": "ac402e57cc9c2e0ca0a3fe16d4959090bfaa023c6fa1b4dd328b65bad8ee9cf5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/green04.log": "557461ce359be5c13ccb99deed5d560791b6f070082df19e0e237dc01817de01",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/im-adapter-audit.py": "628ec4e656f1942b961441db07afcb8a1c5ae6c41548726e393b3f9661fe9ed3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/im-adapter-full-python.py": "80642dc28d7bd58131d7235a93482726526a95538dccf2300e3be6738e99c777",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/im-adapter-prepare-python.py": "d7ec1b0ae3f59f342a6bb17eb7b24f9e48c0db95280da49b5570830b9767ac41",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/im-adapter-prepare-python02.py": "534c24397c2c4d4426c0f63a1f13bcd3b26a5983ce1024355058767635dbb1cb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/im-adapter-publish.py": "ad9f5b3232141fe092c8af8d181e3c048e7b504b33967410c9cf6cf2c6398729",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-green-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-green.log": "5a90b68fda8156c56cd50c00556898bb3c9e7866d73f2e5841628d1f4d085206",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-green02-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-green02.log": "aa70613caee03a574370f8896eb45d828eccc2b4359f5723d857fd6003f7667e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-preparation-error.json": "7ce52a3de48d5d3020b7013029de89132e938bc450e9d17084b1964cca3a007e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-red-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-red.log": "8329d69e2dd19fc55316c4689e973e92a4e70c13e229c046b92770738d879485",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-red02-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-archive-red02.log": "5851ceea82718142134b58680d2bae99e940b23197c909a7237422b34aa8ae08",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/build.log": "86eeee85ee24345219586aea54a4d94654c6399d6a4cf94eaf445d6635ed7fa8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/bundle-manifest.json": "6a061f9c76a658c84d07c4772f8f0f3ae837099ff181abc0fa4591faa410262b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/ios-simulator-debug.zip": "68170b39e3d0c80e81a8ad3c4145f2e3a697b2468111488fde297678385da65e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/preflight.json": "b469d535ec08dbbde0b09552d9df192313ccb215b040c17094d7cd0f7469cfd3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/registry.jsonl": "2abad973a7e39be57c38732a52d0582e85bf1a9605bf06a9bdfcc4fd2fea28b6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01/result.json": "0973e1e19135c306bbb47bc7b5f8458a83d723d541c3d5d66a43349476d016d9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01-export-diagnostic.json": "eba6de264b1b5015c66e2f60aa4deb509d40ea05944e5790d36233e7f2ab58fd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01-host-exit.json": "9cad7a9fadd9e19407cfde577e3c726ea52045252a5c4664627f860b2677c563",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run01-host.log": "df51e5416f13614e615d83f8d372ddf45bf0ffa6445eebbe92131c4a135a6e2f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/acceptance/ios-build.json": "4a821c5f4c8bae34de0113c1c0678408ad59a434c0388335273c7f813866834d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/acceptance/manifest.json": "f817d587a4e49a607ee144488862fac0faf9ab3786599185377cf695e76f8e24",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/acceptance/receipt.json": "2ddf40b9468327fce310b87ea01b61ce0540feed189d8b91d2e5b4569e51d98c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/build.log": "f7222166e94e4e6b17ed9add0d11b1911970af25b1d2496bbfda48f4d431c999",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/bundle-manifest.json": "f3f90fe9424701826f0c153d3f44fa50fbf01217024d762aea31281d7e7978ae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/ios-simulator-debug.zip": "124ae4026942325f3ffdc38252e16775ed0f5f60d43a36148812b33fa46a46a4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/preflight.json": "b469d535ec08dbbde0b09552d9df192313ccb215b040c17094d7cd0f7469cfd3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/pub.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/pub.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/registry.jsonl": "bed6a1860fd4db254add125d46227af478cd67e2b8f06a42d01287feaf61cdf4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/result.json": "4bb5168fdeaee8599d1ed174401dfda20656de593c0a0ca41a6ab4af46631c6d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02-host-exit.json": "01b51d730aba52643064ce82d69874ab1f3b67f7be1b872eade65bb042dbac88",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02-host.log": "df51e5416f13614e615d83f8d372ddf45bf0ffa6445eebbe92131c4a135a6e2f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/normalized-evaluation-exit.json": "07d757a6d9e6106e83ec4b5389f1d2db9c70ab2daa65f11b2f2011743f7145d2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/normalized-evaluation-retry-exit.json": "f78ac125247c70945c0ed057812d088da87295f7447297f1aa6bfc2614dacc6b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/normalized-evaluation-retry.json": "c66d383ab4e5b4e9cc3870b91cb4af42c04e9fbaf5d3b609ad6d17633868ff78",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/normalized-evaluation-retry.log": "87163380cdf4a80ba6d28dbfa2a06d7df7fd355f76733ace434a99560966e99d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/normalized-evaluation.log": "87163380cdf4a80ba6d28dbfa2a06d7df7fd355f76733ace434a99560966e99d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/prefreeze-regression-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/prefreeze-regression.log": "10dc46eae04acd526420ca8951a59b3e5179cd8ad237911cc2e17c175979f359",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/protected-baseline.json": "84655d287b6710cc7353a36f2119a1dc67c7d471a04080314244175c01e35004",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/publish-attempt01.py": "0142216a44b20f949edffb3a97bbd05d1dcebc65bd047514c56e0949197fd01f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/red-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/red.log": "2f38fad7f7348986ea743904ec36d40f2b7ec8914c36c8907f88a447ae6b7a75",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/resource-and-preservation-audit.json": "3c8d06d0465e9e3ffc76f0adc228018a253da0cc383b79321318dff64ce70f31",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/review-green01-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/review-green01.log": "4b6ab8d1a7b01c6affdfa90550988fc73b9e3f19622d3150b5347b4188824d1e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/review-green02-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/review-green02.log": "47c2d34fcfe1ea531e5846f2f414187d09a39dce4d57a25c09f371859b6bb7f9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/review-red-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/review-red.log": "9be758a722d7520748f6051d9f028691f841d4ef555f34238a4fcfb21560561e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/review-resolution.json": "fada9cdfec7f44d8ca0ebec48ee451a8b8269051e9cb5196483752f4b43b06ae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/source-checkpoint.json": "5cc5dc6d1343a16100692877ba2660983064dfe0cc9bff434f01c30f3e264e6e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/source-checkpoint02.json": "0e1d2c126ea498f501727d57584f94718f224e170ed5350f01d16c8c892ebbc4"
+  },
+  "raw_evidence_count": 227,
+  "postcommit_audit_path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/postcommit-audit.json",
+  "no_remote_actions": true
+}

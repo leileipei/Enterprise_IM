@@ -1,0 +1,272 @@
+{
+  "schema": "native_acceptance_results_v1",
+  "source_commit": "f4041320241232f775a24fcd25633074e3b28777",
+  "mode": "offline_evidence_contract_check_only",
+  "status": "incomplete",
+  "four_platform_complete": false,
+  "physical_deferred": true,
+  "customer_acceptance": false,
+  "production_acceptance": false,
+  "platforms": {
+    "macos": {
+      "status": "blocked",
+      "architecture": "arm64",
+      "signing_declaration": "not_verified",
+      "cases": {
+        "build": {
+          "status": "not_run"
+        },
+        "launch": {
+          "status": "not_run"
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        }
+      }
+    },
+    "windows": {
+      "status": "blocked",
+      "architecture": "x64",
+      "signing_declaration": "not_verified",
+      "cases": {
+        "build": {
+          "status": "not_run"
+        },
+        "launch": {
+          "status": "not_run"
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        }
+      }
+    },
+    "android": {
+      "status": "blocked",
+      "architecture": "arm64-v8a",
+      "signing_declaration": "test_only",
+      "cases": {
+        "build": {
+          "status": "passed",
+          "evidence": {
+            "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/acceptance/android-build.json",
+            "sha256": "88e3be5ac3839d3379682f94c956119a49a92df99f8a9e729e68111be80b9b2b"
+          },
+          "actual_exits": [
+            0,
+            0,
+            0
+          ],
+          "test_counts": {
+            "passed": 7,
+            "failures": 0,
+            "errors": 0,
+            "skips": 0
+          },
+          "count_basis": "runner_checks",
+          "cleanup": {
+            "removed": true,
+            "failure_count": 0
+          },
+          "cleanup_verified": true
+        },
+        "launch": {
+          "status": "passed",
+          "evidence": {
+            "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/android-run02/acceptance/android-launch.json",
+            "sha256": "0b84d96ba458445ab0f86aa9c752c0d68c3eda5485436b4aa0e41f0f466ec422"
+          },
+          "actual_exits": [
+            0,
+            0,
+            0
+          ],
+          "test_counts": {
+            "passed": 10,
+            "failures": 0,
+            "errors": 0,
+            "skips": 0
+          },
+          "count_basis": "runner_checks",
+          "cleanup": {
+            "removed": true,
+            "failure_count": 0
+          },
+          "cleanup_verified": true
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        },
+        "simulator": {
+          "status": "not_run"
+        },
+        "physical": {
+          "status": "deferred"
+        }
+      },
+      "artifact_sha256": "d655ce671d7c4ab61d8c29619b5c35c02fc926405c6b2dc127c80402d8c5dd9e"
+    },
+    "ios": {
+      "status": "blocked",
+      "architecture": "arm64",
+      "signing_declaration": "test_only",
+      "cases": {
+        "build": {
+          "status": "passed",
+          "evidence": {
+            "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-runner-adapter/ios-run02/acceptance/ios-build.json",
+            "sha256": "4a821c5f4c8bae34de0113c1c0678408ad59a434c0388335273c7f813866834d"
+          },
+          "actual_exits": [
+            0
+          ],
+          "test_counts": {
+            "passed": 7,
+            "failures": 0,
+            "errors": 0,
+            "skips": 0
+          },
+          "count_basis": "runner_checks",
+          "cleanup": {
+            "removed": true,
+            "failure_count": 0
+          },
+          "cleanup_verified": true
+        },
+        "launch": {
+          "status": "not_run"
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        },
+        "simulator": {
+          "status": "not_run"
+        },
+        "physical": {
+          "status": "deferred"
+        }
+      },
+      "artifact_sha256": "124ae4026942325f3ffdc38252e16775ed0f5f60d43a36148812b33fa46a46a4"
+    }
+  },
+  "historical_reports": [],
+  "limits": [
+    "Does not run tests or attest evidence producers.",
+    "Historical evidence never satisfies current-source platform cases.",
+    "Deferral never removes a required gate."
+  ],
+  "sdk_commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+  "sdk_archive_sha256": "46a3e5203e855ff74fd4fcf1f5f511552881e07fc097a980775991183326a66b",
+  "pubspec_lock_sha256": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669",
+  "backend_source_commit": "f4041320241232f775a24fcd25633074e3b28777",
+  "cross_device": {
+    "status": "not_run"
+  }
+}
