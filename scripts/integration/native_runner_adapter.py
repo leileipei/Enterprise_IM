@@ -67,6 +67,7 @@ def _derive_inputs(repo, out):
     require(result.get('source_sha256')==_snapshot(repo,source,['clients/enterprise_im']),'source_input_mismatch')
     implementation=result.get('implementation_sha256')
     required={'scripts/build-client-mobile.py','scripts/integration/mobile.py','scripts/integration/registry.py','scripts/integration/commands.py'}
+    if platform=='ios' and 'normal_launch' in result:required.add('scripts/integration/ios_app_launch.py')
     if platform=='android':
         required.add('scripts/integration/android_build.py')
         if isinstance(result.get('simulator'),dict):required.add('scripts/integration/android_simulator.py')
@@ -150,6 +151,11 @@ def _derive_inputs(repo, out):
         require(image_rows[0]['stdout_sha256']==digest(screenshot),'release_screenshot_hash_mismatch')
         launch=dict(base,case='launch',release_observations=observations)
         launch['tests']={'passed':len(labels),'failures':0,'errors':0,'skips':0};launch['check_names']=labels;cases['launch']=launch
+    if platform=='ios' and 'normal_launch' in result:
+        from .ios_app_launch import evidence
+        launch_commands,observations=evidence(out,result,preflight,file,ref)
+        launch=dict(base,case='launch',commands=launch_commands,normal_launch_observations=observations)
+        launch['check_names']=['install','bundle-path','launch','alive-before','alive-after','screenshot','terminate','stopped'];launch['tests']={'passed':8,'failures':0,'errors':0,'skips':0};cases['launch']=launch
     record={'architecture':base['architecture'],'artifact':artifact_ref,'build_mode':artifact['build_mode'],'artifact_target':artifact['target'],'signing':'test_only','cases':{}}
     manifest={'schema':'native_acceptance_input_v1','source_commit':source,'backend_source_commit':source,'platforms':{platform:record},'historical_reports':[]}
     return repo,out,manifest,cases

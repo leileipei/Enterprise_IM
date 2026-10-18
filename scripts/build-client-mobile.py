@@ -93,7 +93,7 @@ def main():
     registry = Registry(root / 'registry.jsonl', owner, commit, recover_containers=False)
     private = root / owner
     client = private / 'client'
-    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py', 'scripts/integration/native_runner_adapter.py', 'scripts/integration/native_runner_artifacts.py', 'scripts/integration/native_results.py')}}
+    result = {'status': 'failed', 'target': args.target, 'source_commit': commit, 'owner': owner, 'root': str(root), 'commands': [], 'platform_acceptance': 'partial', 'scope': 'owned Debug iOS simulator build; optional active-scene and two-process Keychain checks only', 'native_leaf_os_exit_independently_observed': False, 'implementation_sha256': {path: digest(repo / path) for path in ('scripts/build-client-mobile.py', 'scripts/integration/mobile.py', 'scripts/integration/mobile_resume.py', 'scripts/integration/mobile_backend.py', 'scripts/integration/registry.py', 'scripts/integration/commands.py', 'scripts/integration/native_runner_adapter.py', 'scripts/integration/native_runner_artifacts.py', 'scripts/integration/native_results.py', 'scripts/integration/ios_app_launch.py')}}
     env = None; simulator = None; runtime = args.simulator_runtime
     simulator_name = 'IM-Mobile-' + owner
     simulator_reserved = False
@@ -188,6 +188,9 @@ def main():
         if archived.returncode:
             raise GateFailure('archive_failed')
         result['archive_sha256'] = digest(archive)
+        if args.verify_simulator:
+            from integration.ios_app_launch import run as launch_normal_app
+            launch_normal_app(app, out, env, result, save, inventory)
         if getattr(args, 'verify_real_backend', False):
             result['scope'] += '; actual mobile send/delivered/read/revoked-device against owned production backend; synthetic refresh IdP, not interactive SSO'
         result['status'] = 'passed'; code = 0

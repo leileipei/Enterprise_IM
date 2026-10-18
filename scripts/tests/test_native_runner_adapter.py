@@ -1,5 +1,6 @@
 """Synthetic runner-output fixtures test conversion, not actual platform builds."""
 import copy
+import os
 import hashlib
 import json
 from pathlib import Path
@@ -302,3 +303,87 @@ class NativeRunnerAdapterTests(unittest.TestCase):
         archive=self.repo/'bundle.zip';p=archive_ios_bundle(app,archive);self.assertEqual(p.returncode,0,p.stderr)
         with zipfile.ZipFile(archive) as z:
             self.assertEqual([n for n in z.namelist() if not n.endswith('/')],['Runner.app/data']);self.assertEqual(z.read('Runner.app/data'),b'normal app content')
+
+    def ios_normal_fixture(self):
+        self.ios();udid='11111111-2222-3333-4444-555555555555';runtime='com.apple.CoreSimulator.SimRuntime.iOS-26-5';device='com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro'
+        app='/private/tmp/im-owned/'+'a'*32+'/client/build/ios/iphonesimulator/Runner.app';installed='/Users/test/Library/Developer/CoreSimulator/Devices/'+udid+'/data/Containers/Bundle/Application/AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE/Runner.app';pid=2468
+        row={'name':'IM-Mobile-'+'a'*32,'udid':udid,'deviceTypeIdentifier':device,'state':'Booted'}
+        pre=self.out/'preflight.json';value=json.loads(pre.read_text());value.update(simulator={'runtime':runtime,'device_type':device},simulator_device_root='/Users/test/Library/Developer/CoreSimulator/Devices',host_uid=501);value['tool_sha256'].update({'/usr/bin/xcrun':'1'*64,'/bin/ps':'2'*64,'/Applications/Xcode.app/Contents/Developer/usr/bin/simctl':'3'*64});pre.write_text(json.dumps(value))
+        manifest=json.loads((self.out/'bundle-manifest.json').read_text());(self.out/'ios-normal-installed-manifest.json').write_text(json.dumps(manifest))
+        self.impl['scripts/integration/ios_app_launch.py']=b'controlled normal launch implementation';path=self.repo/'scripts/integration/ios_app_launch.py';path.write_bytes(self.impl['scripts/integration/ios_app_launch.py']);self.git('add','.');self.git('-c','user.name=Fixture','-c','user.email=fixture@invalid.test','commit','-qm','normal launch producer');self.source=self.git('rev-parse','HEAD');self.result['source_commit']=self.source;self.result['implementation_sha256']={k:sha(v) for k,v in self.impl.items()}
+        chunk=lambda kind,body:struct.pack('>I',len(body))+kind+body+struct.pack('>I',zlib.crc32(kind+body));image=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',1,1,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(b'\0\xff\0\0\xff'))+chunk(b'IEND',b'');(self.out/'ios-normal-login.png').write_bytes(image)
+        commands=[]
+        args={'install':['install',udid,app],'bundle-path':['get_app_container',udid,'com.enterpriseim.client','app'],'launch':['launch','--terminate-running-process',udid,'com.enterpriseim.client'],'screenshot':['io',udid,'screenshot','--type=png',str(self.out/'ios-normal-login.png')],'terminate':['terminate',udid,'com.enterpriseim.client']}
+        for name in ['install','bundle-path','launch','alive-before','alive-after','screenshot','terminate','stopped']:
+            argv=['/bin/ps','-p',str(pid),'-o','pid=,lstart=,comm='] if name in ['alive-before','alive-after','stopped'] else ['/usr/bin/xcrun','simctl',*args[name]]
+            text={'bundle-path':installed+'\n','launch':'com.enterpriseim.client: 2468\n','alive-before':'2468 Sun Oct 18 12:00:00 2026 '+installed+'/Runner\n','alive-after':'2468 Sun Oct 18 12:00:00 2026 '+installed+'/Runner\n'}.get(name,'')
+            name_log='ios-normal-'+name;(self.out/(name_log+'.log')).write_text(text);(self.out/(name_log+'.log.stderr')).write_bytes(b'');commands.append({'name':name,'argv':argv,'actual_exit':1 if name=='stopped' else 0,'stdout_sha256':sha(text.encode()),'stderr_sha256':sha(b'')})
+        identity={'pid':pid,'uid':501,'start_time':'Sun Oct 18 12:00:00 2026','executable_path':installed+'/Runner','executable_sha256':self.result['bundle']['executable_sha256'],'workdir':'/','pgid':1234}
+        self.result['simulator']={'name':row['name'],'udid':udid,'runtime':runtime,'device_type':device}
+        self.result['owned_simulator_removed']=True
+        self.result['normal_launch']={'passed':True,'artifact_sha256':self.result['archive_sha256'],'installed_manifest_sha256':sha((self.out/'ios-normal-installed-manifest.json').read_bytes()),'installed_app':installed,'pid':pid,'identity_before':identity,'identity_after':copy.deepcopy(identity),'ownership_before':row,'ownership_after':copy.deepcopy(row),'commands':commands,'screenshot_sha256':sha(image),'host_absence_after_terminate':True,'native_leaf_os_exit_independently_observed':False,'native_leaf_os_exit':None}
+        self.save()
+
+    def test_ios_ordinary_same_archive_launch_exports_without_promoting_debug_driver_cases(self):
+        self.ios_normal_fixture();self.exported();manifest=json.loads((self.out/'acceptance/manifest.json').read_text());r=assess(self.repo,manifest,self.source,defer_physical=True)
+        self.assertEqual(r['platforms']['ios']['cases']['launch']['status'],'passed');self.assertEqual(r['platforms']['ios']['cases']['storage']['status'],'not_run');self.assertFalse(r['four_platform_complete'])
+
+    def test_ios_launch_false_flags_or_different_artifact_cannot_export(self):
+        self.ios_normal_fixture();original=copy.deepcopy(self.result)
+        for key,value in [('passed',False),('artifact_sha256','b'*64),('host_absence_after_terminate',False),('pid',True),('native_leaf_os_exit_independently_observed',True),('native_leaf_os_exit',0)]:
+            self.result=copy.deepcopy(original);self.result['normal_launch'][key]=value;self.save()
+            with self.assertRaises(ValueError):self.exported()
+
+    def test_ios_launch_wrong_device_or_changed_identity_is_rejected(self):
+        self.ios_normal_fixture();original=copy.deepcopy(self.result)
+        for field,key,value in [('ownership_before','name','foreign'),('ownership_after','state','Shutdown'),('identity_before','executable_sha256','b'*64),('identity_after','start_time','changed'),('identity_after','uid',999)]:
+            self.result=copy.deepcopy(original);self.result['normal_launch'][field][key]=value;self.save()
+            with self.assertRaises(ValueError):self.exported()
+
+    def test_ios_launch_missing_hash_or_unrelated_command_is_rejected(self):
+        self.ios_normal_fixture();original=copy.deepcopy(self.result)
+        for index in range(8):
+            self.result=copy.deepcopy(original);self.result['normal_launch']['commands'][index]['argv'][0]='echo';self.save()
+            with self.assertRaises(ValueError):self.exported()
+        self.result=copy.deepcopy(original);self.result['normal_launch']['commands'][0].pop('stdout_sha256');self.save()
+        with self.assertRaises(ValueError):self.exported()
+
+    def test_ios_launch_unknown_stop_exit_or_nonempty_absence_log_is_rejected(self):
+        self.ios_normal_fixture();self.result['normal_launch']['commands'][-1]['actual_exit']=2;self.save()
+        with self.assertRaises(ValueError):self.exported()
+        self.result['normal_launch']['commands'][-1]['actual_exit']=1;(self.out/'ios-normal-stopped.log').write_text('still alive');self.result['normal_launch']['commands'][-1]['stdout_sha256']=sha(b'still alive');self.save()
+        with self.assertRaises(ValueError):self.exported()
+
+    def test_ios_launch_changed_installed_manifest_or_truncated_screenshot_is_rejected(self):
+        self.ios_normal_fixture();manifest=self.out/'ios-normal-installed-manifest.json';manifest.write_text('{}');self.result['normal_launch']['installed_manifest_sha256']=sha(manifest.read_bytes());self.save()
+        with self.assertRaises(ValueError):self.exported()
+        manifest.write_text((self.out/'bundle-manifest.json').read_text());self.result['normal_launch']['installed_manifest_sha256']=sha(manifest.read_bytes());image=self.out/'ios-normal-login.png';image.write_bytes(b'\x89PNG\r\n\x1a\n');self.result['normal_launch']['screenshot_sha256']=sha(image.read_bytes());self.save()
+        with self.assertRaises(ValueError):self.exported()
+
+    def test_ios_launch_parser_rejects_foreign_pid_output(self):
+        path=SCRIPTS/'integration/ios_app_launch.py';self.assertTrue(path.exists(),'normal iOS launch helper missing')
+        from integration.ios_app_launch import launched_pid
+        self.assertEqual(launched_pid('com.enterpriseim.client: 2468\n'),2468)
+        for text in ['foreign: 2468','com.enterpriseim.client: 0','com.enterpriseim.client: true','com.enterpriseim.client: 2468\nextra']:
+            with self.assertRaises(ValueError):launched_pid(text)
+
+    def test_ios_process_observation_uses_same_utc_time_as_fingerprint(self):
+        from integration import ios_app_launch as module
+        self.assertTrue(hasattr(module,'process_observation'),'canonical process observation is missing')
+        argv=['/bin/ps','-p',str(os.getpid()),'-o','pid=,lstart=,comm='];reference=subprocess.run(argv,env={'TZ':'UTC','LANG':'C','LC_ALL':'C'},capture_output=True)
+        actual=module.process_observation(os.getpid(),{'TZ':'Asia/Shanghai','LANG':'fr_FR.UTF-8','LC_ALL':'fr_FR.UTF-8'})
+        self.assertEqual(reference.returncode,0);self.assertEqual(actual.returncode,0);self.assertEqual(actual.stdout,reference.stdout);self.assertEqual(actual.stderr,b'')
+
+    def test_ios_normal_launch_requires_explicit_owned_simulator_cleanup(self):
+        self.ios_normal_fixture()
+        for value in (None,False):
+            self.result['owned_simulator_removed']=value;self.save()
+            with self.assertRaisesRegex(ValueError,'ios_normal_simulator_cleanup_unverified'):self.exported()
+        self.result.pop('owned_simulator_removed');self.save()
+        with self.assertRaisesRegex(ValueError,'ios_normal_simulator_cleanup_unverified'):self.exported()
+
+    def test_ios_normal_launch_rejects_reordered_commands_and_preserves_chronology(self):
+        self.ios_normal_fixture();commands=self.result['normal_launch']['commands'];self.result['normal_launch']['commands']=list(reversed(commands));self.save()
+        with self.assertRaisesRegex(ValueError,'ios_normal_commands_unverified'):self.exported()
+        self.result['normal_launch']['commands']=commands;self.save();self.exported();proof=json.loads((self.out/'acceptance/ios-launch.json').read_text());self.assertEqual([row['stdout']['path'].rsplit('/',1)[-1] for row in proof['commands']],['ios-normal-install.log','ios-normal-bundle-path.log','ios-normal-launch.log','ios-normal-alive-before.log','ios-normal-alive-after.log','ios-normal-screenshot.log','ios-normal-terminate.log'])
+        self.assertEqual(proof['normal_launch_observations']['stopped_observation']['actual_exit'],1)

@@ -124,6 +124,11 @@ def preflight(repo, args):
     result['tool_sha256'].update(inputs['tool_sha256'])
     result['ios_engine_sha256']=inputs['ios_engine_sha256']
     if args.verify_simulator:
+        result['host_uid']=os.getuid()
+        result['simulator_device_root']=str(Path.home()/'Library/Developer/CoreSimulator/Devices')
+        for path in (Path('/usr/bin/xcrun'),Path('/bin/ps'),args.developer_dir/'usr/bin/simctl'):
+            if not path.is_file():raise ValueError('prepared_simulator_tool_missing')
+            result['tool_sha256'][str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
         inventory = subprocess.check_output(['/usr/bin/xcrun', 'simctl', 'list', 'runtimes', '--json'], env=env, text=True, timeout=45)
         result['simulator'] = simulator_choice(json.loads(inventory), args.simulator_runtime, args.simulator_device_type)
     return result
