@@ -142,7 +142,7 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 
 **Interfaces:** 门禁结果逐platform、architecture、fixed source、SDK/lock/binary hashes、commands actual exit、customer signing、tests/cleanup分别记录；缺项blocked不映射passed。测试包只收已实际生成可复核文件，禁止发布私钥/凭据。
 
-- [ ] 编排RED `python3 -m unittest discover -s scripts/tests -p 'test_native_client_results.py' -v`：只有共享逻辑PASS、平台未跑、实际exit非零、hash错配、真机缺项或清理失败均不能overall“四平台完成”。
+- [x] 编排RED `python3 -m unittest discover -s scripts/tests -p 'test_native_client_results.py' -v`：只有共享逻辑PASS、平台未跑、实际exit非零、hash错配、真机缺项或清理失败均不能overall“四平台完成”。
 - [ ] 实现真实后端资源复用及native platform runner协调，确保证据归属与secret脱敏；不影响其它项目/客户数据。
 - [ ] `flutter analyze --fatal-infos`、`flutter test`、各实际平台integration与四平台build门禁；跨端至少Alice与Bob、Bob两device、跨组织群、断网/重启/丢ACK/receipt重试、退出/撤销/权限/保留变化。
 - [ ] 固定交付源后核对后端相关普通/race回归、旧Web兼容、客户端binary hash及无秘密包，实际进程/资源清理；分别标本地、模拟器、真机、签名与客户SSO状态。
@@ -151,3 +151,8 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 ## Handoff
 
 用户联合评审后保持Native执行方式。先P5-01，后本计划；可独立完成的工作持续推进，平台环境缺项只阻塞对应平台验收。到交付时按真实证据声明已完成范围，不给未经验证的四平台完成结论。
+
+
+## 2026-10-18 Task9阶段推进
+
+用户明确暂缓双真机验证，继续不依赖硬件的工作。本轮完成离线证据合同核验入口、36项合同／CLI测试及测试指南；历史结果只核验原件完整性，不补当前平台用例。真机暂缓仍保持缺项，四平台完成为false。统一runner适配、cross_device实际协调、全部平台最终运行、客户／签名／CI仍未完成，Task9保持进行中。Task5—8原BASE和状态不变。
