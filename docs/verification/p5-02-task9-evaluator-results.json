@@ -1,0 +1,173 @@
+{
+  "schema_version": "p5_02_task9_evaluator_v1",
+  "date": "2026-10-18",
+  "tested_evaluator_source_commit": "62e0c05edbf4734ab538272d3fa3a1bba6cb4215",
+  "scope": "offline contract evaluator and historical evidence integrity only; no new Go/Flutter/platform execution",
+  "contract_tests": {
+    "executions": 36,
+    "actual_exit": 0,
+    "synthetic_contract_fixtures_not_platform_runs": true
+  },
+  "actual_assessment": {
+    "actual_exit": 2,
+    "status": "incomplete",
+    "four_platform_complete": false,
+    "physical_deferred_by_user": true,
+    "customer_acceptance": false,
+    "production_acceptance": false,
+    "history_reports_verified": 9,
+    "declared_raw_references_verified": 4374,
+    "report_file_only_entries": 4
+  },
+  "fixed_run": {
+    "source_commit": "62e0c05edbf4734ab538272d3fa3a1bba6cb4215",
+    "started_at": "2026-10-18T12:46:17.711272+00:00",
+    "archive_sha256": "cf870751df99999590ae38bcc671b6948ec85d7f5deacf6ef25a332d164bb752",
+    "scope": "fixed Git archive contract tests and offline historical evidence check only; no platform execution",
+    "private_root": "/private/tmp/im-native-gate-xl7vny03",
+    "contract_actual_exit": 0,
+    "contract_tests": 36,
+    "assessment_actual_exit": 2,
+    "history_reports_verified": 9,
+    "raw_references_verified": 4374,
+    "report_only_entries": 4,
+    "case_tests_are_synthetic_not_platform_runs": true,
+    "implementation_sha256": {
+      "scripts/integration/native_results.py": "973d51186642e83e20d6ec93222db4e5b624b994c78992be9502657ffea9db97",
+      "scripts/test-native-clients.py": "6f3bd921e74df3551e58396591925a0534348df2abb7ba7d07fe1c3666c92bc2",
+      "scripts/tests/test_native_client_results.py": "753be74ff796bafc768e942c3ab83a174d75d1556677fa8833a7cd3412062c09"
+    },
+    "old_reports_unchanged": 61,
+    "main_status_unchanged": true,
+    "Go_Flutter_product_source_unchanged": true,
+    "assessment_report_sha256": "bdb5288691808bdd63747c6093578c1087e2fe87a70e43aed000bbb57b9ca2d6",
+    "manifest_sha256": "a99b95e79f0f03463bfbc96c6428f7f602da7dfc9b192251dc6984a27110638c",
+    "passed_scoped_verification": true,
+    "private_root_removed": true,
+    "ended_at": "2026-10-18T12:46:25.876680+00:00"
+  },
+  "review": {
+    "reviewer": "/root/review_native_acceptance_gate",
+    "scope": "one read-only review of Task9 new offline evaluator/CLI/tests/docs, not platform execution",
+    "initial_P1": 2,
+    "initial_P2": 5,
+    "fix_method": "one fix pass; precise negative tests observed RED then full36 GREEN; no second independent review",
+    "fixes": [
+      {
+        "finding": "P1_cross_device_binding",
+        "tests": [
+          "test_cross_clients_must_bind_current_platform_sdk_lock_and_artifact",
+          "test_cross_device_requires_one_user_with_two_distinct_devices"
+        ],
+        "status": "fixed_with_regression"
+      },
+      {
+        "finding": "P1_physical_and_simulator_proof",
+        "tests": [
+          "test_physical_and_simulator_business_cannot_use_mock_backend",
+          "test_hardware_field_is_required_beyond_physical_label"
+        ],
+        "status": "fixed_with_regression"
+      },
+      {
+        "finding": "P2_required_input_binding",
+        "tests": [
+          "test_missing_or_wrong_sdk_archive_build_mode_and_backend_source",
+          "test_release_build_required_for_desktop_and_android"
+        ],
+        "status": "fixed_with_regression"
+      },
+      {
+        "finding": "P2_cross_organization_group",
+        "tests": [
+          "test_cross_org_group_and_distinct_organizations_are_required"
+        ],
+        "status": "fixed_with_regression"
+      },
+      {
+        "finding": "P2_windows_drive",
+        "tests": [
+          "test_existing_correct_hash_paths_are_rejected_for_the_path_reason"
+        ],
+        "status": "fixed_with_regression"
+      },
+      {
+        "finding": "P2_false_green_path_tests",
+        "tests": [
+          "test_existing_correct_hash_paths_are_rejected_for_the_path_reason"
+        ],
+        "status": "fixed_with_regression"
+      },
+      {
+        "finding": "P2_structured_failure_summary",
+        "tests": [
+          "test_failure_summaries_preserve_safe_exits_counts_cleanup_and_evidence_ref",
+          "test_summary_retains_verified_input_hashes_counts_and_actual_exits",
+          "test_history_records_number_of_verified_raw_references"
+        ],
+        "status": "fixed_with_regression"
+      }
+    ],
+    "final_contract_test_count": 36,
+    "actual_exit": 0,
+    "historical_failures_retained": true
+  },
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-brief.md": "6d98a511f046dd83aee6adade0d7385e1654805f6ef17869f4d8d362a0c28dd2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evaluator-green01-exit.json": "ac402e57cc9c2e0ca0a3fe16d4959090bfaa023c6fa1b4dd328b65bad8ee9cf5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evaluator-green01.log": "2eed978e1d009fdbd9aac174cf30a6cece2fde5968a32b7858464aea78211131",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evaluator-red.log": "9991e2a097e8291929bada15799302577437394a92b912f76c62b091e1cb0d0e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evaluator-red02-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evaluator-red02.log": "eac39b64f7ab727ff06dc983a818d7d649dac702f42ba51947534d2591ceec9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-final-boundary-red-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-final-boundary-red.log": "59809711984f1c9d76e5594f63666d052081392534a2f62d3004cda59cde2619",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-final-green-exit.json": "ac402e57cc9c2e0ca0a3fe16d4959090bfaa023c6fa1b4dd328b65bad8ee9cf5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-final-green.log": "7f5d4ea81595b46096c88f046cb70cbd81ea9c464fef0e8f4809e5515e0cd351",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-fixed-driver.py": "4f5ba854c2f20683728bc98b8fef4ea9143d92335d0e129ed9f6c567b894315a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-fixed-run/assessment.log": "87163380cdf4a80ba6d28dbfa2a06d7df7fd355f76733ace434a99560966e99d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-fixed-run/contract-tests.log": "7ee5cb514e9299860b1f43065ffbf2aba027641a72e6333c98ec38be3b4690e4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-fixed-run/evaluator-source.tar": "cf870751df99999590ae38bcc671b6948ec85d7f5deacf6ef25a332d164bb752",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-fixed-run/result.json": "2510ff3bd7a1dc6a765177158909529d80d14d743ea0c8050eb9045ac1c5bb71",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-protected-reports.json": "1cf10881a2fa408eb11a2b339d1c41eaabece4a23b766e744ca773e51092bf20",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-readiness-initial-exit.json": "27555da9534d57e1ac2dc5f70fbde38a4057dc3e04ad486c0ad7d3a729c4648d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-readiness-initial.json": "7abf9b93e56f460d7566196efc92d8ba09d4c59f9aa6154d4f93bce4834098be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-review-contract-red-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-review-contract-red.log": "3f29d176739c9fca40a3761ceee136b69bd4c16cbdee89ac0ce178e604e44fc4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-review-fix-receipt.json": "fef4d33b24f46178e1bf4fe6b7de9ea0b8a6f7a63fd2be373207ac8d57b35344",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-review-green01-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-review-green01.log": "e84f16a4967122b16bb9415eeb4132b7f8e554e4d16499b4d56a5f71bb484dbe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-review-precise-red-exit.json": "b8b9eab68203e851595708abb4b126cf54287e1f9e50567afdba91f84e264de1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-review-precise-red.log": "ed5b2cb45d46c3794b90009189a081bb73260558bd5b3ce601a10e54191b3cda"
+  },
+  "raw_evidence_count": 25,
+  "task_status": {
+    "5": "in_progress",
+    "6": "in_progress",
+    "7": "in_progress",
+    "8": "in_progress"
+  },
+  "task_original_baselines": {
+    "5": "2ec34734e50627392cbda7d340bb14f658a97216",
+    "6": "2314d7077068d7af253ee94b136418e642f5cc07",
+    "7": "265540be9c1a228853236e586be1ccdd52958b4e",
+    "8": "069e55ff3ba58d09262d96beed7cfaaaafa61614"
+  },
+  "task9_status": "in_progress; offline evidence contract substep complete; runner adapters and actual cross-platform execution pending",
+  "remaining_gates": [
+    "runner adapters into normalized contract",
+    "real multi-client coordination and cross-device execution",
+    "physical devices deferred",
+    "Windows native execution",
+    "full installed desktop acceptance",
+    "customer SSO and signing",
+    "notifications platform evidence",
+    "remote CI and customer/production acceptance"
+  ],
+  "postcommit_audit_path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-postcommit-audit.json",
+  "no_remote_actions": [
+    "push",
+    "merge",
+    "deploy",
+    "CI"
+  ]
+}

@@ -1,0 +1,300 @@
+{
+  "schema": "native_acceptance_results_v1",
+  "source_commit": "62e0c05edbf4734ab538272d3fa3a1bba6cb4215",
+  "mode": "offline_evidence_contract_check_only",
+  "status": "incomplete",
+  "four_platform_complete": false,
+  "physical_deferred": true,
+  "customer_acceptance": false,
+  "production_acceptance": false,
+  "platforms": {
+    "macos": {
+      "status": "blocked",
+      "architecture": "arm64",
+      "signing_declaration": "not_verified",
+      "cases": {
+        "build": {
+          "status": "not_run"
+        },
+        "launch": {
+          "status": "not_run"
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        }
+      }
+    },
+    "windows": {
+      "status": "blocked",
+      "architecture": "x64",
+      "signing_declaration": "not_verified",
+      "cases": {
+        "build": {
+          "status": "not_run"
+        },
+        "launch": {
+          "status": "not_run"
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        }
+      }
+    },
+    "android": {
+      "status": "blocked",
+      "architecture": "arm64-v8a",
+      "signing_declaration": "not_verified",
+      "cases": {
+        "build": {
+          "status": "not_run"
+        },
+        "launch": {
+          "status": "not_run"
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        },
+        "simulator": {
+          "status": "not_run"
+        },
+        "physical": {
+          "status": "deferred"
+        }
+      }
+    },
+    "ios": {
+      "status": "blocked",
+      "architecture": "arm64",
+      "signing_declaration": "not_verified",
+      "cases": {
+        "build": {
+          "status": "not_run"
+        },
+        "launch": {
+          "status": "not_run"
+        },
+        "oidc": {
+          "status": "not_run"
+        },
+        "text": {
+          "status": "not_run"
+        },
+        "files": {
+          "status": "not_run"
+        },
+        "receipts": {
+          "status": "not_run"
+        },
+        "storage": {
+          "status": "not_run"
+        },
+        "lifecycle": {
+          "status": "not_run"
+        },
+        "recovery": {
+          "status": "not_run"
+        },
+        "groups": {
+          "status": "not_run"
+        },
+        "revocation": {
+          "status": "not_run"
+        },
+        "retention": {
+          "status": "not_run"
+        },
+        "simulator": {
+          "status": "not_run"
+        },
+        "physical": {
+          "status": "deferred"
+        }
+      }
+    }
+  },
+  "historical_reports": [
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 726,
+      "raw_manifest_present": true,
+      "integrity_scope": "report_and_declared_raw",
+      "reference": {
+        "path": "docs/verification/p5-02-full-go-python-results.json",
+        "sha256": "cb1114bcda3563140478f4ea954e9d855c84a651b721f9539e2c372364e3064e"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 783,
+      "raw_manifest_present": true,
+      "integrity_scope": "report_and_declared_raw",
+      "reference": {
+        "path": "docs/verification/p5-02-task8-mobile-backend-results.json",
+        "sha256": "3f7f41aa562dcf6d7118abd35b022f0eb8ca342cf5dda4ed26e4e19e23c5110e"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 743,
+      "raw_manifest_present": true,
+      "integrity_scope": "report_and_declared_raw",
+      "reference": {
+        "path": "docs/verification/p5-02-task8-mobile-resume-results.json",
+        "sha256": "9687bd487dab6ad6626cd94eafa7627a1875dee383a8cd3a74b80273fd71e12d"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 211,
+      "raw_manifest_present": true,
+      "integrity_scope": "report_and_declared_raw",
+      "reference": {
+        "path": "docs/verification/p5-02-task8-android-simulator-cli-results.json",
+        "sha256": "43417ff90b084113d056f2369b85148d42baf7c57a2948d0da6d0cc852b9526a"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 0,
+      "raw_manifest_present": false,
+      "integrity_scope": "report_file_only",
+      "reference": {
+        "path": "docs/verification/p5-02-task8-ios-picker-results.json",
+        "sha256": "1e4c40128975d541d40d79724e4e5a2336934018492517e9d1f8ba83d4564445"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 1911,
+      "raw_manifest_present": true,
+      "integrity_scope": "report_and_declared_raw",
+      "reference": {
+        "path": "docs/verification/p5-02-task8-android-release-receipts-results.json",
+        "sha256": "736dbf3b2da1150b1b7f8a0a1c83ad2e8e584542b1b439ec97391a22db0a438b"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 0,
+      "raw_manifest_present": false,
+      "integrity_scope": "report_file_only",
+      "reference": {
+        "path": "docs/verification/p5-02-task7-native-entry-results.json",
+        "sha256": "52a18fb483728cd767408502e99930828ea8ff40390ece4222b4998b7e9d088c"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 0,
+      "raw_manifest_present": false,
+      "integrity_scope": "report_file_only",
+      "reference": {
+        "path": "docs/verification/p5-02-task7-files-host-results.json",
+        "sha256": "f675d416d0ee15ae7f633727fad6cd6ab8362f066763d1c5781dd02048238d0f"
+      }
+    },
+    {
+      "status": "integrity_verified_historical_only",
+      "verified_raw_files": 0,
+      "raw_manifest_present": false,
+      "integrity_scope": "report_file_only",
+      "reference": {
+        "path": "docs/verification/p5-02-task5-real-messaging-results.json",
+        "sha256": "0661428be23378b6a7b4912241fed435490e963fed5dda02b6bb10a74673698e"
+      }
+    }
+  ],
+  "limits": [
+    "Does not run tests or attest evidence producers.",
+    "Historical evidence never satisfies current-source platform cases.",
+    "Deferral never removes a required gate."
+  ],
+  "sdk_commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+  "sdk_archive_sha256": "46a3e5203e855ff74fd4fcf1f5f511552881e07fc097a980775991183326a66b",
+  "pubspec_lock_sha256": "333f2bf5b17d584a1b0b77110862552fdb0703803b3f8bd6b15b9a8c1ce0c669",
+  "backend_source_commit": "24d71cd9c9ff3ba2322cf4ff5f1a2bebdbd1ec53",
+  "cross_device": {
+    "status": "not_run"
+  }
+}

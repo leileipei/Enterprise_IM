@@ -1,0 +1,44 @@
+{
+  "schema": "native_acceptance_input_v1",
+  "source_commit": "62e0c05edbf4734ab538272d3fa3a1bba6cb4215",
+  "platforms": {},
+  "historical_reports": [
+    {
+      "path": "docs/verification/p5-02-full-go-python-results.json",
+      "sha256": "cb1114bcda3563140478f4ea954e9d855c84a651b721f9539e2c372364e3064e"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-mobile-backend-results.json",
+      "sha256": "3f7f41aa562dcf6d7118abd35b022f0eb8ca342cf5dda4ed26e4e19e23c5110e"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-mobile-resume-results.json",
+      "sha256": "9687bd487dab6ad6626cd94eafa7627a1875dee383a8cd3a74b80273fd71e12d"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-simulator-cli-results.json",
+      "sha256": "43417ff90b084113d056f2369b85148d42baf7c57a2948d0da6d0cc852b9526a"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-ios-picker-results.json",
+      "sha256": "1e4c40128975d541d40d79724e4e5a2336934018492517e9d1f8ba83d4564445"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-release-receipts-results.json",
+      "sha256": "736dbf3b2da1150b1b7f8a0a1c83ad2e8e584542b1b439ec97391a22db0a438b"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-native-entry-results.json",
+      "sha256": "52a18fb483728cd767408502e99930828ea8ff40390ece4222b4998b7e9d088c"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-files-host-results.json",
+      "sha256": "f675d416d0ee15ae7f633727fad6cd6ab8362f066763d1c5781dd02048238d0f"
+    },
+    {
+      "path": "docs/verification/p5-02-task5-real-messaging-results.json",
+      "sha256": "0661428be23378b6a7b4912241fed435490e963fed5dda02b6bb10a74673698e"
+    }
+  ],
+  "backend_source_commit": "24d71cd9c9ff3ba2322cf4ff5f1a2bebdbd1ec53"
+}
