@@ -1,0 +1,1093 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "passed",
+  "tested_source_commit": "60fe84b2eaf19b424d76c7450380fe74d527f1bd",
+  "scope": "Android API36 AOSP ARM64 x2 plus iOS26.5 iPhone17Pro ARM64; three independent installed instrumented Debug application processes against production Go API/outbox/receipt workers and owned PostgreSQL/Redis; synthetic platform-bound rotating-refresh identity issuer",
+  "physical_validation": "deferred_by_user",
+  "four_platform_complete": false,
+  "task9_status": "in_progress",
+  "native_framework_test_count_collected": false,
+  "count_basis": "sequenced native actor assertions, actual UI checks and independently queried database checkpoints; native framework test count uncollected",
+  "participants": {
+    "alice": {
+      "admission": {
+        "role": "alice",
+        "platform": "android",
+        "nonce": "6f94e8d665bfb1b558fcfc125661956e",
+        "pid": 2207,
+        "user": "00000000-0000-4000-8000-000000000231",
+        "device_id": "e180eca2-625c-483f-b076-e5a08e820530"
+      },
+      "vm_identity": "5fe8eacc-7c59-490b-b2a6-c06a571239e3",
+      "pid_start_identity": "2256",
+      "retained_installed_digest_verified": true
+    },
+    "bob_ios": {
+      "admission": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "1199f3f8e8ce87a939ba3c4ef17a0b5a",
+        "pid": 17460,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "2dfbe04e-c071-40ca-9fee-9f7a265d28f4"
+      },
+      "vm_identity": "A0DABD15-0489-431D-B145-7533500BA40C",
+      "pid_start_identity": {
+        "pid": 17460,
+        "uid": 501,
+        "start_time": "Sun Oct 18 15:34:44 2026",
+        "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/A0DABD15-0489-431D-B145-7533500BA40C/data/Containers/Bundle/Application/75DA5C6B-5607-4033-A7DC-41BC98EB75A1/Runner.app/Runner",
+        "executable_sha256": "7fa213025c0b09e96eab746417b71af7076cd132cd199fde7e741198a941fe1f",
+        "workdir": "/",
+        "pgid": 17460
+      },
+      "retained_installed_digest_verified": true
+    },
+    "bob_android": {
+      "admission": {
+        "role": "bob_android",
+        "platform": "android",
+        "nonce": "fde5ba4361cc5dfd0bd177b56789b790",
+        "pid": 2009,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "56a9374a-2b42-4a9d-b7ad-44529fa6619f"
+      },
+      "vm_identity": "067dfa19-2d8b-4a3f-847f-7b549d8c2d1f",
+      "pid_start_identity": "2672",
+      "retained_installed_digest_verified": true
+    }
+  },
+  "binaries": {
+    "android": {
+      "file": "cross-debug.apk",
+      "sha256": "602cf555b06834ebe5e133e60a303a69aeff1fed9f60cc60b8c372b550773fe2"
+    },
+    "ios": {
+      "file": "cross-ios-debug.zip",
+      "sha256": "a7343c05340c698a89cefb19bdbbac8d27a8f1a3cf47a75a7158ebaaf92068ff"
+    },
+    "credentials_created_after_build": true
+  },
+  "checkpoints": [
+    "registered",
+    "first_sent",
+    "bob_delivered",
+    "both_delivered",
+    "bob_read",
+    "offline_sent",
+    "offline_stable",
+    "recovered_delivered",
+    "recovered_read",
+    "reply_read",
+    "done"
+  ],
+  "database_final": {
+    "alice_sends": 2,
+    "bob_sends": 1,
+    "device_delivered": 5,
+    "device_read": 5,
+    "devices": 3,
+    "distinct_client_ids": 3,
+    "max_seq": 3,
+    "messages": 3,
+    "min_seq": 1,
+    "user_read": 3
+  },
+  "network": {
+    "uid": 10150,
+    "comment": "IMCROSS_13F52B926551",
+    "packets": 17,
+    "rule_removed": true,
+    "observed_probe": {
+      "network_error": "timeout",
+      "network_status": null,
+      "cursor": "1",
+      "seqs": [
+        "1"
+      ],
+      "read_seqs": [],
+      "summaries": {}
+    },
+    "post_send_stability_wait_seconds": 3,
+    "total_network_cut_duration_independently_measured": false
+  },
+  "host_runner_actual_exit": 0,
+  "backend_actual_exit": 0,
+  "production_process_lifecycle": {
+    "registered": 3,
+    "lifecycle_verified": true
+  },
+  "same_native_process_and_device_through_recovery": true,
+  "automatic_catchup_without_manual_refresh": true,
+  "sender_second_message_read_visible": true,
+  "native_leaf_os_exit_independently_observed": false,
+  "native_leaf_os_exit": "unknown; owned simulator deletion and original process absence are separate observations",
+  "shared_flutter_tests": 248,
+  "analyzer_issues": 0,
+  "full_python": {
+    "commit": "60fe84b2eaf19b424d76c7450380fe74d527f1bd",
+    "actual_exit": 0,
+    "discovered": 298,
+    "unique_discovered": 291,
+    "failures": [],
+    "errors": [],
+    "skips": [],
+    "cleanup": {
+      "removed": true,
+      "failures": []
+    },
+    "validation_root_removed": true
+  },
+  "python_counts_include_new_contracts": 11,
+  "review": {
+    "fresh_readonly_reviews": 1,
+    "important_findings": 2,
+    "fixed": "exact seq2 sender read+PNG; integrity read failure cannot bypass cleanup",
+    "unresolved_important": 0,
+    "deferred_minors": [],
+    "second_review": false
+  },
+  "audit_diagnostic_history": "First audit compared newline git status against NUL baseline and rejected; preserved log. Repeated with identical NUL format passed. No source or business result changed.",
+  "failure_history": [
+    {
+      "run": "run01",
+      "source_commit": "f972c306c8e32eeb98b302949e3ed348bb3f276f",
+      "status": "failed",
+      "reason": "real_backend_prepare_failed",
+      "passed_checkpoints": [],
+      "original_cleanup": {
+        "failures": [],
+        "private_removed": true,
+        "root_removed": true
+      },
+      "separate_recovery_cleanup": false
+    },
+    {
+      "run": "run02",
+      "source_commit": "446de6944b835f2112b721bf8022b5c316a9e6e0",
+      "status": "failed",
+      "reason": "actor_apk_mismatch",
+      "passed_checkpoints": [],
+      "original_cleanup": {
+        "failures": [
+          "RuntimeError:android_cleanup-package-absent_failed"
+        ],
+        "private_removed": false,
+        "root_removed": false
+      },
+      "separate_recovery_cleanup": true
+    },
+    {
+      "run": "run03",
+      "source_commit": "f72f61cc4256bbc265a3f1d909ea28a450dd13ab",
+      "status": "failed",
+      "reason": "native_actor_failed_bob_android",
+      "passed_checkpoints": [
+        "registered",
+        "first_sent",
+        "bob_delivered",
+        "both_delivered",
+        "bob_read"
+      ],
+      "original_cleanup": {
+        "failures": [],
+        "private_removed": true,
+        "root_removed": true
+      },
+      "separate_recovery_cleanup": false
+    },
+    {
+      "run": "run04",
+      "source_commit": "46f97b43372023e4a762a96eb4f85357dd01db15",
+      "status": "failed",
+      "reason": "native_actor_failed_bob_android",
+      "passed_checkpoints": [
+        "registered",
+        "first_sent",
+        "bob_delivered",
+        "both_delivered",
+        "bob_read"
+      ],
+      "original_cleanup": {
+        "failures": [],
+        "private_removed": true,
+        "root_removed": true
+      },
+      "separate_recovery_cleanup": false
+    }
+  ],
+  "resource_and_preservation_audit": {
+    "source_commit": "60fe84b2eaf19b424d76c7450380fe74d527f1bd",
+    "processes": [
+      {
+        "pid": 95529,
+        "same_process_absent": true
+      },
+      {
+        "pid": 95552,
+        "same_process_absent": true
+      },
+      {
+        "pid": 95700,
+        "same_process_absent": true
+      },
+      {
+        "pid": 95721,
+        "same_process_absent": true
+      },
+      {
+        "pid": 95962,
+        "same_process_absent": true
+      },
+      {
+        "pid": 95975,
+        "same_process_absent": true
+      },
+      {
+        "pid": 96938,
+        "same_process_absent": true
+      },
+      {
+        "pid": 97002,
+        "same_process_absent": true
+      },
+      {
+        "pid": 97012,
+        "same_process_absent": true
+      },
+      {
+        "pid": 97024,
+        "same_process_absent": true
+      },
+      {
+        "pid": 97206,
+        "same_process_absent": true
+      },
+      {
+        "pid": 97229,
+        "same_process_absent": true
+      },
+      {
+        "pid": 97470,
+        "same_process_absent": true
+      },
+      {
+        "pid": 97818,
+        "same_process_absent": true
+      },
+      {
+        "pid": 99388,
+        "same_process_absent": true
+      },
+      {
+        "pid": 99437,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1345,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1406,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1419,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1431,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1433,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1472,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1477,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1477,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1938,
+        "same_process_absent": true
+      },
+      {
+        "pid": 1961,
+        "same_process_absent": true
+      },
+      {
+        "pid": 2104,
+        "same_process_absent": true
+      },
+      {
+        "pid": 2116,
+        "same_process_absent": true
+      },
+      {
+        "pid": 3378,
+        "same_process_absent": true
+      },
+      {
+        "pid": 3437,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5698,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5822,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5832,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5847,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5849,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5886,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5891,
+        "same_process_absent": true
+      },
+      {
+        "pid": 6450,
+        "same_process_absent": true
+      },
+      {
+        "pid": 6500,
+        "same_process_absent": true
+      },
+      {
+        "pid": 6505,
+        "same_process_absent": true
+      },
+      {
+        "pid": 6505,
+        "same_process_absent": true
+      },
+      {
+        "pid": 5891,
+        "same_process_absent": true
+      },
+      {
+        "pid": 7166,
+        "same_process_absent": true
+      },
+      {
+        "pid": 7655,
+        "same_process_absent": true
+      },
+      {
+        "pid": 7679,
+        "same_process_absent": true
+      },
+      {
+        "pid": 7845,
+        "same_process_absent": true
+      },
+      {
+        "pid": 7891,
+        "same_process_absent": true
+      },
+      {
+        "pid": 9667,
+        "same_process_absent": true
+      },
+      {
+        "pid": 9695,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11436,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11499,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11515,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11527,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11529,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11568,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11573,
+        "same_process_absent": true
+      },
+      {
+        "pid": 12145,
+        "same_process_absent": true
+      },
+      {
+        "pid": 12186,
+        "same_process_absent": true
+      },
+      {
+        "pid": 12192,
+        "same_process_absent": true
+      },
+      {
+        "pid": 12192,
+        "same_process_absent": true
+      },
+      {
+        "pid": 11573,
+        "same_process_absent": true
+      },
+      {
+        "pid": 13011,
+        "same_process_absent": true
+      },
+      {
+        "pid": 13035,
+        "same_process_absent": true
+      },
+      {
+        "pid": 13169,
+        "same_process_absent": true
+      },
+      {
+        "pid": 13184,
+        "same_process_absent": true
+      },
+      {
+        "pid": 14914,
+        "same_process_absent": true
+      },
+      {
+        "pid": 14974,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16806,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16875,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16884,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16896,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16899,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16935,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16940,
+        "same_process_absent": true
+      },
+      {
+        "pid": 17503,
+        "same_process_absent": true
+      },
+      {
+        "pid": 17548,
+        "same_process_absent": true
+      },
+      {
+        "pid": 17554,
+        "same_process_absent": true
+      },
+      {
+        "pid": 17554,
+        "same_process_absent": true
+      },
+      {
+        "pid": 16940,
+        "same_process_absent": true
+      }
+    ],
+    "roots": [
+      "/private/tmp/im-cross-d3sw7ejf",
+      "/private/tmp/im-cross-dzl037bu",
+      "/private/tmp/im-cross-8unm8bua",
+      "/private/tmp/im-cross-_56xlzf_",
+      "/private/tmp/im-cross-tgjf97x6",
+      "/private/tmp/im-cross-python-4pmgh_k6",
+      "/private/tmp/im-cross-python-qj3g9tqj",
+      "/private/tmp/im-cross-python-6nc2y_zk",
+      "/private/tmp/im-cross-python-s0rd2ig7"
+    ],
+    "old_raw_verified": 310,
+    "protected_reports_verified": 68,
+    "checkpoints_verified": 11,
+    "main_status_unchanged": true,
+    "ios_simulator_absent": true,
+    "owned_containers_absent": true,
+    "owned_android_ports_absent": true,
+    "ios_engine_unchanged": true,
+    "fixed_sdk_tracked_source_clean": true,
+    "all_owned_roots_absent": true,
+    "passed": true
+  },
+  "go_full_race_rerun_this_increment": false,
+  "remaining_gates": [
+    "physical Android pair deferred",
+    "Windows and macOS native business acceptance",
+    "full Task9 group, file, revocation, retention and restart matrix",
+    "customer interactive SSO",
+    "distribution signing and notifications",
+    "remote CI and customer/production acceptance"
+  ],
+  "no_remote_actions": true,
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/baseline.json": "20bfcf09ffdd927fd009c43b359f8b9384fc8e2b0d49662f25b63d2d5003f743",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/contract-green-exit.json": "98786e9bf1c92169749dc597a0edb6a805b5e5d93f3f6f20633ad86038f4861e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/contract-green.log": "9b6e5e0def996213293171ce81443b855dcbcdf214e164660ded9481172da2d4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/contract-red-exit.json": "3c34fe905903736788d16dc76742cfcc26eb060d495facdb39021b3eb0799e68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/contract-red.log": "8210a0f77e876423eafc28fd6f0fa87a72fd9f322a10512bd2234cb1dc4ff510",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/diagnostic-adb-cleanup.json": "3cb24b654eb23945b62515cb04ae1f973094a998012064664554883fbeb47818",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/inventory.log": "bab2326bbac6471fc020a4e3723bd8c25ae8d0ee8eda41b8ecd5754661ec518c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/python.log": "61b93f516c3c7fc6a29cf58a4985845443039559b91348e7c0ddd311e8e7842a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/python.log.stderr": "3ec73f296e9aff10d89b1d53b233383b254c1bbbb71d024dcdce502d7b374038",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/registry.jsonl": "6b75badf1cbc96aeabce897aa025d7251098474d21c142904cb2b7f34e7dbeff",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/result.json": "ab63dc045a4d7a05e4e4d386269844ad767d3519eae0ce51a9c90d256a172327",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01-python-final02/standard-result.json": "8f639135adfe7fe590ea1b42c2cf06d48f49b843eb0497b1c4671cfaaeb1ec80",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python01.json": "74cd01990a5d1031ad831eef3f2b2040e9f14b263b1993862b1c80b040a4f638",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/inventory.log": "edc51a1d25cce9bed50844a49f7a9d042bf1af58115ec96350fa6e4416e5be0a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/python.log": "9e5f603cf21a6017b7995571640e85c8998047e6830e91e3b99bd2bfc28826a5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/python.log.stderr": "d9758973b4a6aa569dd8169ea891374032bc91f48c678b4616f672ad4c5dc540",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/registry.jsonl": "6e13f38ce1cf2483dde9a70dc9afa6b5d48950fadf76f1a78f68e22448b7dc3c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/result.json": "c8932cc03cc7c2f27945dc5e0843f1283af45f1aa54c7f36aac15a942b73878f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02-python-final02/standard-result.json": "eea0a621a4e85886485fa29fd73aff76885531bde9de81022e919b42e6dd0cbd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python02.json": "78a01beddd9927fea0151c4223491f73946394e6b621caf40d7a666b0716bb0f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/inventory.log": "edc51a1d25cce9bed50844a49f7a9d042bf1af58115ec96350fa6e4416e5be0a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/python.log": "61b93f516c3c7fc6a29cf58a4985845443039559b91348e7c0ddd311e8e7842a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/python.log.stderr": "678f96fad2a86f53f5944f7f5f8bb2f6532ac183123606b5aaf95d617ea98361",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/registry.jsonl": "42d193a12ed163efdb4b74f2f04c6f533ce3ede41d77e5eeee4d8ad96c0bc03f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/result.json": "d616e144b924691594ef7fe5cf15d384c018e3ae7fbd5d9207ce3a48d58409b6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03-python-final02/standard-result.json": "eea0a621a4e85886485fa29fd73aff76885531bde9de81022e919b42e6dd0cbd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python03.json": "1c6f3f926f68ae7af174a69d71ce45e473bb991e4122eab666d263ecf941a27b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/inventory.log": "e0b38dc8ddb60df28915d1d67f328456ab53ad59dda56f9f74f14c98e3e39049",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/python.log": "61b93f516c3c7fc6a29cf58a4985845443039559b91348e7c0ddd311e8e7842a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/python.log.stderr": "de5c2cf750228c688f17a3f79c6b60a7179e7cf36db8b50363f311301d5fabf7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/registry.jsonl": "8d263a7d9b1ddddb62a3ec22a5322a0c288b1f9769d822eef229ef10bb26ca79",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/result.json": "a5bfd77f174b9c7c2b47a3df72a5935dcc00d86366bc13d53564bb91047c0b6f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04-python-final02/standard-result.json": "7f8db0699e8e6b31fbf54544b5c9bba338a8ae16af7e4d5557fc3f6f93027981",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/full-python04.json": "e126090358d7c103da774832b3afae6560823b00f4f0e15beb6fb476637f346f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/go-compile.log": "d8702ab1f4d0c14d70f50c581d05340cf2859f1fb221f2ce0a7b245735b102c9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/host-invocation.json": "89ef620ce934829d3387ce15f1a41ec5116832b4265be1f23b76644f8a03ba81",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/host-run02.log": "cd37db5d974b672b617fff84f4670498cdbaf83ff7187bef4791c455f9101d13",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/host-run03.log": "4c98633b62a4ff8b9dd3bcd7761e9a0ebf2a8f9215aad4480b894b95c5d8607d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/host-run04.log": "390b9d147c696bf3f27e2a1f8aeb386bb570aa51fc63a2113ad345dbca8c9ea9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/host-run05.log": "bdabc442b83d7271cf860939aa27fd757b4e22cbfd36727ac62b94d491e66d98",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/host-wrapper.py": "bbb40a74fac11de0905b28d4bd715d3204a928940f1fc6b5a633f0705c2db90d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/host01.log": "138c23da4e8e542ed55ae3ff68e45db75e35977afbc9c48ba14ceaf30619b7af",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/offline-green.log": "0d3378d3877294984a1472d2b7258f5baa4674f626cf9be6b68a5c973d210b2c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/offline-red.log": "01a3053e824075e56e72bb03b569b4910da178cd1082959dbbdbd0198fa278a8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/resource-and-preservation-audit.json": "f577498d44e99db17815a73e47ddef32d525aa34f37974ba901e48a82cf228db",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/resource-audit.log": "5b1ebcb0704a666e3972f08782890416b7d620ce2da1a11355f98841c13ec4c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/resource-audit02.log": "285f83237d91dae61cc09c91f4a55cc7a18ae60c12cea0d308c316a3fb5010dd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/review-green.log": "d9d734ee1c2de67b748aeef1c4126433aa438ad8375ca953916f12b1df11414d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/review-red.log": "77ca04bc57e5d1bdfce0ad81acb118af4b3fb24cb40f91aeaf64cbef2c54367b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/review-resolution.json": "66ce9797f968b5bcdedc695bae0c6853d2470f6e1f5781d48db0c93bad474dd9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/analysis.log": "1b5b860f3b65c266f4268238a321f17be08192cf831dda7783ec7915469b6323",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/backend.log": "bb929014c75798c13f2853a425cbd2b6ff2f84fe1ad56e0a8f3ff9a8f491ca11",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/build-android.log": "3060ebea159013b6ccb2dcd47f22cf8b2ac258c7ba354c67460de6a007117ea5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/build-android.log.stderr": "3f2f448ba0c709fa59909f031eeb3fcd5aae8ea6232968464e018458a7da4fc3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/build-ios.log": "ae792782e88f5405cae71f11be0b184454f43ca90cb7b910f15d1e6a3fa617a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/cross-debug.apk": "0f7f1dcb313cc6e46e9a287577ca499e7226bec9e5cace7e8dd4baa051845c93",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/cross-ios-debug.zip": "ef38cb2d64e6e5d64ba01847f3fa949323f911fb5c18ef8e8557236a113e08c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/registry.jsonl": "e7042e2fa90abe79594eb6a2ae877bed09de66bb0c1ea7eb673e372521806531",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/result.json": "a912f18e9081cb3cc0063f83aedb04cfafcf72a5f0e9dc1e75c23493d1c6b2e9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/shared.log": "ccba540a6bd968201d7026e49df9f451aa13ed7ad907b8be43708fb953d8028e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-adb-server.log": "8bc5bf85c08eaddd4cdd10bd29063a9bfc579a1689dd158a5f5a48f24ea34f7a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-avd-create.log": "33b63dbb7f5d356e0f29017195c78c6a0100a5429b32b98d71448b6831d4ad7f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-boot-id.log": "d1040813a687bc2ed296a48b5b819aa7f4f7b2a62f9f49cb8d3bfb3a46ccd6e9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-canonical-ro.boot.qemu.avd_name.log": "93d6d5df8188b1cb94707078f98d25fabef0c4fa1e88e93a98d26a3f82c6b93a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-cleanup-owned-avd.log": "2a21250c5037924636821a9c894a0185b8de8ed3eab71765ce2d6e86165ec1fc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-cleanup-package-absent.log": "a7d0391f2b9ecc7dc302d6ca042251f413b26e1f1ee29d396e7db3df0701640f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-cleanup-uninstall.log": "a7d0391f2b9ecc7dc302d6ca042251f413b26e1f1ee29d396e7db3df0701640f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-emulator.log": "ce1a138d2042a70b9e1c44a010cccadc26e8a56d47663c00bee1c2e151974770",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-identity-ro.boot.qemu.avd_name.log": "93d6d5df8188b1cb94707078f98d25fabef0c4fa1e88e93a98d26a3f82c6b93a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-install.log": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-installed-path.log": "bea9b85904769dfc2d09aa9d9308d7cc3234d50c0580ff16c9fee38fcbc28dfc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/alice/android-user-unlocked.log": "fcdddefc71caa18a2603c42e8f013b973c659b491cf61b046bb482988c277ded",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/analysis.log": "1b5b860f3b65c266f4268238a321f17be08192cf831dda7783ec7915469b6323",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/backend-facts.json": "1774bfaeb630b6bc9a8406db361862fbe66cabe5fb9e8a26e1afceb6d776ea14",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/backend.log": "99c2782d8610ba9634e4f274d6786e7c962ce8aae1c9e504b41ad83cacbbe3e1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/build-android.log": "65d680b5327bbc29ade90c50ef95a0189e4cffa8b8eebadb26cf4d143cd68c98",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/build-android.log.stderr": "d4a21c33cc84e02b0752a8d568ca8e2c2d9d96164341046e5889e361e979cfb0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/build-ios.log": "21a47aeaa171c5a18004aa39b0555783dbe28639b8ecc00ea6c6ee4dced19eac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/cross-debug.apk": "486e254a71b4d0650b455444cf0f8b8d6eac2c2a7fb6bdc4c571d87e591958eb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/cross-ios-debug.zip": "5ad265413e5aaf6693c80b6956566bf3553700496f75a409b29b49d382499f36",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/recovery-cleanup.json": "f8979e989b2043bba3117400fab01b5c77194f68e11a7071ebed5025cb3686fa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/recovery-registry.jsonl": "d8049d7d5588cac803ff74239193825f30200f8a0eabf68e23748c6017282f00",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/registry.jsonl": "5ee9145f2a7534fdfb5634f5a81ac33db6fe5854307816b75bb86e238784132e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/result.json": "fdd970fb25817a30c635c7960e0eb3d1f3020e63b533f13218f31cdfb4ff40de",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/shared.log": "0c18a7ae69574b049a3607c1b13f4b38ce44ec0062454a7c7c8157a63ad2596c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run02/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-adb-server.log": "6525b0decb978971b6cca40d4c2e093ed27f2c7a1a6a5bc4e2e901966e06bcba",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-avd-create.log": "04182e5fd0398a11caf127c0df54b2ba7705a6d856bb9d300b06136fd9daa2ed",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-backend-reverse.log": "3fc96304cd506d8a7c24bb96d5114b952ab39e436bbab8c13040569b1afa2697",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-boot-id.log": "998c41b75fab82150ebf2053e920b4dee488e0d6158df4264c2b4a99cfa5e6a9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-canonical-ro.boot.qemu.avd_name.log": "2efffbab0948e41cfa0c412a1d292d5c10521ea6f3a33a4a58caaaa92dcb7f47",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-cleanup-owned-avd.log": "2d8512c39b739b3252ec03b3f4a39ecaea01b98ba2aa9c52ce411fae869a6da4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-emulator.log": "2ed612535ef47c4126814230d4ce4ef93b7c974f8cb452c5ba5c7fda40694a18",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-identity-ro.boot.qemu.avd_name.log": "2efffbab0948e41cfa0c412a1d292d5c10521ea6f3a33a4a58caaaa92dcb7f47",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-initial-pid.log": "9f0904d3852560721474617739366f9f8c3882b47429be10036b79279472bd34",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-install.log": "42c27d420b79717baba82b2952c9ab187d7b66ab9297df3bd4a564ee391edff3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-installed-boot-0.log": "998c41b75fab82150ebf2053e920b4dee488e0d6158df4264c2b4a99cfa5e6a9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-installed-path.log": "7c394857ece2adf9db92bf13f4df7eb2689ba77d6d9c46f4b6e62ee27adcb61c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-installed-sha256-0.log": "08cd7d1247cd84eeaca0a95aa13ffe52031f6f3b8ff4bfa3c570357ab9b77d87",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-package.log": "62cbc62d100c5ef5919d4aa914407f0b4dc183294278d10ad311577f86cc89f3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-start.log": "bad21146e388fec2dbee0abc94ca9938b5332fad2bef674228b349b051dbc7d0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/android-user-unlocked.log": "a46d36dfa8955111e68bb0d292ef3f53061d787f94891a722598334092449485",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/state-0.json": "0010e2b649ec6aa857a8e1b7f32ca0119a84be723e9d6469d2377548f21beca0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/state-1.json": "af3e1eab4434fc932c845cae3dca7805c132a04b60459bc18148dc1f8c7b381f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/state-2.json": "b71ee086cc7613897734296878eae04cfacc371d8df41edefec1b7f8950770b2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/alice/state-3.json": "fb50131d0b3bd6ec588c5b86173d6877a6303f5d93ebf1ed3f272b347bdaf1c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/analysis.log": "d19684afedd4c74bdfa511d7d57e26bb431b5250928f5d4f5a9340a7d93af417",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/backend-api-events.json": "0b3e1b19500adf5009674f7bded358d5feef6e9b1156b120599a3f4df476f4c0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/backend-facts.json": "25962d91c67bac3b949323aa3785f7f96a53adf0c90d70508fb23297127c11bc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/backend.log": "23c24d476d48042e88bd312693816338b17cf19a74ac43b59278fe07db5ab550",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-adb-server.log": "49f7b71e81494674624b0c74a72dab55e232cfbd665a8e966d09abfa3c27e319",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-avd-create.log": "1365e03478a8cecfcb3bfdc45e2066163dc96f744e647f93ebbd8e7f772bf213",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-backend-reverse.log": "3fc96304cd506d8a7c24bb96d5114b952ab39e436bbab8c13040569b1afa2697",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-boot-id.log": "c2e62ccd1ac5bf953a027a1f9418ef3c0ca52bf48f9ef642569a8c38645ad4be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-canonical-ro.boot.qemu.avd_name.log": "1508cdd32ae8c11b4c915c8c047f58d9075336371a5c8bdc6c8ee88f2c5782be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-cleanup-owned-avd.log": "8cb0569cdff6d2bbd1be8242439627429d0048e0cb659436433ee8d314b96a51",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-emulator.log": "c5399f3dcb55287b590cacbfab8768fc0d05545b0ff3404ee59c948d85718dd7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-identity-ro.boot.qemu.avd_name.log": "1508cdd32ae8c11b4c915c8c047f58d9075336371a5c8bdc6c8ee88f2c5782be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-initial-pid.log": "686362a04233ce11b446c6446a4b6ce735349ca3d0d967c835dc47d49dcf8e45",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-install.log": "28b65a4343bcaa4520a824f51bdf8a1b648c85c3ee616ce98160c694824c1bb1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-installed-boot-0.log": "c2e62ccd1ac5bf953a027a1f9418ef3c0ca52bf48f9ef642569a8c38645ad4be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-installed-path.log": "ff0954b77dda0deb085883e349b5da88c7415278e47aa1e8ade9688f8497e95a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-installed-sha256-0.log": "5313d5de36f785fddfdb5934de0e31ac67ff42f671d76ddb1ef187f1d57061a2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-network-cut.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-network-finally-restore.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-package.log": "841e7ec0110d085e18a7c19259dbee1b260a406d4794636bd60070ef33d2059b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-start.log": "d3b6793e7f8475e8a6a221578727c6eec044f4b827987f9c6c63a13adba5473b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/android-user-unlocked.log": "3791eef4bf0d7f0fcf9ff3494b2c59774e0f7f77f9495db2e9609a02d41eb901",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/failed-state-2.json": "26efb3f5cd42823aeedb0879203466f39bb7bc3421ad8f0ebd33fd09746e6053",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/state-0.json": "6319b247e7b2eba367028ee22791a126a710e7fcc4613d28e236b7e297a36b6c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_android/state-1.json": "53ea21d394309cd63f234d455d139a9a40b3c8eff09705df4243350c379e29b5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/bootstatus.log": "a6490ae9a287f4ffd34ecf1769925cdc0bcb8ad0e8b36ba8ab6effa84af25cd3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/create.log": "e3fec0eb18420b463d46055c27382a74549bd3a545f7ea3eec12852c67cf2d7e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/data-path.log": "81266f6dcb39db6cc0dc2f12a6196ce31223267bcf5c6dcde0ece628e6ff76cc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/first-read.png": "e29739ad0e5e2a09fe75a52dfb9ec2e9ecab89b767683d40d1c77b5f6b54fff6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/installed-path.log": "b2d49744102cac0580514243ef5b68c43840493194d1eb86a8bf1754d8e45a09",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/installed-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-0.log": "3e94b5a3636459684194f28ff9b79701dcca1dfe1f97aff65fd41b3228ace85d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-10.log": "e96e4b95e769c5b2c28d12f8770e3496d2ea7a8e0ce801ad5bf3511b5090b125",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-10.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-13.log": "3e94b5a3636459684194f28ff9b79701dcca1dfe1f97aff65fd41b3228ace85d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-13.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-2.log": "81c7e2fff2885cdc6af090b4175a0c071d8b73b25308d9e71dbad4a1016a1417",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/launch.log": "faafe7a864c5a8fac7e2c6ce41c98aaecf45503c37f36d67f7d7b9b4eeb94ee9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/screen-first-read.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/screen-first-read.log.stderr": "20969be21e59f7b831185948581db9d41864bb10b34e534ae9057aedc5ffe8fc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/state-0.json": "b5f2ada53c7d3742bd0e0651cb8431d3f6932565241bf46a9e63504a4df43d38",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/state-1.json": "73f18043bd5720305517530a249e50ed281f3dfbb27ae1ddb4ddfd75fe6347fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/bob_ios/state-2.json": "e79c442367107be98cc642acf9099eb30b82ca0f0ea9f23a1be7f4660f8c1863",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/build-android.log": "104ed7eb1f75553963cbd6fed11624101d9e63054574865a25792ac394aca3dc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/build-android.log.stderr": "9a62b2b4a8f2cbf8fb21b37f6306736440fd56537bee4662321d2007f5a3ccce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/build-ios.log": "75175aedd371747f2f10faee9ef06b4be39fc9b7d57db727015e663686ece427",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/checkpoint-bob_delivered.json": "12afd2978e58347a1a2ca89a229f04f092a23dee3306ac7f3a6e4e400c4d8dd1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/checkpoint-bob_read.json": "bb7cb1fafcef2cc1392e4ea2b5e9b9ecf302c6937e73d7e43354fcc5fd3188fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/checkpoint-both_delivered.json": "f9508c06064a3c90b1fa6412a43b5d896d886dbae9562e11132c416556ef5198",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/checkpoint-first_sent.json": "ca54c166ada3ab810a1614209fc886ea527e2fdadab3291ceabbacce0bdad379",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/checkpoint-registered.json": "a8c86d71d30e690f8b796ecdf34a9da0a2b14d840eb3d74ae1e5585de508aca8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/cross-debug.apk": "bc38669c4d73c4fc2b8161f5f743101d52e016be99e37f4a88330720ea8c6d34",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/cross-ios-debug.zip": "f596286031605482ab42a51988e2d8317d35b5c1ccad471edfbb6e951a093309",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/registry.jsonl": "06f55e260519504d591422935e86e2db1c075f48a933a08253876b7d49f641b0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/result.json": "07a3ee0e2bf430ab4ac4bb47ca5d7b8726530cd094528138df380902eade8ef0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/shared.log": "99513996928de647dddcd07ec50c1c72f5f9cd816c6c72f9355cc1f210bf56a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run03-probe-diagnosis.json": "069bae8b326d73752f762d9876b106bcf43d54d07f9061460642f71cac3de5af",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-adb-server.log": "54038e92297b9a1ccc5ab08c3988a00b5602caca94233219d07d5aba4a0e0eee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-avd-create.log": "45471810974d3d10822902cb4b68e7f43be8c757e38616af74851bb3d9d1d1fa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-backend-reverse.log": "82e4bcbe8d8312935f82abc44680174ecb62a96bc5143e7530cc40adffa9aa3f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-boot-id.log": "7d33abb254f246a42ad2693e6562c048c1a204dfabf94a4050bcab259852a7e9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-canonical-ro.boot.qemu.avd_name.log": "741d0d8547059a2aac5a73014bcd6f9e79db4db069df5876b0b58d39095fbd8e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-cleanup-owned-avd.log": "c9cf869959fe308eb604fdd4af70b014abc8d53e22daf07b8d7089ab4211564d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-emulator.log": "c52f60bbd2e046a8d0373105cd0787853b1548548a8db3c4204074d4009a334a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-identity-ro.boot.qemu.avd_name.log": "741d0d8547059a2aac5a73014bcd6f9e79db4db069df5876b0b58d39095fbd8e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-initial-pid.log": "a6b5fef32af27b5e66a7ff513d30381dba837452a26afcac6c36370f1e015032",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-install.log": "55800b2925bf0fdb096137291b59009d0d70960ab097f640aea674e66b6d9159",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-installed-boot-0.log": "7d33abb254f246a42ad2693e6562c048c1a204dfabf94a4050bcab259852a7e9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-installed-path.log": "891b8afdb7f270fca6a73f0509f50245eda6cf9f0029bcc74a14f758978cca8a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-installed-sha256-0.log": "99a204e39194528395a7b03d94002ac534cd52d1a6cf5993965361b1bac596de",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-package.log": "dd9fd61640b439ce320248c83d0eb14571abbd98ac956c330c840dcca4027d75",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-start.log": "be309a72575fbe6200a6977e92fdcce2fbe4d85821a444ddc83b25cfb0526797",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/android-user-unlocked.log": "f6631dde8d924841eeefdea530685cb7d9450c1aa57ec6b5ced500964f8885f8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/state-0.json": "81f1004103dff42f43d722b71d646d6d5d8addb7d8d08801e24a5ceddbf21f19",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/state-1.json": "1fbca1801e635ae05ae47daf2c23e8b34b7b0695252e43f5fee42f7da90e0f9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/state-2.json": "19527fe9c7cd3debb418c0d2b71c1d6e4ad07e97d3513a18feec030a92e26309",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/alice/state-3.json": "d7ffdeb4eabc0109de52d9c3f3358006efda9ad5a66b8b338a9d7812bbd763b1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/analysis.log": "d19684afedd4c74bdfa511d7d57e26bb431b5250928f5d4f5a9340a7d93af417",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/backend-api-events.json": "3244465bf3fa76d8dea4023a7e722f0d9b8b4c8be87c0163780edd9f684caa68",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/backend-facts.json": "25962d91c67bac3b949323aa3785f7f96a53adf0c90d70508fb23297127c11bc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/backend.log": "0be0563559de8b0551a55cf94024f92b9a1d58008ada87d1fc3be33b4467654a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-adb-server.log": "c5ef53b6b8539d89d75014a655e98eb736bb148962c8224a9a031177c387ab1b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-avd-create.log": "145df6ca98f5fc8e1186cbb2882ba470f671bf92226d9d1e766cc9d1b310b810",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-backend-reverse.log": "82e4bcbe8d8312935f82abc44680174ecb62a96bc5143e7530cc40adffa9aa3f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-boot-id.log": "d492485d8f7adc6404f6a90056a160e281842875311827ed00b34bc19a519b64",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-canonical-ro.boot.qemu.avd_name.log": "810a926857c098d240b17011785f2043c6bc832bb85f6f5c3f1f903e94cf09d8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-cleanup-owned-avd.log": "3d957bac1aa205b5c866188149fe027b29b3227c7ba0fa30236258e1e746f340",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-emulator.log": "afd81a3df7dd9fdd159682ab8ff988b51a76b9f99ec3a6d48cd2b494bd85d5fc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-identity-ro.boot.qemu.avd_name.log": "810a926857c098d240b17011785f2043c6bc832bb85f6f5c3f1f903e94cf09d8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-initial-pid.log": "d9c5667b2933a587e1fe715f3c10733bb39e20276ec627590ff515a6b6a06642",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-install.log": "fbb76162b6baf4e7d909f37bd4ffb70cdc32e2a99e09e3f6a206727bfd6586f2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-installed-boot-0.log": "d492485d8f7adc6404f6a90056a160e281842875311827ed00b34bc19a519b64",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-installed-path.log": "a1ece909ad19f8b68cc900965903572c47ca1dd63185506eecca6bbf91837359",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-installed-sha256-0.log": "e8f58dd512b1ef598ed3e532391d3072ef04c2f14013761579ff0d8fc23287d9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-network-cut.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-network-finally-restore.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-package.log": "2d6b0ded25e5ad00854f1af8aa310a2a981a069a028dc542db9d67a5c256ff58",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-start.log": "7dfd4733a694c59656523db3e2632b292f1421dc762de4cd196eb8d2fadfa2ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/android-user-unlocked.log": "b706827f9aa43e4e6e2818668619638de155483982ad35028a6bb50098864b3d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/failed-state-2.json": "1a8cc52b92d277c9e2977f8ec03d09d3a1733198212aa02ea5d3a149e4231e2c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/state-0.json": "476643eadbb827026a3ed4f69e8c386b97376564c479ef43a54940cff1539f85",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_android/state-1.json": "13554c43d00c6db8c8cf44fb2e3b3f03a8b19f43d2d37b0871654e068d4f4842",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/bootstatus.log": "bf0a5b841ce23c70d4061f39d920b5a870ab95913bb43c6a09906462739c3f4d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/create.log": "5dffb324a2665ab74f7deadd4fd2a09bc9ce53bf1b122c07e21a0f209e890e6e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/data-path.log": "6fd2b3fa1b58eb4ee191e29123f900931ac9f177fac2bcd4be8b09c58212cefb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/first-read.png": "75bbea2ae32a1870bba447ef4c9085a462508580595df55ef1ba65151da7d6f4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/installed-path.log": "8a6c684f007124e6a17524b58c54a5f5793a1225c1fab638e9f8eebc9dbd21dc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/installed-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-0.log": "8e7542d676a2c12b19bef27a186d14bad6fcc241195814180287bd071f516b13",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-10.log": "0dfc67844f0f0a10c9d2431054b4d60f3ca4bff13c27cf2a45fc9d0730abaa79",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-10.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-13.log": "8e7542d676a2c12b19bef27a186d14bad6fcc241195814180287bd071f516b13",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-13.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-2.log": "75a3fe1dcfbe8b2f2f7efa4d9eea25dd4280333e959e0ffb45d31e32256f8cb3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/launch.log": "e5e350e2fc93f32e32df04d6ce86a32a9662808cd9bebe98eeff6b5a6aef1bae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/screen-first-read.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/screen-first-read.log.stderr": "fee467994ef274c64a716c04cd52a8d753477a511492f291403ca4c202f093ae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/state-0.json": "909dff2ec8d6582ea1a2cd7db34c89a72db9cfbb6c9978db52d320dc1ad8f0bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/state-1.json": "a0f85e16572342963feb60a40c297e4dafd6575bf057c9552ce454b4104d7fd4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/bob_ios/state-2.json": "fb32141690cf1bc390859f1d3cb4e207137d82f73597530a4ab51083977f1505",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/build-android.log": "b6cc6a325e7d775294698d46ff161ef198b8444cb2f7d14c6fb1b4155838cd44",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/build-android.log.stderr": "c4ccff354099b12b05dfcc0cad3760db9960e926db71dc247d6e94e3f07770bb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/build-ios.log": "6d2fdb1d6623e2ff9c2077b3857e67075dfe2c262b0038152598c51ef95b5be4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/checkpoint-bob_delivered.json": "12afd2978e58347a1a2ca89a229f04f092a23dee3306ac7f3a6e4e400c4d8dd1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/checkpoint-bob_read.json": "bb7cb1fafcef2cc1392e4ea2b5e9b9ecf302c6937e73d7e43354fcc5fd3188fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/checkpoint-both_delivered.json": "f9508c06064a3c90b1fa6412a43b5d896d886dbae9562e11132c416556ef5198",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/checkpoint-first_sent.json": "ca54c166ada3ab810a1614209fc886ea527e2fdadab3291ceabbacce0bdad379",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/checkpoint-registered.json": "a8c86d71d30e690f8b796ecdf34a9da0a2b14d840eb3d74ae1e5585de508aca8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/cross-debug.apk": "f86f2022b1a4faf8a37ce82af9e70a9d7781207242e10e61543dd0a5f4c4e3d2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/cross-ios-debug.zip": "f6f3f47de45c17cf241cc3b9388b5c0349daa4c6cadb0780b029d48fae3a75af",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/registry.jsonl": "57896afda4079d098055d462150ae80e5f630b7090e3613336b7b93c1026fab1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/result.json": "f846f6edfb0e3fe74195ee2a585da0309094ec2b961d929e99316874dc91d3ac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/shared.log": "2c576024d76922a02f634bbd14c5b0edc689cd438c68ba4f4d55f33eaa2e78f3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run04/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-adb-server.log": "c969873bf0014c982a2fb0470f3a1bbb73255198d0b3af8e10bff659698b7a8f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-avd-create.log": "46ceb2f5300d9f54df45313f59e9de3f30eb74c3875b0d2b43fd9cd683dffd5b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-backend-reverse.log": "4af26df9a9246cc69ae4910634fdf01849584e35277cbadee9e0fa9c7f0c7605",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-boot-id.log": "e433d3a010a83979fa494d44c20a5e2724acff27626ad2ffb6b463acddc15cc9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-canonical-ro.boot.qemu.avd_name.log": "52a8d65c1b344594f650dba8447152efa7dc16b3a59a0b35aecc1394c3058d38",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-cleanup-owned-avd.log": "6594a2a8551d771fc35b2dfba8823127c0cd3e061f92ab37607ff7dff389c2cd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-emulator.log": "74070a53cfa0b554d589b5197c47a245d64f58e4c5f30cfdda0b10cf20e5734b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-identity-ro.boot.qemu.avd_name.log": "52a8d65c1b344594f650dba8447152efa7dc16b3a59a0b35aecc1394c3058d38",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-initial-pid.log": "1c2f28a898a175d9b35aaaf492f26b9a4d2f1388b2f6a8a8bb03b52af39fb78e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-install.log": "de791ff8762b4ff19bc6a257474c58097b8508421cc58dc0fefc51103c39f68f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-installed-boot-0.log": "e433d3a010a83979fa494d44c20a5e2724acff27626ad2ffb6b463acddc15cc9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-installed-path.log": "a9afb581a1aba37914f5e4aec2412cbe195218d5645641a335601f50a8f1af15",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-installed-sha256-0.log": "86e80b6f8d8babaae4c8fd3459019f2c4dcd6eeae38521901fa7c721c3b30d70",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-package.log": "75c5b1ce49661a1198b68b04672e1a7077f25ba06e6b34b38b761bfd65a3f048",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-start.log": "9c3ea2124f0d72573c8d0975fc7fca82ce38829380f5233926af4ee51506bacf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/android-user-unlocked.log": "1b31118519375f55c6b4aa75946459baeada1d2d7001a14e562c2e7c2be6d5ea",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/recovered-sender-read.png": "8ad6749d016777e089e9a83f67ab453dd09fe3c9447761d06061ec39812ea715",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/reply-read.png": "e339e942c9be4c6224d46a38e3e5a085002e0e2b9d1a326993ce185ee06107a4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-0.json": "4e7629e3061a9403ea8a01e8cd50ff2a0b1c68f59c42d14e79693ceb0ef41510",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-1.json": "3ec1e570f0ee85740282e8db68833b5b6ae918c0129e7b6ad6166d15587d5e39",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-2.json": "d32fc2b8b8baf0304684af13beca3c66f67ca94856bf435261a3564663cf5e2a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-3.json": "86283130b2c88a2f9b0d10c7ea2a6a3b88ec5197835c52106875ff46dcf91e84",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-4.json": "192d65def2c3c99590bb8d1ac25d4d6795d46ded5a0745bf4574cf4c646afd7b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-5.json": "8b1c4a0cd1746312bf67b1ce9411fed81fe467b496bdde541087da0a89937304",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-6.json": "f06aab4fca130df21fd6491b4c275da62d8dc6dc3104e4a5248f3a467330f03f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/alice/state-7.json": "3d44b06c6602f6ef75ef32f56a96d442471ae4a3e757838a04116d6807d702ef",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/analysis.log": "d19684afedd4c74bdfa511d7d57e26bb431b5250928f5d4f5a9340a7d93af417",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/backend-api-events.json": "c8011735d08c47a275f00545b72642240da16a8e39cfad532ed15027ed9c5908",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/backend-facts.json": "69ef2d73fa5268ad6bf1b8744af43856f4d9e923aca5b14d6dc48e9b5dc45d03",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/backend.log": "5de46b398a4784bb90c7a5862127246eea4d8c634139b31324ed6d88c25aa136",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-adb-server.log": "217ecf6d0db2c4a4fb213c2a9a7c1702f426c5e9805b91025f1fd1e49692031d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-avd-create.log": "5cd1e4470201505ac2c6dddfac0a58879d17f995de25b73b435e27b0f4c1e66e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-backend-reverse.log": "4af26df9a9246cc69ae4910634fdf01849584e35277cbadee9e0fa9c7f0c7605",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-boot-id.log": "dc80a1e6d3b45e23e8a4ae51a6790a55f365b090e4f0b8fb7e029dee875382ac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-canonical-ro.boot.qemu.avd_name.log": "8b2f94a2cee745332cfeeb8afea4022f667749558cd3913c4e57288710e48b5f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-cleanup-owned-avd.log": "30b15885965291a97851b3ab35a352d510d5e930528133e20c14e65762386db0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-emulator.log": "3dba03a50cc8a8694137962ed5071a7c49b08f6740fbf70e70acace3c03f0fea",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-identity-ro.boot.qemu.avd_name.log": "8b2f94a2cee745332cfeeb8afea4022f667749558cd3913c4e57288710e48b5f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-initial-pid.log": "f57ecfc1e13bf5bc575effdd8785723b8a0aadef6fb0c109bb16fd7af77ac612",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-install.log": "c62deaac38c42c9fd19fb30dbf63f4880edf294404595f8aa738ca6b746904dd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-installed-boot-0.log": "dc80a1e6d3b45e23e8a4ae51a6790a55f365b090e4f0b8fb7e029dee875382ac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-installed-path.log": "f331da16aa28dba91d0a822bed367a5b06ae4cbd16bb53e15afa0745d1149af6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-installed-sha256-0.log": "c53179271c8b739903f58ea8f50eba34255b5aae31b6047bbc739df75e1301b7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-network-absent.log": "e647b93ea0ace29fea182867f7547a11832d05c03e2a689d49dcbb7eaec8bb8b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-network-counters.log": "7c58a435246f5843acd7f368cda5c10b335b70dcc085b44eb611b51e830b5488",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-network-cut.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-network-restore.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-package.log": "1c981c4a9081b7ec2cf76a966c9c49a30ca31528b413164b9daaa1a21c247373",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-start.log": "a67d573abbc51b8b22469914f06fd1a2cd5cb0434bff977f68378c9ebbb34f9a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/android-user-unlocked.log": "0a8ddda277a15ce571812aacff02f9d4b149c8b5210f99f87444ba20a9c9986d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/recovered-read.png": "441c97e525ed46670e0f1ff01d5997cdca259ffb2225cc2530a4d985ed4d803a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/state-0.json": "9b6e140595dc42c30f9f4d156e7dcc945fb147c16d3c0847193a38064f3ede43",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/state-1.json": "803f4c987540db811967c94ffd04aebd11a5b6c5f314d0164bbc9dbd28c25e7c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/state-2.json": "87a85d918685b5ec7f7bb5814dfdfaffd851c33a1b4672b90c29ee350247766c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/state-3.json": "69f227d612819a4453c7063c93a1507299c2836e689e9b64b50bfcd1e6d7db43",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/state-4.json": "23fcddf139de49b0a217e2c14db10dfa1f7e01b89b32a673543a0a681368f2e3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/state-5.json": "fb72f034c244d91c7e270c66cca3abbd30def72ec3b3ec4129f953e0a44ae996",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_android/state-6.json": "d2686f76d21695d79ecdb3270907b6db171a51922b68af214fedec5e29ba6c2d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/bootstatus.log": "c6e30c5e3417e094641dfb4d0983ff766cb4f35c009a386d10a29719e4eafdd4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/create.log": "ba28637c59757b5f546a68862d490e6c8ffbffd0dad504d37693e7b9d1790a4c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/data-path.log": "828262507e32c59c161beed68fdfa01ceeb88ce81c14d1497a26e91e8e719d86",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/first-read.png": "463f9175a647326c30fb4be04e6125545667be132102342fba872b39b44413fd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/installed-path.log": "5c0b4bd082dc6f1b757abcfe7a081f34f58163263c2478c95cbbc4fa88b578a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/installed-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-0.log": "a4375fa25759e3ea4f5ddd80519dc71870ed885300ae1a2226c652811696e8c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-11.log": "0a84dc0e42e2c06cf4c3a3580636e5ee891a0dd766225b3a61dd40ed419631e0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-11.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-14.log": "a4375fa25759e3ea4f5ddd80519dc71870ed885300ae1a2226c652811696e8c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-14.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-2.log": "dae1ee360b1301ae4098c045938c576f82f3c82d17ad38cb37ede8084b5df00a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/launch.log": "6de78559a98b8492c3e1d1b463cbad8f0b6a09ec88adf7a5053b10684d9831ad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/reply-sent.png": "e104598de60f5000296c7dc247e7bdee5aa783b910e39d4de157d94b443be852",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/screen-first-read.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/screen-first-read.log.stderr": "5d82284aa021692ce6985825b6bf8e3223bef1cbaa3068d6b2ef166330938a4d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/screen-reply-sent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/screen-reply-sent.log.stderr": "c107d260425721b7d0c14edf363296144f081dbe0403f8abe50c509e70f2572e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/state-0.json": "cccf90393a1a22e3a950030e642ea964c025b168ef6abc3a8879139a2cc04554",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/state-1.json": "d9ab347b613cd85d533d50ce768370490f9dd25cd48ed0e6216f788be5a308b7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/state-2.json": "ea9ceda20d20857d93d865336f91596cfa0d59ef5242c7d960ffd56945870a6b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/state-3.json": "c22ca87c0920cbeb77a6af53ad1524a197d8bfcf417a801c4c08c5f9ac15a8b1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/state-4.json": "91d3200df9e5a4cab04a07be7c7135fdbac1b887373d83b9574c4b63b49f7de0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/bob_ios/state-5.json": "dd5d18f5dbb5320c2e2469083856f4b8083dca5e5e83ce9f767cf62709b858d6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/build-android.log": "1d02d0f856b70b1c9fbc7fc58478ea475cb4e4c70f280ed7a58087f6ac249168",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/build-android.log.stderr": "57f4d33406d491a89666182a195d4a7bdd58450316af28c8707f59a663aa970a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/build-ios.log": "21a47aeaa171c5a18004aa39b0555783dbe28639b8ecc00ea6c6ee4dced19eac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-bob_delivered.json": "12afd2978e58347a1a2ca89a229f04f092a23dee3306ac7f3a6e4e400c4d8dd1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-bob_read.json": "bb7cb1fafcef2cc1392e4ea2b5e9b9ecf302c6937e73d7e43354fcc5fd3188fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-both_delivered.json": "f9508c06064a3c90b1fa6412a43b5d896d886dbae9562e11132c416556ef5198",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-done.json": "3c33e2ae0963ae61c551d90d2fdcfe9ec915f65473ac4a499c8845897f5de35f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-first_sent.json": "ca54c166ada3ab810a1614209fc886ea527e2fdadab3291ceabbacce0bdad379",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-offline_sent.json": "eeb9697c3ad12909d0c77008106f36e716838e85948dec515462ad4faef9f2c6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-offline_stable.json": "eeb9697c3ad12909d0c77008106f36e716838e85948dec515462ad4faef9f2c6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-recovered_delivered.json": "66d745e6e193eaee2c662ffd05186a1a3a0ac90c2c4bfee5d8e9b83c163d6b49",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-recovered_read.json": "8cdd3410723cccdf6c12b92b2abea9f036821740f4c860e9c08ad199a3869a39",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-registered.json": "a8c86d71d30e690f8b796ecdf34a9da0a2b14d840eb3d74ae1e5585de508aca8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/checkpoint-reply_read.json": "3c33e2ae0963ae61c551d90d2fdcfe9ec915f65473ac4a499c8845897f5de35f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/cross-debug.apk": "602cf555b06834ebe5e133e60a303a69aeff1fed9f60cc60b8c372b550773fe2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/cross-ios-debug.zip": "a7343c05340c698a89cefb19bdbbac8d27a8f1a3cf47a75a7158ebaaf92068ff",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/registry.jsonl": "00febe4ecb1a5421d9153c0f68796fc8f181bc29b8989e0a9d7aeb682a442b7b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/result.json": "e82b13ef82fa2b2616c18e40dc008604c8442915cc3f90ec8e2e767a73173591",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/shared.log": "c0bfa91029ddad3d552e9058444f84c7e51aabcafc6ecc4f14ddcc52729f1939",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/run05/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/source-checkpoint.json": "b60ab666d16931eebe8cc3044b4e7f63f1d25abbb001f836ca4503aab1cb15a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/transport-green.log": "53c5190939da32ea3e6609ef963248eaf669d832af0582f349cce3970fbdb7c3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/transport-red.log": "7a390f577c37174654fe5215dd38a0739d954840fde42c8ec89ae39247614445",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/visual-review.json": "3ce9859c691f2480faba252f16d0076d4571a6f4e69410d782c7a02e7fbc46a1"
+  },
+  "raw_evidence_count": 507,
+  "postcommit_audit_path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-cross-process/postcommit-audit.json",
+  "recording_boundary": {
+    "scoped_scenario_not_full_native_schema": true,
+    "host_argv": "session tool input and unchanged wrapper source",
+    "build_argv": "derivable from fixed driver, not separately sampled from OS",
+    "native_command_argv": "retained by platform actors",
+    "framework_native_test_count": "not collected",
+    "OS_leaf_exit": "unknown",
+    "raw_network_offline_seconds_means_fixed_stability_wait": true
+  }
+}
