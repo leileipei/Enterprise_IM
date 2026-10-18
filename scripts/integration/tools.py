@@ -24,6 +24,18 @@ def verify_digest(path: Path, expected: str) -> None:
     if actual!=expected:raise ValueError('tool_hash_mismatch')
 
 
+def snapshot_binary(source: Path,target: Path) -> Path:
+    source=Path(source);target=Path(target)
+    if source.is_symlink() or not source.is_file():raise ValueError('tool_source_not_regular')
+    expected=file_digest(source)
+    fd=os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+    with os.fdopen(fd,'wb') as dst,source.open('rb') as src:
+        shutil.copyfileobj(src,dst)
+    target.chmod(0o500)
+    verify_digest(target,expected);verify_digest(source,expected)
+    return target
+
+
 def python_cli() -> Path:
     # macOS framework launcher re-execs Python.app after Popen returns.
     # Invoke the current interpreter image directly to bind one stable identity.
@@ -88,6 +100,8 @@ def discover_toolchain(snapshot: SourceSnapshot,private: Path) -> Toolchain:
         if key=='node_modules':
             if not path.is_dir():raise ValueError('node_modules_missing')
         elif not path.is_file():raise ValueError('tool_missing:'+key)
+    # Freeze the shared runtime before probing or executing any business stage.
+    paths['node']=snapshot_binary(paths['node'],private/'node')
     versions={};hashes={}
     def run(key,args):
         kwargs={}

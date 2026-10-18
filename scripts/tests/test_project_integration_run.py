@@ -35,6 +35,20 @@ class RunTests(unittest.TestCase):
   event.inventory=Inventory({'unittest'},{'unittest':{'fixture.Case.test_fixture'}},set());return event
  def patches(self,prepare):
   return patch.multiple(self.run,discover_toolchain=lambda *a:self.tools,run_stage=self.contract,prepare_services=prepare,gate_specs=lambda *a:[{'name':'orchestrator_contract'}])
+ def test_node_copy_retained_after_shared_change_and_private_cleanup(self):
+  source=self.base/'shared-node';source.write_text('#!/bin/sh\nprintf original\n');source.chmod(0o700)
+  self.tools.paths['node']=source;self.tools.hashes['node']=hashlib.sha256(source.read_bytes()).hexdigest();observed=[]
+  def prepare(snapshot,tools,registry,private,deadline):
+   source.write_text('#!/bin/sh\nprintf replaced\n')
+   observed.append(subprocess.check_output([str(tools.paths['node'])]))
+   raise ValueError('controlled_stop_after_retention')
+  with self.patches(prepare):self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
+  self.assertEqual(observed,[b'original'],'business setup consumed replaced shared binary')
+  report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
+  retained=Path(report['tools']['paths']['node'])
+  self.assertEqual(retained,self.output/'tools/node');self.assertEqual(subprocess.check_output([str(retained)]),b'original')
+  self.assertEqual(hashlib.sha256(retained.read_bytes()).hexdigest(),report['tools']['hashes']['node'])
+
  def test_missing_fixture_and_partial_green_never_success(self):
   with self.patches(lambda *a:(_ for _ in ()).throw(ValueError('missing_fixture'))):rc=self.run.execute(self.snapshot,self.output)
   self.assertNotEqual(rc,0);report=json.loads((self.output/'verification.json').read_text())

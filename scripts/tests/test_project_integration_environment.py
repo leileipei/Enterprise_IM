@@ -1,5 +1,6 @@
 """Explicit fixture values cannot import parent or startup-only variables."""
 import os
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -18,6 +19,14 @@ class EnvironmentTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name).resolve()
         self.tools=Toolchain({'go':Path('/opt/homebrew/bin/go')},{},{},{},'darwin','arm64')
+
+    def test_locked_node_wins_over_other_tool_directory(self):
+        owned=self.root/'zz-owned';other=self.root/'aa-other';owned.mkdir();other.mkdir()
+        for directory,value in [(owned,'owned'),(other,'foreign')]:
+            executable=directory/'node';executable.write_text('#!/bin/sh\nprintf '+value+'\n');executable.chmod(0o700)
+        self.tools.paths.update(node=owned/'node',go=other/'go')
+        env=self.build(self.tools,self.root/'private',{})
+        self.assertEqual(subprocess.check_output(['node'],env=env),b'owned')
 
     def test_environment_excludes_home_pg_and_child_flags(self):
         hostile={'HOME':'/foreign','PGPASSWORD':'parent-secret','GODEBUG':'override',

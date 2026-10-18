@@ -10,7 +10,7 @@ import time
 import urllib.parse
 from .model import Toolchain,FixtureBundle,GateEvent,Inventory,CleanupResult,ResourceRef,Verdict
 from .source import verify_snapshot,collect_inventory
-from .tools import discover_toolchain,python_cli,RUNTIME
+from .tools import discover_toolchain,python_cli,RUNTIME,snapshot_binary
 from .registry import Registry
 from .environment import test_environment
 from .services import prepare_services,probe_services
@@ -87,12 +87,14 @@ def execute(snapshot,output,*,attempt_timeout_seconds=None):
         if validate_gate(event,event.inventory or inventory,None):raise ValueError('orchestrator_contract_failed')
         active='toolchain';started=time.time();print(active,'START',flush=True)
         tools=discover_toolchain(snapshot,private/'tools')
-        # Retain only the approved nonsecret executable, not its private build caches.
-        if 'mc' in tools.paths:
+        # Keep the exact nonsecret runtime bytes after owned private caches are cleaned.
+        for key in ('mc','node'):
+            if key not in tools.paths:continue
             retained=output/'tools';retained.mkdir(mode=0o700,exist_ok=True)
-            shutil.copyfile(tools.paths['mc'],retained/'mc');(retained/'mc').chmod(0o700)
-            if digest(retained/'mc')!=tools.hashes['mc']:raise ValueError('retained_mc_hash_mismatch')
-            tools.paths['mc']=retained/'mc'
+            snapshot_binary(tools.paths[key],retained/key)
+            if digest(retained/key)!=tools.hashes[key]:raise ValueError('retained_'+key+'_hash_mismatch')
+            (retained/key).chmod(0o700 if key=='mc' else 0o500)
+            tools.paths[key]=retained/key
         tool_event=_check('toolchain',snapshot,private,['locked_versions','binary_hashes','local_docker','immutable_images','native_platform']);tool_event.started_at=started;tool_event.ended_at=time.time();tool_event.seconds=round(tool_event.ended_at-started,3);events.append(tool_event)
         active='fixture_preflight';started=time.time();print(active,'START',flush=True)
         bundle=prepare_services(snapshot,tools,registry,private/'services',deadline());bundle=prepare_iam(bundle,tools,private/'iam',deadline())

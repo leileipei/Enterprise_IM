@@ -161,6 +161,25 @@ class SourceTests(unittest.TestCase):
         self.assertIn('Docker version',result.stdout)
         self.assertEqual(cli.name,'docker')
 
+    def test_snapshot_binary_keeps_executable_after_shared_replacement(self):
+        source=self.root/'shared-node';source.write_text('#!/bin/sh\nprintf original\n');source.chmod(0o700)
+        target=self.root/'owned-node';expected=self.tools.file_digest(source)
+        self.tools.snapshot_binary(source,target)
+        source.write_text('#!/bin/sh\nprintf replaced\n')
+        self.assertEqual(subprocess.check_output([str(target)]),b'original')
+        self.assertEqual(self.tools.file_digest(target),expected)
+        self.assertEqual(target.stat().st_mode&0o777,0o500)
+        self.assertEqual(source.read_text(),'#!/bin/sh\nprintf replaced\n')
+
+    def test_snapshot_binary_refuses_preexisting_or_linked_destination(self):
+        source=self.root/'shared-tool';source.write_bytes(b'original')
+        existing=self.root/'existing-tool';existing.write_bytes(b'untouched')
+        linked=self.root/'linked-tool';linked.symlink_to(existing)
+        for target in [existing,linked]:
+            with self.assertRaises((ValueError,OSError)):self.tools.snapshot_binary(source,target)
+            self.assertEqual(existing.read_bytes(),b'untouched')
+            self.assertEqual(source.read_bytes(),b'original')
+
     def test_tool_digest_mismatch_and_missing_mc(self):
         # A local executable must not bypass its publisher digest.
         target=self.root/'mc';target.write_bytes(b'not-the-pinned-tool')

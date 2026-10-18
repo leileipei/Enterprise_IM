@@ -131,6 +131,7 @@ func main(){fmt.Printf("{\"no_management_environment\":%t}\n",os.Getenv("IM_TEST
 }
 
 func TestWebFileBrowserLifecycleEvidence(t *testing.T) {
+	requestedNode := os.Getenv("IM_TEST_BROWSER_NODE")
 	root, resolveErr := filepath.EvalSymlinks(t.TempDir())
 	if resolveErr != nil {
 		t.Fatal(resolveErr)
@@ -141,9 +142,19 @@ func TestWebFileBrowserLifecycleEvidence(t *testing.T) {
 	if err := os.WriteFile(ledger, append(seed, '\n'), 0600); err != nil {
 		t.Fatal(err)
 	}
-	node := "/Users/leo.cui/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node"
-	chrome := "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-	for key, value := range map[string]string{"IM_TEST_INTEGRATION_REGISTRY": ledger, "IM_TEST_INTEGRATION_OWNER": strings.Repeat("b", 32), "IM_TEST_INTEGRATION_SOURCE_SHA": strings.Repeat("a", 40), "IM_TEST_INTEGRATION_GATE": "file_components", "IM_TEST_BROWSER_NODE": node, "CHROMIUM_EXECUTABLE": chrome, "NODE_PATH": filepath.Join(filepath.Dir(node), "../node_modules")} {
+	node := requestedNode
+	if node == "" {
+		node = "/Users/leo.cui/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node"
+	}
+	chrome := os.Getenv("CHROMIUM_EXECUTABLE")
+	if chrome == "" {
+		chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+	}
+	modules := os.Getenv("NODE_PATH")
+	if modules == "" {
+		modules = filepath.Join(filepath.Dir(node), "../node_modules")
+	}
+	for key, value := range map[string]string{"IM_TEST_INTEGRATION_REGISTRY": ledger, "IM_TEST_INTEGRATION_OWNER": strings.Repeat("b", 32), "IM_TEST_INTEGRATION_SOURCE_SHA": strings.Repeat("a", 40), "IM_TEST_INTEGRATION_GATE": "file_components", "IM_TEST_BROWSER_NODE": node, "CHROMIUM_EXECUTABLE": chrome, "NODE_PATH": modules} {
 		t.Setenv(key, value)
 	}
 	var calls atomic.Int32
@@ -172,6 +183,9 @@ func TestWebFileBrowserLifecycleEvidence(t *testing.T) {
 		counts[row["event"].(string)]++
 		if row["event"] == "registered" {
 			fp := row["fingerprint"].(map[string]any)
+			if requestedNode != "" && filepath.Base(fp["executable_path"].(string)) == "node" && fp["executable_path"] != requestedNode {
+				t.Fatal("browser lifecycle replaced supplied Node binary")
+			}
 			if fp["uid"] == nil || fp["start_time"] == nil || len(fp["executable_sha256"].(string)) != 64 {
 				t.Fatal("actual browser identity incomplete")
 			}

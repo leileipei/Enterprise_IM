@@ -32,6 +32,9 @@ def test_environment(tools: Toolchain,private: Path,values: Dict[str,str]) -> Di
                  [('TMPDIR','tmp'),('GOCACHE','go-build'),('GOMODCACHE','go-mod'),('GOPATH','go-path')]}
     for directory in directories.values():directory.mkdir(mode=0o700,exist_ok=True)
     paths=sorted({str(path.parent) for key,path in tools.paths.items() if key!='node_modules'})
+    if 'node' in tools.paths:
+        node_directory=str(tools.paths['node'].parent)
+        paths=[node_directory]+[path for path in paths if path!=node_directory]
     env=dict(PATH=':'.join(paths+['/opt/homebrew/bin','/usr/local/bin','/usr/bin','/bin','/usr/sbin','/sbin']),
              LANG='C.UTF-8',TZ='UTC',GOWORK='off',GOFLAGS='-mod=readonly -buildvcs=false',
              GOENV='off',GOTOOLCHAIN='local',PYTHONDONTWRITEBYTECODE='1')

@@ -11,7 +11,7 @@ import time
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from integration.tools import _lock
+from integration.tools import _lock,snapshot_binary
 
 class ScannerTests(unittest.TestCase):
     def setUp(self):
@@ -135,7 +135,7 @@ class ScannerTests(unittest.TestCase):
         from integration.model import FixtureBundle,Toolchain
         from integration.registry import Registry
         runtime=Path('/Users/leo.cui/.cache/codex-runtimes/codex-primary-runtime/dependencies/node')
-        tools=Toolchain({'node':runtime/'bin/node','node_modules':runtime/'node_modules','chrome':Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')},
+        tools=Toolchain({'node':snapshot_binary(runtime/'bin/node',self.root/'node'),'node_modules':runtime/'node_modules','chrome':Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')},
                         {key:value for key,value in _lock(Path(__file__).resolve().parents[2]/'testdata/project-integration/versions.lock').items() if key in {'playwright','chrome'}},{},{},'darwin','arm64')
         if mismatch:tools.versions['chrome']='0.0.0.0'
         registry=Registry(self.root/'registry.jsonl','b'*32,'c'*40)
