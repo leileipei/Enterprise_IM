@@ -172,6 +172,78 @@ class RunTests(unittest.TestCase):
   with self.assertRaises(ValueError):self.evidence.validate_delivery(self.snapshot.commit,report,self.snapshot.repository_root)
   data['cleanup']['removed']=False;report.write_text(json.dumps(data))
   with self.assertRaises(ValueError):self.evidence.validate_delivery(self.snapshot.commit,report,self.snapshot.repository_root)
+ def scanner_protocol(self,bundle,tools,registry,private,deadline,*,required_validity_seconds=0):
+  self.assertGreater(required_validity_seconds,0);self.assertLessEqual(required_validity_seconds,self.run.TOTAL_SECONDS)
+  private.mkdir(mode=0o700,parents=True,exist_ok=True)
+  (private/'validity-window.json').write_text(json.dumps({'fixture':'actual runner passes bounded remaining window'}))
+  return bundle
+
+ def test_failed_scanner_window_keeps_diagnostics_and_cleans(self):
+  self._failed_scanner_window_case()
+
+ def test_cancelled_scanner_window_keeps_diagnostics_and_cleans(self):
+  self._failed_scanner_window_case(cancel=True)
+
+ def _failed_scanner_window_case(self,cancel=False):
+  secret='window-fixture-private-password'
+  def prepare(snapshot,tools,registry,private,deadline):return FixtureBundle({}, {secret},registry.path,{registry.owner},{'source_commit':snapshot.commit})
+  def scanner(bundle,tools,registry,private,deadline,*,required_validity_seconds=0):
+   self.assertGreater(required_validity_seconds,0);self.assertLessEqual(required_validity_seconds,self.run.TOTAL_SECONDS)
+   private.mkdir(mode=0o700,parents=True,exist_ok=True)
+   (private/'validity-window-start.json').write_text(json.dumps({'required_until':'2026-10-17T12:00:00+00:00','current_definitions_verified':False}))
+   (private/'validity-window.json').write_text(json.dumps({'status':'failed','error':'definition_validity_window_insufficient','last_verified_daily':{'source':'updated_copy','expires_at':'2026-10-17T11:00:00+00:00'}}))
+   (private/'freshclam.log').write_text('update refused '+secret)
+   if cancel:raise KeyboardInterrupt()
+   raise ValueError('definition_validity_window_insufficient')
+  with self.patches(prepare),patch.multiple(self.run,prepare_iam=lambda b,*a:b,complete_profile=lambda *a:None,prepare_scanner=scanner):
+   self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
+  report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
+  expected={'validity-window-start.json','validity-window.json','freshclam.log'}
+  rows=[r for r in report['log_dispositions'] if Path(r['original_path']).name in expected]
+  self.assertEqual({Path(r['original_path']).name for r in rows},expected)
+  for row in rows:
+   self.assertTrue(row['original_disposed']);self.assertFalse(Path(row['original_path']).exists())
+   published=self.output/row['published_path'];self.assertEqual(hashlib.sha256(published.read_bytes()).hexdigest(),row['published_sha256']);self.assertNotIn(secret,published.read_text())
+  self.assertTrue(any(('cancelled' if cancel else 'definition_validity_window_insufficient') in x for x in report['failures']))
+
+ def test_scanner_diagnostic_error_overrides_all_green_receipt(self):
+  events,inventory=self.green_events()
+  verdict=self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
+  self.assertTrue(verdict.required_gates_passed,'synthetic all-gate protocol fixture only')
+  actual_exists=Path.exists
+  def exists(path):
+   if path.name=='validity-window-start.json' and path.parent.name=='scanner':raise OSError('controlled private diagnostic error')
+   return actual_exists(path)
+  with patch.object(Path,'exists',exists):
+   try:self.run._collect_scanner_diagnostics(self.snapshot,self.output,events)
+   except OSError:pass
+  verdict=self.evidence.write_evidence(self.output,self.snapshot,self.tools,events,CleanupResult(True,[]),inventory,set())
+  self.assertFalse(verdict.required_gates_passed,'diagnostic collection failed but canonical receipt remained green')
+  report=json.loads((self.output/'verification.json').read_text())
+  self.assertTrue(any('diagnostic_collection_failed' in failure for failure in report['failures']))
+  self.assertNotIn('controlled private diagnostic error',json.dumps(report))
+
+ def test_scanner_diagnostic_read_error_cannot_bypass_cleanup(self):
+  processes=[];actual_exists=Path.exists
+  def prepare(snapshot,tools,registry,private,deadline):return FixtureBundle({},set(),registry.path,{registry.owner},{'source_commit':snapshot.commit})
+  def scanner(bundle,tools,registry,private,deadline,**kwargs):
+   from integration.registry import process_fingerprint
+   process=subprocess.Popen(['/bin/sleep','30'],cwd=registry.root/registry.owner,start_new_session=True);processes.append(process)
+   registry.add(ResourceRef('process',registry.owner,str(process.pid),process_fingerprint(process.pid)))
+   raise KeyboardInterrupt()
+  def exists(path):
+   if path.name=='validity-window-start.json' and path.parent.name=='scanner':raise OSError('controlled diagnostic read failure')
+   return actual_exists(path)
+  try:
+   with self.patches(prepare),patch.multiple(self.run,prepare_iam=lambda b,*a:b,complete_profile=lambda *a:None,prepare_scanner=scanner),patch.object(Path,'exists',exists):
+    self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
+   self.assertEqual(len(processes),1);self.assertIsNotNone(processes[0].poll(),'diagnostic read failure bypassed owned process cleanup');processes[0].wait(timeout=2)
+   report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
+  finally:
+   for process in processes:
+    if process.poll() is None:process.kill()
+    process.wait()
+
  def test_unexpected_stage_error_keeps_raw_log_and_runs_next_gate(self):
   tools=copy.deepcopy(self.tools);tools.paths['go']=Path(sys.executable);calls=[]
   def specs(*args):return [{'name':'orchestrator_contract','kind':'test','env_group':'orchestrator_contract','argv':[]},{'name':'file_messages','kind':'test','env_group':'file_messages','argv':[]},{'name':'web_files','kind':'test','env_group':'web_files','argv':[]}]
@@ -190,7 +262,7 @@ class RunTests(unittest.TestCase):
    if name=='orchestrator_contract':return actual_command(name,kind,commit,argv,cwd,env,log,deadline,registry)
    write_json(log,go_rows('github.com/leileipei/Enterprise_IM/internal/testfixtures',[( 'TestIntegrationFixtureIAM/'+name,'pass') for name in self.run.IAM_SUBCASES]+[('TestIntegrationFixtureIAM','pass')]));Path(str(log)+'.stderr').write_text('')
    return GateEvent(name,kind,commit,0,log)
-  with patch.multiple(self.run,discover_toolchain=lambda *a:tools,gate_specs=specs,run_stage=stage,prepare_services=lambda *a:FixtureBundle({},set(),a[2].path,{a[2].owner},{'source_commit':self.snapshot.commit}),prepare_iam=lambda b,*a:b,prepare_scanner=lambda b,*a:b,complete_profile=lambda *a:None,probe_services=probe,probe_scanner=probe,probe_browser=probe,collect_inventory=lambda *a:Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())),patch('integration.commands.run_command',side_effect=iam_command):
+  with patch.multiple(self.run,discover_toolchain=lambda *a:tools,gate_specs=specs,run_stage=stage,prepare_services=lambda *a:FixtureBundle({},set(),a[2].path,{a[2].owner},{'source_commit':self.snapshot.commit}),prepare_iam=lambda b,*a:b,prepare_scanner=self.scanner_protocol,complete_profile=lambda *a:None,probe_services=probe,probe_scanner=probe,probe_browser=probe,collect_inventory=lambda *a:Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())),patch('integration.commands.run_command',side_effect=iam_command):
    self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
   self.assertEqual(calls,['orchestrator_contract','file_messages','web_files'])
   report=json.loads((self.output/'verification.json').read_text());self.assertTrue(report['cleanup']['removed'])
@@ -213,7 +285,7 @@ class RunTests(unittest.TestCase):
    if name=='orchestrator_contract':return actual_command(name,kind,commit,argv,cwd,env,log,deadline,registry)
    write_json(log,go_rows('github.com/leileipei/Enterprise_IM/internal/testfixtures',[('TestIntegrationFixtureIAM','pass')]));Path(str(log)+'.stderr').write_text('')
    return GateEvent(name,kind,commit,0,log)
-  with patch.multiple(self.run,discover_toolchain=lambda *a:tools,gate_specs=specs,run_stage=stage,prepare_services=lambda *a:FixtureBundle({},set(),a[2].path,{a[2].owner},{'source_commit':self.snapshot.commit}),prepare_iam=lambda b,*a:b,prepare_scanner=lambda b,*a:b,complete_profile=lambda *a:None,probe_services=probe,probe_scanner=probe,probe_browser=probe,collect_inventory=lambda *a:Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())),patch('integration.commands.run_command',side_effect=iam_command):
+  with patch.multiple(self.run,discover_toolchain=lambda *a:tools,gate_specs=specs,run_stage=stage,prepare_services=lambda *a:FixtureBundle({},set(),a[2].path,{a[2].owner},{'source_commit':self.snapshot.commit}),prepare_iam=lambda b,*a:b,prepare_scanner=self.scanner_protocol,complete_profile=lambda *a:None,probe_services=probe,probe_scanner=probe,probe_browser=probe,collect_inventory=lambda *a:Inventory({'fixture'},{'fixture':{'TestProtocol'}},set())),patch('integration.commands.run_command',side_effect=iam_command):
    self.assertNotEqual(self.run.execute(self.snapshot,self.output),0)
   self.assertEqual(calls,['orchestrator_contract'],'missing IAM matrix was accepted before business execution')
   report=json.loads((self.output/'verification.json').read_text())

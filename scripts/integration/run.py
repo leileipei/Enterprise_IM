@@ -94,7 +94,7 @@ def execute(snapshot,output):
         active='fixture_preflight';started=time.time();print(active,'START',flush=True)
         bundle=prepare_services(snapshot,tools,registry,private/'services',deadline());bundle=prepare_iam(bundle,tools,private/'iam',deadline())
         if snapshot.definition_source is not None:bundle.metadata['definition_source']=str(snapshot.definition_source)
-        bundle=prepare_scanner(bundle,tools,registry,private/'scanner',deadline())
+        bundle=prepare_scanner(bundle,tools,registry,private/'scanner',deadline(),required_validity_seconds=max(0,total_deadline-time.monotonic()))
         complete_profile(bundle,private)
         service=probe_services(bundle,tools,deadline());scanner=probe_scanner(bundle,tools,deadline());browser=probe_browser(bundle,tools,registry,private/'browser',deadline())
         env=test_environment(tools,private/'env',bundle.environment)
@@ -110,7 +110,7 @@ def execute(snapshot,output):
         preflight=_check('fixture_preflight',snapshot,private,service.checks+scanner.checks+browser.checks+(['actual_iam_permission_matrix'] if not failed else []),failed);events.append(preflight)
         # Preserve each underlying fixture proof as evidence, without adding duplicate gates.
         preflight.started_at=started;preflight.ended_at=time.time();preflight.seconds=round(preflight.ended_at-started,3)
-        preflight.related_logs=[service.log,scanner.log,browser.log,iam_log,Path(str(iam_log)+'.stderr')]
+        preflight.related_logs=[service.log,scanner.log,browser.log,iam_log,Path(str(iam_log)+'.stderr'),private/'scanner'/'validity-window.json']
         if failed:raise ValueError('fixture_preflight_failed')
         inventory=collect_inventory(snapshot,tools,env,None)
         for spec in gate_specs(snapshot,inventory):
@@ -152,7 +152,10 @@ def execute(snapshot,output):
         signal.setitimer(signal.ITIMER_REAL,0)
         for sig in handlers:signal.signal(sig,signal.SIG_IGN)
         try:
-            verdict,cleanup=_finalize(snapshot,output,tools,bundle,registry,events,inventory,total_deadline)
+            try:
+                _collect_scanner_diagnostics(snapshot,private,events,cancelled)
+            finally:
+                verdict,cleanup=_finalize(snapshot,output,tools,bundle,registry,events,inventory,total_deadline)
         finally:
             for sig,handler in handlers.items():signal.signal(sig,handler)
             signal.setitimer(signal.ITIMER_REAL,*prior_timer)
@@ -163,6 +166,28 @@ def execute(snapshot,output):
         _json(output/'verification.json',data)
     print('required_gates_passed',verdict.required_gates_passed,'full_suite_passed',verdict.full_suite_passed,'race_suite_passed',verdict.race_suite_passed,'cleanup',cleanup.removed,flush=True)
     return 0 if verdict.required_gates_passed else 1
+
+
+def _collect_scanner_diagnostics(snapshot,private,events,cancelled=False):
+    try:
+        scanner_logs=[private/'scanner'/name for name in ('validity-window-start.json','validity-window.json','freshclam.log')
+                      if (private/'scanner'/name).exists() or (private/'scanner'/name).is_symlink()]
+        if scanner_logs:
+            preflight=next((event for event in events if event.name=='fixture_preflight'),None)
+            if preflight is None:
+                preflight=_check('fixture_preflight',snapshot,private,failures=['fixture_setup_interrupted' if cancelled else 'fixture_setup_incomplete']);events.append(preflight)
+            preflight.related_logs=list(dict.fromkeys([*getattr(preflight,'related_logs',[]),*scanner_logs]))
+    except Exception:
+        # A missing diagnostic invalidates delivery even when every test passed.
+        # Reuse an existing log so recording this failure needs no filesystem write.
+        integrity=next((event for event in events if event.name=='evidence_integrity'),None)
+        if integrity is None:
+            integrity=GateEvent('evidence_integrity','check',snapshot.commit,1,
+                                events[0].log if events else private/'diagnostic-collection-failed.json')
+            events.append(integrity)
+        integrity.exit_code=1
+        if 'diagnostic_collection_failed' not in integrity.failures:
+            integrity.failures.append('diagnostic_collection_failed')
 
 
 def _finalize(snapshot,output,tools,bundle,registry,events,inventory,total_deadline):

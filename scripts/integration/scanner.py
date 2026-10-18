@@ -1,6 +1,7 @@
 """Native scanner and browser fixtures bound to owned process identities."""
 import datetime
 import json
+import math
 import os
 from pathlib import Path
 import queue
@@ -87,7 +88,14 @@ def clamd_command(path,command):
         return stream.recv(4096).rstrip(b'\0\n').decode()
 
 
-def prepare_scanner(bundle,tools,registry,private,deadline):
+def prepare_scanner(bundle,tools,registry,private,deadline,*,required_validity_seconds=0):
+    if isinstance(required_validity_seconds,bool) or not isinstance(required_validity_seconds,(int,float)) or not math.isfinite(required_validity_seconds) or not 0<=required_validity_seconds<86400:
+        raise ValueError('definition_validity_window_invalid')
+    required_until=datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(seconds=required_validity_seconds)
+    def require_window(info):
+        expires=datetime.datetime.fromisoformat(info['daily.cvd']['build_time'])+datetime.timedelta(hours=24)
+        if required_validity_seconds and expires<=required_until:raise ValueError('definition_validity_window_insufficient')
+        return expires
     if bundle.metadata['source_commit']!=registry.commit:raise ValueError('scanner_source_mismatch')
     private=Path(private).resolve()
     if not private.is_relative_to(registry.root):raise ValueError('scanner_private_root_not_owned')
@@ -98,16 +106,35 @@ def prepare_scanner(bundle,tools,registry,private,deadline):
     source=Path(bundle.metadata.get('definition_source',DEFINITION_SOURCE))
     for name in NAMES:
         shutil.copyfile(source/name,definitions/name);(definitions/name).chmod(0o600)
-    try:info=check_definitions(definitions,tools,deadline)
-    except ValueError as exc:
-        if str(exc)!='definition_stale_or_future':raise
-        config=private/'freshclam.conf'
-        _private_file(config,'DatabaseDirectory "'+str(definitions)+'"\nDatabaseMirror database.clamav.net\nScriptedUpdates no\nForeground yes\nConnectTimeout 10\nReceiveTimeout 30\nMaxAttempts 1\n')
-        with (private/'freshclam.log').open('xb') as out:
-            result=subprocess.run([str(tools.paths['freshclam']),'--config-file='+str(config),'--stdout'],stdout=out,stderr=subprocess.STDOUT,
-                env={'PATH':'/opt/homebrew/bin:/usr/bin:/bin','LANG':'C.UTF-8','TZ':'UTC'},timeout=max(0.1,min(180,deadline-time.monotonic())))
-        if result.returncode:raise ValueError('definition_update_failed')
-        info=check_definitions(definitions,tools,deadline)
+    window={'required_validity_seconds':required_validity_seconds,'required_until':required_until.isoformat(),
+            'status':'checking','current_definitions_verified':False,'last_verified_daily':None,
+            'update_attempted':False,'updated_before_daemon_start':False}
+    _private_file(private/'validity-window-start.json',json.dumps(window)+'\n')
+    def remember_verified(info,source):
+        expires=datetime.datetime.fromisoformat(info['daily.cvd']['build_time'])+datetime.timedelta(hours=24)
+        window['last_verified_daily']={'source':source,'build_time':info['daily.cvd']['build_time'],'expires_at':expires.isoformat()}
+        window['current_definitions_verified']=True
+    try:
+        try:
+            info=check_definitions(definitions,tools,deadline);remember_verified(info,'seed');require_window(info)
+        except ValueError as exc:
+            if str(exc) not in {'definition_stale_or_future','definition_validity_window_insufficient'}:raise
+            window['update_attempted']=True;window['current_definitions_verified']=False
+            config=private/'freshclam.conf'
+            _private_file(config,'DatabaseDirectory "'+str(definitions)+'"\nDatabaseMirror database.clamav.net\nScriptedUpdates no\nForeground yes\nConnectTimeout 10\nReceiveTimeout 30\nMaxAttempts 1\n')
+            with (private/'freshclam.log').open('xb') as out:
+                result=subprocess.run([str(tools.paths['freshclam']),'--config-file='+str(config),'--stdout'],stdout=out,stderr=subprocess.STDOUT,
+                    env={'PATH':'/opt/homebrew/bin:/usr/bin:/bin','LANG':'C.UTF-8','TZ':'UTC'},timeout=max(0.1,min(180,deadline-time.monotonic())))
+            window['update_exit_code']=result.returncode
+            if result.returncode:raise ValueError('definition_update_failed')
+            info=check_definitions(definitions,tools,deadline);remember_verified(info,'updated_copy');require_window(info)
+        window['status']='ready';window['updated_before_daemon_start']=window['update_attempted']
+    except BaseException as exc:
+        window['status']='failed'
+        window['error']=str(exc) if isinstance(exc,ValueError) and re.fullmatch('[a-z_]+',str(exc)) else 'preparation_'+type(exc).__name__
+        raise
+    finally:
+        _private_file(private/'validity-window.json',json.dumps(window)+'\n')
     runtimes=[]
     for role in ('positive','negative'):
         config=private/(role+'.conf');sock=private/(role+'.sock')

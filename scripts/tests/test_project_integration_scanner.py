@@ -32,6 +32,61 @@ class ScannerTests(unittest.TestCase):
                 self.parse(template.format(date=date),now,True)
         with self.assertRaises(ValueError):self.parse('Build time: 07 Oct 2026 06:24 +0000\nVersion: 28146',now,True)
 
+    def _prepare_window(self, old_hours, updated_hours, seconds=7200, update_code=0, update_error=None):
+        from integration.scanner import prepare_scanner, NAMES
+        from integration.model import FixtureBundle,Toolchain
+        from integration.registry import Registry
+        from types import SimpleNamespace
+        seed=self.root/'seed';seed.mkdir()
+        for name in NAMES:(seed/name).write_bytes(name.encode())
+        registry=Registry(self.root/'registry.jsonl','b'*32,'c'*40)
+        bundle=FixtureBundle({},set(),registry.path,{'b'*32},{'source_commit':'c'*40,'definition_source':str(seed)})
+        tools=Toolchain({key:self.root/key for key in ['freshclam','clamd','qpdf']},{},{},{},'darwin','arm64')
+        now=datetime.datetime.now(datetime.timezone.utc)
+        def info(hours):return {name:{'version':'1','build_time':(now-datetime.timedelta(hours=hours)).isoformat(),'sha256':'a'*64} for name in NAMES}
+        class ReadyForDaemon(Exception):pass
+        with patch('integration.scanner.check_definitions',side_effect=[info(old_hours),info(updated_hours)]) as check,patch('integration.scanner.subprocess.run',return_value=SimpleNamespace(returncode=update_code),side_effect=update_error) as update,patch('integration.scanner.subprocess.Popen',side_effect=ReadyForDaemon) as launch:
+            try:prepare_scanner(bundle,tools,registry,self.root/registry.owner/'scanner',time.monotonic()+30,required_validity_seconds=seconds)
+            except ReadyForDaemon:outcome='ready'
+            except ValueError as error:outcome=str(error)
+        for name in NAMES:self.assertEqual((seed/name).read_bytes(),name.encode(),'shared seed must remain unchanged')
+        return outcome,update,launch,check
+
+    def test_signed_valid_seed_refreshes_for_remaining_attempt(self):
+        outcome,update,launch,check=self._prepare_window(23,1)
+        self.assertEqual(outcome,'ready');self.assertEqual(update.call_count,1);self.assertEqual(launch.call_count,1);self.assertEqual(check.call_count,2)
+        config=next(self.root.glob('*/scanner/freshclam.conf'))
+        self.assertIn(str(config),update.call_args.args[0][1]);self.assertIn(str(config.parent/'definitions'),config.read_text())
+
+    def test_updated_signed_seed_without_remaining_window_refused(self):
+        outcome,update,launch,_=self._prepare_window(23,23)
+        self.assertEqual(outcome,'definition_validity_window_insufficient');self.assertEqual(update.call_count,1);launch.assert_not_called()
+        record=json.loads(next(self.root.glob('*/scanner/validity-window.json')).read_text());self.assertEqual(record['status'],'failed');self.assertTrue(record['current_definitions_verified']);self.assertEqual(record['last_verified_daily']['source'],'updated_copy');self.assertEqual(record['error'],'definition_validity_window_insufficient')
+
+    def test_window_update_failure_stops_before_daemon(self):
+        outcome,update,launch,_=self._prepare_window(23,1,update_code=42)
+        self.assertEqual(outcome,'definition_update_failed');self.assertEqual(update.call_count,1);launch.assert_not_called()
+        record=json.loads(next(self.root.glob('*/scanner/validity-window.json')).read_text());self.assertEqual(record['status'],'failed');self.assertFalse(record['current_definitions_verified']);self.assertEqual(record['last_verified_daily']['source'],'seed');self.assertEqual(record['update_exit_code'],42)
+
+    def test_window_update_timeout_keeps_verified_seed_diagnostic(self):
+        import subprocess
+        with self.assertRaises(subprocess.TimeoutExpired):self._prepare_window(23,1,update_error=subprocess.TimeoutExpired('freshclam',1))
+        record=json.loads(next(self.root.glob('*/scanner/validity-window.json')).read_text());self.assertEqual(record['status'],'failed');self.assertFalse(record['current_definitions_verified']);self.assertEqual(record['last_verified_daily']['source'],'seed');self.assertEqual(record['error'],'preparation_TimeoutExpired')
+
+    def test_window_update_cancel_keeps_verified_seed_diagnostic(self):
+        with self.assertRaises(KeyboardInterrupt):self._prepare_window(23,1,update_error=KeyboardInterrupt())
+        record=json.loads(next(self.root.glob('*/scanner/validity-window.json')).read_text());self.assertEqual(record['status'],'failed');self.assertFalse(record['current_definitions_verified']);self.assertEqual(record['last_verified_daily']['source'],'seed');self.assertEqual(record['error'],'preparation_KeyboardInterrupt')
+
+    def test_signed_seed_covering_attempt_is_not_updated(self):
+        outcome,update,launch,_=self._prepare_window(1,1)
+        self.assertEqual(outcome,'ready');update.assert_not_called();self.assertEqual(launch.call_count,1)
+
+    def test_invalid_definition_window_refused_before_copy(self):
+        from integration.scanner import prepare_scanner
+        for value in [-1,float('nan'),float('inf'),86400,'7200',True]:
+            with self.subTest(value=str(value)),self.assertRaisesRegex(ValueError,'definition_validity_window_invalid'):
+                prepare_scanner(None,None,None,None,None,required_validity_seconds=value)
+
     def fixture(self):
         definitions=self.root/'definitions';definitions.mkdir()
         for name in ('main.cvd','daily.cvd','bytecode.cvd'):(definitions/name).write_bytes(name.encode())
