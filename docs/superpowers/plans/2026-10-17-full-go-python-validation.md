@@ -24,21 +24,21 @@
 
 ## Task 1: 失败复现及测试工具修复
 **Files:** scripts/tests/test_project_integration_registry.py；scripts/tests/test_project_integration_scanner.py；scripts/integration/registry.py、tools.py、scanner.py（仅根因需要时修改）；必要新增针对性测试。
-- [ ] 记录起始SHA、工作树、主目录和既有报告hash；复现Python两失败与下载期限问题并收集退出证据。
-- [ ] 对根因补RED测试，最小修复，跑受影响测试GREEN；不得删除断言或把失败改为skip。
+- [x] 记录起始SHA、工作树、主目录和既有报告hash；复现Python两失败与下载期限问题并收集退出证据。
+- [x] 对根因补RED测试，最小修复，跑受影响测试GREEN；不得删除断言或把失败改为skip。
 
 ## Task 2: 完整夹具与跳过验证
 **Files:** scripts/integration/run.py、environment.py、gates.py及现有夹具；必要增加独立全量入口测试。
-- [ ] 探测已固定工具、镜像、签名库；配置完整本轮自有TLS／DB／IAM／对象存储／扫描器／浏览器。
-- [ ] 正确传递Append专用夹具和Node；真实执行先前失败／跳过测试，检查完整清单和实际终态。
-- [ ] 产品失败按systematic-debugging与TDD修复，不降低现有门禁。
+- [x] 探测已固定工具、镜像、签名库；配置完整本轮自有TLS／DB／IAM／对象存储／扫描器／浏览器。
+- [x] 正确传递Append专用夹具和Node；真实执行先前失败／跳过测试，检查完整清单和实际终态。
+- [x] 产品失败按systematic-debugging与TDD修复，不降低现有门禁。
 
 ## Task 3: 同源最终全量与交付
 **Files:** docs/verification/p5-02-full-go-python-results.json；既有实施记录及验证操作文档追加；本计划。
-- [ ] 冻结修复后源码并保存明确本地运行检查点；独立归档该SHA。
-- [ ] 全量Python、Go ./...及相关完整集成门禁执行并核对无普通skip／缺失终态；已存在race门禁同源执行。
-- [ ] 独立审计登记进程、容器、端口、临时目录与秘密清理；核对旧证据未改。
-- [ ] 最后一次fresh-context只读复核；修复P1/P2；证据、改动范围、提交不可变blob及主目录状态复核。
+- [x] 冻结修复后源码并保存明确本地运行检查点；独立归档该SHA。
+- [x] 全量Python、Go ./...及相关完整集成门禁执行并核对无普通skip／缺失终态；已存在race门禁同源执行。
+- [x] 独立审计登记进程、容器、端口、临时目录与秘密清理；核对旧证据未改。
+- [x] 最后一次fresh-context只读复核；修复P1/P2；证据、改动范围、提交不可变blob及主目录状态复核。
 
 
 ## 执行中诊断补充：下载证据与搜索预算
@@ -81,3 +81,8 @@
 
 
 隔离复核补充：原生命周期测试曾无条件覆盖传入Node，真实Node/Chrome登记路径回归先RED后GREEN；改为优先传入Node／Chrome／NODE_PATH，仅独立运行缺值才fallback。PATH显式把固定Node目录置首，同名冲突回归先RED；Python浏览器契约也用自有副本。最终本轮选8400秒硬截止，全部业务集合与断言不减；实际预检仍必须确认覆盖。
+
+
+## 最终执行记录
+
+固定源码、实际退出、完整清单、失败历史、审计及独立复核见 `docs/verification/p5-02-full-go-python-results.json`。Task5—8状态未扩大；本计划范围以最终证据复核无剩余P1/P2为交付条件。
