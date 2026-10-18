@@ -61,3 +61,8 @@ def confirm_recovery_sender(alice):
     state=alice.command('summary',seq='2',status='read')
     if state.get('details',{}).get('summaries',{}).get('2')!='read':raise ValueError('cross_recovered_sender_read_unproven')
     alice.screenshot('recovered-sender-read')
+
+
+def validate_offline_observation(state):
+    d=state.get('details',{})
+    if d.get('network_error') not in ('unavailable','timeout') or 'network_status' not in d or d['network_status'] is not None or d.get('cursor')!='1' or d.get('seqs')!=['1'] or d.get('read_seqs')!=[]:raise ValueError('cross_offline_observation_unproven')

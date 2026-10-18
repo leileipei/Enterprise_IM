@@ -89,3 +89,13 @@ class TransportRegression(unittest.TestCase):
   sim=Sim();self.assertEqual(native.installed_apk_hash(sim,'/data/app/base.apk','a'*64),'a'*64)
   with self.assertRaises(ValueError):native.installed_apk_hash(Sim(True),'/data/app/base.apk','a'*64)
   with self.assertRaises(ValueError):native.installed_apk_hash(Sim(),'/data/app/base.apk','b'*64)
+
+class OfflineRegression(unittest.TestCase):
+ def test_offline_requires_transport_failure_without_http_or_local_progress(self):
+  import copy
+  state={'details':{'network_error':'timeout','network_status':None,'cursor':'1','seqs':['1'],'read_seqs':[]}}
+  m.validate_offline_observation(state)
+  state['details']['network_error']='unavailable';m.validate_offline_observation(state)
+  for key,value in [('network_error','cancelled'),('network_error','invalid_response'),('network_status',503),('network_status',401),('cursor','2'),('seqs',['1','2']),('read_seqs',['1'])]:
+   bad=copy.deepcopy(state);bad['details'][key]=value
+   with self.assertRaises(ValueError):m.validate_offline_observation(bad)

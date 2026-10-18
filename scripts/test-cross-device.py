@@ -22,7 +22,7 @@ from integration.commands import run_command
 from integration.registry import Registry
 from integration.model import ResourceRef
 from integration.mobile_backend import Backend, preflight as backend_preflight
-from integration.cross_device import actor_config, validate_participants, checkpoint, network_rule, verify_integrity, confirm_recovery_sender
+from integration.cross_device import actor_config, validate_participants, checkpoint, network_rule, verify_integrity, confirm_recovery_sender, validate_offline_observation
 from integration.cross_native import AndroidActor, IOSActor, digest
 
 class CrossBackend(Backend):
@@ -113,7 +113,7 @@ def main():
         uid=int(android.state['installation']['uid']);comment='IMCROSS_'+secrets.token_hex(6).upper()
         # Only the verified owned guest's application UID is affected.
         android.identity(android.state['pid']);android.sim.adb('network-cut',network_rule(uid,comment,'insert'));blocked=(android,uid,comment)
-        android.command('probe_offline');alice.command('send',text='断线期间消息二',seq='2');dbphase('offline_sent')
+        validate_offline_observation(android.command('probe_offline'));alice.command('send',text='断线期间消息二',seq='2');dbphase('offline_sent')
         time.sleep(3);android.command('offline_stable');dbphase('offline_stable')
         counters=android.sim.adb('network-counters',['shell','su','0','iptables','-L','OUTPUT','-n','-v','-x']).stdout.decode()
         matching=[line for line in counters.splitlines() if comment in line]

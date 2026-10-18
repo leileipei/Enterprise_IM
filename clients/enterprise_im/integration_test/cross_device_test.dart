@@ -315,6 +315,7 @@ void main() {
                   await api!.json(
                     'GET',
                     '/api/v1/conversations/${context!.conversationId}/sync?after_seq=1&limit=100',
+                    timeout: const Duration(seconds: 5),
                     bearer: context!.session.accessToken,
                     actingMembershipId: context!.actingMembershipId,
                     device: context!.device,
@@ -327,7 +328,7 @@ void main() {
               details['network_error'] = failure?.code;
               details['network_status'] = failure?.status;
               expect(failure, isNotNull);
-              expect(failure!.code, 'unavailable');
+              expect(['unavailable', 'timeout'], contains(failure!.code));
               expect(failure.status, isNull);
               expect(
                 view!.messages.any((m) => m.seq == Seq.parse('2')),
