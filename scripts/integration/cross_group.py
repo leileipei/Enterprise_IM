@@ -17,3 +17,8 @@ def download(details,device):
 def terminal(details):
  expected={'rejected':['sync','delivered','read','messages','download','renew'],'terminal':True,'private_artifacts_absent':True,'received_cleared':True,'can_send':False}
  if any(details.get(k)!=v for k,v in expected.items()):raise ValueError('revoked_native_device_terminal_unverified')
+
+def selection(role,details):
+ if role=='alice':
+  if details.get('group_role')!='owner' or not isinstance(details.get('organizations'),list) or len(set(details['organizations']))!=2:raise ValueError('cross_group_owner_roster_unverified')
+ elif details.get('group_role')!='member' or details.get('roster_denial')!={'status':403,'code':'group_permission_denied'} or 'organizations' in details:raise ValueError('cross_group_member_roster_scope_unverified')

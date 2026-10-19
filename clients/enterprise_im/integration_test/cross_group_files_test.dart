@@ -292,22 +292,39 @@ void main() {
               group = cmd['group_id'] as String;
               await openView();
               final groups = GroupController(membership!);
-              final roster = await tester.runAsync(() => groups.roster(group!));
               final access = await tester.runAsync(
                 () => groups.membership(group!),
               );
-              groups.close();
-              expect(roster!.members.length, 2);
-              expect(
-                roster.members.map((m) => m.organization).toSet().length,
-                2,
-              );
+              expect(access!.role, role == 'alice' ? 'owner' : 'member');
               details['group_id'] = group;
-              details['group_role'] = access!.role;
-              details['organizations'] = roster.members
-                  .map((m) => m.organization)
-                  .toSet()
-                  .toList();
+              details['group_role'] = access.role;
+              if (role == 'alice') {
+                final roster = await tester.runAsync(
+                  () => groups.roster(group!),
+                );
+                expect(roster!.members.length, 2);
+                final organizations = roster.members
+                    .map((m) => m.organization)
+                    .toSet();
+                expect(organizations.length, 2);
+                details['organizations'] = organizations.toList();
+              } else {
+                final denial = await tester.runAsync(() async {
+                  try {
+                    await groups.roster(group!);
+                    return null;
+                  } on ApiFailure catch (e) {
+                    return e;
+                  }
+                });
+                expect(denial?.status, 403);
+                expect(denial?.code, 'group_permission_denied');
+                details['roster_denial'] = {
+                  'status': denial!.status,
+                  'code': denial.code,
+                };
+              }
+              groups.close();
               expect(view!.receipts.locallyReadSeqs, isEmpty);
             case 'send':
               await mount();
@@ -486,7 +503,7 @@ void main() {
                   ),
                   'messages': (
                     'POST',
-                    '/api/v1/conversations/$group/messages',
+                    '/api/v1/groups/$group/messages',
                     {
                       'client_msg_id': ClientMessageId.create(
                         membership!.current!.clock,
@@ -572,7 +589,8 @@ void main() {
           await snapshot('ok');
         }
         throw StateError('cross actor lifetime exceeded');
-      } catch (error) {
+      } catch (error, stack) {
+        details['failure_stack'] = stack.toString();
         details['failure_type'] = error.runtimeType.toString();
         try {
           await snapshot('failed');

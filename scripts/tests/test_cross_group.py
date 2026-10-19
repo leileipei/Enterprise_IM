@@ -46,3 +46,9 @@ class CrossGroupTests(unittest.TestCase):
  def test_counts_reject_boolean_equivalence(self):
   m=self.module();value=facts('both_read');value['messages']=True
   with self.assertRaises(ValueError):m.checkpoint('both_read',value)
+
+ def test_owner_roster_and_member_denial_are_distinct(self):
+  m=self.module();m.selection('alice',{'group_role':'owner','organizations':['A','A2']})
+  d={'group_role':'member','roster_denial':{'status':403,'code':'group_permission_denied'}};m.selection('bob_ios',d)
+  for bad in [dict(d,organizations=['A','A2']),dict(d,roster_denial={'status':200,'code':'group_permission_denied'}),dict(d,roster_denial={'status':403,'code':'unavailable'})]:
+   with self.assertRaises(ValueError):m.selection('bob_android',bad)

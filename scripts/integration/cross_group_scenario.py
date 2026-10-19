@@ -1,6 +1,6 @@
 """Coordinate real actor commands and independent PostgreSQL group/file facts."""
 import json,re,time,uuid
-from .cross_group import checkpoint,download,terminal,PAYLOAD
+from .cross_group import checkpoint,download,terminal,PAYLOAD,selection
 
 def run(actors,backend,out,result,save):
  schema=backend.config['schema']
@@ -26,8 +26,8 @@ def run(actors,backend,out,result,save):
  alice,ios,android=(actors[k] for k in ('alice','bob_ios','bob_android'))
  phase('registered')
  created=alice.command('create_group',bob_membership=backend.config['actors']['bob_ios']['membership']);group=str(uuid.UUID(created['details']['group_id']));result['group_id']=group;phase('created')
- alice.command('select_group',group_id=group);alice.command('send',text='独立群消息一',seq='1');phase('group_sent')
- ios.command('select_group',group_id=group);android.command('select_group',group_id=group);phase('both_delivered')
+ selection('alice',alice.command('select_group',group_id=group)['details']);alice.command('send',text='独立群消息一',seq='1');phase('group_sent')
+ selection('bob_ios',ios.command('select_group',group_id=group)['details']);selection('bob_android',android.command('select_group',group_id=group)['details']);phase('both_delivered')
  ios.command('read',seqs=['1']);android.command('read',seqs=['1']);phase('both_read');alice.command('summary',seq='1',status='read')
  ios.command('send',text='跨组织群回复二',seq='2');alice.command('received_read',seq='2');phase('reply_read')
  sent=alice.command('file_send',contents=PAYLOAD.decode());result['file_id']=sent['details']['file_id']
