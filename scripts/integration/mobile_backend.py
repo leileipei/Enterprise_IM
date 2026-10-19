@@ -69,6 +69,10 @@ def verify_report(report, facts, code, driver, platform):
 
 class Backend:
     fixture_test = 'TestMobileBackendFixture'
+    expected_product_children = 3
+
+    def runtime_environment(self):
+        return {}
     def __init__(self, repo, args, private, out, registry, platform, state, save):
         self.repo=Path(repo);self.args=args;self.out=Path(out);self.registry=registry
         self.root=Path(private)/'mobile-backend';self.root.mkdir(mode=0o700)
@@ -124,6 +128,7 @@ class Backend:
         (self.root/'tmp').mkdir(mode=0o700)
         env={k:os.environ[k] for k in ('HOME','LANG','TZ') if k in os.environ}
         env.update(PATH=str(self.args.go.parent)+':/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',TMPDIR=str(self.root/'tmp'),GOWORK='off',GOFLAGS='-mod=readonly',GOPROXY='off',GOTOOLCHAIN='local',GOSUMDB='off',IM_TEST_DATABASE_URL='postgresql://postgres:'+password+'@127.0.0.1:'+port+'/enterprise_im_p5?sslmode=disable',IM_TEST_REDIS_URL='redis://:'+redis_secret+'@127.0.0.1:'+rport+'/0',IM_TEST_INTEGRATION_REGISTRY=str(self.registry.path),IM_TEST_INTEGRATION_OWNER=self.registry.owner,IM_TEST_INTEGRATION_SOURCE_SHA=self.registry.commit,IM_TEST_INTEGRATION_GATE='mobile_backend',IM_TEST_INTEGRATION_PRIVATE_ROOT=str(self.root.parent),IM_TEST_MOBILE_PLATFORM=self.platform,IM_TEST_MOBILE_CONFIG=str(self.root/'input.json'),IM_TEST_MOBILE_FACTS=str(self.out/'backend-facts.json'),IM_TEST_MOBILE_STOP=str(self.root/'stop'))
+        env.update(self.runtime_environment())
         argv=[str(self.args.go),'test','-tags=nativeclientintegration','-count=1','-v','-timeout=20m','./internal/policystore','-run','^'+self.fixture_test+'$']
         def execute():
             try:
@@ -153,7 +158,7 @@ class Backend:
         self.state['go_unchanged']=digest(self.args.go)==self.state['go_sha256']
         records=self.registry.records()
         children=[r for r in records if r.get('event')=='registered' and r.get('kind')=='process' and r.get('detail',{}).get('test')==self.fixture_test]
-        verified=len(children)==3
+        verified=len(children)==self.expected_product_children
         for child in children:
             def match(r):return all(r.get(k)==child.get(k) for k in ('source_commit','owner','kind','identity','fingerprint'))
             ready=[r for r in records if r.get('event')=='ready' and match(r)]

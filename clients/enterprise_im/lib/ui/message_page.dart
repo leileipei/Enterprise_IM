@@ -13,11 +13,13 @@ class MessagePage extends StatefulWidget {
   final ConversationView view;
   final ConversationSummary conversation;
   final VoidCallback onBack;
+  final FileDownload Function()? createDownloads;
   const MessagePage({
     super.key,
     required this.view,
     required this.conversation,
     required this.onBack,
+    this.createDownloads,
   });
   @override
   State<MessagePage> createState() => _MessagePageState();
@@ -32,7 +34,8 @@ class _MessagePageState extends State<MessagePage> {
   void initState() {
     super.initState();
     widget.view.addListener(_changed);
-    _downloads = FileDownload(widget.view.memberships);
+    _downloads =
+        widget.createDownloads?.call() ?? FileDownload(widget.view.memberships);
   }
 
   void _changed() {
@@ -41,7 +44,9 @@ class _MessagePageState extends State<MessagePage> {
       _downloads = null;
       if (downloads != null) unawaited(downloads.close());
     } else {
-      _downloads ??= FileDownload(widget.view.memberships);
+      _downloads ??=
+          widget.createDownloads?.call() ??
+          FileDownload(widget.view.memberships);
       unawaited(_downloads!.prune().catchError((Object _) {}));
     }
     if (mounted) setState(() {});

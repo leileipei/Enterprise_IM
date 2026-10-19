@@ -33,6 +33,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('flutter-sdk','pub-cache','android-sdk','java-home','gradle-cache','go','developer-dir','output'):
         parser.add_argument('--'+name,type=Path,required=True)
+    parser.add_argument('--scenario',choices=['messaging','group-files-devices'],default='messaging')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parents[1]
     sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -44,7 +45,7 @@ def main():
     pre={'android':android_build.preflight(repo,aa),'ios':mobile.preflight(repo,ia),'backend':backend_preflight(args.go)}
     owner=secrets.token_hex(16);root=Path(tempfile.mkdtemp(prefix='im-cross-',dir='/private/tmp')).resolve();root.chmod(0o700)
     reg=Registry(root/'registry.jsonl',owner,sha);private=root/owner;client=private/'client'
-    result={'status':'failed','source_commit':sha,'owner':owner,'root':str(root),'preflight':pre,'commands':[],'actors':{},'backend':{},'checkpoints':[], 'scope':'two owned Android API36 and one iOS26.5 native process; production API and workers; synthetic platform-bound refresh IdP; no physical hardware or interactive customer SSO'}
+    result={'status':'failed','source_commit':sha,'owner':owner,'root':str(root),'preflight':pre,'scenario':args.scenario,'commands':[],'actors':{},'backend':{},'checkpoints':[], 'scope':'two owned Android API36 and one iOS26.5 native process; production API and workers; synthetic platform-bound refresh IdP; no physical hardware or interactive customer SSO'}
     actors={};backend=None;blocked=None
     def save():(out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     def inventory():
@@ -53,7 +54,7 @@ def main():
     sources=inventory();result['source_sha256']=sources;save()
     def step(name,argv,env,timeout=1200):
         e=run_command(name,'cross-native',sha,argv,client,env,out/(name+'.log'),time.monotonic()+timeout,reg)
-        result['commands'].append({'name':name,'actual_exit':e.exit_code,'failures':e.failures,'stdout_sha256':digest(e.log),'stderr_sha256':digest(str(e.log)+'.stderr')});save()
+        result['commands'].append({'name':name,'argv':argv,'actual_exit':e.exit_code,'failures':e.failures,'stdout_sha256':digest(e.log),'stderr_sha256':digest(str(e.log)+'.stderr')});save()
         if e.exit_code!=0 or e.failures:raise ValueError('cross_'+name+'_failed')
     def dbphase(phase):
         schema=backend.config['schema']
@@ -78,7 +79,7 @@ def main():
         mobile.copy_client(repo,client,{p:h for p,h in sources.items() if p.startswith('clients/enterprise_im/')})
         build=private/'android-build';build.mkdir(mode=0o700);env=android_build.android_environment(build,aa)
         flutter=[str(args.flutter_sdk/'bin/cache/dart-sdk/bin/dart'),str(args.flutter_sdk/'bin/cache/flutter_tools.snapshot')]
-        target='integration_test/cross_device_test.dart'
+        target='integration_test/cross_group_files_test.dart' if args.scenario=='group-files-devices' else 'integration_test/cross_device_test.dart'
         step('pub-android',flutter+['pub','get','--offline','--enforce-lockfile'],env,120)
         step('shared',flutter+['test','--no-pub'],env)
         step('analysis',flutter+['analyze','--fatal-infos','--no-pub'],env)
@@ -94,7 +95,11 @@ def main():
                 if any(Path(n).name in ('cross-input.json','owned_backend.json') for n in z.namelist()):raise ValueError('runtime_credentials_bundled')
         if digest(client/'pubspec.lock')!=sources['clients/enterprise_im/pubspec.lock']:raise ValueError('cross_lock_changed')
         result['binaries']={'android':{'file':apk.name,'sha256':digest(apk)},'ios':{'file':archive.name,'sha256':digest(archive)},'credentials_created_after_build':True};save()
-        backend=CrossBackend(repo,args,private,out,reg,'cross',result['backend'],save);config=backend.start();port=urlparse(config['origin']).port
+        backend_type=CrossBackend
+        if args.scenario=='group-files-devices':
+            from integration.cross_group_backend import GroupFilesBackend
+            backend_type=GroupFilesBackend
+        backend=backend_type(repo,args,private,out,reg,'cross',result['backend'],save);config=backend.start();port=urlparse(config['origin']).port
         for role in ('alice','bob_ios','bob_android'):
             actorout=out/role;actorout.mkdir(mode=0o700);state={};result['actors'][role]=state
             if role=='bob_ios':actor=IOSActor(role,ia,actorout,secrets.token_hex(16),state,save,ienv);binary=app
@@ -105,33 +110,37 @@ def main():
             actor.ready(bootstrap)
         validate_participants({role:a.state['admission'] for role,a in actors.items()})
         if actors['alice'].sim.name==actors['bob_android'].sim.name or actors['alice'].sim.console==actors['bob_android'].sim.console:raise ValueError('independent_android_vms_unproven')
-        dbphase('registered');alice=actors['alice'];ios=actors['bob_ios'];android=actors['bob_android']
-        alice.command('send',text='独立进程消息一',seq='1');dbphase('first_sent')
-        ios.command('open');dbphase('bob_delivered')
-        android.command('open');dbphase('both_delivered');alice.command('summary',seq='1',status='delivered')
-        ios.command('read',seqs=['1']);dbphase('bob_read');alice.command('summary',seq='1',status='read');ios.screenshot('first-read')
-        uid=int(android.state['installation']['uid']);comment='IMCROSS_'+secrets.token_hex(6).upper()
-        # Only the verified owned guest's application UID is affected.
-        android.identity(android.state['pid']);android.sim.adb('network-cut',network_rule(uid,comment,'insert'));blocked=(android,uid,comment)
-        validate_offline_observation(android.command('probe_offline'));alice.command('send',text='断线期间消息二',seq='2');dbphase('offline_sent')
-        time.sleep(3);android.command('offline_stable');dbphase('offline_stable')
-        counters=android.sim.adb('network-counters',['shell','su','0','iptables','-L','OUTPUT','-n','-v','-x']).stdout.decode()
-        matching=[line for line in counters.splitlines() if comment in line]
-        if len(matching)!=1 or int(matching[0].split()[0])<=0:raise ValueError('cross_network_cut_not_observed')
-        result['network']={'uid':uid,'comment':comment,'packets':int(matching[0].split()[0]),'offline_seconds':3};save()
-        android.sim.adb('network-restore',network_rule(uid,comment,'delete'));blocked=None
-        absent=android.sim.adb('network-absent',['shell','su','0','iptables','-C','OUTPUT',*network_rule(uid,comment,'delete')[6:]],required=False)
-        if absent.returncode!=1:raise ValueError('cross_network_rule_remains')
-        result['network']['rule_removed']=True
-        recovered=android.command('auto_catchup')
-        if recovered['details'].get('automatic_catchup') is not True or recovered['details'].get('cursor')!='2':raise ValueError('cross_automatic_catchup_unproven')
-        dbphase('recovered_delivered');android.command('read',seqs=['1','2']);dbphase('recovered_read');android.screenshot('recovered-read');confirm_recovery_sender(alice)
-        ios.command('send',text='跨端回复三',seq='3');alice.command('received_read',seq='3');ios.command('summary',seq='3',status='read');dbphase('reply_read')
-        alice.screenshot('reply-read');ios.screenshot('reply-sent')
-        for actor in actors.values():
-            final=actor.command('done')
-            if final.get('cleanup') is not True:raise ValueError('cross_actor_cleanup_unproven')
-        dbphase('done');(backend.root/'scenario-done').touch(mode=0o600);result['scenario_passed']=True
+        if args.scenario=='group-files-devices':
+            from integration.cross_group_scenario import run as run_group_scenario
+            run_group_scenario(actors,backend,out,result,save)
+        else:
+            dbphase('registered');alice=actors['alice'];ios=actors['bob_ios'];android=actors['bob_android']
+            alice.command('send',text='独立进程消息一',seq='1');dbphase('first_sent')
+            ios.command('open');dbphase('bob_delivered')
+            android.command('open');dbphase('both_delivered');alice.command('summary',seq='1',status='delivered')
+            ios.command('read',seqs=['1']);dbphase('bob_read');alice.command('summary',seq='1',status='read');ios.screenshot('first-read')
+            uid=int(android.state['installation']['uid']);comment='IMCROSS_'+secrets.token_hex(6).upper()
+            # Only the verified owned guest's application UID is affected.
+            android.identity(android.state['pid']);android.sim.adb('network-cut',network_rule(uid,comment,'insert'));blocked=(android,uid,comment)
+            validate_offline_observation(android.command('probe_offline'));alice.command('send',text='断线期间消息二',seq='2');dbphase('offline_sent')
+            time.sleep(3);android.command('offline_stable');dbphase('offline_stable')
+            counters=android.sim.adb('network-counters',['shell','su','0','iptables','-L','OUTPUT','-n','-v','-x']).stdout.decode()
+            matching=[line for line in counters.splitlines() if comment in line]
+            if len(matching)!=1 or int(matching[0].split()[0])<=0:raise ValueError('cross_network_cut_not_observed')
+            result['network']={'uid':uid,'comment':comment,'packets':int(matching[0].split()[0]),'offline_seconds':3};save()
+            android.sim.adb('network-restore',network_rule(uid,comment,'delete'));blocked=None
+            absent=android.sim.adb('network-absent',['shell','su','0','iptables','-C','OUTPUT',*network_rule(uid,comment,'delete')[6:]],required=False)
+            if absent.returncode!=1:raise ValueError('cross_network_rule_remains')
+            result['network']['rule_removed']=True
+            recovered=android.command('auto_catchup')
+            if recovered['details'].get('automatic_catchup') is not True or recovered['details'].get('cursor')!='2':raise ValueError('cross_automatic_catchup_unproven')
+            dbphase('recovered_delivered');android.command('read',seqs=['1','2']);dbphase('recovered_read');android.screenshot('recovered-read');confirm_recovery_sender(alice)
+            ios.command('send',text='跨端回复三',seq='3');alice.command('received_read',seq='3');ios.command('summary',seq='3',status='read');dbphase('reply_read')
+            alice.screenshot('reply-read');ios.screenshot('reply-sent')
+            for actor in actors.values():
+                final=actor.command('done')
+                if final.get('cleanup') is not True:raise ValueError('cross_actor_cleanup_unproven')
+            dbphase('done');(backend.root/'scenario-done').touch(mode=0o600);result['scenario_passed']=True
     except Exception as exc:
         result['failure_type']=type(exc).__name__;result['failure_reason']=str(exc);save()
     finally:
@@ -153,7 +162,7 @@ def main():
         if not cleanup and cleaned.removed and not private.exists():reg.path.unlink();root.rmdir()
         result['cleanup']={'failures':cleanup,'private_removed':not private.exists(),'root_removed':not root.exists()}
         back=result['backend']
-        result['status']='passed' if result.get('scenario_passed') is True and back.get('actual_exit')==0 and not back.get('command_failures') and back.get('product_children',{}).get('lifecycle_verified') is True and back.get('source_unchanged') is True and back.get('go_unchanged') is True and back.get('thread_joined') is True and result['source_unchanged'] and result['tools_unchanged'] and not cleanup and not root.exists() else 'failed'
+        result['status']='passed' if result.get('scenario_passed') is True and back.get('actual_exit')==0 and not back.get('command_failures') and back.get('product_children',{}).get('lifecycle_verified') is True and back.get('source_unchanged') is True and back.get('go_unchanged') is True and back.get('thread_joined') is True and result['source_unchanged'] and result['tools_unchanged'] and not cleanup and not root.exists() and (args.scenario!='group-files-devices' or (back.get('file_tools_unchanged') is True and not back.get('scanner_cleanup_failures'))) else 'failed'
         save()
     print(json.dumps({k:result.get(k) for k in ('status','source_commit','checkpoints','failure_reason','cleanup')},ensure_ascii=False))
     return 0 if result['status']=='passed' else 1
