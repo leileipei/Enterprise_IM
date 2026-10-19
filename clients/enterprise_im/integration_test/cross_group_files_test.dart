@@ -360,11 +360,27 @@ void main() {
                 () => view!.summaries[seq]?.status == cmd['status'],
                 'sender receipt converged',
               );
-              if (mounted)
-                expect(
-                  find.text(cmd['status'] == 'read' ? '已读' : '已送达'),
-                  findsWidgets,
-                );
+              expect(mounted, isTrue);
+              final receipt = view!.summaries[seq]!;
+              expect(receipt.summaryAvailable, isTrue);
+              expect(receipt.visibleRecipientCount, 1);
+              expect(receipt.visibleDeliveredCount, 1);
+              expect(receipt.visibleReadCount, 1);
+              const label = '可见接收者：已送达 1/1 · 已读 1/1';
+              await until(
+                () =>
+                    find
+                        .descendant(
+                          of: find.byKey(ValueKey('message-$seq')),
+                          matching: find.text(label),
+                        )
+                        .evaluate()
+                        .length ==
+                    1,
+                'exact group message visible read badge',
+              );
+              details['visible_read_seq'] = seq.toString();
+              details['visible_read_label'] = label;
             case 'file_send':
               await mount();
               final bytes = utf8.encode(cmd['contents'] as String);
