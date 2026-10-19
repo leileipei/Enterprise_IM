@@ -19,6 +19,21 @@ func authorizeFileDownloadTx(ctx context.Context, tx pgx.Tx, id access.TrustedId
 	if err != nil {
 		return files.Metadata{}, "", 0, time.Time{}, err
 	}
+	expiry, err := lockFileDownloadDevice(ctx, tx, id, fresh)
+	if err != nil {
+		return files.Metadata{}, "", 0, time.Time{}, err
+	}
+	if expiry != nil {
+		// The device lock may have waited across expiry. Re-evaluate all business
+		// evidence at the authoritative database clock after that wait.
+		fresh, err = fileClock(ctx, tx)
+		if err != nil {
+			return files.Metadata{}, "", 0, time.Time{}, err
+		}
+		if !fresh.Before(*expiry) {
+			return files.Metadata{}, "", 0, time.Time{}, ErrInvalidDevice
+		}
+	}
 	m, mid, seq, err := evaluateFileVisibility(f, fresh)
 	if err != nil {
 		return files.Metadata{}, "", 0, time.Time{}, err

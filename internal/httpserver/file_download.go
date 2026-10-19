@@ -16,6 +16,7 @@ import (
 	"github.com/leileipei/Enterprise_IM/internal/access"
 	"github.com/leileipei/Enterprise_IM/internal/filedownload"
 	"github.com/leileipei/Enterprise_IM/internal/files"
+	"github.com/leileipei/Enterprise_IM/internal/policystore"
 )
 
 type FileDownloadService interface {
@@ -125,6 +126,13 @@ func HandlerWithFileDownload(next http.Handler, auth Authenticator, svc FileDown
 		}
 		ctx, cancel := context.WithDeadline(r.Context(), total)
 		defer cancel()
+		if len(r.Header.Values("X-IM-Device-ID")) != 0 || len(r.Header.Values("X-IM-Device-Token")) != 0 {
+			device, ok := receiptDeviceHeader(w, r)
+			if !ok {
+				return
+			}
+			ctx = policystore.WithFileDownloadDeviceCredential(ctx, device)
+		}
 		p, e := svc.Prepare(ctx, id, strings.ToLower(fid))
 		if e != nil {
 			writeDownloadError(w, e)
@@ -156,7 +164,7 @@ func HandlerWithFileDownload(next http.Handler, auth Authenticator, svc FileDown
 		}
 		if e = svc.Authorize(ctx, id, p); e != nil {
 			reason := "audit_unavailable"
-			if errors.Is(e, filedownload.ErrNotFound) || errors.Is(e, filedownload.ErrInvalidIdentity) {
+			if errors.Is(e, filedownload.ErrNotFound) || errors.Is(e, filedownload.ErrInvalidIdentity) || errors.Is(e, policystore.ErrInvalidDevice) {
 				reason = "authorization_revoked"
 			}
 			fail(e, reason)
@@ -284,6 +292,8 @@ func downloadStopReason(ctx context.Context, expiry time.Time) string {
 }
 func writeDownloadError(w http.ResponseWriter, e error) {
 	switch {
+	case errors.Is(e, policystore.ErrInvalidDevice):
+		writeDeviceAuthError(w, http.StatusUnauthorized, "invalid_device")
 	case errors.Is(e, filedownload.ErrNotFound):
 		writeAdminError(w, 404, "not_found")
 	case errors.Is(e, filedownload.ErrInvalidIdentity):

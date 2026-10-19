@@ -559,6 +559,10 @@ void main() {
                   } on ApiFailure catch (e) {
                     denied = e;
                   }
+                  details['rejection_${entry.key}'] = {
+                    'status': denied?.status,
+                    'code': denied?.code,
+                  };
                   expect(denied?.status, 401);
                   expect(denied?.code, 'invalid_device');
                   rejected.add(entry.key);
@@ -570,6 +574,14 @@ void main() {
                 expect(await owner!.current!.store.pendingReceipts(), isEmpty);
                 expect(await owner!.current!.store.pendingSends(), isEmpty);
               });
+              expect(rejected, [
+                'sync',
+                'delivered',
+                'read',
+                'messages',
+                'download',
+                'renew',
+              ]);
               await until(
                 () => find.textContaining('独立群消息一').evaluate().isEmpty,
                 'UI body removed',

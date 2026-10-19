@@ -322,3 +322,45 @@ func TestFileDownloadAdmissionErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestFileDownloadDeviceHeadersFailClosed(t *testing.T) {
+	for _, kind := range []string{"id-only", "token-only", "duplicate-id", "duplicate-token", "bad-token"} {
+		t.Run(kind, func(t *testing.T) {
+			repo := &downloadHTTPRepo{data: []byte("private bytes"), name: "file.txt"}
+			h := downloadHTTPHandler(t, repo, authFunc(downloadHTTPAuth))
+			req := downloadHTTPReq("GET")
+			if kind != "token-only" {
+				req.Header.Set("X-IM-Device-ID", actorID)
+			}
+			if kind != "id-only" {
+				req.Header.Set("X-IM-Device-Token", strings.Repeat("A", 43))
+			}
+			if kind == "duplicate-id" {
+				req.Header.Add("X-IM-Device-ID", actorID)
+			}
+			if kind == "duplicate-token" {
+				req.Header.Add("X-IM-Device-Token", strings.Repeat("A", 43))
+			}
+			if kind == "bad-token" {
+				req.Header.Set("X-IM-Device-Token", "invalid")
+			}
+			w := &downloadHTTPWriter{ResponseRecorder: httptest.NewRecorder()}
+			h.ServeHTTP(w, req)
+			if w.Code != 401 || !strings.Contains(w.Body.String(), "invalid_device") || w.Header().Get("WWW-Authenticate") != "Bearer" || repo.prepares != 0 {
+				t.Fatalf("status=%d prepares=%d body=%s", w.Code, repo.prepares, w.Body.String())
+			}
+		})
+	}
+}
+func TestFileDownloadRevokedDeviceErrorIsUnauthorized(t *testing.T) {
+	repo := &downloadHTTPRepo{data: []byte("private bytes"), name: "file.txt", beginErr: policystore.ErrInvalidDevice}
+	h := downloadHTTPHandler(t, repo, authFunc(downloadHTTPAuth))
+	req := downloadHTTPReq("GET")
+	req.Header.Set("X-IM-Device-ID", actorID)
+	req.Header.Set("X-IM-Device-Token", strings.Repeat("A", 43))
+	w := &downloadHTTPWriter{ResponseRecorder: httptest.NewRecorder()}
+	h.ServeHTTP(w, req)
+	if w.Code != 401 || !strings.Contains(w.Body.String(), "invalid_device") || w.Header().Get("WWW-Authenticate") != "Bearer" {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}
