@@ -151,11 +151,11 @@ func TestCrossGroupFilesDeviceFixture(t *testing.T) {
 		dest []any
 	}{
 		{"SELECT count(*),COALESCE(min(seq),0),COALESCE(max(seq),0),count(DISTINCT client_msg_id) FROM messages", []any{&messages, &minSeq, &maxSeq, &clients}},
-		{"SELECT count(*),count(*) FILTER(WHERE status='revoked') FROM user_devices", []any{&devices, &revoked}},
+		{"SELECT count(*),count(*) FILTER(WHERE revoked_at IS NOT NULL) FROM user_devices", []any{&devices, &revoked}},
 		{"SELECT count(*),count(*) FILTER(WHERE read_at IS NOT NULL) FROM message_device_receipts", []any{&delivered, &reads}},
 		{"SELECT count(*) FROM message_user_receipts WHERE read_at IS NOT NULL", []any{&userReads}},
 		{"SELECT count(*) FROM conversations WHERE kind='group'", []any{&groups}},
-		{"SELECT count(*),count(DISTINCT organization_id) FROM conversation_membership_intervals WHERE leave_seq IS NULL", []any{&members, &organizations}},
+		{"SELECT count(*),count(DISTINCT source_organization_id) FROM conversation_membership_intervals WHERE leave_seq IS NULL", []any{&members, &organizations}},
 		{"SELECT count(*) FROM file_objects WHERE state='ready'", []any{&readyFiles}},
 		{"SELECT count(*) FROM message_attachments", []any{&attachments}},
 		{"SELECT count(*) FROM file_scan_jobs WHERE status='completed'", []any{&scans}},
