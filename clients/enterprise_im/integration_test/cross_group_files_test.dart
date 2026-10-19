@@ -429,22 +429,31 @@ void main() {
                 view!.fileAuthorizationRemaining(message),
                 greaterThan(const Duration(seconds: 120)),
               );
-              await tester.runAsync(
-                () => downloads!.downloadAuthorized(
-                  context!,
-                  message,
-                  authorizationRemaining: () =>
-                      view!.fileAuthorizationRemaining(message),
-                ),
-              );
               final data = await tester.runAsync(() async {
-                final files = await Directory('${storage!.path}/downloads')
-                    .list(recursive: true)
-                    .where((p) => p is File && p.path.endsWith('/content'))
-                    .cast<File>()
-                    .toList();
-                expect(files.length, 1);
-                return files.single.readAsBytes();
+                try {
+                  await downloads!.downloadAuthorized(
+                    context!,
+                    message,
+                    authorizationRemaining: () =>
+                        view!.fileAuthorizationRemaining(message),
+                  );
+                  final files = await Directory('${storage!.path}/downloads')
+                      .list(recursive: true)
+                      .where((p) => p is File && p.path.endsWith('/content'))
+                      .cast<File>()
+                      .toList();
+                  expect(files.length, 1);
+                  return await files.single.readAsBytes();
+                } catch (error, stack) {
+                  details['download_failure_type'] = error.runtimeType
+                      .toString();
+                  details['download_failure_stack'] = stack.toString();
+                  if (error is ApiFailure) {
+                    details['download_failure_code'] = error.code;
+                    details['download_failure_status'] = error.status;
+                  }
+                  rethrow;
+                }
               });
               expect(data, utf8.encode(cmd['contents'] as String));
               final hash = await tester.runAsync(() => Sha256().hash(data!));
