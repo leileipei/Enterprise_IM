@@ -30,7 +30,7 @@ class GroupFilesBackend(Backend):
    except OSError:pass
    if time.monotonic()>deadline:raise TimeoutError('group_minio_ready_timeout')
    time.sleep(.2)
-  bundle=FixtureBundle({'IM_TEST_S3_ENDPOINT':'http://127.0.0.1:'+port},{key,secret},self.registry.path,{self.registry.owner},{'source_commit':self.registry.commit,'minio_admin':(key,secret)})
+  bundle=FixtureBundle({'IM_TEST_S3_ENDPOINT':'http://127.0.0.1:'+port},{key,secret},self.registry.path,{self.registry.owner},{'source_commit':self.registry.commit,'minio_admin':(key,secret),'definition_source':'/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-files-20261015/definitions'})
   self.bundle=bundle
   prepare_iam(bundle,tools,self.root/'iam',deadline)
   prepare_scanner(bundle,tools,self.registry,self.root/'scan',deadline,required_validity_seconds=1500)
