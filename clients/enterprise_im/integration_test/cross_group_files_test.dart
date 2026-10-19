@@ -157,9 +157,14 @@ void main() {
                 view: view!,
                 conversation: summary!,
                 onBack: () {},
-                createDownloads: () => downloads = FileDownload(
-                  membership!,
-                  privateRoot: Directory('${storage!.path}/downloads'),
+                // Live frames execute outside the surrounding test zone.
+                // Keep the actual UI-owned transport bound to this fixture CA.
+                createDownloads: () => HttpOverrides.runWithHttpOverrides(
+                  () => downloads = FileDownload(
+                    membership!,
+                    privateRoot: Directory('${storage!.path}/downloads'),
+                  ),
+                  FixtureTrust(trust),
                 ),
               ),
             ),
