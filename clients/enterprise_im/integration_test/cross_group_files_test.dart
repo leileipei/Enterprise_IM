@@ -347,6 +347,11 @@ void main() {
                 expect(account, isNotNull);
                 await owner!.restore(account!);
                 expect(await cachePresent(), isFalse);
+                final cursor = await owner!.current!.store.committedCursor(
+                  group!,
+                );
+                expect(cursor?.toString(), '3');
+                details['restored_cursor'] = cursor?.toString();
                 membership = MembershipController(owner!);
                 await membership!.load();
                 await membership!.select(config['membership'] as String);

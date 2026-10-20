@@ -33,7 +33,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('flutter-sdk','pub-cache','android-sdk','java-home','gradle-cache','go','developer-dir','output'):
         parser.add_argument('--'+name,type=Path,required=True)
-    parser.add_argument('--scenario',choices=['messaging','group-files-devices','retention-restart'],default='messaging')
+    parser.add_argument('--scenario',choices=['messaging','group-files-devices','retention-restart','retention-restart-android'],default='messaging')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parents[1]
     sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -42,10 +42,13 @@ def main():
     out=args.output
     aa=SimpleNamespace(**vars(args),target='android',verify_simulator=True,simulator_runtime='system-images;android-36;default;arm64-v8a',simulator_device_type='pixel_7')
     ia=SimpleNamespace(**vars(args),target='ios-simulator',verify_simulator=True,simulator_runtime='com.apple.CoreSimulator.SimRuntime.iOS-26-5',simulator_device_type='com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro')
-    pre={'android':android_build.preflight(repo,aa),'ios':mobile.preflight(repo,ia),'backend':backend_preflight(args.go)}
+    android_only=args.scenario=='retention-restart-android'
+    pre={'android':android_build.preflight(repo,aa),'backend':backend_preflight(args.go)}
+    if not android_only:pre['ios']=mobile.preflight(repo,ia)
     owner=secrets.token_hex(16);root=Path(tempfile.mkdtemp(prefix='im-cross-',dir='/private/tmp')).resolve();root.chmod(0o700)
     reg=Registry(root/'registry.jsonl',owner,sha);private=root/owner;client=private/'client'
     result={'status':'failed','source_commit':sha,'owner':owner,'root':str(root),'preflight':pre,'scenario':args.scenario,'commands':[],'actors':{},'backend':{},'checkpoints':[], 'scope':'two owned Android API36 and one iOS26.5 native process; production API and workers; synthetic platform-bound refresh IdP; no physical hardware or interactive customer SSO'}
+    if android_only:result['scope']='two owned Android API36 native processes; production API and workers; synthetic refresh IdP; iOS blocked by operator Xcode initialization; no physical hardware'
     actors={};backend=None;blocked=None
     def save():(out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     def inventory():
@@ -79,28 +82,32 @@ def main():
         mobile.copy_client(repo,client,{p:h for p,h in sources.items() if p.startswith('clients/enterprise_im/')})
         build=private/'android-build';build.mkdir(mode=0o700);env=android_build.android_environment(build,aa)
         flutter=[str(args.flutter_sdk/'bin/cache/dart-sdk/bin/dart'),str(args.flutter_sdk/'bin/cache/flutter_tools.snapshot')]
-        target='integration_test/cross_group_files_test.dart' if args.scenario in ('group-files-devices','retention-restart') else 'integration_test/cross_device_test.dart'
+        target='integration_test/cross_group_files_test.dart' if args.scenario in ('group-files-devices','retention-restart','retention-restart-android') else 'integration_test/cross_device_test.dart'
         step('pub-android',flutter+['pub','get','--offline','--enforce-lockfile'],env,120)
         step('shared',flutter+['test','--no-pub'],env)
         step('analysis',flutter+['analyze','--fatal-infos','--no-pub'],env)
         step('build-android',flutter+['build','apk','--debug','--no-pub','--target='+target],env,1800)
         apk=out/'cross-debug.apk';shutil.copyfile(client/'build/app/outputs/flutter-apk/app-debug.apk',apk);apk.chmod(0o600)
-        iosbuild=private/'ios-build';iosbuild.mkdir(mode=0o700);ienv=mobile.xcrun_environment(iosbuild,args.developer_dir,args.pub_cache)
-        step('pub-ios',flutter+['pub','get','--offline','--enforce-lockfile'],ienv,120)
-        step('build-ios',flutter+['build','ios','--simulator','--debug','--no-pub','--target='+target],ienv,1800)
-        app=client/'build/ios/iphonesimulator/Runner.app';archive=out/'cross-ios-debug.zip';p=mobile.archive_ios_bundle(app,archive)
-        if p.returncode:raise ValueError('cross_ios_archive_failed')
-        for binary in (apk,archive):
+        binaries=[apk]
+        if not android_only:
+            iosbuild=private/'ios-build';iosbuild.mkdir(mode=0o700);ienv=mobile.xcrun_environment(iosbuild,args.developer_dir,args.pub_cache)
+            step('pub-ios',flutter+['pub','get','--offline','--enforce-lockfile'],ienv,120)
+            step('build-ios',flutter+['build','ios','--simulator','--debug','--no-pub','--target='+target],ienv,1800)
+            app=client/'build/ios/iphonesimulator/Runner.app';archive=out/'cross-ios-debug.zip';p=mobile.archive_ios_bundle(app,archive)
+            if p.returncode:raise ValueError('cross_ios_archive_failed')
+            binaries.append(archive)
+        for binary in binaries:
             with zipfile.ZipFile(binary) as z:
                 if any(Path(n).name in ('cross-input.json','owned_backend.json') for n in z.namelist()):raise ValueError('runtime_credentials_bundled')
         if digest(client/'pubspec.lock')!=sources['clients/enterprise_im/pubspec.lock']:raise ValueError('cross_lock_changed')
-        result['binaries']={'android':{'file':apk.name,'sha256':digest(apk)},'ios':{'file':archive.name,'sha256':digest(archive)},'credentials_created_after_build':True};save()
+        result['binaries']={'android':{'file':apk.name,'sha256':digest(apk)},**({'ios':{'file':archive.name,'sha256':digest(archive)}} if not android_only else {}),'credentials_created_after_build':True};save()
         backend_type=CrossBackend
-        if args.scenario in ('group-files-devices','retention-restart'):
+        if args.scenario in ('group-files-devices','retention-restart','retention-restart-android'):
             from integration.cross_group_backend import GroupFilesBackend
             backend_type=GroupFilesBackend
         backend=backend_type(repo,args,private,out,reg,'cross',result['backend'],save);config=backend.start();port=urlparse(config['origin']).port
-        for role in ('alice','bob_ios','bob_android'):
+        roles=('alice','bob_android') if android_only else ('alice','bob_ios','bob_android')
+        for role in roles:
             actorout=out/role;actorout.mkdir(mode=0o700);state={};result['actors'][role]=state
             if role=='bob_ios':actor=IOSActor(role,ia,actorout,secrets.token_hex(16),state,save,ienv);binary=app
             else:actor=AndroidActor(role,aa,private/role,actorout,secrets.token_hex(16),reg,pre['android']['simulator'],state,save);binary=apk
@@ -109,10 +116,11 @@ def main():
             else:actor.start(binary,port,bootstrap)
             actor.config=bootstrap
             actor.ready(bootstrap)
-        validate_participants({role:a.state['admission'] for role,a in actors.items()})
+        if not android_only:validate_participants({role:a.state['admission'] for role,a in actors.items()})
+        elif len({a.state['admission']['device_id'] for a in actors.values()})!=2 or actors['alice'].state['admission']['user']==actors['bob_android'].state['admission']['user']:raise ValueError('android_independent_accounts_devices_unproven')
         if actors['alice'].sim.name==actors['bob_android'].sim.name or actors['alice'].sim.console==actors['bob_android'].sim.console:raise ValueError('independent_android_vms_unproven')
-        if args.scenario in ('group-files-devices','retention-restart'):
-            if args.scenario=='retention-restart':
+        if args.scenario in ('group-files-devices','retention-restart','retention-restart-android'):
+            if args.scenario.startswith('retention-restart'):
                 from integration.cross_retention_scenario import run as run_group_scenario
             else:
                 from integration.cross_group_scenario import run as run_group_scenario
@@ -158,7 +166,7 @@ def main():
         if backend:
             try:backend.close()
             except Exception as exc:cleanup.append('backend:'+type(exc).__name__)
-        result.update(verify_integrity(repo,sources,{p:h for platform in ('android','ios') for p,h in pre[platform]['tool_sha256'].items()}))
+        result.update(verify_integrity(repo,sources,{p:h for platform in pre if platform in ('android','ios') for p,h in pre[platform]['tool_sha256'].items()}))
         if not cleanup:
             st=private.stat();reg.add(ResourceRef('directory',owner,str(private),{'device':st.st_dev,'inode':st.st_ino}))
         cleaned=reg.cleanup(time.monotonic()+90);cleanup.extend(cleaned.failures)
@@ -166,7 +174,7 @@ def main():
         if not cleanup and cleaned.removed and not private.exists():reg.path.unlink();root.rmdir()
         result['cleanup']={'failures':cleanup,'private_removed':not private.exists(),'root_removed':not root.exists()}
         back=result['backend']
-        result['status']='passed' if result.get('scenario_passed') is True and back.get('actual_exit')==0 and not back.get('command_failures') and back.get('product_children',{}).get('lifecycle_verified') is True and back.get('source_unchanged') is True and back.get('go_unchanged') is True and back.get('thread_joined') is True and result['source_unchanged'] and result['tools_unchanged'] and not cleanup and not root.exists() and (args.scenario not in ('group-files-devices','retention-restart') or (back.get('file_tools_unchanged') is True and not back.get('scanner_cleanup_failures'))) else 'failed'
+        result['status']='passed' if result.get('scenario_passed') is True and back.get('actual_exit')==0 and not back.get('command_failures') and back.get('product_children',{}).get('lifecycle_verified') is True and back.get('source_unchanged') is True and back.get('go_unchanged') is True and back.get('thread_joined') is True and result['source_unchanged'] and result['tools_unchanged'] and not cleanup and not root.exists() and (args.scenario not in ('group-files-devices','retention-restart','retention-restart-android') or (back.get('file_tools_unchanged') is True and not back.get('scanner_cleanup_failures'))) else 'failed'
         save()
     print(json.dumps({k:result.get(k) for k in ('status','source_commit','checkpoints','failure_reason','cleanup')},ensure_ascii=False))
     return 0 if result['status']=='passed' else 1

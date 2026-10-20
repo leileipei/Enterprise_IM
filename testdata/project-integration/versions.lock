@@ -2,8 +2,8 @@
 # Service/scanner/mc pins are also enforced from testdata/file-runtime/versions.lock.
 go = 1.27.1
 node = 24.19.0
-# 2026-10-17: explicit local baseline refresh; exact version check remains mandatory.
-chrome = 155.0.8059.82
+# 2026-10-20: installed Chrome auto-update verified; exact version check remains mandatory.
+chrome = 155.0.8059.85
 playwright = 1.62.1
 redis-image = redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
 # Approved 2026-10-07: same release source rebuild, Go1.27.1 darwin/arm64.

@@ -6,9 +6,9 @@ class RetentionTests(unittest.TestCase):
  def test_restart_rejects_replaced_device_store_pid_or_missing_revalidation(self):
   m=importlib.import_module('integration.cross_retention')
   before={'pid':12,'device_id':'d','storage':'s','nonce':'n'}
-  after={'pid':13,'device_id':'d','storage':'s','nonce':'n','old_absent':True,'preauth_hidden':True,'cache_erased':True,'vault_reused':True,'renew_before_sync':True}
+  after={'pid':13,'device_id':'d','storage':'s','nonce':'n','old_absent':True,'preauth_hidden':True,'cache_erased':True,'vault_reused':True,'renew_before_sync':True,'restored_cursor':'3'}
   m.restart_proof(before,after)
-  for key,value in [('pid',12),('device_id','new'),('storage','new'),('nonce','new'),('old_absent',False),('preauth_hidden',False),('cache_erased',False),('vault_reused',False),('renew_before_sync',False)]:
+  for key,value in [('pid',12),('device_id','new'),('storage','new'),('nonce','new'),('old_absent',False),('preauth_hidden',False),('cache_erased',False),('vault_reused',False),('renew_before_sync',False),('restored_cursor','0')]:
    with self.assertRaises(ValueError):m.restart_proof(before,dict(after,**{key:value}))
  def test_policy_requires_versioned_existing_content_and_no_physical_purge(self):
   m=importlib.import_module('integration.cross_retention')
