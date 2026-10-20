@@ -67,13 +67,20 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 			t.Error("owned Redis cleanup failed")
 		}
 	})
+	ackRestart := os.Getenv("IM_TEST_CROSS_ACK_RESTART") == "1"
+	startRealtime := startRealtimeProcess
+	startAPI := startProductionAPI
+	if ackRestart {
+		startRealtime = crossRetainedRealtime
+		startAPI = crossRetainedAPI
+	}
 	worker := fileProductCommand(productionTestBinary(t, "im-outbox-worker"), []string{"IM_DATABASE_URL=" + dsn, "IM_OUTBOX_REDIS_URL=" + os.Getenv("IM_TEST_REDIS_URL"), "IM_OUTBOX_STREAM=" + stream})
-	startRealtimeProcess(t, worker, func() bool { return cache.Exists(ctx, outbox.PublisherPresenceKey(stream)).Val() == 1 })
+	startRealtime(t, worker, func() bool { return cache.Exists(ctx, outbox.PublisherPresenceKey(stream)).Val() == 1 })
 	receiptWorker := fileProductCommand(productionTestBinary(t, "im-receipt-worker"), []string{"IM_DATABASE_URL=" + dsn, "IM_RECEIPT_REDIS_URL=" + os.Getenv("IM_TEST_REDIS_URL"), "IM_RECEIPT_STREAM=" + receipts})
-	startRealtimeProcess(t, receiptWorker, func() bool { return cache.Exists(ctx, receiptoutbox.PublisherPresenceKey(receipts)).Val() == 1 })
+	startRealtime(t, receiptWorker, func() bool { return cache.Exists(ctx, receiptoutbox.PublisherPresenceKey(receipts)).Val() == 1 })
 	// Real broker refresh uses the platform-bound synthetic identity issuer.
 	env, refresh := crossRefreshIssuer(t, conn)
-	upstream, _ := url.Parse(startProductionAPI(t, productionTestBinary(t, "im-api"), append(env, "IM_DATABASE_URL="+dsn, "IM_HTTP_ADDR=127.0.0.1:0", "IM_RECEIPTS_ENABLED=true", "IM_RECEIPT_WRITES_PER_SECOND=100", "IM_REALTIME_REDIS_URL="+os.Getenv("IM_TEST_REDIS_URL"), "IM_REALTIME_STREAM="+stream, "IM_RECEIPT_STREAM="+receipts)))
+	upstream, _ := url.Parse(startAPI(t, productionTestBinary(t, "im-api"), append(env, "IM_DATABASE_URL="+dsn, "IM_HTTP_ADDR=127.0.0.1:0", "IM_RECEIPTS_ENABLED=true", "IM_RECEIPT_WRITES_PER_SECOND=100", "IM_REALTIME_REDIS_URL="+os.Getenv("IM_TEST_REDIS_URL"), "IM_REALTIME_STREAM="+stream, "IM_RECEIPT_STREAM="+receipts)))
 
 	var mu sync.Mutex
 	events := []map[string]any{}
@@ -91,11 +98,27 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 		}
 	}
 	reverse := httputil.NewSingleHostReverseProxy(upstream)
+	seenACK := map[string]bool{}
 	reverse.ModifyResponse = func(r *http.Response) error {
 		mu.Lock()
 		defer mu.Unlock()
-		events = append(events, map[string]any{"n": len(events) + 1, "method": r.Request.Method, "path": r.Request.URL.Path, "status": r.StatusCode, "device": r.Request.Header.Get("X-IM-Device-ID"), "device_headers": r.Request.Header.Get("X-IM-Device-ID") != "" && r.Request.Header.Get("X-IM-Device-Token") != ""})
+		event := map[string]any{"n": len(events) + 1, "method": r.Request.Method, "path": r.Request.URL.Path, "status": r.StatusCode, "device": r.Request.Header.Get("X-IM-Device-ID"), "device_headers": r.Request.Header.Get("X-IM-Device-ID") != "" && r.Request.Header.Get("X-IM-Device-Token") != ""}
+		drop := false
+		if ackRestart && r.Request.Method == "POST" && r.Request.URL.Path == "/api/v1/conversations/"+directA+"/messages" && r.StatusCode == 200 {
+			ack, lost, err := crossObserveACK(r, r.Request.Header.Get("X-IM-Device-ID"), seenACK)
+			if err != nil {
+				return err
+			}
+			drop = lost
+			event["ack"] = ack
+			event["upstream_status"] = r.StatusCode
+			event["downstream_dropped"] = drop
+		}
+		events = append(events, event)
 		saveEvents()
+		if drop {
+			panic(http.ErrAbortHandler)
+		}
 		return nil
 	}
 	proxy, ca := nativeProbeTLS(t, reverse)

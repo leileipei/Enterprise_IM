@@ -19,6 +19,7 @@ import 'package:enterprise_im/features/memberships/membership_controller.dart';
 import 'package:enterprise_im/features/conversations/conversation_list.dart';
 import 'package:enterprise_im/features/conversations/conversation_view.dart';
 import 'package:enterprise_im/platform/mobile_activity.dart';
+import 'package:enterprise_im/platform/native_storage.dart';
 import 'package:enterprise_im/ui/message_page.dart';
 import 'owned_backend_fixture.dart';
 import 'files_and_devices_test.dart' show FixtureTrust, NoInteractiveBrowser;
@@ -58,6 +59,10 @@ void main() {
       final origin = Uri.parse(config['origin'] as String);
       final role = config['role'] as String, nonce = config['nonce'] as String;
       final vault = OsSecureVault(), adapter = mobileActivityAdapter();
+      final recovery = File('${documents.path}/cross-recovery.json');
+      final restarting = config['restart'] == true;
+      String storageName() =>
+          storage!.uri.pathSegments.where((s) => s.isNotEmpty).last;
       ClientSession? owner;
       MembershipController? membership;
       ApiClient? api;
@@ -137,7 +142,13 @@ void main() {
           view = ConversationView(membership!, adapter.activity);
           await view!.select(context!, summary!);
         });
-        await until(() => view!.canSend, 'conversation admitted');
+        await until(
+          () =>
+              view!.context != null &&
+              !view!.loading &&
+              (view!.canSend || view!.pending.isNotEmpty),
+          'conversation admitted',
+        );
       }
 
       Future<void> mount() async {
@@ -192,6 +203,7 @@ void main() {
         await tester.runAsync(() async {
           if (await input.exists()) await input.delete();
           if (await command.exists()) await command.delete();
+          if (await recovery.exists()) await recovery.delete();
         });
         cleaned = true;
       }
@@ -201,7 +213,7 @@ void main() {
           await tester.runAsync(
             () => vault.read(bootstrapNamespace, 'account'),
           ),
-          isNull,
+          restarting ? isNotNull : isNull,
         );
         await tester.pumpWidget(
           MaterialApp(home: Scaffold(body: Text('独立进程 $role'))),
@@ -211,7 +223,26 @@ void main() {
           'actual native active scene',
         );
         await tester.runAsync(() async {
-          storage = await createOwnedNativeStorage(host: false);
+          if (restarting) {
+            expect(config.containsKey('refresh'), isFalse);
+            final saved =
+                jsonDecode(await recovery.readAsString())
+                    as Map<String, dynamic>;
+            expect(saved['nonce'], nonce);
+            final name = saved['storage'] as String;
+            expect(
+              RegExp(r'^im-native-backend-[a-zA-Z0-9]+$').hasMatch(name),
+              isTrue,
+            );
+            storage = Directory('${(await nativeStorageRoot()).path}/$name');
+            expect(
+              await FileSystemEntity.type(storage!.path, followLinks: false),
+              FileSystemEntityType.directory,
+            );
+            device = saved['device'] as String;
+          } else {
+            storage = await createOwnedNativeStorage(host: false);
+          }
           api = ApiClient(origin, HttpApiTransport());
           final auth = NativeAuth(
             api!,
@@ -229,24 +260,53 @@ void main() {
             tenantId: config['tenant'] as String,
             userId: config['user'] as String,
           );
-          final seed = await auth.restore(
-            account,
-            Platform.operatingSystem,
-            config['refresh'] as String,
-          );
-          await store.open(seed);
-          await store.saveCredentials(
-            seed,
-            refreshToken: auth.refreshCredential,
-          );
-          await store.close();
-          await auth.cancel();
-          await owner!.restore(account);
-          membership = MembershipController(owner!);
-          await membership!.load();
-          await membership!.select(config['membership'] as String);
-          device = membership!.current!.device.deviceId;
+          if (!restarting) {
+            final seed = await auth.restore(
+              account,
+              Platform.operatingSystem,
+              config['refresh'] as String,
+            );
+            await store.open(seed);
+            await store.saveCredentials(
+              seed,
+              refreshToken: auth.refreshCredential,
+            );
+            await store.close();
+            await auth.cancel();
+            await owner!.restore(account);
+            membership = MembershipController(owner!);
+            await membership!.load();
+            await membership!.select(config['membership'] as String);
+            device = membership!.current!.device.deviceId;
+            await recovery.writeAsString(
+              jsonEncode({
+                'nonce': nonce,
+                'storage': storageName(),
+                'device': device,
+              }),
+              flush: true,
+            );
+          } else {
+            expect(await owner!.accounts.load(), isNotNull);
+            expect(owner!.current, isNull);
+            final ns = await accountNamespace(
+              origin,
+              config['tenant'] as String,
+              config['user'] as String,
+            );
+            expect(await vault.read(ns, 'session'), isNotNull);
+            details.addAll({
+              'preauth_hidden': true,
+              'vault_reused': true,
+              'storage': storageName(),
+            });
+          }
         });
+        expect(owner, isNotNull);
+        expect(
+          restarting ? owner!.current == null : membership?.current != null,
+          isTrue,
+        );
         await snapshot('ok');
         final lifetime = Stopwatch()..start();
         while (lifetime.elapsed < const Duration(minutes: 15)) {
@@ -265,6 +325,106 @@ void main() {
           last = cmd['id'] as int;
           details.clear();
           switch (cmd['action']) {
+            case 'restore_pending':
+              expect(restarting, isTrue);
+              expect(owner!.current, isNull);
+              final savedDevice = device;
+              await tester.runAsync(() async {
+                final account = await owner!.accounts.load();
+                expect(account, isNotNull);
+                await owner!.restore(account!);
+                final pending = await owner!.current!.store.pendingSends();
+                expect(pending, hasLength(1));
+                details['pending_id'] = pending.single.clientMsgId;
+                membership = MembershipController(owner!);
+                await membership!.load();
+                await membership!.select(config['membership'] as String);
+                device = membership!.current!.device.deviceId;
+                expect(device, savedDevice);
+                details.addAll({
+                  'vault_reused': true,
+                  'storage': storageName(),
+                });
+              });
+              expect(membership!.current, isNotNull);
+              expect(details['pending_id'], isNotNull);
+            case 'pending_restored':
+              await mount();
+              expect(view!.pending, hasLength(1));
+              expect(view!.sender.lastACK, isNull);
+              expect(find.text('重试原消息'), findsOneWidget);
+              details.addAll({
+                'pending_id': view!.pending.single.clientMsgId,
+                'storage': storageName(),
+                'pending_count': view!.pending.length,
+              });
+            case 'retry_pending':
+              expect(view!.pending, hasLength(1));
+              final pendingId = view!.pending.single.clientMsgId;
+              await tester.tap(find.text('重试原消息'));
+              await until(
+                () =>
+                    !view!.sending &&
+                    view!.pending.isEmpty &&
+                    view!.sender.lastACK?.seq ==
+                        Seq.parse(cmd['seq'] as String),
+                'duplicate retry ACK',
+              );
+              final ack = view!.sender.lastACK!;
+              expect(ack.duplicate, isTrue);
+              final confirmed = await tester.runAsync(
+                () => owner!.current!.store.sendConfirmation(pendingId),
+              );
+              expect(confirmed, isNotNull);
+              expect(confirmed!.ack.messageId, ack.messageId);
+              expect(confirmed.ack.seq, ack.seq);
+              expect(confirmed.ack.duplicate, isTrue);
+              expect(find.text('重试原消息'), findsNothing);
+              details.addAll({
+                'pending_id': pendingId,
+                'message_id': ack.messageId,
+                'seq': ack.seq.toString(),
+                'duplicate': ack.duplicate,
+                'pending_after': view!.pending.length,
+                'storage': storageName(),
+                'confirmation_saved': true,
+              });
+            case 'send_lost_ack':
+              await mount();
+              await until(() => view!.canSend, 'send admitted');
+              await tester.enterText(
+                find.byKey(const ValueKey('message-editor')),
+                cmd['text'] as String,
+              );
+              await tester.pump();
+              await tester.tap(find.widgetWithText(FilledButton, '发送'));
+              await until(
+                () =>
+                    !view!.sending &&
+                    view!.pending.length == 1 &&
+                    view!.failure != null,
+                'lost ACK pending',
+              );
+              expect(view!.sender.lastACK, isNull);
+              expect(view!.failure!.code, 'unavailable');
+              expect(view!.failure!.status, isNull);
+              expect(find.text('重试原消息'), findsOneWidget);
+              final saved = await tester.runAsync(
+                () => owner!.current!.store.pendingSends(),
+              );
+              expect(saved, hasLength(1));
+              expect(
+                saved!.single.clientMsgId,
+                view!.pending.single.clientMsgId,
+              );
+              details.addAll({
+                'pending_id': saved.single.clientMsgId,
+                'pending_count': saved.length,
+                'storage': storageName(),
+                'native_ack': null,
+                'network_error': view!.failure!.code,
+                'network_status': view!.failure!.status,
+              });
             case 'open':
               await openView();
               expect(view!.receipts.locallyReadSeqs, isEmpty);
