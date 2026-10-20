@@ -61,8 +61,6 @@ void main() {
       final vault = OsSecureVault(), adapter = mobileActivityAdapter();
       final recovery = File('${documents.path}/cross-recovery.json');
       final restarting = config['restart'] == true;
-      String storageName() =>
-          storage!.uri.pathSegments.where((s) => s.isNotEmpty).last;
       ClientSession? owner;
       MembershipController? membership;
       ApiClient? api;
@@ -70,6 +68,8 @@ void main() {
       ConversationSummary? summary;
       ClientContext? context;
       Directory? storage;
+      String storageName() =>
+          storage!.uri.pathSegments.where((s) => s.isNotEmpty).last;
       String? device;
       var last = 0;
       var mounted = false;
