@@ -40,6 +40,19 @@ def installed_apk_hash(sim,path,expected):
     raise ValueError('actor_installed_apk_transport_unavailable')
 
 
+def wait_process_absent(pid,timeout=15):
+    # Identity must be proved by the caller before its one terminating signal.
+    # A dying process can temporarily report a non-executable comm string.
+    # Kernel existence needs neither path decoding nor another killing signal.
+    if type(pid) is not int or pid<=1:raise ValueError('invalid_absence_pid')
+    end=time.monotonic()+timeout
+    while True:
+        try:os.kill(pid,0)
+        except ProcessLookupError:return
+        if time.monotonic()>=end:raise TimeoutError('old_process_still_exists')
+        time.sleep(.05)
+
+
 class Actor:
     def __init__(self,role,out,state,save):
         self.role=role;self.out=Path(out);self.state=state;self.save=save;self.expected=None;self.number=0
@@ -171,10 +184,7 @@ class IOSActor(Actor):
         self.state['restart_before']['process_identity']=self.fp
         if self.owned() is None:raise ValueError('ios_restart_vm_missing')
         os.kill(self.state['pid'],9)
-        end=time.monotonic()+15
-        while process_fingerprint(self.state['pid']) is not None:
-            if time.monotonic()>end:raise ValueError('ios_old_process_remains')
-            time.sleep(.1)
+        wait_process_absent(self.state['pid'])
         self.state['restart_old_absent']=True;self.save()
     def launch_restart(self,config):
         self.write('cross-input.json',config);self.write('cross-command.json',{'id':0,'action':'wait'});self.write('cross-state.json',{})

@@ -23,3 +23,17 @@ class RetentionTests(unittest.TestCase):
   m.policy_proof(row,1,2,message_days=30,message_version=1)
   for key,value in [('message_days',1),('message_version',2),('file_days','30'),('file_version','1')]:
    with self.assertRaises(ValueError):m.policy_proof(dict(row,**{key:value}),1,2,message_days=30,message_version=1)
+
+ def test_exit_probe_waits_for_kernel_absence_without_decoding_dying_comm(self):
+  from unittest.mock import patch,call
+  m=importlib.import_module('integration.cross_native')
+  with patch.object(m.os,'kill',side_effect=[None,ProcessLookupError]) as probe,patch.object(m.time,'sleep'),patch.object(m,'process_fingerprint',side_effect=ValueError('unknown_process_executable')):
+   m.wait_process_absent(88)
+  self.assertEqual(probe.call_args_list,[call(88,0),call(88,0)])
+ def test_exit_probe_never_accepts_still_alive_or_permission_denial(self):
+  from unittest.mock import patch
+  m=importlib.import_module('integration.cross_native')
+  with patch.object(m.os,'kill',return_value=None):
+   with self.assertRaises(TimeoutError):m.wait_process_absent(88,timeout=0)
+  with patch.object(m.os,'kill',side_effect=PermissionError):
+   with self.assertRaises(PermissionError):m.wait_process_absent(88)
