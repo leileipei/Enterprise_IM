@@ -38,10 +38,11 @@ def run(actors,backend,out,result,save):
  phase('long_cached',3,n,1,30,1+2*n,1+2*n)
  # Shortening removes old bodies and UI-owned content after a fresh production admission.
  policy_proof(alice.command('policy',days=1,version=2)['details'],1,2)
- for actor in recipients:actor.command('retention_view',hidden=True);actor.screenshot('retention-hidden')
+ for actor in actors.values():actor.command('retention_view',hidden=True);actor.screenshot('retention-hidden')
  phase('short_hidden',3,n,2,1,1+2*n,1+2*n)
  policy_proof(alice.command('policy',days=30,version=3)['details'],30,3)
  # Download again so ungraceful process deaths leave real artifacts to recover.
+ alice.command('retention_view',hidden=False)
  before={}
  for actor in recipients:
   actor.command('retention_view',hidden=False);download(actor.command('download',contents=PAYLOAD.decode())['details'],actor.state['admission']['device_id'])
@@ -49,6 +50,7 @@ def run(actors,backend,out,result,save):
  phase('extended_cached',3,2*n,3,30,1+2*n,1+2*n)
  for actor in recipients:actor.stop_for_restart()
  policy_proof(alice.command('policy',days=1,version=4)['details'],1,4)
+ alice.command('retention_view',hidden=True)
  alice.command('send',text='进程退出期间新消息四',seq='4');phase('processes_stopped',4,2*n,4,1,1+2*n,1+2*n)
  result['restart_proofs']={}
  for actor in recipients:

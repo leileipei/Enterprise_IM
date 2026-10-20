@@ -107,6 +107,13 @@ void main() {
             ),
           ))?.toString();
         if (view != null) {
+          details['view_failure_code'] = view!.failure?.code;
+          details['view_failure_status'] = view!.failure?.status;
+          details['view_context_active'] = view!.context != null;
+          details['redacted_seqs'] = view!.messages
+              .where((m) => m.redacted)
+              .map((m) => m.seq.toString())
+              .toList();
           details['seqs'] = view!.messages
               .map((m) => m.seq.toString())
               .toList();
@@ -428,16 +435,46 @@ void main() {
               expect(details['message_version'], cmd['version']);
             case 'retention_view':
               await mount();
-              await tester.runAsync(() => view!.coordinator.start(context!));
               final hidden = cmd['hidden'] == true;
-              await until(
-                () => ['1', '2', '3'].every(
-                  (n) => view!.messages.any(
-                    (m) => m.seq == Seq.parse(n) && m.redacted == hidden,
-                  ),
+              await tester.runAsync(() => view!.coordinator.start(context!));
+              bool authorizedRows() => ['1', '2', '3'].every(
+                (n) => view!.messages.any(
+                  (m) => m.seq == Seq.parse(n) && m.redacted == hidden,
                 ),
-                'retention current body admission',
               );
+              // A queued read from the earlier body grant can receive404 after
+              // shortening. Production correctly stops that view and clears it.
+              await until(
+                () =>
+                    authorizedRows() ||
+                    (view!.context == null && view!.failure?.status == 404),
+                'current rows or fail-closed old read',
+              );
+              if (view!.context == null) {
+                expect(view!.failure?.status, 404);
+                expect(view!.messages, isEmpty);
+                final erased = Stopwatch()..start();
+                while ((await tester.runAsync(cachePresent))!) {
+                  if (erased.elapsed > const Duration(seconds: 10))
+                    throw StateError('stopped view artifact remains');
+                  await pause();
+                }
+                details['old_view_withdrawal'] = 'terminal404';
+                details['old_view_cache_erased'] = true;
+                // Follow real back/reselect semantics with a new controller.
+                await tester.pumpWidget(const SizedBox.shrink());
+                await tester.runAsync(view!.close);
+                if (downloads != null) await tester.runAsync(downloads!.close);
+                view = null;
+                downloads = null;
+                mounted = false;
+                summary = null;
+                context = null;
+                await mount();
+                await until(authorizedRows, 'fresh view current policy');
+              } else {
+                details['old_view_withdrawal'] = 'fresh_policy_rows';
+              }
               if (hidden) {
                 await until(
                   () =>
@@ -452,8 +489,9 @@ void main() {
                     throw StateError('retention artifact remains');
                   await pause();
                 }
-                expect(await tester.runAsync(cachePresent), isFalse);
               }
+              expect(view!.context, isNotNull);
+              expect(view!.canSend, isTrue);
               details.addAll({
                 'hidden': hidden,
                 'cache_absent': !(await tester.runAsync(cachePresent))!,
