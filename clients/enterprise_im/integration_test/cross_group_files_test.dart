@@ -1,6 +1,7 @@
 // One real account/device per installed OS process. Runtime credentials are
 // injected into this disposable application's private Documents, never assets.
 import 'dart:convert';
+import 'package:enterprise_im/platform/native_storage.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:enterprise_im/core/protocol/client_id.dart';
 import 'package:enterprise_im/features/groups/group_controller.dart';
@@ -75,6 +76,17 @@ void main() {
       String? lastProof;
       FileDownload? downloads;
       var last = 0;
+      final recovery = File('${documents.path}/cross-recovery.json');
+      final restarting = config['restart'] == true;
+      String? privatePath;
+      Future<bool> cachePresent() async {
+        if (privatePath == null || !await Directory(privatePath!).exists())
+          return false;
+        return Directory(privatePath!)
+            .list(recursive: true)
+            .any((p) => p is File && p.path.endsWith('/content'));
+      }
+
       var mounted = false;
       var cleaned = false;
       final details = <String, Object?>{};
@@ -162,7 +174,7 @@ void main() {
                 createDownloads: () => HttpOverrides.runWithHttpOverrides(
                   () => downloads = FileDownload(
                     membership!,
-                    privateRoot: Directory('${storage!.path}/downloads'),
+                    privateRoot: Directory(privatePath!),
                   ),
                   FixtureTrust(trust),
                 ),
@@ -209,6 +221,7 @@ void main() {
         await tester.runAsync(() async {
           if (await input.exists()) await input.delete();
           if (await command.exists()) await command.delete();
+          if (await recovery.exists()) await recovery.delete();
         });
         cleaned = true;
       }
@@ -218,7 +231,7 @@ void main() {
           await tester.runAsync(
             () => vault.read(bootstrapNamespace, 'account'),
           ),
-          isNull,
+          restarting ? isNotNull : isNull,
         );
         await tester.pumpWidget(
           MaterialApp(home: Scaffold(body: Text('独立进程 $role'))),
@@ -228,7 +241,34 @@ void main() {
           'actual native active scene',
         );
         await tester.runAsync(() async {
-          storage = await createOwnedNativeStorage(host: false);
+          if (restarting) {
+            expect(config.containsKey('refresh'), isFalse);
+            final saved =
+                jsonDecode(await recovery.readAsString())
+                    as Map<String, dynamic>;
+            expect(saved['nonce'], nonce);
+            final root = await nativeStorageRoot();
+            final name = saved['storage'] as String;
+            expect(
+              RegExp(r'^im-native-backend-[a-zA-Z0-9]+$').hasMatch(name),
+              isTrue,
+            );
+            storage = Directory('${root.path}/$name');
+            expect(
+              await FileSystemEntity.type(storage!.path, followLinks: false),
+              FileSystemEntityType.directory,
+            );
+            group = saved['group'] as String;
+            device = saved['device'] as String;
+          } else {
+            storage = await createOwnedNativeStorage(host: false);
+          }
+          final ns = await accountNamespace(
+            origin,
+            config['tenant'] as String,
+            config['user'] as String,
+          );
+          privatePath = '${storage!.path}/$ns.attachments';
           api = ApiClient(origin, HttpApiTransport());
           final auth = NativeAuth(
             api!,
@@ -246,23 +286,39 @@ void main() {
             tenantId: config['tenant'] as String,
             userId: config['user'] as String,
           );
-          final seed = await auth.restore(
-            account,
-            Platform.operatingSystem,
-            config['refresh'] as String,
-          );
-          await store.open(seed);
-          await store.saveCredentials(
-            seed,
-            refreshToken: auth.refreshCredential,
-          );
-          await store.close();
-          await auth.cancel();
-          await owner!.restore(account);
-          membership = MembershipController(owner!);
-          await membership!.load();
-          await membership!.select(config['membership'] as String);
-          device = membership!.current!.device.deviceId;
+          if (!restarting) {
+            final seed = await auth.restore(
+              account,
+              Platform.operatingSystem,
+              config['refresh'] as String,
+            );
+            await store.open(seed);
+            await store.saveCredentials(
+              seed,
+              refreshToken: auth.refreshCredential,
+            );
+            await store.close();
+            await auth.cancel();
+          }
+          if (!restarting) {
+            await owner!.restore(account);
+            membership = MembershipController(owner!);
+            await membership!.load();
+            await membership!.select(config['membership'] as String);
+            device = membership!.current!.device.deviceId;
+          } else {
+            expect(await vault.read(ns, 'session'), isNotNull);
+            expect(await owner!.accounts.load(), isNotNull);
+            expect(owner!.current, isNull);
+            details.addAll({
+              'preauth_hidden': true,
+              'vault_reused': true,
+              'storage': storage!.uri.pathSegments
+                  .where((s) => s.isNotEmpty)
+                  .last,
+              'cached_before_restore': await cachePresent(),
+            });
+          }
         });
         await snapshot('ok');
         final lifetime = Stopwatch()..start();
@@ -282,6 +338,121 @@ void main() {
           last = cmd['id'] as int;
           details.clear();
           switch (cmd['action']) {
+            case 'restore':
+              expect(restarting, isTrue);
+              expect(owner!.current, isNull);
+              final savedDevice = device;
+              await tester.runAsync(() async {
+                final account = await owner!.accounts.load();
+                expect(account, isNotNull);
+                await owner!.restore(account!);
+                expect(await cachePresent(), isFalse);
+                membership = MembershipController(owner!);
+                await membership!.load();
+                await membership!.select(config['membership'] as String);
+                device = membership!.current!.device.deviceId;
+                expect(device, savedDevice);
+                details.addAll({
+                  'cache_erased': true,
+                  'vault_reused': true,
+                  'storage': storage!.uri.pathSegments
+                      .where((s) => s.isNotEmpty)
+                      .last,
+                });
+              });
+              expect(membership!.current, isNotNull);
+              expect(device, savedDevice);
+            case 'prepare_restart':
+              expect(await tester.runAsync(cachePresent), isTrue);
+              details.addAll({
+                'storage': storage!.uri.pathSegments
+                    .where((s) => s.isNotEmpty)
+                    .last,
+                'cached_before_stop': true,
+              });
+            case 'policy':
+              await tester.runAsync(() async {
+                final current = membership!.current!;
+                final message = await api!.json(
+                  'GET',
+                  '/api/v1/admin/retention-policy',
+                  bearer: current.client.session.accessToken,
+                  actingMembershipId: current.membership.id,
+                );
+                final file = await api!.json(
+                  'GET',
+                  '/api/v1/admin/file-retention-policy',
+                  bearer: current.client.session.accessToken,
+                  actingMembershipId: current.membership.id,
+                );
+                final m = await api!.json(
+                  'PUT',
+                  '/api/v1/admin/retention-policy',
+                  bearer: current.client.session.accessToken,
+                  actingMembershipId: current.membership.id,
+                  body: {
+                    'message_body_days': cmd['days'],
+                    'expected_version': message['version'],
+                    'approval_reference':
+                        'CAB-NATIVE-RETENTION-${cmd['version']}',
+                  },
+                );
+                final f = await api!.json(
+                  'PUT',
+                  '/api/v1/admin/file-retention-policy',
+                  bearer: current.client.session.accessToken,
+                  actingMembershipId: current.membership.id,
+                  body: {
+                    'file_retention_days': '${cmd['days']}',
+                    'expected_version': file['version'],
+                    'cleanup_enabled': false,
+                    'approval_reference':
+                        'CAB-NATIVE-RETENTION-${cmd['version']}',
+                  },
+                );
+                details.addAll({
+                  'message_days': m['message_body_days'],
+                  'file_days': f['file_retention_days'],
+                  'message_version': m['version'],
+                  'file_version': f['version'],
+                  'cleanup_enabled': f['cleanup_enabled'],
+                  'existing_files':
+                      f['current_policy_applies_to_existing_files'],
+                });
+              });
+              expect(details['message_version'], cmd['version']);
+            case 'retention_view':
+              await mount();
+              await tester.runAsync(() => view!.coordinator.start(context!));
+              final hidden = cmd['hidden'] == true;
+              await until(
+                () => ['1', '2', '3'].every(
+                  (n) => view!.messages.any(
+                    (m) => m.seq == Seq.parse(n) && m.redacted == hidden,
+                  ),
+                ),
+                'retention current body admission',
+              );
+              if (hidden) {
+                await until(
+                  () =>
+                      find.textContaining('独立群消息一').evaluate().isEmpty &&
+                      find.textContaining('跨组织群回复二').evaluate().isEmpty &&
+                      find.textContaining('跨端附件校验').evaluate().isEmpty,
+                  'retention UI body withheld',
+                );
+                final wait = Stopwatch()..start();
+                while ((await tester.runAsync(cachePresent))!) {
+                  if (wait.elapsed > const Duration(seconds: 10))
+                    throw StateError('retention artifact remains');
+                  await pause();
+                }
+                expect(await tester.runAsync(cachePresent), isFalse);
+              }
+              details.addAll({
+                'hidden': hidden,
+                'cache_absent': !(await tester.runAsync(cachePresent))!,
+              });
             case 'create_group':
               final groups = GroupController(membership!);
               final result = await tester.runAsync(
@@ -295,6 +466,19 @@ void main() {
               details['group_id'] = group;
             case 'select_group':
               group = cmd['group_id'] as String;
+              await tester.runAsync(
+                () => recovery.writeAsString(
+                  jsonEncode({
+                    'storage': storage!.uri.pathSegments
+                        .where((s) => s.isNotEmpty)
+                        .last,
+                    'group': group,
+                    'device': device,
+                    'nonce': nonce,
+                  }),
+                  flush: true,
+                ),
+              );
               await openView();
               final groups = GroupController(membership!);
               final access = await tester.runAsync(
@@ -442,7 +626,7 @@ void main() {
                     authorizationRemaining: () =>
                         view!.fileAuthorizationRemaining(message),
                   );
-                  final files = await Directory('${storage!.path}/downloads')
+                  final files = await Directory(privatePath!)
                       .list(recursive: true)
                       .where((p) => p is File && p.path.endsWith('/content'))
                       .cast<File>()
@@ -483,7 +667,7 @@ void main() {
                   .inMilliseconds;
             case 'cache_present':
               final present = await tester.runAsync(
-                () => Directory('${storage!.path}/downloads')
+                () => Directory(privatePath!)
                     .list(recursive: true)
                     .any((p) => p is File && p.path.endsWith('/content')),
               );
@@ -587,7 +771,7 @@ void main() {
                 'UI body removed',
               );
               final erased = await tester.runAsync(() async {
-                final dir = Directory('${storage!.path}/downloads');
+                final dir = Directory(privatePath!);
                 if (!await dir.exists()) return true;
                 return !(await dir.list(recursive: true).any((p) => p is File));
               });

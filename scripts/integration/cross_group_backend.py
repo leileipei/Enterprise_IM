@@ -38,6 +38,7 @@ class GroupFilesBackend(Backend):
   if event.exit_code:raise ValueError('group_scanner_probe_failed')
   env=dict(bundle.environment);env.update(IM_FILE_S3_ACCESS_KEY=env['IM_TEST_FILE_UPLOAD_ACCESS_KEY'],IM_FILE_S3_SECRET_KEY=env['IM_TEST_FILE_UPLOAD_SECRET_KEY'])
   self.state['file_runtime']={'tool_sha256':hashes,'versions':versions,'scanner_probe_exit':event.exit_code,'scanner_bound':True,'definition_info':bundle.metadata['scanner_definition_info'],'minio_image':image['Id'],'iam_roles':bundle.metadata['iam_roles']};self.save()
+  if self.args.scenario=='retention-restart':env['IM_TEST_CROSS_SCENARIO']='retention-restart'
   return env
  def close(self):
   try:super().close()

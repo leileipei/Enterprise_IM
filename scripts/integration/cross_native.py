@@ -103,6 +103,21 @@ class AndroidActor(Actor):
         self.start_ticks=ticks;self.state['process_start_ticks']=ticks
     def screenshot(self,label):
         path=self.out/(label+'.png');path.write_bytes(self.sim.adb('screen-'+label,['exec-out','screencap','-p'],binary=True).stdout);validate_png(path.read_bytes())
+    def stop_for_restart(self):
+        self.identity(self.state['pid']);self.state['restart_before']=dict(self.state['admission'])
+        self.state['restart_before']['process_start_ticks']=self.start_ticks
+        self.sim.adb('restart-force-stop',['shell','am','force-stop',PACKAGE])
+        absent=self.sim.adb('restart-old-absent',['shell','pidof',PACKAGE],required=False)
+        if absent.returncode!=1 or absent.stdout.strip():raise ValueError('android_old_process_remains')
+        self.state['restart_old_absent']=True;self.save()
+    def launch_restart(self,config):
+        self.write('cross-input.json',config);self.write('cross-command.json',{'id':0,'action':'wait'});self.write('cross-state.json',{})
+        self.state['pid']=None;self.start_ticks=None;self.expected=None;self.number=0
+        self.out=self.out/'restart';self.out.mkdir(mode=0o700)
+        self.sim.adb('restart-launch',['shell','am','start','-W','-n',PACKAGE+'/.MainActivity'])
+        text=self.sim.adb('restart-pid',['shell','pidof',PACKAGE]).stdout.decode().strip()
+        if not re.fullmatch('[1-9][0-9]*',text) or int(text)==self.state['restart_before']['pid']:raise ValueError('android_new_process_unproven')
+        self.state['pid']=int(text);self.identity(int(text));self.ready(config)
     def close(self):return self.sim.close()
 
 
@@ -151,6 +166,23 @@ class IOSActor(Actor):
         self.fp=fp;self.state['process_identity']=fp
     def screenshot(self,label):
         path=self.out/(label+'.png');self.simctl('screen-'+label,['io',self.udid,'screenshot','--type=png',str(path)]);validate_png(path.read_bytes())
+    def stop_for_restart(self):
+        self.identity(self.state['pid']);self.state['restart_before']=dict(self.state['admission'])
+        self.state['restart_before']['process_identity']=self.fp
+        if self.owned() is None:raise ValueError('ios_restart_vm_missing')
+        os.kill(self.state['pid'],9)
+        end=time.monotonic()+15
+        while process_fingerprint(self.state['pid']) is not None:
+            if time.monotonic()>end:raise ValueError('ios_old_process_remains')
+            time.sleep(.1)
+        self.state['restart_old_absent']=True;self.save()
+    def launch_restart(self,config):
+        self.write('cross-input.json',config);self.write('cross-command.json',{'id':0,'action':'wait'});self.write('cross-state.json',{})
+        self.expected=None;self.number=0;self.fp=None;self.state['pid']=None
+        self.out=self.out/'restart';self.out.mkdir(mode=0o700)
+        pid=launched_pid(self.simctl('restart-launch',['launch',self.udid,PACKAGE]))
+        if pid==self.state['restart_before']['pid']:raise ValueError('ios_new_process_unproven')
+        self.state['pid']=pid;self.identity(pid);self.ready(config)
     def close(self):
         failures=[]
         try:

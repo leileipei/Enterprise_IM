@@ -33,7 +33,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('flutter-sdk','pub-cache','android-sdk','java-home','gradle-cache','go','developer-dir','output'):
         parser.add_argument('--'+name,type=Path,required=True)
-    parser.add_argument('--scenario',choices=['messaging','group-files-devices'],default='messaging')
+    parser.add_argument('--scenario',choices=['messaging','group-files-devices','retention-restart'],default='messaging')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parents[1]
     sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -79,7 +79,7 @@ def main():
         mobile.copy_client(repo,client,{p:h for p,h in sources.items() if p.startswith('clients/enterprise_im/')})
         build=private/'android-build';build.mkdir(mode=0o700);env=android_build.android_environment(build,aa)
         flutter=[str(args.flutter_sdk/'bin/cache/dart-sdk/bin/dart'),str(args.flutter_sdk/'bin/cache/flutter_tools.snapshot')]
-        target='integration_test/cross_group_files_test.dart' if args.scenario=='group-files-devices' else 'integration_test/cross_device_test.dart'
+        target='integration_test/cross_group_files_test.dart' if args.scenario in ('group-files-devices','retention-restart') else 'integration_test/cross_device_test.dart'
         step('pub-android',flutter+['pub','get','--offline','--enforce-lockfile'],env,120)
         step('shared',flutter+['test','--no-pub'],env)
         step('analysis',flutter+['analyze','--fatal-infos','--no-pub'],env)
@@ -96,7 +96,7 @@ def main():
         if digest(client/'pubspec.lock')!=sources['clients/enterprise_im/pubspec.lock']:raise ValueError('cross_lock_changed')
         result['binaries']={'android':{'file':apk.name,'sha256':digest(apk)},'ios':{'file':archive.name,'sha256':digest(archive)},'credentials_created_after_build':True};save()
         backend_type=CrossBackend
-        if args.scenario=='group-files-devices':
+        if args.scenario in ('group-files-devices','retention-restart'):
             from integration.cross_group_backend import GroupFilesBackend
             backend_type=GroupFilesBackend
         backend=backend_type(repo,args,private,out,reg,'cross',result['backend'],save);config=backend.start();port=urlparse(config['origin']).port
@@ -107,11 +107,15 @@ def main():
             actors[role]=actor;bootstrap=actor_config(config,role,secrets.token_hex(16))
             if role=='bob_ios':actor.start(binary,bootstrap)
             else:actor.start(binary,port,bootstrap)
+            actor.config=bootstrap
             actor.ready(bootstrap)
         validate_participants({role:a.state['admission'] for role,a in actors.items()})
         if actors['alice'].sim.name==actors['bob_android'].sim.name or actors['alice'].sim.console==actors['bob_android'].sim.console:raise ValueError('independent_android_vms_unproven')
-        if args.scenario=='group-files-devices':
-            from integration.cross_group_scenario import run as run_group_scenario
+        if args.scenario in ('group-files-devices','retention-restart'):
+            if args.scenario=='retention-restart':
+                from integration.cross_retention_scenario import run as run_group_scenario
+            else:
+                from integration.cross_group_scenario import run as run_group_scenario
             run_group_scenario(actors,backend,out,result,save)
         else:
             dbphase('registered');alice=actors['alice'];ios=actors['bob_ios'];android=actors['bob_android']
@@ -162,7 +166,7 @@ def main():
         if not cleanup and cleaned.removed and not private.exists():reg.path.unlink();root.rmdir()
         result['cleanup']={'failures':cleanup,'private_removed':not private.exists(),'root_removed':not root.exists()}
         back=result['backend']
-        result['status']='passed' if result.get('scenario_passed') is True and back.get('actual_exit')==0 and not back.get('command_failures') and back.get('product_children',{}).get('lifecycle_verified') is True and back.get('source_unchanged') is True and back.get('go_unchanged') is True and back.get('thread_joined') is True and result['source_unchanged'] and result['tools_unchanged'] and not cleanup and not root.exists() and (args.scenario!='group-files-devices' or (back.get('file_tools_unchanged') is True and not back.get('scanner_cleanup_failures'))) else 'failed'
+        result['status']='passed' if result.get('scenario_passed') is True and back.get('actual_exit')==0 and not back.get('command_failures') and back.get('product_children',{}).get('lifecycle_verified') is True and back.get('source_unchanged') is True and back.get('go_unchanged') is True and back.get('thread_joined') is True and result['source_unchanged'] and result['tools_unchanged'] and not cleanup and not root.exists() and (args.scenario not in ('group-files-devices','retention-restart') or (back.get('file_tools_unchanged') is True and not back.get('scanner_cleanup_failures'))) else 'failed'
         save()
     print(json.dumps({k:result.get(k) for k in ('status','source_commit','checkpoints','failure_reason','cleanup')},ensure_ascii=False))
     return 0 if result['status']=='passed' else 1

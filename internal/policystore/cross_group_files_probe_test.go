@@ -174,7 +174,11 @@ func TestCrossGroupFilesDeviceFixture(t *testing.T) {
 	if _, e = os.Stat(filepath.Join(filepath.Dir(path), "scenario-done")); e != nil {
 		t.Fatal("group scenario incomplete")
 	}
-	if messages != 4 || devices != 3 || delivered != 6 || reads != 6 || userReads != 4 || groups != 1 || members != 2 || organizations != 2 || readyFiles != 1 || attachments != 1 || scans != 1 || downloads != 2 || acked != 2 || revoked != 1 || minSeq != 1 || maxSeq != 4 || clients != 4 {
+	expectedDownloads, expectedRevoked, expectedDelivered, expectedRead := 2, 1, 6, 6
+	if os.Getenv("IM_TEST_CROSS_SCENARIO") == "retention-restart" {
+		expectedDownloads, expectedRevoked, expectedDelivered, expectedRead = 4, 0, 7, 7
+	}
+	if messages != 4 || devices != 3 || delivered != expectedDelivered || reads != expectedRead || userReads != 4 || groups != 1 || members != 2 || organizations != 2 || readyFiles != 1 || attachments != 1 || scans != 1 || downloads != expectedDownloads || acked != expectedDownloads || revoked != expectedRevoked || minSeq != 1 || maxSeq != 4 || clients != 4 {
 		t.Fatalf("group/file/device final facts mismatch %s", b)
 	}
 	t.Log("CROSS_GROUP_FILES_DEVICES_FINAL independent database facts passed")
