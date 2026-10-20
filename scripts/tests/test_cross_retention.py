@@ -16,3 +16,10 @@ class RetentionTests(unittest.TestCase):
   m.policy_proof(row,1,1)
   for key,value in [('message_days',True),('file_days','01'),('message_version',0),('file_version','0'),('cleanup_enabled',True),('existing_files',False)]:
    with self.assertRaises(ValueError):m.policy_proof(dict(row,**{key:value}),1,1)
+
+ def test_body_and_file_versions_are_independent(self):
+  m=importlib.import_module('integration.cross_retention')
+  row={'message_days':30,'file_days':'1','message_version':1,'file_version':'2','cleanup_enabled':False,'existing_files':True}
+  m.policy_proof(row,1,2,message_days=30,message_version=1)
+  for key,value in [('message_days',1),('message_version',2),('file_days','30'),('file_version','1')]:
+   with self.assertRaises(ValueError):m.policy_proof(dict(row,**{key:value}),1,2,message_days=30,message_version=1)

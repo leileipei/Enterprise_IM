@@ -382,6 +382,53 @@ void main() {
                     .last,
                 'cached_before_stop': true,
               });
+            case 'file_denied':
+              final rejected = await tester.runAsync(() async {
+                final current = membership!.current!;
+                try {
+                  await api!.json(
+                    'GET',
+                    '/api/v1/files/${cmd['file_id']}/content',
+                    bearer: current.client.session.accessToken,
+                    actingMembershipId: current.membership.id,
+                    device: current.device,
+                  );
+                  return null;
+                } on ApiFailure catch (e) {
+                  return {'status': e.status, 'code': e.code};
+                }
+              });
+              expect(rejected, {'status': 404, 'code': 'not_found'});
+              expect(await tester.runAsync(cachePresent), isFalse);
+              details['file_denial'] = rejected;
+            case 'reject_body_extension':
+              final denied = await tester.runAsync(() async {
+                final current = membership!.current!;
+                final before = await api!.json(
+                  'GET',
+                  '/api/v1/admin/retention-policy',
+                  bearer: current.client.session.accessToken,
+                  actingMembershipId: current.membership.id,
+                );
+                try {
+                  await api!.json(
+                    'PUT',
+                    '/api/v1/admin/retention-policy',
+                    bearer: current.client.session.accessToken,
+                    actingMembershipId: current.membership.id,
+                    body: {
+                      'message_body_days': 30,
+                      'expected_version': before['version'],
+                      'approval_reference': 'CAB-NATIVE-REJECT-RESURRECTION',
+                    },
+                  );
+                  return null;
+                } on ApiFailure catch (e) {
+                  return {'status': e.status, 'code': e.code};
+                }
+              });
+              expect(denied, {'status': 409, 'code': 'conflict'});
+              details['body_extension_denial'] = denied;
             case 'policy':
               await tester.runAsync(() async {
                 final current = membership!.current!;
@@ -397,18 +444,21 @@ void main() {
                   bearer: current.client.session.accessToken,
                   actingMembershipId: current.membership.id,
                 );
-                final m = await api!.json(
-                  'PUT',
-                  '/api/v1/admin/retention-policy',
-                  bearer: current.client.session.accessToken,
-                  actingMembershipId: current.membership.id,
-                  body: {
-                    'message_body_days': cmd['days'],
-                    'expected_version': message['version'],
-                    'approval_reference':
-                        'CAB-NATIVE-RETENTION-${cmd['version']}',
-                  },
-                );
+                final m = cmd['file_only'] == true
+                    ? message
+                    : await api!.json(
+                        'PUT',
+                        '/api/v1/admin/retention-policy',
+                        bearer: current.client.session.accessToken,
+                        actingMembershipId: current.membership.id,
+                        body: {
+                          'message_body_days':
+                              cmd['message_days'] ?? cmd['days'],
+                          'expected_version': message['version'],
+                          'approval_reference':
+                              'CAB-NATIVE-RETENTION-${cmd['version']}',
+                        },
+                      );
                 final f = await api!.json(
                   'PUT',
                   '/api/v1/admin/file-retention-policy',
@@ -432,7 +482,10 @@ void main() {
                       f['current_policy_applies_to_existing_files'],
                 });
               });
-              expect(details['message_version'], cmd['version']);
+              expect(
+                details['message_version'],
+                cmd['message_version'] ?? cmd['version'],
+              );
             case 'retention_view':
               await mount();
               final hidden = cmd['hidden'] == true;
