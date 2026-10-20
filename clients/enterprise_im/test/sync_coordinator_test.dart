@@ -601,12 +601,20 @@ void main() {
       final channel = RealtimeChannel(api, dial);
       final scheduler = ManualScheduler();
       final results = <SyncResult>[];
+      final refreshed = Completer<SyncResult>();
       final coordinator = SyncCoordinator(
         engine,
         channel,
         receipts,
         activity,
-        onResult: results.add,
+        onResult: (result) {
+          results.add(result);
+          if (renewal.isCompleted &&
+              result.messages.any((message) => !message.redacted) &&
+              !refreshed.isCompleted) {
+            refreshed.complete(result);
+          }
+        },
         schedule: scheduler.create,
         retry: RetryPolicy(random: () => .5),
       );
@@ -641,7 +649,7 @@ void main() {
       expect(afters, ['0', '1', '0']);
       expect(await store.committedCursor(fixture.conversation), isNotNull);
       renewal.complete(fixture.response(online()));
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      await refreshed.future.timeout(const Duration(seconds: 5));
       expect(original.messages.single.redacted, isTrue);
       expect(results.last.messages.single.redacted, isFalse);
     },
