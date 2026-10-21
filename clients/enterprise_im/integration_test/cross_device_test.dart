@@ -24,6 +24,23 @@ import 'package:enterprise_im/ui/message_page.dart';
 import 'owned_backend_fixture.dart';
 import 'files_and_devices_test.dart' show FixtureTrust, NoInteractiveBrowser;
 
+// Passive test observer: delegates every request/cancellation to the original
+// production HTTP transport and returns its exact response. No retry or ACK.
+final class ObservedReceiptTransport implements ApiTransport {
+  final ApiTransport inner;
+  final void Function(ApiRequest, ApiResponse) observed;
+  ObservedReceiptTransport(this.inner, this.observed);
+  @override
+  Future<ApiResponse> send(ApiRequest request, Cancellation cancel) async {
+    final response = await inner.send(request, cancel);
+    observed(request, response);
+    return response;
+  }
+
+  @override
+  void close() => inner.close();
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('independent native cross-platform messaging actor', (
@@ -76,6 +93,7 @@ void main() {
       var cleaned = false;
       var seenReceipt503 = false;
       final observedFailures = <String>[];
+      final observedReceiptHTTP = <Map<String, Object?>>[];
       final details = <String, Object?>{};
       Future<void> until(bool Function() fn, String name) async {
         final watch = Stopwatch()..start();
@@ -95,6 +113,9 @@ void main() {
           ))?.toString();
         if (view != null) {
           details['observed_failures'] = List<String>.of(observedFailures);
+          details['observed_receipt_http'] = List<Map<String, Object?>>.of(
+            observedReceiptHTTP,
+          );
           details['latest_network_code'] = view!.failure?.code;
           details['latest_network_status'] = view!.failure?.status;
           details['loading'] = view!.loading;
@@ -260,7 +281,22 @@ void main() {
           } else {
             storage = await createOwnedNativeStorage(host: false);
           }
-          api = ApiClient(origin, HttpApiTransport());
+          api = ApiClient(
+            origin,
+            ObservedReceiptTransport(HttpApiTransport(), (request, response) {
+              if (request.method == 'PUT' &&
+                  (request.uri.path.endsWith('/delivered') ||
+                      request.uri.path.endsWith('/read'))) {
+                if (response.status == 503) seenReceipt503 = true;
+                if (observedReceiptHTTP.length < 32)
+                  observedReceiptHTTP.add({
+                    'action': request.uri.pathSegments.last,
+                    'status': response.status,
+                    'device_id': request.headers['X-IM-Device-ID'],
+                  });
+              }
+            }),
+          );
           final auth = NativeAuth(
             api!,
             callbackFactory: (_, __) => throw StateError('owned refresh only'),
