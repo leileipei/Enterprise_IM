@@ -11,6 +11,7 @@ import 'package:enterprise_im/core/auth/client_session.dart';
 import 'package:enterprise_im/core/auth/native_auth.dart';
 import 'package:enterprise_im/core/auth/session_store.dart';
 import 'package:enterprise_im/core/protocol/api_client.dart';
+import 'package:enterprise_im/core/protocol/client_id.dart';
 import 'package:enterprise_im/core/protocol/seq.dart';
 import 'package:enterprise_im/core/protocol/models.dart';
 import 'package:enterprise_im/core/storage/secure_vault.dart';
