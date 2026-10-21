@@ -101,6 +101,78 @@ void main() {
     },
   );
 
+  for (final laterMetadataError in [false, true]) {
+    test(
+      'read retry success clears only its own warning metadata=$laterMetadataError',
+      () async {
+        final secondRead = Completer<void>(),
+            releaseRead = Completer<ApiResponse>();
+        final failed = Completer<void>(), recovered = Completer<void>();
+        var attempts = 0, metadataError = false;
+        final owner = await nav.owner((request, _) async {
+          if (request.uri.path.endsWith('/tickets'))
+            throw const ApiFailure('unavailable');
+          if (request.uri.path.endsWith('/sync')) return oidc.response(page());
+          if (request.uri.path.endsWith('/delivered'))
+            return oidc.response(disk.state());
+          if (request.uri.path.endsWith('/read')) {
+            attempts++;
+            if (attempts == 1)
+              return ApiResponse(
+                503,
+                utf8.encode('{"error_code":"unavailable"}'),
+                {'retry-after': '1'},
+              );
+            if (!secondRead.isCompleted) secondRead.complete();
+            return releaseRead.future;
+          }
+          if (metadataError)
+            return ApiResponse(
+              429,
+              utf8.encode('{"error_code":"rate_limited"}'),
+              {'retry-after': '3600'},
+            );
+          return metadata(request);
+        });
+        addTearDown(owner.logout);
+        final (roles, context) = await sending.admission(owner);
+        addTearDown(roles.close);
+        final activity = AppActivity()
+          ..update(foreground: true, focused: true, activeConversation: nav.dm);
+        addTearDown(activity.dispose);
+        final view = ConversationView(
+          roles,
+          activity,
+          connector: OfflineSocket(),
+        );
+        addTearDown(view.close);
+        view.addListener(() {
+          if (view.failure?.status == 503 && !failed.isCompleted)
+            failed.complete();
+          if (view.receipts.locallyReadSeqs.isNotEmpty &&
+              !recovered.isCompleted)
+            recovered.complete();
+        });
+        await view.select(context, ConversationSummary.fromJson(nav.direct()));
+        view.receipts.observe(view.messages.single.seq, 1, context);
+        await failed.future.timeout(Duration(seconds: 6));
+        expect(view.failure?.status, 503);
+        await secondRead.future.timeout(Duration(seconds: 6));
+        if (laterMetadataError) {
+          metadataError = true;
+          await view.refreshMetadata();
+          expect(view.failure?.status, 429);
+        }
+        releaseRead.complete(oidc.response(disk.state(read: 1)));
+        await recovered.future.timeout(Duration(seconds: 6));
+        expect(attempts, 2);
+        expect(view.receipts.locallyReadSeqs.map((s) => s.toString()), ['1']);
+        expect(view.failure?.status, laterMetadataError ? 429 : isNull);
+        expect(view.canSend, isTrue);
+      },
+    );
+  }
+
   for (final mixed in [false, true]) {
     test(
       'recipient metadata preserves conversation and only queries own messages mixed=$mixed',

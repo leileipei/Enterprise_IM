@@ -564,6 +564,11 @@ void main() {
                 ),
                 'actual visible read ACK',
               );
+              if (cmd['clear_read_failure'] == true) {
+                expect(view!.failure, isNull);
+                expect(find.text('连接或状态查询未完成，请刷新重试。'), findsNothing);
+                details['recovered_warning_cleared'] = true;
+              }
             case 'summary':
               final seq = Seq.parse(cmd['seq'] as String);
               await until(

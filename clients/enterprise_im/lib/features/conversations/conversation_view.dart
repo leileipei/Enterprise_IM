@@ -33,7 +33,7 @@ final class ConversationView extends ChangeNotifier {
   ClientContext? _context;
   WorkspaceAdmission? _admission;
   UnreadState? _unread;
-  ApiFailure? _failure;
+  ApiFailure? _failure, _readFailure;
   Timer? _expiry, _metadataRetry;
   Cancellation? _metadataCancel;
   Future<void>? _metadataFlight, _closing;
@@ -69,9 +69,22 @@ final class ConversationView extends ChangeNotifier {
       api,
       activity,
       onState: (_) {
+        if (_active) {
+          // A successful read ACK resolves only that read attempt's warning.
+          // Preserve a newer failure from metadata or another operation.
+          if (_readFailure != null && identical(_failure, _readFailure)) {
+            _failure = null;
+          }
+          _readFailure = null;
+          notifyListeners();
+        }
         unawaited(refreshMetadata());
       },
-      onFailure: _failed,
+      onFailure: (error) {
+        if (!_active) return;
+        _readFailure = error;
+        _failed(error);
+      },
     );
     channel = RealtimeChannel(api, connector ?? HttpRealtimeConnector());
     coordinator = SyncCoordinator(
@@ -484,6 +497,7 @@ final class ConversationView extends ChangeNotifier {
 
   Future<void> refresh() => coordinator.resume();
   void _clear() {
+    _readFailure = null;
     _expiry?.cancel();
     _expiry = null;
     _metadataRetry?.cancel();

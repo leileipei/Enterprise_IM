@@ -61,12 +61,12 @@ def run(actors,backend,out,result,save):
   if row['details']['pending_receipts']!=0 or row['details']['cursor']!='1' or row['details']['read_seqs'] or row['details'].get('observed_503') is not True:raise ValueError('receipt_false_read_confirmation')
   result['receipt_native'][actor.role]['read_blocked']=row;save();actor.screenshot('read-failure-visible')
  phase('read_failed_no_confirmation',1,0,0,1,0,0,0,0);alice.command('summary',seq='1',status='delivered');alice.screenshot('delivery-only-before-read-retry')
- release(ios.state['admission']['device_id']+':read');row=ios.command('read',seqs=['1']);result['receipt_native']['bob_ios']['read_recovered']=row;save()
+ release(ios.state['admission']['device_id']+':read');row=ios.command('read',seqs=['1'],clear_read_failure=True);result['receipt_native']['bob_ios']['read_recovered']=row;save();ios.screenshot('automatic-read-recovered-no-warning')
  phase('ios_read_recovered_android_still_unread',1,0,0,1,1,0,0,1)
  other=android.command('receipt_snapshot',expect_unread=True)
  if other['details']['read_seqs']:raise ValueError('receipt_user_read_forged_device_read')
  result['receipt_native']['bob_android']['other_device_user_read']=other;save()
- release(android.state['admission']['device_id']+':read');row=android.command('read',seqs=['1']);result['receipt_native']['bob_android']['read_recovered']=row;save()
+ release(android.state['admission']['device_id']+':read');row=android.command('read',seqs=['1'],clear_read_failure=True);result['receipt_native']['bob_android']['read_recovered']=row;save();android.screenshot('automatic-read-recovered-no-warning')
  phase('both_read_recovered_user_deduplicated',1,0,0,1,1,1,0,1);alice.command('summary',seq='1',status='read');alice.screenshot('both-retries-read')
  observed=events();result['retry_proofs']={}
  for actor in recipients:
