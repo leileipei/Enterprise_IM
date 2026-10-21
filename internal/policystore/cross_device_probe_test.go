@@ -38,6 +38,7 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	ctx := context.Background()
 	conn := db(t)
 	seedDirectConversation(t, conn)
+	logoutRace := os.Getenv("IM_TEST_CROSS_LOGOUT_RACE") == "1"
 	permissionChange := os.Getenv("IM_TEST_CROSS_PERMISSION_CHANGE") == "1"
 	if permissionChange {
 		grantPublisher(t, conn)
@@ -75,7 +76,7 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	startRealtime := startRealtimeProcess
 	startAPI := startProductionAPI
 	receiptRetry := os.Getenv("IM_TEST_CROSS_RECEIPT_RETRY") == "1"
-	if ackRestart || receiptRetry || permissionChange {
+	if ackRestart || receiptRetry || permissionChange || logoutRace {
 		startRealtime = crossRetainedRealtime
 		startAPI = crossRetainedAPI
 	}
@@ -146,6 +147,19 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 			saveEvents()
 		})
 	}
+	if logoutRace {
+		control := filepath.Join(filepath.Dir(os.Getenv("IM_TEST_MOBILE_CONFIG")), "logout-control.json")
+		if err := os.WriteFile(control, []byte(`{}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+		handler = crossLogoutGate(reverse, control, directA, func(event map[string]any) {
+			mu.Lock()
+			defer mu.Unlock()
+			event["n"] = len(events) + 1
+			events = append(events, event)
+			saveEvents()
+		})
+	}
 	proxy, ca := nativeProbeTLS(t, handler)
 	actors := map[string]any{}
 	for role, platform := range map[string]string{"alice": "android", "bob_ios": "ios", "bob_android": "android"} {
@@ -206,6 +220,9 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	wantMessages, wantReceipts, wantUserReads, wantAliceSends := 3, 5, 3, 2
 	if permissionChange {
 		wantMessages, wantReceipts, wantUserReads, wantAliceSends = 2, 3, 2, 1
+	}
+	if logoutRace {
+		wantMessages, wantReceipts, wantUserReads, wantAliceSends = 5, 4, 3, 4
 	}
 	if messages != wantMessages || devices != 3 || delivered != wantReceipts || reads != wantReceipts || userReads != wantUserReads || aliceSends != wantAliceSends || bobSends != 1 || minSeq != 1 || maxSeq != wantMessages || distinctIDs != wantMessages {
 		t.Fatalf("cross final database mismatch: %s", b)

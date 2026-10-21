@@ -91,6 +91,8 @@ void main() {
           storage!.uri.pathSegments.where((s) => s.isNotEmpty).last;
       String? device, permissionProof;
       var last = 0;
+      final initialPid = pid;
+      var loggedOut = false;
       var mounted = false;
       var cleaned = false;
       var seenReceipt503 = false;
@@ -213,6 +215,53 @@ void main() {
               .isNotEmpty,
           'editor visible',
         );
+      }
+
+      Future<void> captureLogout() async {
+        expect(loggedOut, isTrue);
+        expect(owner!.current, isNull);
+        expect(view!.context, isNull);
+        expect(view!.canSend, isFalse);
+        expect(view!.messages, isEmpty);
+        expect(view!.receipts.locallyReadSeqs, isEmpty);
+        final checks = await tester.runAsync(() async {
+          final ns = await accountNamespace(
+            origin,
+            config['tenant'] as String,
+            config['user'] as String,
+          );
+          for (final key in ['session', 'key', 'refresh', 'device']) {
+            expect(await vault.read(ns, key), isNull);
+          }
+          expect(await vault.read(bootstrapNamespace, 'account'), isNull);
+          return !await storage!.list(recursive: true).any((f) => f is File);
+        });
+        expect(checks, isTrue);
+        final bodies = [
+          '退出竞态消息一',
+          '退出前在途消息二',
+          '存活设备回复三',
+          'Android 退出前在途消息四',
+          '双方退出后消息五',
+        ];
+        await until(
+          () => bodies.every(
+            (body) => find.textContaining(body).evaluate().isEmpty,
+          ),
+          'logged out UI has no old body',
+        );
+        details.addAll({
+          'account_absent': true,
+          'vault_absent': true,
+          'database_files_absent': checks,
+          'context_cleared': true,
+          'can_send': false,
+          'seqs': <String>[],
+          'read_seqs': <String>[],
+          'ui_body_absent': true,
+          'cursor': null,
+          'same_process': pid == initialPid,
+        });
       }
 
       Future<void> cleanup() async {
@@ -822,6 +871,53 @@ void main() {
               expect(SelfContext.fromJson(self!).userId, config['user']);
               expect(owner!.current, isNotNull);
               details['account_active'] = true;
+            case 'logout_prepare':
+              await mount();
+              final waiting = Stopwatch()..start();
+              while (true) {
+                final cursor = await tester.runAsync(
+                  () => owner!.current!.store.committedCursor(
+                    config['conversation'] as String,
+                  ),
+                );
+                if (cursor?.toString() == cmd['cursor']) break;
+                if (waiting.elapsed > const Duration(seconds: 60))
+                  throw StateError('logout durable cursor not ready');
+                await pause();
+              }
+              expect(view!.canSend, isTrue);
+              expect(
+                await tester.runAsync(
+                  () => owner!.current!.store.pendingReceipts(),
+                ),
+                isEmpty,
+              );
+              details['prepared_cursor'] = cmd['cursor'];
+            case 'logout_while_held':
+              final before = await tester.runAsync(
+                () => owner!.current!.store.committedCursor(
+                  config['conversation'] as String,
+                ),
+              );
+              expect(before?.toString(), cmd['cursor']);
+              expect(
+                view!.messages.any(
+                  (m) => m.seq == Seq.parse(cmd['blocked_seq'] as String),
+                ),
+                isFalse,
+              );
+              details['before_cursor'] = before.toString();
+              // Same shutdown order as ClientShell: stop detail, membership,
+              // then ClientSession.logout. This test does not navigate Shell.
+              await tester.runAsync(() async {
+                await view!.close();
+                membership!.close();
+                await owner!.logout();
+              });
+              loggedOut = true;
+              await captureLogout();
+            case 'logout_stable':
+              await captureLogout();
             case 'done':
               await cleanup();
               await snapshot('done');
