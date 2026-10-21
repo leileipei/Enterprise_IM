@@ -38,6 +38,7 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	ctx := context.Background()
 	conn := db(t)
 	seedDirectConversation(t, conn)
+	logoutNavigation := os.Getenv("IM_TEST_CROSS_LOGOUT_NAVIGATION") == "1"
 	logoutRace := os.Getenv("IM_TEST_CROSS_LOGOUT_RACE") == "1"
 	permissionChange := os.Getenv("IM_TEST_CROSS_PERMISSION_CHANGE") == "1"
 	if permissionChange {
@@ -76,7 +77,7 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	startRealtime := startRealtimeProcess
 	startAPI := startProductionAPI
 	receiptRetry := os.Getenv("IM_TEST_CROSS_RECEIPT_RETRY") == "1"
-	if ackRestart || receiptRetry || permissionChange || logoutRace {
+	if ackRestart || receiptRetry || permissionChange || logoutRace || logoutNavigation {
 		startRealtime = crossRetainedRealtime
 		startAPI = crossRetainedAPI
 	}
@@ -223,6 +224,9 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	}
 	if logoutRace {
 		wantMessages, wantReceipts, wantUserReads, wantAliceSends = 5, 4, 3, 4
+	}
+	if logoutNavigation {
+		wantMessages, wantReceipts, wantUserReads, wantAliceSends = 4, 4, 3, 3
 	}
 	if messages != wantMessages || devices != 3 || delivered != wantReceipts || reads != wantReceipts || userReads != wantUserReads || aliceSends != wantAliceSends || bobSends != 1 || minSeq != 1 || maxSeq != wantMessages || distinctIDs != wantMessages {
 		t.Fatalf("cross final database mismatch: %s", b)

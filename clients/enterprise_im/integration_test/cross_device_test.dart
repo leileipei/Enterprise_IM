@@ -23,6 +23,8 @@ import 'package:enterprise_im/features/conversations/conversation_view.dart';
 import 'package:enterprise_im/platform/mobile_activity.dart';
 import 'package:enterprise_im/platform/native_storage.dart';
 import 'package:enterprise_im/ui/message_page.dart';
+import 'package:enterprise_im/ui/login_page.dart';
+import 'package:enterprise_im/ui/client_shell.dart';
 import 'owned_backend_fixture.dart';
 import 'files_and_devices_test.dart' show FixtureTrust, NoInteractiveBrowser;
 
@@ -80,6 +82,7 @@ void main() {
       final vault = OsSecureVault(), adapter = mobileActivityAdapter();
       final recovery = File('${documents.path}/cross-recovery.json');
       final restarting = config['restart'] == true;
+      final loggedOutRestart = config['logged_out_restart'] == true;
       ClientSession? owner;
       MembershipController? membership;
       ApiClient? api;
@@ -92,6 +95,8 @@ void main() {
       String? device, permissionProof;
       var last = 0;
       final initialPid = pid;
+      SessionStore? navigationStore;
+      var loginApiCreations = 0;
       var loggedOut = false;
       var mounted = false;
       var cleaned = false;
@@ -264,9 +269,101 @@ void main() {
         });
       }
 
+      Future<void> mountNavigationLogin({required bool restored}) async {
+        if (view != null) await tester.runAsync(view!.close);
+        membership?.close();
+        if (owner != null) await tester.runAsync(owner!.close);
+        api?.close();
+        view = null;
+        membership = null;
+        mounted = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            key: UniqueKey(),
+            home: LoginPage(
+              platform: Platform.operatingSystem,
+              activity: adapter.activity,
+              callbackFactory: (_, __) =>
+                  throw StateError('saved refresh only; no callback'),
+              browser: NoInteractiveBrowser(),
+              storeFactory: () async =>
+                  navigationStore = SessionStore(vault, directory: storage!),
+              apiFactory: (address) {
+                loginApiCreations++;
+                return api = ApiClient(address, HttpApiTransport());
+              },
+            ),
+          ),
+        );
+        if (restored) {
+          await until(
+            () => find.text('登录成功').evaluate().isNotEmpty,
+            'real LoginPage restored',
+          );
+        } else {
+          await until(
+            () =>
+                find.text('登录集团工作空间').evaluate().isNotEmpty &&
+                find
+                    .widgetWithText(FilledButton, '使用企业账号登录')
+                    .evaluate()
+                    .isNotEmpty &&
+                tester
+                        .widget<FilledButton>(
+                          find.widgetWithText(FilledButton, '使用企业账号登录'),
+                        )
+                        .onPressed !=
+                    null,
+            'real LoginPage logged out ready',
+          );
+        }
+      }
+
+      Future<void> captureNavigationLogout() async {
+        expect(owner?.current, isNull);
+        expect(find.text('登录集团工作空间'), findsOneWidget);
+        expect(find.byType(ClientShell), findsNothing);
+        expect(find.byType(MessagePage), findsNothing);
+        expect(find.text('登录成功'), findsNothing);
+        expect(find.text('进入工作空间'), findsNothing);
+        expect(find.text('恢复登录'), findsNothing);
+        final button = find.widgetWithText(FilledButton, '使用企业账号登录');
+        expect(button, findsOneWidget);
+        expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+        final empty = await tester.runAsync(() async {
+          final ns = await accountNamespace(
+            origin,
+            config['tenant'] as String,
+            config['user'] as String,
+          );
+          for (final key in ['session', 'key', 'refresh', 'device']) {
+            expect(await vault.read(ns, key), isNull);
+          }
+          expect(await vault.read(bootstrapNamespace, 'account'), isNull);
+          return !await storage!.list(recursive: true).any((f) => f is File);
+        });
+        expect(empty, isTrue);
+        details.addAll({
+          'login_heading': true,
+          'client_shell_count': 0,
+          'message_page_count': 0,
+          'workspace_entry': false,
+          'restore_button': false,
+          'account_absent': true,
+          'vault_absent': true,
+          'database_files_absent': empty,
+          'login_button_enabled': true,
+          'storage': storageName(),
+          'login_api_creations': loginApiCreations,
+          'no_seed_refresh': !config.containsKey('refresh'),
+        });
+      }
+
       Future<void> cleanup() async {
         if (view != null) await tester.runAsync(view!.close);
         await tester.pumpWidget(const SizedBox.shrink());
+        if (navigationStore != null)
+          await tester.runAsync(navigationStore!.close);
         membership?.close();
         if (owner != null) await tester.runAsync(owner!.logout);
         final ns = await accountNamespace(
@@ -302,7 +399,7 @@ void main() {
           await tester.runAsync(
             () => vault.read(bootstrapNamespace, 'account'),
           ),
-          restarting ? isNotNull : isNull,
+          restarting && !loggedOutRestart ? isNotNull : isNull,
         );
         await tester.pumpWidget(
           MaterialApp(home: Scaffold(body: Text('独立进程 $role'))),
@@ -390,6 +487,24 @@ void main() {
               }),
               flush: true,
             );
+          } else if (loggedOutRestart) {
+            expect(config.containsKey('refresh'), isFalse);
+            expect(await owner!.accounts.load(), isNull);
+            final ns = await accountNamespace(
+              origin,
+              config['tenant'] as String,
+              config['user'] as String,
+            );
+            expect(await vault.read(ns, 'session'), isNull);
+            expect(
+              await storage!.list(recursive: true).any((f) => f is File),
+              isFalse,
+            );
+            details.addAll({
+              'logged_out_restart': true,
+              'no_seed_refresh': true,
+              'storage': storageName(),
+            });
           } else {
             expect(await owner!.accounts.load(), isNotNull);
             expect(owner!.current, isNull);
@@ -918,6 +1033,91 @@ void main() {
               await captureLogout();
             case 'logout_stable':
               await captureLogout();
+            case 'navigation_open':
+              await mountNavigationLogin(restored: true);
+              await tester.tap(find.text('进入工作空间'));
+              await until(
+                () => find
+                    .byKey(ValueKey('membership-${config['membership']}'))
+                    .evaluate()
+                    .isNotEmpty,
+                'actual workspace membership choice',
+              );
+              await tester.tap(
+                find.byKey(ValueKey('membership-${config['membership']}')),
+              );
+              final tile = find.widgetWithText(ListTile, '管理员');
+              await until(
+                () => tile.evaluate().isNotEmpty,
+                'actual conversation tile',
+              );
+              await tester.tap(tile);
+              await until(
+                () => find.byType(MessagePage).evaluate().isNotEmpty,
+                'actual MessagePage route',
+              );
+              final page = tester.widget<MessagePage>(find.byType(MessagePage));
+              view = page.view;
+              summary = page.conversation;
+              membership = view!.memberships;
+              owner = membership!.owner;
+              api = owner!.auth.api;
+              await until(
+                () => view!.context != null && view!.canSend,
+                'actual UI view admitted',
+              );
+              context = view!.context;
+              expect(context!.device.deviceId, device);
+              mounted = true;
+              details.addAll({
+                'login_restore_via_ui': true,
+                'workspace_entered': true,
+                'membership_selected': context!.actingMembershipId,
+                'same_device': context!.device.deviceId == device,
+                'storage': storageName(),
+                'login_api_creations': loginApiCreations,
+              });
+            case 'navigation_logout':
+              expect(find.byType(MessagePage), findsOneWidget);
+              await tester.tap(find.byIcon(Icons.arrow_back));
+              await until(
+                () =>
+                    find.byType(MessagePage).evaluate().isEmpty &&
+                    find.byType(ClientShell).evaluate().isNotEmpty,
+                'back to actual ClientShell',
+              );
+              final exit = find.widgetWithText(TextButton, '退出登录');
+              await until(
+                () =>
+                    exit.evaluate().isNotEmpty &&
+                    tester.widget<TextButton>(exit).onPressed != null,
+                'actual logout enabled',
+              );
+              await tester.tap(exit);
+              await until(
+                () =>
+                    find.byType(ClientShell).evaluate().isEmpty &&
+                    find.text('登录集团工作空间').evaluate().isNotEmpty,
+                'logout pops workspace to LoginPage',
+              );
+              loggedOut = true;
+              mounted = false;
+              await captureNavigationLogout();
+              details['logout_button_tapped'] = true;
+            case 'navigation_reopen':
+              final before = loginApiCreations;
+              await mountNavigationLogin(restored: false);
+              await captureNavigationLogout();
+              expect(loginApiCreations, before);
+              details['new_api_creations'] = loginApiCreations - before;
+            case 'navigation_cold_start':
+              expect(loggedOutRestart, isTrue);
+              await mountNavigationLogin(restored: false);
+              await captureNavigationLogout();
+              expect(loginApiCreations, 0);
+              expect(details['no_seed_refresh'], isTrue);
+            case 'navigation_logged_out':
+              await captureNavigationLogout();
             case 'done':
               await cleanup();
               await snapshot('done');
