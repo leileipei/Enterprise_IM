@@ -226,3 +226,10 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 固定源 `28ebe98b795f71f97859d55bf274988ce817591a`，测试扩展，产品实现未改。Android API36×2＋iOS26.5三原生进程及真实生产API／Outbox／Receipt、PG／Redis：Bob iOS在真实next_seq2同步200、Android在next_seq4同步200生成后，下游响应头前暂缓；按产品方法顺序关闭view／membership并ClientSession.logout，系统安全存储、账号选择及DB文件清空，消息页正文／已读清空、发送关闭。完成清理后原字节放行，两条请求均观测取消、摘要相同，双端不恢复旧账号或正文。同PID退出，iOS退出后Android读seq2、发送seq3被Alice读；双端退出后Alice发送seq5，3秒无其设备请求／新注册／新增回执。7SQL阶段最终5消息／3设备／0撤销／4设备D+R／3用户read；Flutter250／analyzer0／Python318执行311唯一零失败错误跳过；Go夹具2顶层＋2子场景普通／race通过。75旧JSON／3707原件及主工作区保持，自有资源独立清理，截图已复核。详情见[专项结果](../../verification/p5-02-logout-race-results.json)。
 
 本轮为原生控制器／账号退出边界，不含完整退出按钮导航、再次登录、所有异步回调或OS死亡。夹具放行为向已取消连接写入原成功字节的尝试，不证明客户端实际接收。Task9及Tasks5—8原BASE／进行中、真机暂缓保持；无全仓Go／race重跑或远端发布声明。
+
+
+### Task9 实际退出按钮与冷启动增量（2026-10-21）
+
+固定源 `e60fa443b306ca83171e83fc2c5129a6cd145243`，本轮测试扩展、产品实现未改。Android API36×2＋iOS26.5三原生进程及生产API／Outbox／Receipt、PG／Redis：Bob双端实际LoginPage恢复、点击进入工作空间／任职／会话，原设备renew200、seq1已读；从消息页返回并点实际Shell退出按钮，回LoginPage且安全存储／账号选择／DB文件清空，无工作空间或恢复登录入口。同进程重建页面无新API；Androidforce-stop／iOSSIGKILL后同安装同私有目录、新PID且旧进程消失，重启无seedrefresh，实际LoginPage保持未登录，无OAuth／新注册。iOS退出后Android回复seq2、Alice读；seq3只有存活Android读；双端退出冷启动后seq4不增加回执，3秒静默无设备请求／新认证。8SQL阶段最终4消息／3设备／0撤销／4设备D+R／3用户read。Flutter250／analyzer0／Python320执行313唯一零失败错误跳过，HTTP Go2项普通及race通过；76旧JSON／3894原件及主工作区不变，截图与自有资源清理核实。详情见[专项结果](../../verification/p5-02-logout-navigation-results.json)。
+
+真实UI使用保存refresh和合成IdP恢复，不替代客户交互式SSO或退出后重新登录；退出中途崩溃／存储故障及原生客户回调仍另验。Task9及Tasks5—8原BASE／进行中和真机暂缓保持；无全仓Go／race重跑、完整四平台或远端发布声明。

@@ -1,0 +1,3096 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-21",
+  "status": "passed",
+  "tested_source_commit": "e60fa443b306ca83171e83fc2c5129a6cd145243",
+  "backend_source_unchanged_from": "c61194d9fe07d10ae6c6e24f04c6e8af5d63ca6b",
+  "no_product_changes_this_increment": true,
+  "fixture_trust_scope": "real UI callbacks use this disposable native process default FixtureTrust CA, normal TLS verification retained, restored in finally; no OS trust store installation/change",
+  "scope": "two owned Android API36 and one iOS26.5 native process; production API and workers; synthetic platform-bound refresh IdP; no physical hardware or interactive customer SSO; real LoginPage saved-account restore, ClientShell/member/message route, back and actual logout button; fresh LoginPage and actual same-install process cold start",
+  "physical_validation": "deferred_by_user",
+  "task9_status": "in_progress",
+  "four_platform_complete": false,
+  "participants": {
+    "alice": {
+      "name": "IM-Mobile-Android-c4dc58462ea22912a6e56c7a4d4ac81e",
+      "configuration": {
+        "package": "system-images;android-36;default;arm64-v8a",
+        "api": 36,
+        "abi": "arm64-v8a",
+        "revision": "2",
+        "device_type": "pixel_7",
+        "tool_sha256": {
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/source.properties": "ba13085f647fb8389a4d06a1de0e4104ac4e841733e50f67223ac230e1ce685a",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb": "1811e253b21b12cbfda7201ebaf86c10e7ddcb5c606a7a81f7c82b4c429c2d3b",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/source.properties": "2dccd788c0234d8cf7f7457377e57f57527a86a629c6ed54feb8af0f549dac38",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/cmdline-tools/23.0/bin/avdmanager": "09199f7bca5dc7eb4e4b4ff459dc125579c3e08c61ddc078dcd2c6e8e61efbb6",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/system-images/android-36/default/arm64-v8a/source.properties": "78181fe85df7b9dfc77c2dc89958bd3af35d4293a847683648fb2fc964a3395b"
+        },
+        "image_archive_hash_claimed": false
+      },
+      "commands": [
+        {
+          "label": "identity-ro.boot.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "127.0.0.1:5555",
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "3f87c93298bb96be3dbfa3d47a1f080117c876974a874338b72b92413f7a21fb",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "3f87c93298bb96be3dbfa3d47a1f080117c876974a874338b72b92413f7a21fb"
+        },
+        {
+          "label": "identity-ro.kernel.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "127.0.0.1:5555",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "label": "identity-ro.build.version.sdk",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "127.0.0.1:5555",
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758"
+        },
+        {
+          "label": "identity-ro.product.cpu.abi",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "127.0.0.1:5555",
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90"
+        },
+        {
+          "label": "identity-ro.kernel.qemu",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "127.0.0.1:5555",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+        },
+        {
+          "label": "canonical-ro.boot.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "3f87c93298bb96be3dbfa3d47a1f080117c876974a874338b72b92413f7a21fb",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "3f87c93298bb96be3dbfa3d47a1f080117c876974a874338b72b92413f7a21fb"
+        },
+        {
+          "label": "canonical-ro.kernel.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "label": "canonical-ro.build.version.sdk",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758"
+        },
+        {
+          "label": "canonical-ro.product.cpu.abi",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90"
+        },
+        {
+          "label": "canonical-ro.kernel.qemu",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+        },
+        {
+          "label": "user-unlocked",
+          "arguments": [
+            "shell",
+            "dumpsys",
+            "user"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "dumpsys",
+            "user"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "eb98008ecaa3c6d8b3a9924a229342c0a0e6d24d2cedf8b5c800e9c4733b0150",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "eb98008ecaa3c6d8b3a9924a229342c0a0e6d24d2cedf8b5c800e9c4733b0150"
+        },
+        {
+          "label": "boot-id",
+          "arguments": [
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "c7658257854a0f840ebc3a00c45b4f5e59b317216535cbad82a46d43c4088f36",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "c7658257854a0f840ebc3a00c45b4f5e59b317216535cbad82a46d43c4088f36"
+        },
+        {
+          "label": "install",
+          "arguments": [
+            "install",
+            "--no-streaming",
+            "-r",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/cross-debug.apk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "install",
+            "--no-streaming",
+            "-r",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/cross-debug.apk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "8cfe21ca9831863004ad6eb25b313f8944786f7a01b291da8fbbe61cc0c847e5",
+          "stderr_sha256": "98e348d62861fc45bac9607934ee5ec4cd307604d10fc8c91054f942170f779f",
+          "combined_sha256": "d1471141efb32eef239cfa32b55bff90c577cbd20e85cc681f102520f2da3b4b"
+        },
+        {
+          "label": "installed-path",
+          "arguments": [
+            "shell",
+            "pm",
+            "path",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "pm",
+            "path",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "b5d78ed8140469712301c16e749fb41950ef3869778b2bfa25d4c7e490222bb7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "b5d78ed8140469712301c16e749fb41950ef3869778b2bfa25d4c7e490222bb7"
+        },
+        {
+          "label": "installed-sha256-0",
+          "arguments": [
+            "shell",
+            "sha256sum",
+            "/data/app/~~HPjZiKFcsSJ1lIM6MaJCTw==/com.enterpriseim.client-kNxfCCb-Ml8bF1HNa9sLxw==/base.apk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "sha256sum",
+            "/data/app/~~HPjZiKFcsSJ1lIM6MaJCTw==/com.enterpriseim.client-kNxfCCb-Ml8bF1HNa9sLxw==/base.apk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "8d9f8ba5ff5037712e1db1e0a32ab54db33dc6dbffb176efe9043cd62ca928d7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "8d9f8ba5ff5037712e1db1e0a32ab54db33dc6dbffb176efe9043cd62ca928d7"
+        },
+        {
+          "label": "installed-boot-0",
+          "arguments": [
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "c7658257854a0f840ebc3a00c45b4f5e59b317216535cbad82a46d43c4088f36",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "c7658257854a0f840ebc3a00c45b4f5e59b317216535cbad82a46d43c4088f36"
+        },
+        {
+          "label": "package",
+          "arguments": [
+            "shell",
+            "dumpsys",
+            "package",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "dumpsys",
+            "package",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a80047cbe6ffbebb0d194e8fed53e952d20c0523e7e0a0d62475d06b145c7cb6",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a80047cbe6ffbebb0d194e8fed53e952d20c0523e7e0a0d62475d06b145c7cb6"
+        },
+        {
+          "label": "backend-reverse",
+          "arguments": [
+            "reverse",
+            "tcp:63363",
+            "tcp:63363"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "reverse",
+            "tcp:63363",
+            "tcp:63363"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "9fa691b9498aae64ca4e52207412bbf4be35e3781492ed13bac0230d80a0eb6d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "9fa691b9498aae64ca4e52207412bbf4be35e3781492ed13bac0230d80a0eb6d"
+        },
+        {
+          "label": "start",
+          "arguments": [
+            "shell",
+            "am",
+            "start",
+            "-W",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+            "-n",
+            "com.enterpriseim.client/.MainActivity"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "am",
+            "start",
+            "-W",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+            "-n",
+            "com.enterpriseim.client/.MainActivity"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a86f88b2477afee5bc248d5f8d1841b60cb240527ed7cb89f0054812f876cf47",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a86f88b2477afee5bc248d5f8d1841b60cb240527ed7cb89f0054812f876cf47"
+        },
+        {
+          "label": "initial-pid",
+          "arguments": [
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "b67718a7f23969337b599fbccb53c9cb23e8020b355d8a5e4072ad1d761efe36",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "b67718a7f23969337b599fbccb53c9cb23e8020b355d8a5e4072ad1d761efe36"
+        },
+        {
+          "label": "screen-survivor-send-after-ui-logouts",
+          "arguments": [
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "de9f16c51801b9cfabba7b84edd1cb1d77169ef5bbbf1eed46c6a107a3c09836",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "de9f16c51801b9cfabba7b84edd1cb1d77169ef5bbbf1eed46c6a107a3c09836"
+        },
+        {
+          "label": "cleanup-owned-avd",
+          "arguments": [
+            "emu",
+            "avd",
+            "name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "emu",
+            "avd",
+            "name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "5f0ea8f68e20a235e4cf01d464532a966c5a6903a2f3805785cbfc3b839ded46",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "5f0ea8f68e20a235e4cf01d464532a966c5a6903a2f3805785cbfc3b839ded46"
+        },
+        {
+          "label": "cleanup-uninstall",
+          "arguments": [
+            "uninstall",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "uninstall",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0"
+        },
+        {
+          "label": "cleanup-package-absent",
+          "arguments": [
+            "shell",
+            "pm",
+            "list",
+            "packages",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "shell",
+            "pm",
+            "list",
+            "packages",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "cleanup-emulator-stop",
+          "arguments": [
+            "emu",
+            "kill"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "63364",
+            "-s",
+            "emulator-5554",
+            "emu",
+            "kill"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f"
+        }
+      ],
+      "service_exits": [
+        {
+          "name": "emulator",
+          "pid": 30037,
+          "actual_exit": 0
+        },
+        {
+          "name": "adb-server",
+          "pid": 30032,
+          "actual_exit": -15
+        },
+        {
+          "name": "avd-create",
+          "pid": 29996,
+          "actual_exit": 0
+        }
+      ],
+      "boot_poll": [
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 124,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5555"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "1",
+          "serial": "127.0.0.1:5555"
+        }
+      ],
+      "console_port": 5554,
+      "adb_server_port": 63364,
+      "launched": [
+        {
+          "name": "avd-create",
+          "pid": 29996,
+          "fingerprint": {
+            "pid": 29996,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:30:24 2026",
+            "executable_path": "/bin/sh",
+            "executable_sha256": "84ca7f9b83021621e16059a1c7850df72a462d879e8239d566236ca6ddd00953",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/alice",
+            "pgid": 29996
+          }
+        },
+        {
+          "name": "adb-server",
+          "pid": 30032,
+          "fingerprint": {
+            "pid": 30032,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:30:24 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "executable_sha256": "1811e253b21b12cbfda7201ebaf86c10e7ddcb5c606a7a81f7c82b4c429c2d3b",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/alice",
+            "pgid": 30032
+          }
+        },
+        {
+          "name": "emulator",
+          "pid": 30037,
+          "fingerprint": {
+            "pid": 30037,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:30:24 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator",
+            "executable_sha256": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/alice",
+            "pgid": 30037
+          }
+        }
+      ],
+      "avd_create_actual_exit": 0,
+      "serial": "emulator-5554",
+      "properties": {
+        "ro.boot.qemu.avd_name": "IM-Mobile-Android-c4dc58462ea22912a6e56c7a4d4ac81e",
+        "ro.kernel.qemu.avd_name": "",
+        "ro.build.version.sdk": "36",
+        "ro.product.cpu.abi": "arm64-v8a",
+        "ro.kernel.qemu": "1"
+      },
+      "user_unlocked": true,
+      "boot_id": "14f6e8ad-aff2-46ee-ab98-d9e33bbf9e21",
+      "apk_sha256": "2d0f4bbc537845d9aa7ffde9ac00ab8bb2b6d2c7d7765b45cf6dff3baff5c256",
+      "installation": {
+        "uid": "10150",
+        "first_install": "2026-10-21 23:30:46"
+      },
+      "pid": 2046,
+      "process_start_ticks": "2089",
+      "admission": {
+        "role": "alice",
+        "platform": "android",
+        "nonce": "d6460b85a4b1e0e869252a5966a331fe",
+        "pid": 2046,
+        "user": "00000000-0000-4000-8000-000000000231",
+        "device_id": "d091ed64-7456-4225-8c4b-02e7035941e0"
+      },
+      "service_fingerprint_transitions": [
+        {
+          "name": "emulator",
+          "from": {
+            "pid": 30037,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:30:24 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator",
+            "executable_sha256": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/alice",
+            "pgid": 30037
+          },
+          "to": {
+            "pid": 30037,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:30:24 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/qemu/darwin-aarch64/qemu-system-aarch64-headless",
+            "executable_sha256": "debac868b79f1170e64c5c202f8b39ce3dd0215c358b8d0e62ba63256ef6a819",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/alice",
+            "pgid": 30037
+          }
+        }
+      ],
+      "cleanup_failures": []
+    },
+    "bob_ios": {
+      "name": "IM-Cross-dcdf0209256b868f6d359a988878db96",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+      "commands": [
+        {
+          "label": "inventory-0",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "list",
+            "devices",
+            "-j"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "41730261597de4519abfbe4b796e27a253dd3f3361cf480fb692671c156a8b50",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "create",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "create",
+            "IM-Cross-dcdf0209256b868f6d359a988878db96",
+            "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+            "com.apple.CoreSimulator.SimRuntime.iOS-26-5"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "f3d3e16bdc638efb471e6e7f52371baa81ba236b76c1ea24ff20efee9015a012",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "inventory-2",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "list",
+            "devices",
+            "-j"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "87d7228d5839640448091b0f2214b8f75b31e8283f44ca313c9eb75068c78ee6",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "boot",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "boot",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "bootstatus",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "bootstatus",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "-b"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "16d62023124b0f58fd0c74641cd1cd318c3d7f8c2d58fa09587344d0984df818",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "install",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "install",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/client/build/ios/iphonesimulator/Runner.app"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "installed-path",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "get_app_container",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "com.enterpriseim.client",
+            "app"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "5c82ca12092cd690e20eb452bbc48788cfc7d47abe782609dd3644a01c66b81a",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "data-path",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "get_app_container",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "com.enterpriseim.client",
+            "data"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "3f6fb3c664379531671b88821b7b382bc3625bef0da8d301fcaff8fbcc0548a0",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "launch",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "launch",
+            "--terminate-running-process",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "0771b0c9a1d971f858bd46dc13471f30a4fb35e18c1bcba1dcbfee581814c42a",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "screen-actual-login-workspace-message-read",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "io",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "screenshot",
+            "--type=png",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/actual-login-workspace-message-read.png"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "fa51b67cd8395bab7e4d09ffd35a0ee2b7f3f928ff8ac63888259b5c5fa3172f"
+        },
+        {
+          "label": "screen-logout-button-back-to-login",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "io",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "screenshot",
+            "--type=png",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/logout-button-back-to-login.png"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "45883532aaf84c3fccfdcaae649e21afc94bc7052df9531e681af1f1fbb8981a"
+        },
+        {
+          "label": "screen-fresh-login-page-no-account",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "io",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "screenshot",
+            "--type=png",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/fresh-login-page-no-account.png"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "4a921d25887fa079e2fca32380a725fbe0b4f1ed5b1c3630021eaa1b7b07846d"
+        },
+        {
+          "label": "inventory-12",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "list",
+            "devices",
+            "-j"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "848fc258bb79e5e29a4b74829b70d5976b9c7be4eb2b7158048eb5cb907751ec",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "restart-launch",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "launch",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "815a86dc75b69cf8ce5e42d91aadb4dbe23ffe095efa3544994a75d51d9e434c",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "screen-cold-start-stays-logged-out",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "io",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+            "screenshot",
+            "--type=png",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/cold-start-stays-logged-out.png"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "9689de96c6de176422b40095f71e4978024699979d11be91993be9166d7f0c56"
+        },
+        {
+          "label": "inventory-15",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "list",
+            "devices",
+            "-j"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "02238541984c926fb794232440a759d5047773806f736705cc94bc8b8d3064fb",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "shutdown",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "shutdown",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "delete",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "delete",
+            "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "inventory-18",
+          "argv": [
+            "/usr/bin/xcrun",
+            "simctl",
+            "list",
+            "devices",
+            "-j"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "41730261597de4519abfbe4b796e27a253dd3f3361cf480fb692671c156a8b50",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "udid": "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01",
+      "installed_app": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/CA2CD3FD-5702-40E0-ADF0-F68C4C605B01/data/Containers/Bundle/Application/B8901EF9-359C-4758-8E07-7DD982E3CBB3/Runner.app",
+      "executable_sha256": "361854c8224b65ab00c72f9bc713707751f32e727b2b4bc4d79665b39cfa174c",
+      "data_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/CA2CD3FD-5702-40E0-ADF0-F68C4C605B01/data/Containers/Data/Application/89C56449-560F-47C4-A43A-A978D6D03E7B",
+      "pid": 31039,
+      "process_identity": {
+        "pid": 31039,
+        "uid": 501,
+        "start_time": "Wed Oct 21 15:31:52 2026",
+        "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/CA2CD3FD-5702-40E0-ADF0-F68C4C605B01/data/Containers/Bundle/Application/B8901EF9-359C-4758-8E07-7DD982E3CBB3/Runner.app/Runner",
+        "executable_sha256": "361854c8224b65ab00c72f9bc713707751f32e727b2b4bc4d79665b39cfa174c",
+        "workdir": "/",
+        "pgid": 31039
+      },
+      "admission": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+        "pid": 31039,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2"
+      },
+      "restart_before": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+        "pid": 30528,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2",
+        "process_identity": {
+          "pid": 30528,
+          "uid": 501,
+          "start_time": "Wed Oct 21 15:31:10 2026",
+          "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/CA2CD3FD-5702-40E0-ADF0-F68C4C605B01/data/Containers/Bundle/Application/B8901EF9-359C-4758-8E07-7DD982E3CBB3/Runner.app/Runner",
+          "executable_sha256": "361854c8224b65ab00c72f9bc713707751f32e727b2b4bc4d79665b39cfa174c",
+          "workdir": "/",
+          "pgid": 30528
+        }
+      },
+      "restart_old_absent": true,
+      "owned_simulator_removed": true,
+      "cleanup_failures": []
+    },
+    "bob_android": {
+      "name": "IM-Mobile-Android-7f8ec2f1638ee9ce69dc02f748c81186",
+      "configuration": {
+        "package": "system-images;android-36;default;arm64-v8a",
+        "api": 36,
+        "abi": "arm64-v8a",
+        "revision": "2",
+        "device_type": "pixel_7",
+        "tool_sha256": {
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/source.properties": "ba13085f647fb8389a4d06a1de0e4104ac4e841733e50f67223ac230e1ce685a",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb": "1811e253b21b12cbfda7201ebaf86c10e7ddcb5c606a7a81f7c82b4c429c2d3b",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/source.properties": "2dccd788c0234d8cf7f7457377e57f57527a86a629c6ed54feb8af0f549dac38",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/cmdline-tools/23.0/bin/avdmanager": "09199f7bca5dc7eb4e4b4ff459dc125579c3e08c61ddc078dcd2c6e8e61efbb6",
+          "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/system-images/android-36/default/arm64-v8a/source.properties": "78181fe85df7b9dfc77c2dc89958bd3af35d4293a847683648fb2fc964a3395b"
+        },
+        "image_archive_hash_claimed": false
+      },
+      "commands": [
+        {
+          "label": "identity-ro.boot.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "127.0.0.1:5557",
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a80d984789b4795417746e17fcc58e7e75c7f02eb0509fb0bd6903535902ec57",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a80d984789b4795417746e17fcc58e7e75c7f02eb0509fb0bd6903535902ec57"
+        },
+        {
+          "label": "identity-ro.kernel.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "127.0.0.1:5557",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "label": "identity-ro.build.version.sdk",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "127.0.0.1:5557",
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758"
+        },
+        {
+          "label": "identity-ro.product.cpu.abi",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "127.0.0.1:5557",
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90"
+        },
+        {
+          "label": "identity-ro.kernel.qemu",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "127.0.0.1:5557",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+        },
+        {
+          "label": "canonical-ro.boot.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "getprop",
+            "ro.boot.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a80d984789b4795417746e17fcc58e7e75c7f02eb0509fb0bd6903535902ec57",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a80d984789b4795417746e17fcc58e7e75c7f02eb0509fb0bd6903535902ec57"
+        },
+        {
+          "label": "canonical-ro.kernel.qemu.avd_name",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu.avd_name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "label": "canonical-ro.build.version.sdk",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "getprop",
+            "ro.build.version.sdk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758"
+        },
+        {
+          "label": "canonical-ro.product.cpu.abi",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "getprop",
+            "ro.product.cpu.abi"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90"
+        },
+        {
+          "label": "canonical-ro.kernel.qemu",
+          "arguments": [
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "getprop",
+            "ro.kernel.qemu"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+        },
+        {
+          "label": "user-unlocked",
+          "arguments": [
+            "shell",
+            "dumpsys",
+            "user"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "dumpsys",
+            "user"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "376ac636caad7540f6e3695714dee5ac4befde3b70e86f32b4ca3f6d23a7c7ad",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "376ac636caad7540f6e3695714dee5ac4befde3b70e86f32b4ca3f6d23a7c7ad"
+        },
+        {
+          "label": "boot-id",
+          "arguments": [
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "434b9b08e44d133b656e78877db61293270a4907a28500922c238c74b40d43c7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "434b9b08e44d133b656e78877db61293270a4907a28500922c238c74b40d43c7"
+        },
+        {
+          "label": "install",
+          "arguments": [
+            "install",
+            "--no-streaming",
+            "-r",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/cross-debug.apk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "install",
+            "--no-streaming",
+            "-r",
+            "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/cross-debug.apk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "8cfe21ca9831863004ad6eb25b313f8944786f7a01b291da8fbbe61cc0c847e5",
+          "stderr_sha256": "c508785bca2c8ad96c6b5b742264644d34e35a58fb27adc5c448f928711c35a0",
+          "combined_sha256": "b1e558b89d54a750060705ceeac54f9bf9ea0511e19c4d776925f3e0c6cdd866"
+        },
+        {
+          "label": "installed-path",
+          "arguments": [
+            "shell",
+            "pm",
+            "path",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "pm",
+            "path",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "51b081705aa14bdacc7cbd51ac54883ebe389ea29878efd47f1e13c154f0dc30",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "51b081705aa14bdacc7cbd51ac54883ebe389ea29878efd47f1e13c154f0dc30"
+        },
+        {
+          "label": "installed-sha256-0",
+          "arguments": [
+            "shell",
+            "sha256sum",
+            "/data/app/~~JHgFFHsAs2HXJ2VPZRqTlA==/com.enterpriseim.client-ot-4gGRS-snh2hTlOeBoQw==/base.apk"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "sha256sum",
+            "/data/app/~~JHgFFHsAs2HXJ2VPZRqTlA==/com.enterpriseim.client-ot-4gGRS-snh2hTlOeBoQw==/base.apk"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "54b6f26faf803acce322c6a61881e1b819aef140c3b9fa5fd30abc1516ff4129",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "54b6f26faf803acce322c6a61881e1b819aef140c3b9fa5fd30abc1516ff4129"
+        },
+        {
+          "label": "installed-boot-0",
+          "arguments": [
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "cat",
+            "/proc/sys/kernel/random/boot_id"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "434b9b08e44d133b656e78877db61293270a4907a28500922c238c74b40d43c7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "434b9b08e44d133b656e78877db61293270a4907a28500922c238c74b40d43c7"
+        },
+        {
+          "label": "package",
+          "arguments": [
+            "shell",
+            "dumpsys",
+            "package",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "dumpsys",
+            "package",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "4a53497c1da3a09aef3221a07f9c390322ee3b23e33ca247c17ba96120e2f4d2",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "4a53497c1da3a09aef3221a07f9c390322ee3b23e33ca247c17ba96120e2f4d2"
+        },
+        {
+          "label": "backend-reverse",
+          "arguments": [
+            "reverse",
+            "tcp:63363",
+            "tcp:63363"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "reverse",
+            "tcp:63363",
+            "tcp:63363"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "9fa691b9498aae64ca4e52207412bbf4be35e3781492ed13bac0230d80a0eb6d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "9fa691b9498aae64ca4e52207412bbf4be35e3781492ed13bac0230d80a0eb6d"
+        },
+        {
+          "label": "start",
+          "arguments": [
+            "shell",
+            "am",
+            "start",
+            "-W",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+            "-n",
+            "com.enterpriseim.client/.MainActivity"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "am",
+            "start",
+            "-W",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+            "-n",
+            "com.enterpriseim.client/.MainActivity"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "d024ea3dab9d58603969dba5d836f0fc804cf8af8bb6d19a5037ecdf58b1ec44",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "d024ea3dab9d58603969dba5d836f0fc804cf8af8bb6d19a5037ecdf58b1ec44"
+        },
+        {
+          "label": "initial-pid",
+          "arguments": [
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "4d6f3be1b084bf8f9fd72011640361c05726861c7d9d483332561735729b39f1",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "4d6f3be1b084bf8f9fd72011640361c05726861c7d9d483332561735729b39f1"
+        },
+        {
+          "label": "screen-actual-login-workspace-message-read",
+          "arguments": [
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "04a84a42ecac1cff9da75697aa00ef6202cc8435cb4fca8449d1a7de9059a8f1",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "04a84a42ecac1cff9da75697aa00ef6202cc8435cb4fca8449d1a7de9059a8f1"
+        },
+        {
+          "label": "screen-logout-button-back-to-login",
+          "arguments": [
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "c4b8674fe1a0c49d2804005d4f7e680164f7d11c1c14fdf3a7c9980cb0aff4e4",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "c4b8674fe1a0c49d2804005d4f7e680164f7d11c1c14fdf3a7c9980cb0aff4e4"
+        },
+        {
+          "label": "screen-fresh-login-page-no-account",
+          "arguments": [
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "3f84ba3bfa4bc4f102eebaa42887ceb09f6946af32d8c808088004067bb3360b",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "3f84ba3bfa4bc4f102eebaa42887ceb09f6946af32d8c808088004067bb3360b"
+        },
+        {
+          "label": "restart-force-stop",
+          "arguments": [
+            "shell",
+            "am",
+            "force-stop",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "am",
+            "force-stop",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "restart-old-absent",
+          "arguments": [
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 1,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "restart-launch",
+          "arguments": [
+            "shell",
+            "am",
+            "start",
+            "-W",
+            "-n",
+            "com.enterpriseim.client/.MainActivity"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "am",
+            "start",
+            "-W",
+            "-n",
+            "com.enterpriseim.client/.MainActivity"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "d9d96a78e84b07824d915049b63f12adc2c27fd8fb2e54628b0f5cece42d8333",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "d9d96a78e84b07824d915049b63f12adc2c27fd8fb2e54628b0f5cece42d8333"
+        },
+        {
+          "label": "restart-pid",
+          "arguments": [
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "pidof",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "9c67b8c6e6b0f4dc00297d687ef2272b060d361dc2ad50132e71489762cdee22",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "9c67b8c6e6b0f4dc00297d687ef2272b060d361dc2ad50132e71489762cdee22"
+        },
+        {
+          "label": "screen-cold-start-stays-logged-out",
+          "arguments": [
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "exec-out",
+            "screencap",
+            "-p"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "74bb6de74b850e4700ea35bcc86c3eb625528a07032eda9ba1ddd3d79de9b81e",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "74bb6de74b850e4700ea35bcc86c3eb625528a07032eda9ba1ddd3d79de9b81e"
+        },
+        {
+          "label": "cleanup-owned-avd",
+          "arguments": [
+            "emu",
+            "avd",
+            "name"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "emu",
+            "avd",
+            "name"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "d196d447f42b4ee305923939f2b7d22c270c22555c9f1a0a4a88f7879e4f8ab5",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "d196d447f42b4ee305923939f2b7d22c270c22555c9f1a0a4a88f7879e4f8ab5"
+        },
+        {
+          "label": "cleanup-uninstall",
+          "arguments": [
+            "uninstall",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "uninstall",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0"
+        },
+        {
+          "label": "cleanup-package-absent",
+          "arguments": [
+            "shell",
+            "pm",
+            "list",
+            "packages",
+            "com.enterpriseim.client"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "shell",
+            "pm",
+            "list",
+            "packages",
+            "com.enterpriseim.client"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "cleanup-emulator-stop",
+          "arguments": [
+            "emu",
+            "kill"
+          ],
+          "argv": [
+            "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "-P",
+            "50136",
+            "-s",
+            "emulator-5556",
+            "emu",
+            "kill"
+          ],
+          "actual_exit": 0,
+          "stdout_sha256": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "combined_sha256": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f"
+        }
+      ],
+      "service_exits": [
+        {
+          "name": "emulator",
+          "pid": 30632,
+          "actual_exit": 0
+        },
+        {
+          "name": "adb-server",
+          "pid": 30627,
+          "actual_exit": -15
+        },
+        {
+          "name": "avd-create",
+          "pid": 30579,
+          "actual_exit": 0
+        }
+      ],
+      "boot_poll": [
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 124,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": 0,
+          "ready_exit": 1,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "",
+          "serial": "127.0.0.1:5557"
+        },
+        {
+          "devices_exit": 0,
+          "connect_exit": null,
+          "ready_exit": 0,
+          "boot_completed": "1",
+          "serial": "127.0.0.1:5557"
+        }
+      ],
+      "console_port": 5556,
+      "adb_server_port": 50136,
+      "launched": [
+        {
+          "name": "avd-create",
+          "pid": 30579,
+          "fingerprint": {
+            "pid": 30579,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:31:12 2026",
+            "executable_path": "/bin/sh",
+            "executable_sha256": "84ca7f9b83021621e16059a1c7850df72a462d879e8239d566236ca6ddd00953",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/bob_android",
+            "pgid": 30579
+          }
+        },
+        {
+          "name": "adb-server",
+          "pid": 30627,
+          "fingerprint": {
+            "pid": 30627,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:31:13 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb",
+            "executable_sha256": "1811e253b21b12cbfda7201ebaf86c10e7ddcb5c606a7a81f7c82b4c429c2d3b",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/bob_android",
+            "pgid": 30627
+          }
+        },
+        {
+          "name": "emulator",
+          "pid": 30632,
+          "fingerprint": {
+            "pid": 30632,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:31:13 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator",
+            "executable_sha256": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/bob_android",
+            "pgid": 30632
+          }
+        }
+      ],
+      "avd_create_actual_exit": 0,
+      "serial": "emulator-5556",
+      "properties": {
+        "ro.boot.qemu.avd_name": "IM-Mobile-Android-7f8ec2f1638ee9ce69dc02f748c81186",
+        "ro.kernel.qemu.avd_name": "",
+        "ro.build.version.sdk": "36",
+        "ro.product.cpu.abi": "arm64-v8a",
+        "ro.kernel.qemu": "1"
+      },
+      "user_unlocked": true,
+      "boot_id": "5d955179-dbb0-49bc-92a3-c085cf6dcf78",
+      "apk_sha256": "2d0f4bbc537845d9aa7ffde9ac00ab8bb2b6d2c7d7765b45cf6dff3baff5c256",
+      "installation": {
+        "uid": "10150",
+        "first_install": "2026-10-21 23:31:38"
+      },
+      "pid": 2854,
+      "process_start_ticks": "4588",
+      "admission": {
+        "role": "bob_android",
+        "platform": "android",
+        "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+        "pid": 2854,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1"
+      },
+      "restart_before": {
+        "role": "bob_android",
+        "platform": "android",
+        "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+        "pid": 2130,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+        "process_start_ticks": "2476"
+      },
+      "restart_old_absent": true,
+      "service_fingerprint_transitions": [
+        {
+          "name": "emulator",
+          "from": {
+            "pid": 30632,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:31:13 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator",
+            "executable_sha256": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/bob_android",
+            "pgid": 30632
+          },
+          "to": {
+            "pid": 30632,
+            "uid": 501,
+            "start_time": "Wed Oct 21 15:31:13 2026",
+            "executable_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/qemu/darwin-aarch64/qemu-system-aarch64-headless",
+            "executable_sha256": "debac868b79f1170e64c5c202f8b39ce3dd0215c358b8d0e62ba63256ef6a819",
+            "workdir": "/private/tmp/im-cross-eyz_xqfd/c4e9ade553e0ce1f2952cd54b90040b0/bob_android",
+            "pgid": 30632
+          }
+        }
+      ],
+      "cleanup_failures": []
+    }
+  },
+  "binaries": {
+    "android": {
+      "file": "cross-debug.apk",
+      "sha256": "2d0f4bbc537845d9aa7ffde9ac00ab8bb2b6d2c7d7765b45cf6dff3baff5c256"
+    },
+    "ios": {
+      "file": "cross-ios-debug.zip",
+      "sha256": "e553299127cb6cc1f34120bab826d39c2790997f812c6726b4187958f36ae226"
+    },
+    "credentials_created_after_build": true
+  },
+  "checkpoints": [
+    "registered",
+    "actual_ui_both_read",
+    "ios_button_logout_and_cold_start",
+    "survivor_reply_read",
+    "ios_cold_stays_out_survivor_read",
+    "both_button_logout_and_cold_start",
+    "new_message_after_cold_no_receipts",
+    "done"
+  ],
+  "database_final": {
+    "alice_sends": 3,
+    "bob_sends": 1,
+    "device_delivered": 4,
+    "device_read": 4,
+    "devices": 3,
+    "distinct_client_ids": 4,
+    "max_seq": 4,
+    "messages": 4,
+    "min_seq": 1,
+    "user_read": 3
+  },
+  "native_ui_admissions": {
+    "bob_ios": {
+      "role": "bob_ios",
+      "platform": "ios",
+      "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+      "pid": 30528,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2",
+      "id": 1,
+      "status": "ok",
+      "details": {
+        "navigation_saved_account_after_close": true,
+        "navigation_transport_trust": true,
+        "login_restore_via_ui": true,
+        "workspace_entered": true,
+        "membership_selected": "00000000-0000-4000-8000-000000000243",
+        "same_device": true,
+        "storage": "im-native-backend-RRh7SN",
+        "login_api_creations": 1,
+        "cursor": "1",
+        "observed_failures": [],
+        "observed_receipt_http": [],
+        "latest_network_code": null,
+        "latest_network_status": null,
+        "loading": false,
+        "observed_503": false,
+        "seqs": [
+          "1"
+        ],
+        "read_seqs": [],
+        "summaries": {}
+      },
+      "cleanup": false
+    },
+    "bob_android": {
+      "role": "bob_android",
+      "platform": "android",
+      "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+      "pid": 2130,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+      "id": 1,
+      "status": "ok",
+      "details": {
+        "navigation_saved_account_after_close": true,
+        "navigation_transport_trust": true,
+        "login_restore_via_ui": true,
+        "workspace_entered": true,
+        "membership_selected": "00000000-0000-4000-8000-000000000243",
+        "same_device": true,
+        "storage": "im-native-backend-SLITSG",
+        "login_api_creations": 1,
+        "cursor": "1",
+        "observed_failures": [],
+        "observed_receipt_http": [],
+        "latest_network_code": null,
+        "latest_network_status": null,
+        "loading": false,
+        "observed_503": false,
+        "seqs": [
+          "1"
+        ],
+        "read_seqs": [],
+        "summaries": {}
+      },
+      "cleanup": false
+    }
+  },
+  "button_logout_states": {
+    "bob_ios": {
+      "role": "bob_ios",
+      "platform": "ios",
+      "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+      "pid": 30528,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2",
+      "id": 3,
+      "status": "ok",
+      "details": {
+        "login_heading": true,
+        "client_shell_count": 0,
+        "message_page_count": 0,
+        "workspace_entry": false,
+        "restore_button": false,
+        "account_absent": true,
+        "vault_absent": true,
+        "database_files_absent": true,
+        "login_button_enabled": true,
+        "storage": "im-native-backend-RRh7SN",
+        "login_api_creations": 1,
+        "no_seed_refresh": false,
+        "logout_button_tapped": true,
+        "observed_failures": [],
+        "observed_receipt_http": [],
+        "latest_network_code": null,
+        "latest_network_status": null,
+        "loading": false,
+        "observed_503": false,
+        "seqs": [],
+        "read_seqs": [],
+        "summaries": {}
+      },
+      "cleanup": false
+    },
+    "bob_android": {
+      "role": "bob_android",
+      "platform": "android",
+      "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+      "pid": 2130,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+      "id": 6,
+      "status": "ok",
+      "details": {
+        "login_heading": true,
+        "client_shell_count": 0,
+        "message_page_count": 0,
+        "workspace_entry": false,
+        "restore_button": false,
+        "account_absent": true,
+        "vault_absent": true,
+        "database_files_absent": true,
+        "login_button_enabled": true,
+        "storage": "im-native-backend-SLITSG",
+        "login_api_creations": 1,
+        "no_seed_refresh": false,
+        "logout_button_tapped": true,
+        "observed_failures": [],
+        "observed_receipt_http": [],
+        "latest_network_code": null,
+        "latest_network_status": null,
+        "loading": false,
+        "observed_503": false,
+        "seqs": [],
+        "read_seqs": [],
+        "summaries": {}
+      },
+      "cleanup": false
+    }
+  },
+  "fresh_login_page_states": {
+    "bob_ios": {
+      "role": "bob_ios",
+      "platform": "ios",
+      "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+      "pid": 30528,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2",
+      "id": 4,
+      "status": "ok",
+      "details": {
+        "navigation_saved_account_after_close": false,
+        "login_heading": true,
+        "client_shell_count": 0,
+        "message_page_count": 0,
+        "workspace_entry": false,
+        "restore_button": false,
+        "account_absent": true,
+        "vault_absent": true,
+        "database_files_absent": true,
+        "login_button_enabled": true,
+        "storage": "im-native-backend-RRh7SN",
+        "login_api_creations": 1,
+        "no_seed_refresh": false,
+        "new_api_creations": 0
+      },
+      "cleanup": false
+    },
+    "bob_android": {
+      "role": "bob_android",
+      "platform": "android",
+      "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+      "pid": 2130,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+      "id": 7,
+      "status": "ok",
+      "details": {
+        "navigation_saved_account_after_close": false,
+        "login_heading": true,
+        "client_shell_count": 0,
+        "message_page_count": 0,
+        "workspace_entry": false,
+        "restore_button": false,
+        "account_absent": true,
+        "vault_absent": true,
+        "database_files_absent": true,
+        "login_button_enabled": true,
+        "storage": "im-native-backend-SLITSG",
+        "login_api_creations": 1,
+        "no_seed_refresh": false,
+        "new_api_creations": 0
+      },
+      "cleanup": false
+    }
+  },
+  "cold_start_proofs": {
+    "bob_ios": {
+      "before": {
+        "pid": 30528,
+        "device": "d157091f-0fec-41d8-a209-fb908f1724c2",
+        "storage": "im-native-backend-RRh7SN"
+      },
+      "after": {
+        "pid": 31039,
+        "device": "d157091f-0fec-41d8-a209-fb908f1724c2",
+        "storage": "im-native-backend-RRh7SN",
+        "old_absent": true,
+        "no_seed_refresh": true,
+        "login_api_creations": 0
+      },
+      "native": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+        "pid": 31039,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2",
+        "id": 1,
+        "status": "ok",
+        "details": {
+          "navigation_saved_account_after_close": false,
+          "login_heading": true,
+          "client_shell_count": 0,
+          "message_page_count": 0,
+          "workspace_entry": false,
+          "restore_button": false,
+          "account_absent": true,
+          "vault_absent": true,
+          "database_files_absent": true,
+          "login_button_enabled": true,
+          "storage": "im-native-backend-RRh7SN",
+          "login_api_creations": 0,
+          "no_seed_refresh": true
+        },
+        "cleanup": false
+      },
+      "initial": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+        "pid": 31039,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2",
+        "id": 0,
+        "status": "ok",
+        "details": {
+          "logged_out_restart": true,
+          "no_seed_refresh": true,
+          "storage": "im-native-backend-RRh7SN"
+        },
+        "cleanup": false
+      }
+    },
+    "bob_android": {
+      "before": {
+        "pid": 2130,
+        "device": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+        "storage": "im-native-backend-SLITSG"
+      },
+      "after": {
+        "pid": 2854,
+        "device": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+        "storage": "im-native-backend-SLITSG",
+        "old_absent": true,
+        "no_seed_refresh": true,
+        "login_api_creations": 0
+      },
+      "native": {
+        "role": "bob_android",
+        "platform": "android",
+        "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+        "pid": 2854,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+        "id": 1,
+        "status": "ok",
+        "details": {
+          "navigation_saved_account_after_close": false,
+          "login_heading": true,
+          "client_shell_count": 0,
+          "message_page_count": 0,
+          "workspace_entry": false,
+          "restore_button": false,
+          "account_absent": true,
+          "vault_absent": true,
+          "database_files_absent": true,
+          "login_button_enabled": true,
+          "storage": "im-native-backend-SLITSG",
+          "login_api_creations": 0,
+          "no_seed_refresh": true
+        },
+        "cleanup": false
+      },
+      "initial": {
+        "role": "bob_android",
+        "platform": "android",
+        "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+        "pid": 2854,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+        "id": 0,
+        "status": "ok",
+        "details": {
+          "logged_out_restart": true,
+          "no_seed_refresh": true,
+          "storage": "im-native-backend-SLITSG"
+        },
+        "cleanup": false
+      }
+    }
+  },
+  "stable_native_states": {
+    "bob_ios": {
+      "role": "bob_ios",
+      "platform": "ios",
+      "nonce": "5d14ca1d6b56b45cf457825d499c30a6",
+      "pid": 31039,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "d157091f-0fec-41d8-a209-fb908f1724c2",
+      "id": 2,
+      "status": "ok",
+      "details": {
+        "login_heading": true,
+        "client_shell_count": 0,
+        "message_page_count": 0,
+        "workspace_entry": false,
+        "restore_button": false,
+        "account_absent": true,
+        "vault_absent": true,
+        "database_files_absent": true,
+        "login_button_enabled": true,
+        "storage": "im-native-backend-RRh7SN",
+        "login_api_creations": 0,
+        "no_seed_refresh": true
+      },
+      "cleanup": false
+    },
+    "bob_android": {
+      "role": "bob_android",
+      "platform": "android",
+      "nonce": "b6a25b1cc153361dc9b47ffaf3b2f02f",
+      "pid": 2854,
+      "user": "00000000-0000-4000-8000-000000000232",
+      "device_id": "88f2a8db-b989-4bd3-9472-6a316f7a86d1",
+      "id": 2,
+      "status": "ok",
+      "details": {
+        "login_heading": true,
+        "client_shell_count": 0,
+        "message_page_count": 0,
+        "workspace_entry": false,
+        "restore_button": false,
+        "account_absent": true,
+        "vault_absent": true,
+        "database_files_absent": true,
+        "login_button_enabled": true,
+        "storage": "im-native-backend-SLITSG",
+        "login_api_creations": 0,
+        "no_seed_refresh": true
+      },
+      "cleanup": false
+    }
+  },
+  "quiet_window": {
+    "seconds": 3,
+    "start_event": 142,
+    "logged_out_device_requests": 0,
+    "new_auth_or_registration": 0
+  },
+  "ui_scope": "real restored LoginPage -> enter workspace -> real membership tile -> MessagePage -> back -> real Shell logout button -> LoginPage; test observes public MessagePage.view only after normal UI created it; no direct logout in tested navigation commands",
+  "restore_scope": "fixed production LoginPage and ClientShell widgets with actual HttpApiTransport, real OS vault and same encrypted DB directory; owned synthetic refresh issuer, not customer interactive SSO",
+  "cold_scope": "actual Android force-stop and iOS SIGKILL, verified old process absence and different new PID, same installation/data directory and recorded device identity; no reinstall, no seed refresh in restart config, no saved account or OAuth/device registration after cold start",
+  "server_scope": "3 server device registrations and 0 revoked remain; local logout erases client credentials/data and does not delete historical message/receipt records",
+  "shared_flutter_tests": 250,
+  "analyzer_issues": 0,
+  "full_python": {
+    "commit": "e60fa443b306ca83171e83fc2c5129a6cd145243",
+    "actual_exit": 0,
+    "discovered": 320,
+    "unique_discovered": 313,
+    "failures": [],
+    "errors": [],
+    "skips": [],
+    "validation_root_removed": true,
+    "source_archive_sha256": "cef7f0c91673b1a4ca97528661ccaa1083f46c2934585f209b7861f4a1549def"
+  },
+  "focused_go": {
+    "source_commit": "e60fa443b306ca83171e83fc2c5129a6cd145243",
+    "runs": [
+      {
+        "name": "go-final-normal",
+        "actual_exit": 0,
+        "passed_tests": [
+          "TestNativeHTTPConfigurationAndStrictTokenBody",
+          "TestSelfContextUsesOnlyBearerIdentity"
+        ],
+        "failures": []
+      },
+      {
+        "name": "go-final-race",
+        "actual_exit": 0,
+        "passed_tests": [
+          "TestNativeHTTPConfigurationAndStrictTokenBody",
+          "TestSelfContextUsesOnlyBearerIdentity"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "host_runner_actual_exit": 0,
+  "backend_actual_exit": 0,
+  "production_process_lifecycle": {
+    "registered": 3,
+    "lifecycle_verified": true
+  },
+  "native_framework_test_count_collected": false,
+  "native_leaf_os_exit_independently_observed": false,
+  "visual_review": {
+    "passed": true,
+    "reviewed_directly": true,
+    "images_sha256": {
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/actual-login-workspace-message-read.png": "624a9bee6fe85d4b141fadcd9098150e7dea12a4e0363aec8adaa72d86119824",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/logout-button-back-to-login.png": "0a3bb2281da613f833e83571e1d45dff0de7ce52e903d50f903145d47871fe30",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/fresh-login-page-no-account.png": "bd113317a432f3b782a798602303c1288d38fb3b020a8c4cec14e78fb3cebbf1",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/cold-start-stays-logged-out.png": "1af070883e3ae70b9292cc7580f0cae94240512c32d1bd1f8e3126c863f3d25f",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/actual-login-workspace-message-read.png": "04a84a42ecac1cff9da75697aa00ef6202cc8435cb4fca8449d1a7de9059a8f1",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/logout-button-back-to-login.png": "c4b8674fe1a0c49d2804005d4f7e680164f7d11c1c14fdf3a7c9980cb0aff4e4",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/fresh-login-page-no-account.png": "3f84ba3bfa4bc4f102eebaa42887ceb09f6946af32d8c808088004067bb3360b",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/restart/cold-start-stays-logged-out.png": "74bb6de74b850e4700ea35bcc86c3eb625528a07032eda9ba1ddd3d79de9b81e",
+      ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/survivor-send-after-ui-logouts.png": "de9f16c51801b9cfabba7b84edd1cb1d77169ef5bbbf1eed46c6a107a3c09836"
+    },
+    "before": "both actual ClientShell-created MessagePage routes show seq1/unread0",
+    "button_logout": "both back to LoginPage, no account/workspace/recovery route; existing UI notice says login cancelled and service URL remains on same page",
+    "fresh_page": "empty service field and no saved-account path; Android image captures button color transition after onPressed admission",
+    "cold_start": "both new OS processes show stable empty LoginPage, enabled enterprise-login button, no previous service/account/recovery",
+    "survivor": "Alice seq1/3 read and received seq2; final seq4 sent only, no false delivery/read",
+    "scope": "actual production widgets and controller/navigation with private store/API dependencies; not interactive customer SSO"
+  },
+  "resource_and_preservation_audit": {
+    "passed": true,
+    "tested_source_commit": "e60fa443b306ca83171e83fc2c5129a6cd145243",
+    "old_reports_verified": 76,
+    "old_raw_verified": 3894,
+    "main_status_unchanged": true,
+    "source_blobs_verified": 1338,
+    "owned_process_registration_observations_absent": 60,
+    "native_ios_process_identity_observations_absent": 4,
+    "owned_roots_removed": [
+      "/private/tmp/im-cross-8jdelyva",
+      "/private/tmp/im-cross-oogjdy3m",
+      "/private/tmp/im-cross-eyz_xqfd",
+      "/private/tmp/im-navigation-python-qy0j4_7y",
+      "/private/tmp/im-navigation-python-b5cit09t"
+    ],
+    "owned_ios_udids_removed": [
+      "DB65ED22-87E8-4749-A1FF-885262CD200B",
+      "6B9B1086-AD2F-44D7-98CD-B50A5FEE3727",
+      "CA2CD3FD-5702-40E0-ADF0-F68C4C605B01"
+    ],
+    "owned_containers_and_ports_absent": true,
+    "selected_tools_unchanged": true,
+    "runtime_runs": [
+      {
+        "run": "run01",
+        "source": "e3680643ba17e18cd428d2a44c74e171d412fe37",
+        "status": "failed",
+        "failure": "native_actor_failed_bob_ios",
+        "backend_exit": 1
+      },
+      {
+        "run": "run02",
+        "source": "763bc33cf7e38e02eb799c14fe1c59f69ff42f6b",
+        "status": "failed",
+        "failure": "native_actor_failed_bob_ios",
+        "backend_exit": 1
+      },
+      {
+        "run": "run03",
+        "source": "e60fa443b306ca83171e83fc2c5129a6cd145243",
+        "status": "passed",
+        "failure": null,
+        "backend_exit": 0
+      }
+    ],
+    "no_product_changes_this_increment": true,
+    "physical_validation": "deferred_by_user"
+  },
+  "failure_history": [
+    {
+      "run": "run01",
+      "source": "e3680643ba17e18cd428d2a44c74e171d412fe37",
+      "status": "failed",
+      "failure": "native_actor_failed_bob_ios",
+      "backend_exit": 1
+    },
+    {
+      "run": "run02",
+      "source": "763bc33cf7e38e02eb799c14fe1c59f69ff42f6b",
+      "status": "failed",
+      "failure": "native_actor_failed_bob_ios",
+      "backend_exit": 1
+    },
+    {
+      "run": "run03",
+      "source": "e60fa443b306ca83171e83fc2c5129a6cd145243",
+      "status": "passed",
+      "failure": null,
+      "backend_exit": 0
+    }
+  ],
+  "limitations": [
+    "initial UI login uses saved refresh and synthetic platform-bound IdP; customer interactive SSO and fresh sign-in after logout not exercised",
+    "same-install normal logout followed by actual process death; not all mid-logout crashes, storage failures or async boundaries",
+    "application root supplies approved private store/API dependencies; native AppLinks initialization and customer auth callback are separate gates",
+    "physical hardware, full Windows/signed macOS installation, notifications, customer signing and remote CI remain open",
+    "full repository Go/race not rerun this increment"
+  ],
+  "go_full_race_rerun_this_increment": false,
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/audit-host.log": "9724882c5a783e263d957c31a1d09456750f824cd2579e3f902dd57c16dc6fa0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/baseline.json": "cc21ce4fba6461a903478541513252c11e324629e5340ddb667243b8de5a931c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/contract-green.json": "a933364ac216ab2f18d959a929e1e2329ac90e19a3f0e5fb62fd9ba7eaf326d3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/contract-green.log": "594a7c254624841a768e894bccce65801d15d1329eacbfdbe94e2a30e5a1b784",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/contract-red.json": "5989b8fe3a92d6bcdf9d2d596f8b31265352f1f3e3e91023b1dfed4ccb6a23aa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/contract-red.log": "b5b5b676b2cd18136679d59d20143ac03c368cceb8714cace7f6f4b581c79f1f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-audit.py": "d2408ece4050f0cc04c2c6456d0e86c03220a5864582803926abcd9a63df3140",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-final-check.py": "eb6b7da8b8b55caf2b6c108621510bf8c4a4f14110146f060c246778ae5ba906",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-final-gates.py": "30249ad2d902cc8bcbf6ec1826d3539a3efcce748ae7f2925212488e14076169",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-full-python.py": "65c30480ab4059f3094d60b14b902614a5914fedee8ed0592c78302c8f23168d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-gates.py": "8d0870b0e6335bd25e8a7d3b295ed38adb31ea7908338bd3b9c6cb94f7753b5e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-implement.py": "b6daf9ee40451d702e9b5e5e3f20c54c58b88a96d19b7218e4f849a1cf1b9bec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-publish-utf8.py": "2e2258197a349379a7f2c4547197872db6dff67470d59c4ebeb0828be99bda5b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-publish.py": "38022884066aa7cd5b440d03866cd7e9d9f21ce30384f1edb79dae90f71a4936",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-navigation-setup.py": "fc3e8b0ca82fc86703c5d976776c63cc4c5645862bfc3cb55554a6de085c0147",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/evidence-scripts/im-run-navigation.py": "8ec31e5a3e68aadcc1b72082130261f0072a774d97d40b8bcb9ade489bcba723",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/inventory.log": "2c35f7e6a2ee923d8188b3eaea0e67bd13b6be256225e1564815531824b4baee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/python.log": "20d2a386c0727c01ec4f4e81d7660d770af5d21af15fc513cf14f947c9a0e02c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/python.log.stderr": "0ab4ebdc0fbca3fe7dba7a1e806d5413475981cfca8330cbc48aaa30d0c35858",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/registry.jsonl": "8f664bd21d941c740a59df9436c34cb1897c10bc82dcfd4224b1bb1facd16495",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/result.json": "627007a4ddd2136f175e9ce5d45e4a98b6881ef0b3c734f274fe55c2e0d886d1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python01/standard-result.json": "497d89c655610d4d086d4d64bcf72e18e5ae631148062ca8f80486c3dcb87ed1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/inventory.log": "2c35f7e6a2ee923d8188b3eaea0e67bd13b6be256225e1564815531824b4baee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/python.log": "20d2a386c0727c01ec4f4e81d7660d770af5d21af15fc513cf14f947c9a0e02c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/python.log.stderr": "4754ddb5a1df52118a5019fcc8278ac60d199757c0990d2b35efb17fa325f3d5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/registry.jsonl": "1694b9ca67f0e5bec8a25e96441f3dc7d2b76313413d91077e22b31939b521b9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/result.json": "e7ed6018fa92de57ee35323d8357139d73c078e90d843d42bcddee302b82523b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/runner.py": "68faecc5b4dd6ef3e868885284bfc6626af9882727e317851118edcb3095f672",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/full-python02/standard-result.json": "497d89c655610d4d086d4d64bcf72e18e5ae631148062ca8f80486c3dcb87ed1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/go-final-host.log": "8ee0a61f3cebdcfff22d0514719bb988ba9a85f04bbb68b9af7244fdaf120e78",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/go-final-normal.jsonl": "b265f0c9655815040593c78f71c9f708999d4c130539db2021120f4b9c05e170",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/go-final-race.jsonl": "bb81b3b22b380a9476011f582837be8e3de0ea93dab2c1b5272bad463e538e3e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/go-final-results.json": "8a56bb4d3eb7703177b2f910b1dac189046b715108ccad5ade8f9dfd5181b8ad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/owned-ios-absence.json": "d42d53a33f549f8fb562712d5e9b1ae793223560fd4f42f82b9e52604df30356",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/publisher-encoding-diagnostic.json": "d53b18c2cb250387d83765673568c3e4f92626ce852419689915ba8d7ebb7a23",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/publisher-exit.json": "371871bb292d36fc91ffc7b89191ddf5b60ba4e3093256f7984548e073089160",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/publisher-host.log": "071fd9071e97cdf235ce23c9605dbd5daa744a8a9f51af33708bf536480c569a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/python-final-host.log": "f9615a6f02c9772b20118bc00f5b859280b6e80377565af25a780283d76c9400",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/python-host.log": "f9615a6f02c9772b20118bc00f5b859280b6e80377565af25a780283d76c9400",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/python01.json": "7d85fb25156f7d1e485d3ed406c8e2e8cc8da0bb2449a581c35ad0b645a14437",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/python02.json": "bdc631f271917b8f74cb09c6e4fb4a37a5c2d4d6029c7e792dfa14315ed48ca5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/resource-and-preservation-audit.json": "c35fe624869bae0cae7faf985da3b46fe7ea9cd284eefc4479ae0c02c216dfe6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-adb-server.log": "f23eb6fa704c4be65541871856021d3db80746e778f2a41eeba60a06c846695d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-avd-create.log": "8becb46e3c0799b715d98f2334831a18e1887408028c1f108eca5abd92d19042",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-backend-reverse.log": "83f8001eee88992418656f51feaaca4b06f9fd34773012bd5a1b91b84cc4b4f3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-boot-id.log": "d98f53267ae9a30b2e7687bb097bc5e4618f10d8604e11e43da22cb64dd158bf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-canonical-ro.boot.qemu.avd_name.log": "e6c8998bdd0cecb9344cfc8de4f89aef618440329c58858f2763578e17cf926b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-cleanup-owned-avd.log": "7b9f7a56912576980c7f505d7c3ee513ff8b77eefbf98c5f44f4b89c6c573b8d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-emulator.log": "6e8b4effc01b6bdaec5858f3a5e206e2cc9444786e5580bdac7e882a4805b450",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-identity-ro.boot.qemu.avd_name.log": "e6c8998bdd0cecb9344cfc8de4f89aef618440329c58858f2763578e17cf926b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-initial-pid.log": "b0a77b14a3bd7d4939a04957dc9ff88c5437e897c941494ced504be891ecacca",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-install.log": "911965f08670f098a08ca51b0a0d19c32eb5980423b2395dbcba0714a2042adf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-installed-boot-0.log": "d98f53267ae9a30b2e7687bb097bc5e4618f10d8604e11e43da22cb64dd158bf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-installed-path.log": "3112892b68fe88c2c4e85106e4cbbf3a3fee402a42c4761e27e54b43fd4ba6e3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-installed-sha256-0.log": "4474cd1551d142dfe352ffbdd86b82c54f2eeea80eba5496e8cea9cccd4446f4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-package.log": "cf35579432de9ec4964e903c1d1bb69e45c902f4d1aaf9e055879ea4189b7a3a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-start.log": "a8f20abf666056c876d542969d2ca56499a1ee23d44777a4c44a6e679e5d3600",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/android-user-unlocked.log": "81df2530b7790af1eac50a3951f4b7fb914b3510c6fa3eb7f86565d83cf068ae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/state-0.json": "0a733dbd3f9df80dde27997fa766d4676e3e8e048ad3c1a14291fc08e40f5c94",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/alice/state-1.json": "718e16a654ab56764e57daa93e1a48ca7477cd80457c2841858758b31f457e94",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/analysis.log": "1b5b860f3b65c266f4268238a321f17be08192cf831dda7783ec7915469b6323",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/backend-api-events.json": "9f0fc056498e487aadcff60090b2af4ea4913940d91d6f34a57b5e19d23c4339",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/backend-facts.json": "b3fd8cb1f3398364d580471b297a65f369da51ea4aad287f49d108b0b1340809",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/backend.log": "f45bdb6beeb407ae6659f790a652207ceac27b0fdafd47cd319210a91a6b4a6f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-adb-server.log": "74f82477a80310019dc1dc028150d0f84b6b3431a67a42f9f4b3d84d39ddef96",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-avd-create.log": "bc7188cab9ba804a9549e86a1d588bb37428c86fbf7a59802e41383a9ceba78b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-backend-reverse.log": "83f8001eee88992418656f51feaaca4b06f9fd34773012bd5a1b91b84cc4b4f3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-boot-id.log": "cc4966ba990287bd52cb9c1968669e41d372f7ccda9fbaf28f665d20a9c60db1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-canonical-ro.boot.qemu.avd_name.log": "4ad05bddecc9eff09b086a4df90bba944d93fbf71737b83c60c9007951cafe97",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-cleanup-owned-avd.log": "f10a34bcd612d427e536e0158fec6fd9134997084d915758f040859809cfd1ae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-emulator.log": "ebeaa49b9bd2b57bf0657f7c94519c967dae45c85873c435cecdfda832fc36b4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-identity-ro.boot.qemu.avd_name.log": "4ad05bddecc9eff09b086a4df90bba944d93fbf71737b83c60c9007951cafe97",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-initial-pid.log": "76f82e07d318d410cee292d658f4ab93e748b23dee6b8d52b5863869eaa26d0d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-install.log": "60aec99e02cf519ebebf89c4f3d4bbea0cc86fbf165943d3088f34b59271e150",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-installed-boot-0.log": "cc4966ba990287bd52cb9c1968669e41d372f7ccda9fbaf28f665d20a9c60db1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-installed-path.log": "6cb12161abde8d67ac8eaa8e2be8d716cf6d0b7ca507f83bcddc0acd20187cc5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-installed-sha256-0.log": "79add8795e46bc6d17c6754415f45f2ccb6eaf06f878ac56f8bbe83feec921a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-package.log": "65822fe2e84d2e7675ce9772680664dd0ee47a6342ab8cdbc6dd2ad350fac00e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-start.log": "b7c708850114dc777a600aea97bbe6685cc9e67deb6c23c32f0f83e16b3b5fa5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/android-user-unlocked.log": "19d6a8175c1a0a2a47089943c3f5a0a0eaec3e8b8c1f57af809054e10f69ae1c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_android/state-0.json": "ece121507714a2e8c920ddb3fed3fe17db33bc0eb149d99a98bcd01904e817b0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/bootstatus.log": "faa0280fee52d04f6095ddbae28cf1a1b07da7dc44ceae3c8f2cd77cbe043b10",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/create.log": "6f4f00c57614c181633b3a3ba70add40a347138d102121c56a80adcdc262716e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/data-path.log": "bb02acbab293546c50dcdd1f9581516735d511889087203d164325c52c544368",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/failed-state-1.json": "16d4554abae7aca1f1932b62464d4120b8d54308db8628b5f6f799ecec769463",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/installed-path.log": "1af42450cc4dfebdd124be425b3e46311dc4cfec0903339d587dbf81f5659fe0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/installed-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-0.log": "a1889c61b46318a7bd9df63b7d5cec55bd0f21e4c252d5411ff6f9b6ee707739",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-12.log": "a1889c61b46318a7bd9df63b7d5cec55bd0f21e4c252d5411ff6f9b6ee707739",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-12.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-2.log": "a777a8045d4e77a5c8e1d9fd0c6881d6315182a7180abf11eae12f2c2e999e25",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-9.log": "a11a85c79a2f836232970cf73690ee5ddd99fe52d94ea8f14a2825e03d59fdf0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/inventory-9.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/launch.log": "b9ef98aa1cb816623c790039d54308bdb0e6b51895da2b22881e36d4c7fe2a1e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/bob_ios/state-0.json": "215666f03657135fb9c7ef5784148f57f9a38d9efdb98689097c4b3ee1b1fb9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/build-android.log": "d303679cc568f4f050ff472d7ad3e70c39d0697346cae04f7dcb25dd0a044ac5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/build-android.log.stderr": "a2f4cb7d27e1b60eb9f244229d157838427c5101f663dd46dc54283d7a0d988b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/build-ios.log": "8d59c8cc430b9ed8d56278f5b6bc25426da205913a6e96b766a0b13b76b20ad4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/checkpoint-registered.json": "3f9a3c70bdf0d9b79a842dc122ae7561ed02e5cdf7da0748cdafc1b5c3ae88ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/cross-debug.apk": "3786187712aa3831ba69529000792b6153fd8b4af881822dfdbfc02fbaf99804",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/cross-ios-debug.zip": "4ce7d707e978a2314c1493311ac0b11acb5cea6a1e7d4a543e542a5dc953de94",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/product/api.log": "c3628a8d14b68362ebd7f9920080e9dacc0b56cdac08e04abcbfe8e24df95327",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/product/im-outbox-worker.log": "c2f1613f114effc8689b524a00011d0288abe6a448de0787c640ec43de5ed2a8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/product/im-receipt-worker.log": "9db247d54bc6280986730d4f289391846bb8015285b9da90a1a0186949bc016e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/registry.jsonl": "1ec1385b05ebeaabb9ec59c4229f1dd92f98f3375da1a9c330fa7f053647b458",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/result.json": "a9d0d47e9e5e7bb718cf2fc15e6d0650e980074f56f166325092c3da5db4efdd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/shared.log": "89419742b082049b8704c409a58c7413209de4b8aa78b161e50b0bcfcbc0fead",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01-host-exit.json": "679315898bed569ade0cb0844e109d0d886c28fc396141f0ea33224a78895964",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run01-host.log": "f5d98df5edaf3e7a6630af37fd5fb6ef3bd4bb7516297cd936b6daf37fdca830",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-adb-server.log": "339eae429c79350536dc81b792970564cd277fdb65a1bc94fd7dbc69aa6fcb50",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-avd-create.log": "2617f16288047d2c7d711d0cf8609f6050ea73b310e4b1fd97cac92c35b98027",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-backend-reverse.log": "9af860f91e74e11aeaf93cbb408869a925c883736b6ef9b54bdc1baca74cef4b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-boot-id.log": "92e2b28141549ab90ba430367a9a032bc22ae83a34ca592c8fd9f42914aef191",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-canonical-ro.boot.qemu.avd_name.log": "8d3048f6e8d6f24404c9832d87f1ff715ae77166765fab083e30ffe3a3741f96",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-cleanup-owned-avd.log": "e3e770a1267d5e9bdc1282903a4512545530a54b1895da8ed07001903b79920f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-emulator.log": "bdc977cad8766abd8c7697e9b00e3b38db9c42c220cd63bb66b5ba065e1aa619",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-identity-ro.boot.qemu.avd_name.log": "8d3048f6e8d6f24404c9832d87f1ff715ae77166765fab083e30ffe3a3741f96",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-initial-pid.log": "3d61584f88d0e2d560bb5e936dc9e26f2fd958d531133aeb88bd22ce412c6501",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-install.log": "32bd0f74e4442192cdda623475c5fb248debabbd1c18e330bd8ced8f0292c429",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-installed-boot-0.log": "92e2b28141549ab90ba430367a9a032bc22ae83a34ca592c8fd9f42914aef191",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-installed-path.log": "dca875a024b2c986ccfc06d5822bc54f3bb37ef8582171574c986dc4f4898c8b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-installed-sha256-0.log": "938ccec32401a946ca341b0bb7a19f2e303d53c05440ace125c4a3bbd9827150",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-package.log": "e7d4e6db402800fbb78eb0923b9f7385dd16879c90862c8960054603f9c5927c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-start.log": "f5ab7573d97ddad9b8ab741b35bf63ca034bcef04bc410feb98c2e12cef8fa79",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/android-user-unlocked.log": "cb530f2306053b554aeb90f4b5cd9580d8b8a7d3d5f7b11995fe38ffa58415e4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/state-0.json": "d3b9fb66613c15a682949ab96558fc6064f535d4a02f59088ddab80962c931c5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/alice/state-1.json": "08ac377ac71ab0116dec2dbab6b3f28dbb84c9ba8949f2b78d38634cb0e0cf62",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/analysis.log": "4f586163bbeb149b5297e16d711c2538ffaa6b635b722364633bab9aa9a6d69e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/backend-api-events.json": "ea0c93a1dd748c0e27b8439977878730cd6f37e0d1fe45f33a65116e077f3c72",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/backend-facts.json": "b3fd8cb1f3398364d580471b297a65f369da51ea4aad287f49d108b0b1340809",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/backend.log": "07918942c640b6c6d36f309ccfa1d885cbfb31a8a8e929fe0c95a7c5eeaa8fbf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-adb-server.log": "cfdbcf25627fc75dbd6b603128e1eef57c47f08477fc262770d815ea988bcd35",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-avd-create.log": "5923fd8e6d11ec23e24f9d383e1c76faa322f49b7df1a7468464ec74c47110ca",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-backend-reverse.log": "9af860f91e74e11aeaf93cbb408869a925c883736b6ef9b54bdc1baca74cef4b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-boot-id.log": "048a9086944280435c5d387508db265ff9354f8e2ae2a1025b2b462437e5cf55",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-canonical-ro.boot.qemu.avd_name.log": "f9afb040a9fe93f84575214ae27a002ec31ad609404f0134dd596c670c848abc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-cleanup-owned-avd.log": "a1d42caa61a086f2492e9af6abea63b16bc8283e2783a41a43e44205da19106f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-emulator.log": "9527cd624f1c62a3db5dba29c0f49fe99fb384984181d1360686c7ed499b687c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-identity-ro.boot.qemu.avd_name.log": "f9afb040a9fe93f84575214ae27a002ec31ad609404f0134dd596c670c848abc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-initial-pid.log": "90d11685fa518e69652802000eb067af76170409da6d8dca3f6d76cf491c9735",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-install.log": "445a05796c47cecf3235ca16a671a8a99b9ccf9975051063c61f347e6b01b212",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-installed-boot-0.log": "048a9086944280435c5d387508db265ff9354f8e2ae2a1025b2b462437e5cf55",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-installed-path.log": "83d0b95b91acf0e9e6f80b13ba13670a70c5ce35520c49ad124f00038a0015b5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-installed-sha256-0.log": "063d7ecc34840b4435cb5efa90f3f17bcdb24cf528a08ca10581c3c9897a35ff",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-package.log": "32b18cdf67d1e7903849e2cb4ee0d775f6f288015d3ebb3a92f770ce366afe88",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-start.log": "daea77556b8f4d437b019f5785ac7cd9d78b687a020d0681b3bf0adf7f692041",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/android-user-unlocked.log": "7098ca6a7960ecc842a2a19c01f762052e469df043e18d8498a7f0ac981a2f22",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_android/state-0.json": "277a1d3aee6845f9f37a2ecc9a300cc1a1bf86754e2a786f0b2f9dbe72bab4d9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/bootstatus.log": "663f90ad4ddd7a9dcd070a201832f6ababf3688376325768e56c6421c6834a02",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/create.log": "2dcd39a7c94082033599fa72b270956fea499df12a17939123312efd723c51bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/data-path.log": "88d75b6e3279de168320c54fcd85223ac9e3d5e452623ebb5b73a7e09812b5a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/failed-state-1.json": "69ed420a1e75e191c373d3fdd47f0c5f65002c008024bd076b87c4e7f20f35ad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/installed-path.log": "35e98e5bb792d8143ffed8287aaa8205c070ba304ea2cb397b9db9bb79e033c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/installed-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-0.log": "2977667354c65d12573042c9e59d544f1b8aea6bfa69207c884f764fce2f160b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-12.log": "2977667354c65d12573042c9e59d544f1b8aea6bfa69207c884f764fce2f160b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-12.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-2.log": "a20d483edee717439c0b18db926710d536e934f35782855fadbcb18cdf247cab",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-9.log": "0c4809a16fe4cf51648344e96173ba95cfe121c5fcfd4d22a06a45b4e26c3091",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/inventory-9.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/launch.log": "52abedfca21503e04229f102c02b4db3064ef03f3c24bf0589df2c8fb9946c7c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/bob_ios/state-0.json": "5bee1137b55badf28ef54519d9f08ee61a5a21dde2e162a36674045f5bc6cabf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/build-android.log": "99b5b2dc638e1b46db38757c3734bcd6410abef6e4810fee1ff614bf23ffc852",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/build-android.log.stderr": "9c0fa8caaaf323dc301ce924371c358801190b7e203e9a91a41f86d07d63f2fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/build-ios.log": "e4281e4617cc4d402af081d4fedbb6e36f74963f77305a3fc0125d1a061f5035",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/checkpoint-registered.json": "3f9a3c70bdf0d9b79a842dc122ae7561ed02e5cdf7da0748cdafc1b5c3ae88ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/cross-debug.apk": "d39e914d8b0cac7a4fde725900e3cec7a3ea4325f6138ba3292d5b7a8128995a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/cross-ios-debug.zip": "9b0a528cd221a5c65fd576674f3ced229b3a4d6169b69c22b0db6a2f3329c7b6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/product/api.log": "a42bc82e1050c00285a7d7bd8e58a761a6db66a58aa9c5bbdcee6fd5605a2be0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/product/im-outbox-worker.log": "5fc2eb90daee208710ddc1af3867216d7dad2057e18747e78267c6fbdddfb9b5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/product/im-receipt-worker.log": "675efe7006c3f602c3c0a3f07e9651a11dc6ecd56e053bdeffb4bae65429b2b5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/registry.jsonl": "a9ee9a01b4b9f766dc7a477ebf573da2edd0322c96bea18b2948a51a631336a8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/result.json": "1dd6df8e4b118207632c7ba84772aa79043762dd5c41d82ec41659a2774cd106",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/shared.log": "680f1ed1fac71476967acfe8b68b99b86a74433de76380c6c62426b3f96f514c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02-host-exit.json": "3f5810b4068eabc3f4ccc40acfd577d73eee261d968ac5113cf0f9e03d0b20b8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run02-host.log": "b8fc3f11306562a8f2a3659e65d56ba0561194478d0c49371a6e0fc014839c67",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-adb-server.log": "ed263ff1fb2f9d163a70dd310d2f3f8a279b97c060145b54828aef4ce23af183",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-avd-create.log": "dacd8e4dcaf6cbea73e63e8ab0ed98d190faf8bc92baa09d58af9aabe54351d4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-backend-reverse.log": "9fa691b9498aae64ca4e52207412bbf4be35e3781492ed13bac0230d80a0eb6d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-boot-id.log": "c7658257854a0f840ebc3a00c45b4f5e59b317216535cbad82a46d43c4088f36",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-canonical-ro.boot.qemu.avd_name.log": "3f87c93298bb96be3dbfa3d47a1f080117c876974a874338b72b92413f7a21fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-cleanup-owned-avd.log": "5f0ea8f68e20a235e4cf01d464532a966c5a6903a2f3805785cbfc3b839ded46",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-emulator.log": "57059d04e00ff9250f6d388511e2165d5243e7416c0e0132a876112b7b2199c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-identity-ro.boot.qemu.avd_name.log": "3f87c93298bb96be3dbfa3d47a1f080117c876974a874338b72b92413f7a21fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-initial-pid.log": "b67718a7f23969337b599fbccb53c9cb23e8020b355d8a5e4072ad1d761efe36",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-install.log": "d1471141efb32eef239cfa32b55bff90c577cbd20e85cc681f102520f2da3b4b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-installed-boot-0.log": "c7658257854a0f840ebc3a00c45b4f5e59b317216535cbad82a46d43c4088f36",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-installed-path.log": "b5d78ed8140469712301c16e749fb41950ef3869778b2bfa25d4c7e490222bb7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-installed-sha256-0.log": "8d9f8ba5ff5037712e1db1e0a32ab54db33dc6dbffb176efe9043cd62ca928d7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-package.log": "a80047cbe6ffbebb0d194e8fed53e952d20c0523e7e0a0d62475d06b145c7cb6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-start.log": "a86f88b2477afee5bc248d5f8d1841b60cb240527ed7cb89f0054812f876cf47",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/android-user-unlocked.log": "eb98008ecaa3c6d8b3a9924a229342c0a0e6d24d2cedf8b5c800e9c4733b0150",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/state-0.json": "6b6640529e7b81c4d16f183fcb9648ce505ac7239af8d83394543948d331f399",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/state-1.json": "b0522c205a551b9352bc76a58a6d39d9aa1fcb35dafd6eb31dd2f8b041ffbbaa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/state-2.json": "024e3bca123cb558a2a3fb7b0783478177604654aa2b626b7f6cbaa3fe9098fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/state-3.json": "a8a337d949efe9c897cf594dfd1fc4fa35afb577630057a28619ade4fee88503",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/state-4.json": "7345d59319166fa918e8960170e84447f8f631e026da73c537303ee3d7cf2365",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/state-5.json": "11020cb2026e097194c8fc27da294f3c65c571afde050cda58858f0ea8409cab",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/alice/survivor-send-after-ui-logouts.png": "de9f16c51801b9cfabba7b84edd1cb1d77169ef5bbbf1eed46c6a107a3c09836",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/analysis.log": "4f586163bbeb149b5297e16d711c2538ffaa6b635b722364633bab9aa9a6d69e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/backend-api-events.json": "834562d5424d39ed41deeea5dcd9b6cc53ce80763a948b64fada33e9f87f1009",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/backend-facts.json": "3c17f08b756028424494996258277157ea8ef58226c80ab1f38f1d5da3ae30b2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/backend.log": "2ddea77e6d465acd4fb827977f21f8db4271cdde7c56d6f388782dc80c40ffc9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/actual-login-workspace-message-read.png": "04a84a42ecac1cff9da75697aa00ef6202cc8435cb4fca8449d1a7de9059a8f1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-adb-server.log": "805181fab55e3d0991d0280d8d1278d76f69650536e9e270eaea3319409da65a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-avd-create.log": "f62ecc05eb82a106cf0d7b33b02353b936ad0cb97ae404943d1c8680abd9bf9c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-backend-reverse.log": "9fa691b9498aae64ca4e52207412bbf4be35e3781492ed13bac0230d80a0eb6d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-boot-id.log": "434b9b08e44d133b656e78877db61293270a4907a28500922c238c74b40d43c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-canonical-ro.boot.qemu.avd_name.log": "a80d984789b4795417746e17fcc58e7e75c7f02eb0509fb0bd6903535902ec57",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-cleanup-owned-avd.log": "d196d447f42b4ee305923939f2b7d22c270c22555c9f1a0a4a88f7879e4f8ab5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-emulator.log": "fb5b91693b5bd0c0319c90ccaad04620cd32404b020960ee940486233b4c2dd8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-identity-ro.boot.qemu.avd_name.log": "a80d984789b4795417746e17fcc58e7e75c7f02eb0509fb0bd6903535902ec57",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-initial-pid.log": "4d6f3be1b084bf8f9fd72011640361c05726861c7d9d483332561735729b39f1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-install.log": "b1e558b89d54a750060705ceeac54f9bf9ea0511e19c4d776925f3e0c6cdd866",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-installed-boot-0.log": "434b9b08e44d133b656e78877db61293270a4907a28500922c238c74b40d43c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-installed-path.log": "51b081705aa14bdacc7cbd51ac54883ebe389ea29878efd47f1e13c154f0dc30",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-installed-sha256-0.log": "54b6f26faf803acce322c6a61881e1b819aef140c3b9fa5fd30abc1516ff4129",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-package.log": "4a53497c1da3a09aef3221a07f9c390322ee3b23e33ca247c17ba96120e2f4d2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-restart-force-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-restart-launch.log": "d9d96a78e84b07824d915049b63f12adc2c27fd8fb2e54628b0f5cece42d8333",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-restart-old-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-restart-pid.log": "9c67b8c6e6b0f4dc00297d687ef2272b060d361dc2ad50132e71489762cdee22",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-start.log": "d024ea3dab9d58603969dba5d836f0fc804cf8af8bb6d19a5037ecdf58b1ec44",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/android-user-unlocked.log": "376ac636caad7540f6e3695714dee5ac4befde3b70e86f32b4ca3f6d23a7c7ad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/fresh-login-page-no-account.png": "3f84ba3bfa4bc4f102eebaa42887ceb09f6946af32d8c808088004067bb3360b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/logout-button-back-to-login.png": "c4b8674fe1a0c49d2804005d4f7e680164f7d11c1c14fdf3a7c9980cb0aff4e4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/restart/cold-start-stays-logged-out.png": "74bb6de74b850e4700ea35bcc86c3eb625528a07032eda9ba1ddd3d79de9b81e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/restart/state-0.json": "912d14590c93e0bf5bb55ce409184a2b588d46feb1aa290028d0dc36ad87319e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/restart/state-1.json": "38438656d45cb193fe2a1863242eb6d713ab4c3c4edf905f47c683331705bf34",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/restart/state-2.json": "552d5f802eec35238968436e402e48b388a66cc120eaa3d320bfdd0a257e33b0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/restart/state-3.json": "d0b67d06fef8989f874ad4f491f2ba281f8103d7d908ef6682aafab53a4fd504",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-0.json": "4eabdeec8b97e2eb9821fe0c90f8daafdf554b2cef314ba914d386a51815e9d6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-1.json": "c823f25d142c99932671c1bacaedc8c1125946db042f777593d92a12f2de4cda",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-2.json": "d9dd671342994ac613839e3f3e7155620077c4886a9d38279a193810480dad2e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-3.json": "14200cba275247f850689604ba0aa9b9044c0feec0eb1a45c1286c95d20c2d39",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-4.json": "686d68ee891f5c564975524d79909c59ab95ef31f82a654bad97d7407f688b3c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-5.json": "d8bfe082c86406903a21a234d888193ee01724bb4df7064df425b025fdbcfc2a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-6.json": "18612fd9bbf885becbe20e1bfa6c6d631115db4122e311d4d885ff9ada6b585b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_android/state-7.json": "14a5d5361d3cc928d2f9ae65bb89bf06089602f00493ff7ec3544a465db42ee8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/actual-login-workspace-message-read.png": "624a9bee6fe85d4b141fadcd9098150e7dea12a4e0363aec8adaa72d86119824",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/bootstatus.log": "16d62023124b0f58fd0c74641cd1cd318c3d7f8c2d58fa09587344d0984df818",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/create.log": "f3d3e16bdc638efb471e6e7f52371baa81ba236b76c1ea24ff20efee9015a012",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/data-path.log": "3f6fb3c664379531671b88821b7b382bc3625bef0da8d301fcaff8fbcc0548a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/fresh-login-page-no-account.png": "bd113317a432f3b782a798602303c1288d38fb3b020a8c4cec14e78fb3cebbf1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/installed-path.log": "5c82ca12092cd690e20eb452bbc48788cfc7d47abe782609dd3644a01c66b81a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/installed-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/inventory-0.log": "41730261597de4519abfbe4b796e27a253dd3f3361cf480fb692671c156a8b50",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/inventory-12.log": "848fc258bb79e5e29a4b74829b70d5976b9c7be4eb2b7158048eb5cb907751ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/inventory-12.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/inventory-2.log": "87d7228d5839640448091b0f2214b8f75b31e8283f44ca313c9eb75068c78ee6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/launch.log": "0771b0c9a1d971f858bd46dc13471f30a4fb35e18c1bcba1dcbfee581814c42a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/logout-button-back-to-login.png": "0a3bb2281da613f833e83571e1d45dff0de7ce52e903d50f903145d47871fe30",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/cold-start-stays-logged-out.png": "1af070883e3ae70b9292cc7580f0cae94240512c32d1bd1f8e3126c863f3d25f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/inventory-15.log": "02238541984c926fb794232440a759d5047773806f736705cc94bc8b8d3064fb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/inventory-15.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/inventory-18.log": "41730261597de4519abfbe4b796e27a253dd3f3361cf480fb692671c156a8b50",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/inventory-18.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/restart-launch.log": "815a86dc75b69cf8ce5e42d91aadb4dbe23ffe095efa3544994a75d51d9e434c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/restart-launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/screen-cold-start-stays-logged-out.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/screen-cold-start-stays-logged-out.log.stderr": "9689de96c6de176422b40095f71e4978024699979d11be91993be9166d7f0c56",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/state-0.json": "ccdd8eb5b081f4cb01151e2a62456f1fb353cbd80bdd3602c1f679c45a3626c3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/state-1.json": "a3fc60d8801994774729b36eaadeaf1106ba5aedb52d539a6211399eb88b9382",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/state-2.json": "0dd8839df346af19a921bd56e1b62d59921ec8c9b6bcf9d55b3cc56ca5090a90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/restart/state-3.json": "b5bdd6017c92c0111350973cbecb6087b32b274b60ebd15dcef9ae6c754347c8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/screen-actual-login-workspace-message-read.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/screen-actual-login-workspace-message-read.log.stderr": "fa51b67cd8395bab7e4d09ffd35a0ee2b7f3f928ff8ac63888259b5c5fa3172f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/screen-fresh-login-page-no-account.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/screen-fresh-login-page-no-account.log.stderr": "4a921d25887fa079e2fca32380a725fbe0b4f1ed5b1c3630021eaa1b7b07846d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/screen-logout-button-back-to-login.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/screen-logout-button-back-to-login.log.stderr": "45883532aaf84c3fccfdcaae649e21afc94bc7052df9531e681af1f1fbb8981a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/state-0.json": "627b5d0402b34baf1ab4d4cab975aeb91698154e84f96fb2cdd47ba8ae6286ce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/state-1.json": "6a52c063d46f5b08f3b48221687a89a12e23380d629267978389fe010e97c263",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/state-2.json": "171ff7451e673c6a7272ff091629de266e1ad7d8f63a98a706ab71d1d4485a6b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/state-3.json": "fcc63130bf80db6d2619a708a186ebac032f4403f9fa2619bc3225341bebafa5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/bob_ios/state-4.json": "c0d9d2a66294c620fa4f16e3a801a1c485a23aea975a3411684591c2c99c5f85",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/build-android.log": "8d17480625ad852c33df018549490d60c412f037a40b8c1c7174af66d491cadf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/build-android.log.stderr": "058d0268d8ffb926d3a917aeb74d6effde9b7ab3d332fbcd18b8e7726cdc3d36",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/build-ios.log": "10bc479a9ee8d872f0394eca54938e141fa96af9bf245d6ba13ccf3a764f73d4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-actual_ui_both_read.json": "884529a054373689584bd6ef5ee84c5865514d4af1ed2c50006ca3d5e19bab17",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-both_button_logout_and_cold_start.json": "9fc3e37d8c2e92a69b0a3bb33c92465efe568bed09ac83f2c4402d16e5d0aff6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-done.json": "bd3aaac54ecbd21726cce360023bd897c9dd010e77ee3a36496e988fb4c04870",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-ios_button_logout_and_cold_start.json": "884529a054373689584bd6ef5ee84c5865514d4af1ed2c50006ca3d5e19bab17",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-ios_cold_stays_out_survivor_read.json": "9fc3e37d8c2e92a69b0a3bb33c92465efe568bed09ac83f2c4402d16e5d0aff6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-new_message_after_cold_no_receipts.json": "bd3aaac54ecbd21726cce360023bd897c9dd010e77ee3a36496e988fb4c04870",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-registered.json": "3f9a3c70bdf0d9b79a842dc122ae7561ed02e5cdf7da0748cdafc1b5c3ae88ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/checkpoint-survivor_reply_read.json": "bad09805d422531df7ac51a836cf375199f2f2a92e6cea76d8e51e387aad7f97",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/cross-debug.apk": "2d0f4bbc537845d9aa7ffde9ac00ab8bb2b6d2c7d7765b45cf6dff3baff5c256",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/cross-ios-debug.zip": "e553299127cb6cc1f34120bab826d39c2790997f812c6726b4187958f36ae226",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/product/api.log": "a599180c2a9f35cee02cbc58ac752a1bbc4897c95ce8ec522b8c2e05b9aa0515",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/product/im-outbox-worker.log": "8bbd55cf1a0c6aaa2d4c2c4559394107537ee765b9f8dd1646db5e7cc998730a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/product/im-receipt-worker.log": "1317140e83cf2be645948d33a18fd1df202e0d65e4e8733ca1237dd63a10870a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/registry.jsonl": "479d9fd6cdc7f1f44679c47601393455b827f26f1b3e34831105db7a351de39c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/result.json": "4ab30d038cb9edd95961c1e034a2e90885128ab9b23bac0160f9dca4f6680b67",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/shared.log": "f83aefeff42ede4dec2d25c0c03451477eef47fb7152abcaf5f87ffecf2ee494",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03-host-exit.json": "9380c7a9891700eefe286f50fcefa85ee28ee864e4831147815b6c167defca84",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/run03-host.log": "e5534d5059aef9fd53d0493ee21d68ef49a19d726a35894d13e47b0e5394562e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/sourcee368-go-final-normal.jsonl": "2d3df04185241469509f2e720f6cbd7f429830da489ae3009e329b13ec9c0945",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/sourcee368-go-final-race.jsonl": "31b645dc69ada1bec251be23abc342825d67db413dbac6481d768c9a1ffb26b0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/sourcee368-go-final-results.json": "98f2684ce11210c19b54eec3f987e200b6d6fe2b033f2eaf4184e53462d7f34e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/sourcee368-go-host.log": "63bab8a3bd9f0be1b412780a6f18ef39a99d1ae3e56a7b976498016c55dea2a2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/visual-review.json": "5f2dfbdb9a005fbbb2ee7678234940eb4c35475c22fb47b201cd3805f19d3f3e"
+  },
+  "raw_evidence_count": 437,
+  "postcommit_audit_path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-logout-navigation/postcommit-audit.json",
+  "no_remote_publication_actions": true,
+  "publication_inventory_note": "435 files recorded by publisher plus its two closed wrapper outputs, finalized without rerunning or duplicating documentation sections"
+}
