@@ -107,8 +107,26 @@ void main() {
       Future<void> until(bool Function() fn, String name) async {
         final watch = Stopwatch()..start();
         while (!fn()) {
-          if (watch.elapsed > const Duration(seconds: 80))
+          if (watch.elapsed > const Duration(seconds: 80)) {
+            details['failed_condition'] = name;
+            details['login_api_creations'] = loginApiCreations;
+            details['navigation_store_created'] = navigationStore != null;
+            details['navigation_visible_labels'] = [
+              for (final label in [
+                '登录集团工作空间',
+                '登录成功',
+                '恢复上次登录…',
+                '使用企业账号登录',
+                '恢复登录',
+                '系统安全存储不可用，登录未完成。请检查系统配置后重试。',
+                '无法读取上次账号，请检查系统安全存储后重试。',
+                '登录暂时不可用，请稍后重试。',
+                '当前账号没有可用任职，请联系管理员。',
+              ])
+                if (find.text(label).evaluate().isNotEmpty) label,
+            ];
             throw StateError('actor condition: $name');
+          }
           await pause();
         }
       }
@@ -274,6 +292,11 @@ void main() {
         membership?.close();
         if (owner != null) await tester.runAsync(owner!.close);
         api?.close();
+        details['navigation_saved_account_after_close'] = await tester.runAsync(
+          () => vault
+              .read(bootstrapNamespace, 'account')
+              .then((value) => value != null),
+        );
         view = null;
         membership = null;
         mounted = false;
@@ -290,7 +313,20 @@ void main() {
                   navigationStore = SessionStore(vault, directory: storage!),
               apiFactory: (address) {
                 loginApiCreations++;
-                return api = ApiClient(address, HttpApiTransport());
+                return api = ApiClient(
+                  address,
+                  ObservedReceiptTransport(HttpApiTransport(), (
+                    request,
+                    response,
+                  ) {
+                    if (response.status != 200)
+                      details['navigation_http_failure'] = {
+                        'method': request.method,
+                        'path': request.uri.path,
+                        'status': response.status,
+                      };
+                  }),
+                );
               },
             ),
           ),
