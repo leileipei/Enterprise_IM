@@ -25,6 +25,9 @@ from integration.mobile_backend import Backend, preflight as backend_preflight
 from integration.cross_device import actor_config, validate_participants, checkpoint, network_rule, verify_integrity, confirm_recovery_sender, validate_offline_observation
 from integration.cross_native import AndroidActor, IOSActor, digest
 
+class PermissionChangeBackend(Backend):
+    fixture_test='TestCrossPermissionBackendFixture'
+
 class ReceiptRetryBackend(Backend):
     fixture_test='TestCrossReceiptRetryBackendFixture'
 
@@ -39,7 +42,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('flutter-sdk','pub-cache','android-sdk','java-home','gradle-cache','go','developer-dir','output'):
         parser.add_argument('--'+name,type=Path,required=True)
-    parser.add_argument('--scenario',choices=['receipt-retry','ack-restart','messaging','group-files-devices','retention-restart','retention-restart-android'],default='messaging')
+    parser.add_argument('--scenario',choices=['permission-change','receipt-retry','ack-restart','messaging','group-files-devices','retention-restart','retention-restart-android'],default='messaging')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parents[1]
     sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -107,7 +110,7 @@ def main():
                 if any(Path(n).name in ('cross-input.json','owned_backend.json') for n in z.namelist()):raise ValueError('runtime_credentials_bundled')
         if digest(client/'pubspec.lock')!=sources['clients/enterprise_im/pubspec.lock']:raise ValueError('cross_lock_changed')
         result['binaries']={'android':{'file':apk.name,'sha256':digest(apk)},**({'ios':{'file':archive.name,'sha256':digest(archive)}} if not android_only else {}),'credentials_created_after_build':True};save()
-        backend_type=ReceiptRetryBackend if args.scenario=='receipt-retry' else AckRestartBackend if args.scenario=='ack-restart' else CrossBackend
+        backend_type=PermissionChangeBackend if args.scenario=='permission-change' else ReceiptRetryBackend if args.scenario=='receipt-retry' else AckRestartBackend if args.scenario=='ack-restart' else CrossBackend
         if args.scenario in ('group-files-devices','retention-restart','retention-restart-android'):
             from integration.cross_group_backend import GroupFilesBackend
             backend_type=GroupFilesBackend
@@ -125,7 +128,10 @@ def main():
         if not android_only:validate_participants({role:a.state['admission'] for role,a in actors.items()})
         elif len({a.state['admission']['device_id'] for a in actors.values()})!=2 or actors['alice'].state['admission']['user']==actors['bob_android'].state['admission']['user']:raise ValueError('android_independent_accounts_devices_unproven')
         if actors['alice'].sim.name==actors['bob_android'].sim.name or actors['alice'].sim.console==actors['bob_android'].sim.console:raise ValueError('independent_android_vms_unproven')
-        if args.scenario=='receipt-retry':
+        if args.scenario=='permission-change':
+            from integration.cross_permission_scenario import run as run_permission_scenario
+            run_permission_scenario(actors,backend,out,result,save)
+        elif args.scenario=='receipt-retry':
             from integration.cross_receipts_scenario import run as run_receipt_scenario
             run_receipt_scenario(actors,backend,out,result,save)
         elif args.scenario=='ack-restart':

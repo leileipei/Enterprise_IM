@@ -16,6 +16,7 @@ import 'package:enterprise_im/core/protocol/models.dart';
 import 'package:enterprise_im/core/storage/secure_vault.dart';
 import 'package:enterprise_im/core/sync/client_context.dart';
 import 'package:enterprise_im/features/memberships/membership_controller.dart';
+import 'package:enterprise_im/features/devices/device_controller.dart';
 import 'package:enterprise_im/features/conversations/conversation_list.dart';
 import 'package:enterprise_im/features/conversations/conversation_view.dart';
 import 'package:enterprise_im/platform/mobile_activity.dart';
@@ -87,7 +88,7 @@ void main() {
       Directory? storage;
       String storageName() =>
           storage!.uri.pathSegments.where((s) => s.isNotEmpty).last;
-      String? device;
+      String? device, permissionProof;
       var last = 0;
       var mounted = false;
       var cleaned = false;
@@ -637,6 +638,189 @@ void main() {
                     ),
                 'other native process reply read',
               );
+            case 'permission_prepare':
+              await mount();
+              expect(view!.canSend, isTrue);
+              final page = await tester.runAsync(
+                () => api!.json(
+                  'GET',
+                  '/api/v1/conversations/${config['conversation']}/sync?after_seq=0&limit=100',
+                  bearer: context!.session.accessToken,
+                  actingMembershipId: context!.actingMembershipId,
+                  device: context!.device,
+                ),
+              );
+              permissionProof = page!['sync_proof'] as String;
+              expect(permissionProof, isNotEmpty);
+              details['proof_was_real'] = true;
+            case 'end_membership':
+              final target = uuidField(cmd, 'membership');
+              await tester.runAsync(
+                () => api!.json(
+                  'POST',
+                  '/api/v1/admin/memberships/$target:end',
+                  bearer: context!.session.accessToken,
+                  actingMembershipId: context!.actingMembershipId,
+                  expectNoContent: true,
+                ),
+              );
+              details['ended_membership'] = target;
+            case 'permission_terminal':
+              // No refresh/reselect: the real coordinator must observe denial.
+              await until(
+                () =>
+                    view!.failure?.status == 403 &&
+                    view!.failure?.code == 'invalid_identity' &&
+                    view!.context == null &&
+                    !view!.channel.connected,
+                'ended membership invalid_identity403',
+              );
+              expect(view!.canSend, isFalse);
+              expect(view!.messages, isEmpty);
+              expect(view!.receipts.locallyReadSeqs, isEmpty);
+              expect(permissionProof, isNotEmpty);
+              final rejections = <String, Object?>{};
+              await tester.runAsync(() async {
+                final conversation = config['conversation'] as String;
+                final checks = <String, (String, String, Map<String, Object?>?)>{
+                  'sync': (
+                    'GET',
+                    '/api/v1/conversations/$conversation/sync?after_seq=0&limit=100',
+                    null,
+                  ),
+                  'history': (
+                    'GET',
+                    '/api/v1/conversations/$conversation/messages?after_seq=0&limit=100',
+                    null,
+                  ),
+                  'delivered': (
+                    'PUT',
+                    '/api/v1/conversations/$conversation/delivered',
+                    {'sync_proof': permissionProof!},
+                  ),
+                  'read': (
+                    'PUT',
+                    '/api/v1/conversations/$conversation/read',
+                    {
+                      'seqs': ['1'],
+                    },
+                  ),
+                  'send': (
+                    'POST',
+                    '/api/v1/conversations/$conversation/messages',
+                    {
+                      'client_msg_id': ClientMessageId.create(
+                        membership!.current!.clock,
+                      ),
+                      'message_type': 'text',
+                      'text': '任职结束后禁止提交',
+                    },
+                  ),
+                };
+                for (final entry in checks.entries) {
+                  ApiFailure? failure;
+                  try {
+                    await api!.json(
+                      entry.value.$1,
+                      entry.value.$2,
+                      body: entry.value.$3,
+                      bearer: context!.session.accessToken,
+                      actingMembershipId: context!.actingMembershipId,
+                      device: context!.device,
+                    );
+                  } on ApiFailure catch (error) {
+                    failure = error;
+                  }
+                  rejections[entry.key] = {
+                    'status': failure?.status,
+                    'code': failure?.code,
+                  };
+                  expect(failure?.status, 403);
+                  expect(failure?.code, 'invalid_identity');
+                }
+                final store = owner!.current!.store;
+                expect(await store.committedCursor(conversation), isNull);
+                expect(await store.pendingReceipts(), isEmpty);
+                expect(await store.pendingSends(), isEmpty);
+                final self = SelfContext.fromJson(
+                  await api!.json(
+                    'GET',
+                    '/api/v1/me',
+                    bearer: context!.session.accessToken,
+                  ),
+                );
+                expect(self.userId, config['user']);
+                expect(self.memberships.map((m) => m.id).toList(), [
+                  cmd['other_membership'],
+                ]);
+                final devices = DevicePageResult.fromJson(
+                  await api!.json(
+                    'GET',
+                    '/api/v1/devices',
+                    bearer: context!.session.accessToken,
+                  ),
+                  null,
+                );
+                expect(
+                  devices.devices.singleWhere((d) => d.id == device).status,
+                  'active',
+                );
+                expect(devices.devices.length, 2);
+                details.addAll({
+                  'pending_receipts': 0,
+                  'pending_sends': 0,
+                  'account_active': true,
+                  'remaining_memberships': self.memberships
+                      .map((m) => m.id)
+                      .toList(),
+                  'same_device': membership!.current!.device.deviceId == device,
+                });
+              });
+              expect(rejections, hasLength(5));
+              await until(
+                () =>
+                    find.textContaining('任职变更前消息一').evaluate().isEmpty &&
+                    find.textContaining('任职变更前回复二').evaluate().isEmpty,
+                'ended scope UI erased',
+              );
+              details.addAll({
+                'rejections': rejections,
+                'context_cleared': true,
+                'can_send': view!.canSend,
+                'ui_body_absent': true,
+                'proof_was_real': true,
+              });
+            case 'permission_stable':
+              expect(view!.context, isNull);
+              expect(view!.canSend, isFalse);
+              expect(view!.messages, isEmpty);
+              expect(view!.receipts.locallyReadSeqs, isEmpty);
+              expect(find.textContaining('任职变更前消息一'), findsNothing);
+              expect(find.textContaining('任职变更前回复二'), findsNothing);
+              expect(
+                await tester.runAsync(
+                  () => owner!.current!.store.committedCursor(
+                    config['conversation'] as String,
+                  ),
+                ),
+                isNull,
+              );
+              details.addAll({
+                'context_cleared': true,
+                'can_send': false,
+                'ui_body_absent': true,
+              });
+            case 'identity_still_active':
+              final self = await tester.runAsync(
+                () => api!.json(
+                  'GET',
+                  '/api/v1/me',
+                  bearer: owner!.current!.session.accessToken,
+                ),
+              );
+              expect(SelfContext.fromJson(self!).userId, config['user']);
+              expect(owner!.current, isNotNull);
+              details['account_active'] = true;
             case 'done':
               await cleanup();
               await snapshot('done');

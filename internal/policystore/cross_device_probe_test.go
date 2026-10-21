@@ -38,6 +38,10 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	ctx := context.Background()
 	conn := db(t)
 	seedDirectConversation(t, conn)
+	permissionChange := os.Getenv("IM_TEST_CROSS_PERMISSION_CHANGE") == "1"
+	if permissionChange {
+		grantPublisher(t, conn)
+	}
 	for _, n := range []string{"000004_external_identities", "000026_native_oauth_rate"} {
 		b, e := os.ReadFile("../../db/migrations/" + n + ".up.sql")
 		if e != nil {
@@ -71,7 +75,7 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	startRealtime := startRealtimeProcess
 	startAPI := startProductionAPI
 	receiptRetry := os.Getenv("IM_TEST_CROSS_RECEIPT_RETRY") == "1"
-	if ackRestart || receiptRetry {
+	if ackRestart || receiptRetry || permissionChange {
 		startRealtime = crossRetainedRealtime
 		startAPI = crossRetainedAPI
 	}
@@ -152,6 +156,9 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 		actors[role] = map[string]any{"platform": platform, "user": user, "membership": membership, "refresh": refresh[role]}
 	}
 	input := map[string]any{"origin": proxy.URL, "ca_pem": string(ca), "tenant": tenantA, "conversation": directA, "schema": schema, "actors": actors}
+	if permissionChange {
+		input["permission_other_membership"] = targetM
+	}
 	b, e := json.Marshal(input)
 	if e != nil {
 		t.Fatal(e)
@@ -196,7 +203,11 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	if _, e = os.Stat(filepath.Join(filepath.Dir(path), "scenario-done")); e != nil {
 		t.Fatal("cross scenario stopped before all checkpoints")
 	}
-	if messages != 3 || devices != 3 || delivered != 5 || reads != 5 || userReads != 3 || aliceSends != 2 || bobSends != 1 || minSeq != 1 || maxSeq != 3 || distinctIDs != 3 {
+	wantMessages, wantReceipts, wantUserReads, wantAliceSends := 3, 5, 3, 2
+	if permissionChange {
+		wantMessages, wantReceipts, wantUserReads, wantAliceSends = 2, 3, 2, 1
+	}
+	if messages != wantMessages || devices != 3 || delivered != wantReceipts || reads != wantReceipts || userReads != wantUserReads || aliceSends != wantAliceSends || bobSends != 1 || minSeq != 1 || maxSeq != wantMessages || distinctIDs != wantMessages {
 		t.Fatalf("cross final database mismatch: %s", b)
 	}
 	mu.Lock()
