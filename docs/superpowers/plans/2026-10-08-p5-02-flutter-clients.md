@@ -212,3 +212,10 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 测试源 `45107705e8ec2be2039bab5f9a834f5fb8dcd3de`；后端实现未改；客户端成功已读只清除自身旧警告，并通知界面，较新的其它错误保留。真实Android API36×2＋iOS26.5三独立进程及生产API／Outbox／Receipt、PG／Redis：Bob双设备delivered／read四流分别至少两次受控503后自动恢复，失败与首个成功请求摘要一致，同PID／设备，无手动刷新或重选。送达失败时加密SQLite cursor1/pending保留，消息未获显示及读取授权；实际送达200后pending清除。已读503时设备read及用户read均0；先放行iOS时设备read1/0、用户read1，再放行Android后设备read1/1、用户仍1。发送端已送达→已读及后续seq2/3通过，10SQL阶段最终3消息／3设备／5设备D+R／3用户read。Flutter250／analyzer0／Python314执行307唯一零失败错误跳过，聚焦Go2项普通及race通过；73旧JSON／2870旧原件不变，证据及资源清理独立核实。详情见[专项结果](../../verification/p5-02-receipt-retry-results.json)。
 
 故障仅为服务端转发前503，送达既有指数退避、已读Retry-After2秒；不覆盖所有状态、回执提交后丢ACK或死亡后已读曝光恢复。Task9及Tasks5—8原BASE／进行中状态保持，真机继续暂缓，无全仓Go／race重跑或远端发布声明。
+
+
+### Task9 任职结束权限隔离增量（2026-10-21）
+
+固定源 `e926330325c95ebbc15ce46ff7d93fc0ccae3b06`，本轮测试扩展、产品实现未改。Android API36×2＋iOS26.5三独立原生进程，真实生产API／Outbox／Receipt和PG／Redis：变更前seq1双Bob设备已读、seq2 Alice已读，随后实际管理接口204结束Bob当前任职。双端自动观测403 invalid_identity、消息正文／上下文／本地已读／加密接收游标及pending清空；实际旧sync、history、真实旧proof送达、read、send各403。集团账号、另一任职、原设备仍active，/me和本人设备列表仍200；3秒静默窗无后续失效设备请求或新注册，Alice账号有效。5SQL阶段最终2消息／3设备／0撤销／3设备D+R／2用户read，服务器历史回执保持。Flutter250／analyzer0／Python316执行309唯一零失败错误跳过；聚焦HTTP Go2项普通及race通过。74旧JSON／3510原件／主工作区不变，证据及自有资源独立核实；首轮缺测试导入导致analyzer失败，失败原件保留，最终运行通过。详情见[专项结果](../../verification/p5-02-permission-change-results.json)。
+
+本轮仅在线任职结束；另一任职在本人接口仍可选，未切换再发消息；退出竞态、所有通信策略、离线／死亡窗口仍待验收。Task9及Tasks5—8原BASE／进行中状态保留，真机继续暂缓，无全仓Go／race或远端发布声明。
