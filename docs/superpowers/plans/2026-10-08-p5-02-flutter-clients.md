@@ -219,3 +219,10 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 固定源 `e926330325c95ebbc15ce46ff7d93fc0ccae3b06`，本轮测试扩展、产品实现未改。Android API36×2＋iOS26.5三独立原生进程，真实生产API／Outbox／Receipt和PG／Redis：变更前seq1双Bob设备已读、seq2 Alice已读，随后实际管理接口204结束Bob当前任职。双端自动观测403 invalid_identity、消息正文／上下文／本地已读／加密接收游标及pending清空；实际旧sync、history、真实旧proof送达、read、send各403。集团账号、另一任职、原设备仍active，/me和本人设备列表仍200；3秒静默窗无后续失效设备请求或新注册，Alice账号有效。5SQL阶段最终2消息／3设备／0撤销／3设备D+R／2用户read，服务器历史回执保持。Flutter250／analyzer0／Python316执行309唯一零失败错误跳过；聚焦HTTP Go2项普通及race通过。74旧JSON／3510原件／主工作区不变，证据及自有资源独立核实；首轮缺测试导入导致analyzer失败，失败原件保留，最终运行通过。详情见[专项结果](../../verification/p5-02-permission-change-results.json)。
 
 本轮仅在线任职结束；另一任职在本人接口仍可选，未切换再发消息；退出竞态、所有通信策略、离线／死亡窗口仍待验收。Task9及Tasks5—8原BASE／进行中状态保留，真机继续暂缓，无全仓Go／race或远端发布声明。
+
+
+### Task9 退出在途响应隔离增量（2026-10-21）
+
+固定源 `28ebe98b795f71f97859d55bf274988ce817591a`，测试扩展，产品实现未改。Android API36×2＋iOS26.5三原生进程及真实生产API／Outbox／Receipt、PG／Redis：Bob iOS在真实next_seq2同步200、Android在next_seq4同步200生成后，下游响应头前暂缓；按产品方法顺序关闭view／membership并ClientSession.logout，系统安全存储、账号选择及DB文件清空，消息页正文／已读清空、发送关闭。完成清理后原字节放行，两条请求均观测取消、摘要相同，双端不恢复旧账号或正文。同PID退出，iOS退出后Android读seq2、发送seq3被Alice读；双端退出后Alice发送seq5，3秒无其设备请求／新注册／新增回执。7SQL阶段最终5消息／3设备／0撤销／4设备D+R／3用户read；Flutter250／analyzer0／Python318执行311唯一零失败错误跳过；Go夹具2顶层＋2子场景普通／race通过。75旧JSON／3707原件及主工作区保持，自有资源独立清理，截图已复核。详情见[专项结果](../../verification/p5-02-logout-race-results.json)。
+
+本轮为原生控制器／账号退出边界，不含完整退出按钮导航、再次登录、所有异步回调或OS死亡。夹具放行为向已取消连接写入原成功字节的尝试，不证明客户端实际接收。Task9及Tasks5—8原BASE／进行中、真机暂缓保持；无全仓Go／race重跑或远端发布声明。
