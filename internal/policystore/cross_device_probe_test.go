@@ -70,7 +70,8 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	ackRestart := os.Getenv("IM_TEST_CROSS_ACK_RESTART") == "1"
 	startRealtime := startRealtimeProcess
 	startAPI := startProductionAPI
-	if ackRestart {
+	receiptRetry := os.Getenv("IM_TEST_CROSS_RECEIPT_RETRY") == "1"
+	if ackRestart || receiptRetry {
 		startRealtime = crossRetainedRealtime
 		startAPI = crossRetainedAPI
 	}
@@ -103,6 +104,12 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		event := map[string]any{"n": len(events) + 1, "method": r.Request.Method, "path": r.Request.URL.Path, "status": r.StatusCode, "device": r.Request.Header.Get("X-IM-Device-ID"), "device_headers": r.Request.Header.Get("X-IM-Device-ID") != "" && r.Request.Header.Get("X-IM-Device-Token") != ""}
+		if meta, ok := r.Request.Context().Value(crossReceiptContextKey{}).(map[string]any); ok {
+			for k, v := range meta {
+				event[k] = v
+			}
+			event["upstream_status"] = r.StatusCode
+		}
 		drop := false
 		if ackRestart && r.Request.Method == "POST" && r.Request.URL.Path == "/api/v1/conversations/"+directA+"/messages" && r.StatusCode == 200 {
 			ack, lost, err := crossObserveACK(r, r.Request.Header.Get("X-IM-Device-ID"), seenACK)
@@ -121,7 +128,21 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 		}
 		return nil
 	}
-	proxy, ca := nativeProbeTLS(t, reverse)
+	var handler http.Handler = reverse
+	if receiptRetry {
+		control := filepath.Join(filepath.Dir(os.Getenv("IM_TEST_MOBILE_CONFIG")), "receipt-control.json")
+		if err := os.WriteFile(control, []byte(`{}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+		handler = crossReceiptGate(reverse, control, directA, time.Now(), func(event map[string]any) {
+			mu.Lock()
+			defer mu.Unlock()
+			event["n"] = len(events) + 1
+			events = append(events, event)
+			saveEvents()
+		})
+	}
+	proxy, ca := nativeProbeTLS(t, handler)
 	actors := map[string]any{}
 	for role, platform := range map[string]string{"alice": "android", "bob_ios": "ios", "bob_android": "android"} {
 		user, membership := personA, targetM2

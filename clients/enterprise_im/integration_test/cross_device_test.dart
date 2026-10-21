@@ -122,7 +122,7 @@ void main() {
         });
       }
 
-      Future<void> openView() async {
+      Future<void> openView({bool waitForAdmission = true}) async {
         if (view != null) return;
         await tester.runAsync(() async {
           final list = ConversationList(membership!);
@@ -142,13 +142,14 @@ void main() {
           view = ConversationView(membership!, adapter.activity);
           await view!.select(context!, summary!);
         });
-        await until(
-          () =>
-              view!.context != null &&
-              !view!.loading &&
-              (view!.canSend || view!.pending.isNotEmpty),
-          'conversation admitted',
-        );
+        if (waitForAdmission)
+          await until(
+            () =>
+                view!.context != null &&
+                !view!.loading &&
+                (view!.canSend || view!.pending.isNotEmpty),
+            'conversation admitted',
+          );
       }
 
       Future<void> mount() async {
@@ -425,6 +426,60 @@ void main() {
                 'network_error': view!.failure!.code,
                 'network_status': view!.failure!.status,
               });
+            case 'open_unconfirmed':
+              await openView(waitForAdmission: false);
+              await until(
+                () => view!.failure?.status == 503 && !view!.loading,
+                'delivery failure observed',
+              );
+              expect(view!.canSend, isFalse);
+              expect(view!.messages, isEmpty);
+              expect(view!.receipts.locallyReadSeqs, isEmpty);
+              final pending = await tester.runAsync(
+                () => owner!.current!.store.pendingReceipts(),
+              );
+              expect(pending, hasLength(1));
+              details.addAll({
+                'pending_receipts': pending!.length,
+                'pending_next': pending
+                    .map((p) => p.nextAfterSeq.toString())
+                    .toList(),
+                'can_send': view!.canSend,
+                'network_status': view!.failure?.status,
+              });
+            case 'delivered_restored':
+              // Wait only: production coordinator owns the retry, not this command.
+              await until(
+                () =>
+                    view!.canSend &&
+                    view!.messages.any((m) => m.seq == Seq.parse('1')),
+                'automatic delivery retry',
+              );
+              final pending = await tester.runAsync(
+                () => owner!.current!.store.pendingReceipts(),
+              );
+              expect(pending, isEmpty);
+              expect(view!.receipts.locallyReadSeqs, isEmpty);
+              details.addAll({
+                'pending_receipts': pending!.length,
+                'can_send': view!.canSend,
+              });
+            case 'show_for_read':
+              await mount();
+            case 'receipt_snapshot':
+              final pending = await tester.runAsync(
+                () => owner!.current!.store.pendingReceipts(),
+              );
+              details.addAll({
+                'pending_receipts': pending!.length,
+                'pending_next': pending
+                    .map((p) => p.nextAfterSeq.toString())
+                    .toList(),
+                'can_send': view!.canSend,
+                'network_status': view!.failure?.status,
+              });
+              if (cmd['expect_unread'] == true)
+                expect(view!.receipts.locallyReadSeqs, isEmpty);
             case 'open':
               await openView();
               expect(view!.receipts.locallyReadSeqs, isEmpty);
