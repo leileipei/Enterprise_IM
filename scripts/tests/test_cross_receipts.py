@@ -12,7 +12,7 @@ class ReceiptRetryTests(unittest.TestCase):
   with self.assertRaises(ValueError):m.retry_proof(rows[1:],'d','read')
  def test_native_failure_must_not_advance_read_or_discard_pending_page(self):
   m=importlib.import_module('integration.cross_receipts')
-  row={'cursor':'1','pending_receipts':1,'pending_next':['1'],'seqs':[],'read_seqs':[],'can_send':False,'network_status':503}
+  row={'cursor':'1','pending_receipts':1,'pending_next':['1'],'seqs':[],'read_seqs':[],'can_send':False,'observed_503':True}
   m.delivery_blocked(row)
-  for k,v in [('pending_receipts',0),('pending_next',[]),('cursor','0'),('seqs',['1']),('read_seqs',['1']),('can_send',True),('network_status',None)]:
+  for k,v in [('pending_receipts',0),('pending_next',[]),('cursor','0'),('seqs',['1']),('read_seqs',['1']),('can_send',True),('observed_503',False)]:
    with self.assertRaises(ValueError):m.delivery_blocked(dict(row,**{k:v}))

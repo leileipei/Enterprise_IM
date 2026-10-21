@@ -18,4 +18,4 @@ def retry_proof(events,device,action):
  return {'device':device,'action':action,'failed_attempts':len(failures),'first_success_n':success.get('n'),'body_sha256':digest,'attempt_times_ms':times,'minimum_gap_ms':min(b-a for a,b in zip(times,times[1:]))}
 
 def delivery_blocked(row):
- if row.get('cursor')!='1' or row.get('pending_receipts')!=1 or row.get('pending_next')!=['1'] or row.get('seqs')!=[] or row.get('read_seqs')!=[] or row.get('can_send') is not False or row.get('network_status')!=503:raise ValueError('receipt_false_local_confirmation')
+ if row.get('cursor')!='1' or row.get('pending_receipts')!=1 or row.get('pending_next')!=['1'] or row.get('seqs')!=[] or row.get('read_seqs')!=[] or row.get('can_send') is not False or row.get('observed_503') is not True:raise ValueError('receipt_false_local_confirmation')

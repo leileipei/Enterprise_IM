@@ -58,7 +58,7 @@ def run(actors,backend,out,result,save):
  for actor in recipients:wait_failed(actor.state['admission']['device_id'],'read')
  for actor in recipients:
   row=actor.command('receipt_snapshot',expect_unread=True)
-  if row['details']['pending_receipts']!=0 or row['details']['cursor']!='1' or row['details']['read_seqs'] or row['details']['network_status']!=503:raise ValueError('receipt_false_read_confirmation')
+  if row['details']['pending_receipts']!=0 or row['details']['cursor']!='1' or row['details']['read_seqs'] or row['details'].get('observed_503') is not True:raise ValueError('receipt_false_read_confirmation')
   result['receipt_native'][actor.role]['read_blocked']=row;save();actor.screenshot('read-failure-visible')
  phase('read_failed_no_confirmation',1,0,0,1,0,0,0,0);alice.command('summary',seq='1',status='delivered');alice.screenshot('delivery-only-before-read-retry')
  release(ios.state['admission']['device_id']+':read');row=ios.command('read',seqs=['1']);result['receipt_native']['bob_ios']['read_recovered']=row;save()

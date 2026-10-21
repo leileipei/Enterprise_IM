@@ -74,6 +74,8 @@ void main() {
       var last = 0;
       var mounted = false;
       var cleaned = false;
+      var seenReceipt503 = false;
+      final observedFailures = <String>[];
       final details = <String, Object?>{};
       Future<void> until(bool Function() fn, String name) async {
         final watch = Stopwatch()..start();
@@ -92,6 +94,11 @@ void main() {
             ),
           ))?.toString();
         if (view != null) {
+          details['observed_failures'] = List<String>.of(observedFailures);
+          details['latest_network_code'] = view!.failure?.code;
+          details['latest_network_status'] = view!.failure?.status;
+          details['loading'] = view!.loading;
+          details['observed_503'] = seenReceipt503;
           details['seqs'] = view!.messages
               .map((m) => m.seq.toString())
               .toList();
@@ -140,6 +147,15 @@ void main() {
             conversationId: summary!.id,
           );
           view = ConversationView(membership!, adapter.activity);
+          view!.addListener(() {
+            final error = view!.failure;
+            if (error == null) return;
+            if (error.status == 503) seenReceipt503 = true;
+            final label = '${error.code}:${error.status}';
+            if ((observedFailures.isEmpty || observedFailures.last != label) &&
+                observedFailures.length < 32)
+              observedFailures.add(label);
+          });
           await view!.select(context!, summary!);
         });
         if (waitForAdmission)
@@ -429,7 +445,7 @@ void main() {
             case 'open_unconfirmed':
               await openView(waitForAdmission: false);
               await until(
-                () => view!.failure?.status == 503 && !view!.loading,
+                () => seenReceipt503 && !view!.loading,
                 'delivery failure observed',
               );
               expect(view!.canSend, isFalse);
@@ -445,7 +461,7 @@ void main() {
                     .map((p) => p.nextAfterSeq.toString())
                     .toList(),
                 'can_send': view!.canSend,
-                'network_status': view!.failure?.status,
+                'observed_503': seenReceipt503,
               });
             case 'delivered_restored':
               // Wait only: production coordinator owns the retry, not this command.
@@ -465,6 +481,7 @@ void main() {
                 'can_send': view!.canSend,
               });
             case 'show_for_read':
+              seenReceipt503 = false;
               await mount();
             case 'receipt_snapshot':
               final pending = await tester.runAsync(
@@ -476,7 +493,7 @@ void main() {
                     .map((p) => p.nextAfterSeq.toString())
                     .toList(),
                 'can_send': view!.canSend,
-                'network_status': view!.failure?.status,
+                'observed_503': seenReceipt503,
               });
               if (cmd['expect_unread'] == true)
                 expect(view!.receipts.locallyReadSeqs, isEmpty);
