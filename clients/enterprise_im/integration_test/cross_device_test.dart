@@ -1532,6 +1532,19 @@ void main() {
           throw StateError('cross actor lifetime exceeded');
         } catch (error) {
           details['failure_type'] = error.runtimeType.toString();
+          details['notification_click_observations'] = {
+            'lists': notificationLists,
+            'syncs': notificationSyncs,
+            'armed_lists': tapLists,
+            'armed_syncs': tapSyncs,
+            'foreground': adapter.activity.foreground,
+            'focused': adapter.activity.focused,
+            'same_notification_view': identical(view, notificationView),
+            'message_route_present': find
+                .byType(MessagePage)
+                .evaluate()
+                .isNotEmpty,
+          };
           try {
             await snapshot('failed');
           } catch (_) {}
