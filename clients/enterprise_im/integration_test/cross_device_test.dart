@@ -1297,9 +1297,9 @@ void main() {
                 expect(loginRefreshRequests, 0);
                 expect(loginCallbackCompletions, 2);
                 expect(loginProvider!.authorizeRequests, 2);
-                expect(loginProvider!.freshPKCE, isTrue);
-                expect(loginProvider!.wrongStateIgnored, isTrue);
-                expect(loginProvider!.callbackViaOS, isTrue);
+                expect(loginProvider.freshPKCE, isTrue);
+                expect(loginProvider.wrongStateIgnored, isTrue);
+                expect(loginProvider.callbackViaOS, isTrue);
                 await enterNavigationWorkspace(fresh: true);
                 expect(device, isNot(oldDevice));
                 expect(oldOwner.current, isNull);
@@ -1337,9 +1337,9 @@ void main() {
                   'old_device_id': oldDevice,
                   'storage': storageName(),
                   'relogin_from_same_page': pageRetained,
-                  'fresh_pkce': loginProvider!.freshPKCE,
-                  'wrong_state_ignored': loginProvider!.wrongStateIgnored,
-                  'callback_via_os': loginProvider!.callbackViaOS,
+                  'fresh_pkce': loginProvider.freshPKCE,
+                  'wrong_state_ignored': loginProvider.wrongStateIgnored,
+                  'callback_via_os': loginProvider.callbackViaOS,
                   'old_owner_stopped': oldOwner.current == null,
                   'old_view_stopped':
                       oldView.context == null && !oldView.canSend,
@@ -1349,7 +1349,7 @@ void main() {
                   'token_requests': loginTokenRequests,
                   'refresh_requests': loginRefreshRequests,
                   'callback_completions': loginCallbackCompletions,
-                  'authorize_requests': loginProvider!.authorizeRequests,
+                  'authorize_requests': loginProvider.authorizeRequests,
                 });
               case 'navigation_reopen':
                 final before = loginApiCreations;
