@@ -27,9 +27,16 @@ final class NativeNotificationPort implements NotificationPort {
   }) : plugin = plugin ?? FlutterLocalNotificationsPlugin();
   @override
   Future<bool> enable(void Function(String?) onTap) async {
-    if (platform != 'macos' && platform != 'windows') return false;
+    if (!const ['android', 'ios', 'macos', 'windows'].contains(platform))
+      return false;
     final initialized = await plugin.initialize(
       settings: const InitializationSettings(
+        android: AndroidInitializationSettings('im_notification'),
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
         macOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
@@ -45,6 +52,22 @@ final class NativeNotificationPort implements NotificationPort {
     );
     if (initialized != true) return false;
     _initialized = true;
+    if (platform == 'android') {
+      return await plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >()
+              ?.requestNotificationsPermission() ==
+          true;
+    }
+    if (platform == 'ios') {
+      return await plugin
+              .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin
+              >()
+              ?.requestPermissions(alert: true, badge: false, sound: false) ==
+          true;
+    }
     if (platform == 'macos') {
       return await plugin
               .resolvePlatformSpecificImplementation<
@@ -66,6 +89,23 @@ final class NativeNotificationPort implements NotificationPort {
         body: body,
         payload: payload,
         notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'enterprise_im_messages',
+            '消息通知',
+            importance: Importance.high,
+            priority: Priority.high,
+            visibility: NotificationVisibility.private,
+            playSound: false,
+            enableVibration: false,
+            channelShowBadge: false,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBanner: true,
+            presentList: true,
+            presentBadge: false,
+            presentSound: false,
+          ),
           macOS: DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: false,

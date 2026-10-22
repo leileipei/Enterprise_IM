@@ -43,6 +43,7 @@ class _ClientShellState extends State<ClientShell> {
   late final AppActivity _activity;
   late final MessageNotifications _notifications;
   bool _requestingNotifications = false;
+  bool _openingNotification = false;
   ConversationView? _view;
   ConversationSummary? _detail;
   bool _opening = false;
@@ -483,19 +484,22 @@ class _ClientShellState extends State<ClientShell> {
   }
 
   Future<void> _openNotification(ClientContext context, String kind) async {
-    final ready = _ready, epoch = _epoch;
+    final ready = _ready, epoch = _epoch, view = _view;
     if (_busy ||
-        _opening ||
+        _openingNotification ||
         _expired ||
         _activity.blocked ||
         ready == null ||
-        _view?.context?.sameScope(context) != true)
+        view == null ||
+        view.context?.sameScope(context) != true)
       return;
+    _openingNotification = true;
     final lists = ConversationList(_memberships);
     try {
       final page = await lists.load(kind);
       if (!_active(epoch) ||
           !identical(_memberships.current, ready) ||
+          !identical(_view, view) ||
           _view?.context?.sameScope(context) != true ||
           _activity.blocked)
         return;
@@ -503,11 +507,17 @@ class _ClientShellState extends State<ClientShell> {
         (item) => item.id == context.conversationId,
       );
       if (matches.isEmpty) return;
-      // _open creates a new view and authorized sync; payload is never content authority.
       if (!mounted) return;
-      await _open(matches.single, MediaQuery.sizeOf(this.context).width >= 800);
+      if (MediaQuery.sizeOf(this.context).width < 800) {
+        // A narrow message route holds _opening until it is popped. Reuse its
+        // still-current view after fresh authorization, without stacking routes.
+        await view.refresh();
+      } else if (!_opening) {
+        await _open(matches.single, true);
+      }
     } finally {
       lists.close();
+      _openingNotification = false;
     }
   }
 

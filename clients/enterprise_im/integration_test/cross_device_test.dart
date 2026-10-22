@@ -2,6 +2,7 @@
 // injected into this disposable application's private Documents, never assets.
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -110,7 +111,9 @@ void main() {
         var last = 0;
         final initialPid = pid;
         SessionStore? navigationStore;
-        var loginApiCreations = 0;
+        var loginApiCreations = 0, notificationLists = 0, notificationSyncs = 0;
+        var tapLists = 0, tapSyncs = 0;
+        ConversationView? notificationView;
         var loggedOut = false;
         var mounted = false;
         var cleaned = false;
@@ -118,10 +121,14 @@ void main() {
         final observedFailures = <String>[];
         final observedReceiptHTTP = <Map<String, Object?>>[];
         final details = <String, Object?>{};
-        Future<void> until(bool Function() fn, String name) async {
+        Future<void> until(
+          bool Function() fn,
+          String name, {
+          int timeoutSeconds = 80,
+        }) async {
           final watch = Stopwatch()..start();
           while (!fn()) {
-            if (watch.elapsed > const Duration(seconds: 80)) {
+            if (watch.elapsed > Duration(seconds: timeoutSeconds)) {
               details['failed_condition'] = name;
               details['login_api_creations'] = loginApiCreations;
               details['navigation_store_created'] = navigationStore != null;
@@ -358,6 +365,12 @@ void main() {
                       request,
                       response,
                     ) {
+                      if (request.method == 'GET' && response.status == 200) {
+                        if (request.uri.path == '/api/v1/conversations')
+                          notificationLists++;
+                        if (request.uri.path.endsWith('/sync'))
+                          notificationSyncs++;
+                      }
                       if (request.method == 'POST' &&
                           request.uri.path == '/api/v1/native/oauth/token')
                         loginTokenRequests++;
@@ -400,18 +413,7 @@ void main() {
           }
         }
 
-        Future<void> enterNavigationWorkspace({bool fresh = false}) async {
-          await tester.tap(find.text('进入工作空间'));
-          await until(
-            () => find
-                .byKey(ValueKey('membership-${config['membership']}'))
-                .evaluate()
-                .isNotEmpty,
-            'actual workspace membership choice',
-          );
-          await tester.tap(
-            find.byKey(ValueKey('membership-${config['membership']}')),
-          );
+        Future<void> openNavigationConversation({bool fresh = false}) async {
           final tile = find.widgetWithText(
             ListTile,
             role == 'alice' ? '用户 A' : '管理员',
@@ -439,6 +441,21 @@ void main() {
           if (!fresh) expect(context!.device.deviceId, device);
           device = context!.device.deviceId;
           mounted = true;
+        }
+
+        Future<void> enterNavigationWorkspace({bool fresh = false}) async {
+          await tester.tap(find.text('进入工作空间'));
+          await until(
+            () => find
+                .byKey(ValueKey('membership-${config['membership']}'))
+                .evaluate()
+                .isNotEmpty,
+            'actual workspace membership choice',
+          );
+          await tester.tap(
+            find.byKey(ValueKey('membership-${config['membership']}')),
+          );
+          await openNavigationConversation(fresh: fresh);
         }
 
         Future<void> captureNavigationLogout() async {
@@ -1259,6 +1276,96 @@ void main() {
                 await captureLogout();
               case 'logout_stable':
                 await captureLogout();
+              case 'notification_permission':
+                expect(find.byType(MessagePage), findsOneWidget);
+                await tester.tap(find.byTooltip('返回会话列表'));
+                await until(
+                  () =>
+                      find.byType(MessagePage).evaluate().isEmpty &&
+                      find.byType(ClientShell).evaluate().isNotEmpty,
+                  'notification Shell',
+                );
+                expect(
+                  tester
+                      .widget<ClientShell>(find.byType(ClientShell))
+                      .notificationPort,
+                  isNull,
+                );
+                await tester.tap(find.byTooltip('启用消息通知'));
+                final allowed = cmd['allowed'] == true;
+                final notice = allowed
+                    ? '已请求消息通知，显示方式由系统设置决定。'
+                    : '消息通知未启用，不影响正常收发。';
+                await until(
+                  () => find.text(notice).evaluate().isNotEmpty,
+                  'actual native notification permission',
+                  timeoutSeconds: 240,
+                );
+                details.addAll({
+                  'notification_default_port': true,
+                  'notification_explicit_click': true,
+                  'notification_allowed': allowed,
+                });
+              case 'notification_open':
+                await openNavigationConversation();
+                details['notification_message_route'] = true;
+              case 'notification_status':
+                final wanted = cmd['count'] as int;
+                var notifications = <ActiveNotification>[];
+                final wait = Stopwatch()..start();
+                while (true) {
+                  notifications = (await tester.runAsync(
+                    () => FlutterLocalNotificationsPlugin()
+                        .getActiveNotifications(),
+                  ))!;
+                  if (notifications.length == wanted) break;
+                  if (wait.elapsed > const Duration(seconds: 40))
+                    throw StateError('native notification count');
+                  await pause();
+                }
+                for (final item in notifications) {
+                  expect(item.title, '企业 IM');
+                  expect(item.body, '收到新消息');
+                  if (Platform.isIOS)
+                    expect(
+                      item.payload,
+                      matches(RegExp(r'^[A-Za-z0-9_-]{43}$')),
+                    );
+                }
+                details.addAll({
+                  'notification_count': notifications.length,
+                  'notification_generic_only': true,
+                  'notification_payload_check': Platform.isIOS
+                      ? 'opaque43'
+                      : 'not_exposed_by_android_api',
+                });
+              case 'notification_arm_tap':
+                notificationView = view;
+                tapLists = notificationLists;
+                tapSyncs = notificationSyncs;
+                details.addAll({
+                  'tap_list_before': tapLists,
+                  'tap_sync_before': tapSyncs,
+                });
+              case 'notification_tapped':
+                await until(
+                  () =>
+                      notificationLists > tapLists &&
+                      notificationSyncs > tapSyncs,
+                  'real OS notification tap fresh list and sync',
+                  timeoutSeconds: 240,
+                );
+                expect(
+                  tester.widget<MessagePage>(find.byType(MessagePage)).view,
+                  same(notificationView),
+                );
+                expect(view!.canSend, isTrue);
+                details.addAll({
+                  'notification_tap_same_route': true,
+                  'tap_list_after': notificationLists,
+                  'tap_sync_after': notificationSyncs,
+                  'tap_device_unchanged': context!.device.deviceId == device,
+                });
               case 'navigation_open':
                 await mountNavigationLogin(restored: true);
                 await enterNavigationWorkspace();

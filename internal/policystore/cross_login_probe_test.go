@@ -26,6 +26,11 @@ import (
 	"time"
 )
 
+func TestCrossMobileNotificationsBackendFixture(t *testing.T) {
+	t.Setenv("IM_TEST_CROSS_MOBILE_NOTIFICATIONS", "1")
+	TestCrossFreshLoginBackendFixture(t)
+}
+
 func TestCrossFreshLoginBackendFixture(t *testing.T) {
 	t.Setenv("IM_TEST_CROSS_FRESH_LOGIN", "1")
 	TestCrossDeviceBackendFixture(t)
