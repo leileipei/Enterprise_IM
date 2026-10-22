@@ -50,7 +50,11 @@ final class NativeNotificationPort implements NotificationPort {
       ),
       onDidReceiveNotificationResponse: (response) => onTap(response.payload),
     );
-    if (initialized != true) return false;
+    // Darwin returns its authorization result from initialize. With every
+    // automatic permission request disabled, false is a successful setup.
+    // Only the explicit permission request below can enable notifications.
+    final darwin = platform == 'ios' || platform == 'macos';
+    if (initialized == null || (!darwin && initialized != true)) return false;
     _initialized = true;
     if (platform == 'android') {
       return await plugin

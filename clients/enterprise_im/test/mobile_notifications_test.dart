@@ -6,16 +6,22 @@ import 'package:enterprise_im/platform/notifications.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+  for (final platform in [
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+    TargetPlatform.macOS,
+  ]) {
     for (final granted in [true, false]) {
       test(
-        '$platform explicitly requests notification permission: $granted',
+        '$platform explicitly requests notification permission after permissionless init: $granted',
         () async {
           debugDefaultTargetPlatformOverride = platform;
           if (platform == TargetPlatform.android) {
             AndroidFlutterLocalNotificationsPlugin.registerWith();
-          } else {
+          } else if (platform == TargetPlatform.iOS) {
             IOSFlutterLocalNotificationsPlugin.registerWith();
+          } else {
+            MacOSFlutterLocalNotificationsPlugin.registerWith();
           }
           addTearDown(() => debugDefaultTargetPlatformOverride = null);
           const channel = MethodChannel(
@@ -26,7 +32,8 @@ void main() {
               .setMockMethodCallHandler(channel, (call) async {
                 calls.add(call);
                 if (call.method.startsWith('request')) return granted;
-                return true;
+                // Fixed Darwin plugin completes init with false when no permissions are requested.
+                return platform == TargetPlatform.android;
               });
           addTearDown(
             () => TestDefaultBinaryMessengerBinding
@@ -35,7 +42,11 @@ void main() {
                 .setMockMethodCallHandler(channel, null),
           );
           final port = NativeNotificationPort(
-            platform == TargetPlatform.android ? 'android' : 'ios',
+            platform == TargetPlatform.android
+                ? 'android'
+                : platform == TargetPlatform.iOS
+                ? 'ios'
+                : 'macos',
           );
           expect(
             calls,
@@ -50,7 +61,7 @@ void main() {
                 'an explicit request must reach the native adapter even when permission is denied',
           );
           expect(calls.first.method, 'initialize');
-          if (platform == TargetPlatform.iOS) {
+          if (platform != TargetPlatform.android) {
             final init = calls.first.arguments as Map;
             expect(init['requestAlertPermission'], false);
             expect(init['requestBadgePermission'], false);
@@ -81,9 +92,13 @@ void main() {
                 config['visibility'],
                 NotificationVisibility.private.index,
               );
-            } else {
+            } else if (platform == TargetPlatform.iOS) {
               expect(config['presentBanner'], true);
               expect(config['presentList'], true);
+              expect(config['presentSound'], false);
+              expect(config['presentBadge'], false);
+            } else {
+              expect(config['presentAlert'], true);
               expect(config['presentSound'], false);
               expect(config['presentBadge'], false);
             }
