@@ -24,6 +24,52 @@ class PermissionPort implements NotificationPort {
 }
 
 void main() {
+  for (final platform in ['android', 'ios']) {
+    testWidgets(
+      '$platform exposes explicit notification opt-in without blocking messaging',
+      (tester) async {
+        final owner = (await tester.runAsync(
+          () => nav.owner(
+            (r, _) async =>
+                oidc.response({'conversations': [], 'has_more': false}),
+            platform: platform,
+          ),
+        ))!;
+        addTearDown(() => tester.runAsync(owner.logout));
+        final activity = AppActivity()
+          ..update(foreground: true, focused: true, activeConversation: null);
+        addTearDown(activity.dispose);
+        final port = PermissionPort();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ClientShell(
+              owner: owner,
+              activity: activity,
+              notificationPort: port,
+              onLogout: () async => true,
+            ),
+          ),
+        );
+        await pumpUntil(
+          tester,
+          () => find.text('选择当前任职').evaluate().isNotEmpty,
+        );
+        expect(port.prompts, 0);
+        expect(find.byTooltip('启用消息通知'), findsOneWidget);
+        await tester.tap(find.byTooltip('启用消息通知'));
+        await tester.pump();
+        expect(port.prompts, 1);
+        port.permission.complete(false);
+        await pumpUntil(
+          tester,
+          () => find.text('消息通知未启用，不影响正常收发。').evaluate().isNotEmpty,
+        );
+        expect(find.text('选择当前任职'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
   testWidgets(
     'desktop notification permission is requested only after an explicit click',
     (tester) async {

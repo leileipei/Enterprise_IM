@@ -36,12 +36,22 @@ Map<String, Object?> groupItem() => {
   'updated_at': '2026-10-09T00:00:00Z',
 };
 Future<ClientSession> owner(
-  Future<ApiResponse> Function(ApiRequest, Cancellation) messages,
-) async {
+  Future<ApiResponse> Function(ApiRequest, Cancellation) messages, {
+  String platform = 'macos',
+}) async {
   final (_, _, store) = await disk.fixture();
   final native = bootstrap.authentication(
     oidc.FakeTransport((r, c) async {
-      if (r.uri.path.endsWith('/config')) return oidc.response(oidc.config());
+      if (r.uri.path.endsWith('/config'))
+        return oidc.response({
+          ...oidc.config(),
+          'platform': platform,
+          'client_id': 'im-$platform',
+          'loopback': platform == 'macos' || platform == 'windows',
+          'redirect_uri': platform == 'macos' || platform == 'windows'
+              ? 'http://127.0.0.1/oauth/callback'
+              : 'com.enterpriseim.client:/oauth/callback',
+        });
       if (r.uri.path.endsWith('/refresh'))
         return oidc.response(oidc.tokens('fresh-refresh'));
       if (r.uri.path == '/api/v1/me') return oidc.response(fixture.self());
@@ -50,7 +60,7 @@ Future<ClientSession> owner(
       return messages(r, c);
     }),
   );
-  final result = ClientSession(native, store, platform: 'macos');
+  final result = ClientSession(native, store, platform: platform);
   await result.restore(bootstrap.account());
   return result;
 }

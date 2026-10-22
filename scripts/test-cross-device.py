@@ -25,6 +25,9 @@ from integration.mobile_backend import Backend, preflight as backend_preflight
 from integration.cross_device import actor_config, validate_participants, checkpoint, network_rule, verify_integrity, confirm_recovery_sender, validate_offline_observation
 from integration.cross_native import AndroidActor, IOSActor, digest
 
+class AndroidNotificationsBackend(Backend):
+    fixture_test='TestCrossAndroidNotificationsBackendFixture'
+
 class MobileNotificationsBackend(Backend):
     fixture_test='TestCrossMobileNotificationsBackendFixture'
 
@@ -60,7 +63,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('flutter-sdk','pub-cache','android-sdk','java-home','gradle-cache','go','developer-dir','output'):
         parser.add_argument('--'+name,type=Path,required=True)
-    parser.add_argument('--scenario',choices=['mobile-notifications','relogin-restart','relogin','fresh-login','logout-navigation','logout-race','permission-change','receipt-retry','ack-restart','messaging','group-files-devices','retention-restart','retention-restart-android'],default='messaging')
+    parser.add_argument('--scenario',choices=['mobile-notifications-android','mobile-notifications','relogin-restart','relogin','fresh-login','logout-navigation','logout-race','permission-change','receipt-retry','ack-restart','messaging','group-files-devices','retention-restart','retention-restart-android'],default='messaging')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parents[1]
     sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -69,14 +72,15 @@ def main():
     out=args.output
     aa=SimpleNamespace(**vars(args),target='android',verify_simulator=True,simulator_runtime='system-images;android-36;default;arm64-v8a',simulator_device_type='pixel_7')
     ia=SimpleNamespace(**vars(args),target='ios-simulator',verify_simulator=True,simulator_runtime='com.apple.CoreSimulator.SimRuntime.iOS-26-5',simulator_device_type='com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro')
-    android_only=args.scenario=='retention-restart-android'
+    android_only=args.scenario in ('retention-restart-android','mobile-notifications-android')
     pre={'android':android_build.preflight(repo,aa),'backend':backend_preflight(args.go)}
     if not android_only:pre['ios']=mobile.preflight(repo,ia)
     owner=secrets.token_hex(16);root=Path(tempfile.mkdtemp(prefix='im-cross-',dir='/private/tmp')).resolve();root.chmod(0o700)
     reg=Registry(root/'registry.jsonl',owner,sha);private=root/owner;client=private/'client'
     result={'status':'failed','source_commit':sha,'owner':owner,'root':str(root),'preflight':pre,'scenario':args.scenario,'commands':[],'actors':{},'backend':{},'checkpoints':[], 'scope':'two owned Android API36 and one iOS26.5 native process; production API and workers; synthetic platform-bound refresh IdP; no physical hardware or interactive customer SSO'}
-    if args.scenario in ('fresh-login','relogin','relogin-restart','mobile-notifications'):result['scope']='three owned Android/iOS native processes; real LoginPage fresh sign-in, PKCE, OS AppLinks callback and production broker; synthetic authorize adapter, no system browser HTTPS or customer SSO/physical acceptance'
+    if args.scenario in ('fresh-login','relogin','relogin-restart','mobile-notifications','mobile-notifications-android'):result['scope']='three owned Android/iOS native processes; real LoginPage fresh sign-in, PKCE, OS AppLinks callback and production broker; synthetic authorize adapter, no system browser HTTPS or customer SSO/physical acceptance'
     if android_only:result['scope']='two owned Android API36 native processes; production API and workers; synthetic refresh IdP; iOS blocked by operator Xcode initialization; no physical hardware'
+    if args.scenario=='mobile-notifications-android':result['scope']='two owned Android API36 native processes; real native notification adapter and controlled OS permission allow/deny, production backend and receipts; iOS/OS UI tap deferred because host Mac is locked; no physical acceptance'
     actors={};backend=None;blocked=None
     def save():(out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
     def inventory():
@@ -129,7 +133,7 @@ def main():
                 if any(Path(n).name in ('cross-input.json','owned_backend.json') for n in z.namelist()):raise ValueError('runtime_credentials_bundled')
         if digest(client/'pubspec.lock')!=sources['clients/enterprise_im/pubspec.lock']:raise ValueError('cross_lock_changed')
         result['binaries']={'android':{'file':apk.name,'sha256':digest(apk)},**({'ios':{'file':archive.name,'sha256':digest(archive)}} if not android_only else {}),'credentials_created_after_build':True};save()
-        backend_type=MobileNotificationsBackend if args.scenario=='mobile-notifications' else ReloginRestartBackend if args.scenario=='relogin-restart' else ReloginBackend if args.scenario=='relogin' else FreshLoginBackend if args.scenario=='fresh-login' else LogoutNavigationBackend if args.scenario=='logout-navigation' else LogoutRaceBackend if args.scenario=='logout-race' else PermissionChangeBackend if args.scenario=='permission-change' else ReceiptRetryBackend if args.scenario=='receipt-retry' else AckRestartBackend if args.scenario=='ack-restart' else CrossBackend
+        backend_type=AndroidNotificationsBackend if args.scenario=='mobile-notifications-android' else MobileNotificationsBackend if args.scenario=='mobile-notifications' else ReloginRestartBackend if args.scenario=='relogin-restart' else ReloginBackend if args.scenario=='relogin' else FreshLoginBackend if args.scenario=='fresh-login' else LogoutNavigationBackend if args.scenario=='logout-navigation' else LogoutRaceBackend if args.scenario=='logout-race' else PermissionChangeBackend if args.scenario=='permission-change' else ReceiptRetryBackend if args.scenario=='receipt-retry' else AckRestartBackend if args.scenario=='ack-restart' else CrossBackend
         if args.scenario in ('group-files-devices','retention-restart','retention-restart-android'):
             from integration.cross_group_backend import GroupFilesBackend
             backend_type=GroupFilesBackend
@@ -140,7 +144,7 @@ def main():
             if role=='bob_ios':actor=IOSActor(role,ia,actorout,secrets.token_hex(16),state,save,ienv);binary=app
             else:actor=AndroidActor(role,SimpleNamespace(**{**vars(aa),'visible_simulator':args.scenario=='mobile-notifications' and role=='bob_android'}),private/role,actorout,secrets.token_hex(16),reg,pre['android']['simulator'],state,save);binary=apk
             actors[role]=actor
-            if args.scenario in ('fresh-login','relogin','relogin-restart','mobile-notifications'):
+            if args.scenario in ('fresh-login','relogin','relogin-restart','mobile-notifications','mobile-notifications-android'):
                 from integration.cross_login import bootstrap as login_bootstrap
                 bootstrap=login_bootstrap(config,role,secrets.token_hex(16))
             else:bootstrap=actor_config(config,role,secrets.token_hex(16))
@@ -151,9 +155,9 @@ def main():
         if not android_only:validate_participants({role:a.state['admission'] for role,a in actors.items()})
         elif len({a.state['admission']['device_id'] for a in actors.values()})!=2 or actors['alice'].state['admission']['user']==actors['bob_android'].state['admission']['user']:raise ValueError('android_independent_accounts_devices_unproven')
         if actors['alice'].sim.name==actors['bob_android'].sim.name or actors['alice'].sim.console==actors['bob_android'].sim.console:raise ValueError('independent_android_vms_unproven')
-        if args.scenario=='mobile-notifications':
+        if args.scenario in ('mobile-notifications','mobile-notifications-android'):
             from integration.cross_notification_scenario import run as run_notification_scenario
-            run_notification_scenario(actors,backend,out,result,save)
+            run_notification_scenario(actors,backend,out,result,save,android_only=android_only)
         elif args.scenario in ('relogin','relogin-restart'):
             from integration.cross_relogin_scenario import run as run_relogin_scenario
             run_relogin_scenario(actors,backend,out,result,save,restart=args.scenario=='relogin-restart')
@@ -211,7 +215,7 @@ def main():
             dbphase('done');(backend.root/'scenario-done').touch(mode=0o600);result['scenario_passed']=True
     except Exception as exc:
         result['failure_type']=type(exc).__name__;result['failure_reason']=str(exc);save()
-        if args.scenario=='mobile-notifications':
+        if args.scenario in ('mobile-notifications','mobile-notifications-android'):
             for role,actor in actors.items():
                 try:actor.screenshot('notification-failure')
                 except Exception as capture:result.setdefault('failure_screenshot_errors',{})[role]=type(capture).__name__

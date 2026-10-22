@@ -547,8 +547,12 @@ class _ClientShellState extends State<ClientShell> {
       actions: [
         if (!_expired &&
             !_logoutFailed &&
-            (widget.owner.platform == 'macos' ||
-                widget.owner.platform == 'windows'))
+            const [
+              'android',
+              'ios',
+              'macos',
+              'windows',
+            ].contains(widget.owner.platform))
           IconButton(
             tooltip: '启用消息通知',
             onPressed: _requestingNotifications ? null : _enableNotifications,
