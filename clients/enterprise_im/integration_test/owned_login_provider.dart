@@ -31,7 +31,8 @@ final class OwnedLoginProvider implements BrowserLauncher {
   final AppLinksSource source;
   final bool Function() completed;
   int authorizeRequests = 0;
-  bool wrongStateIgnored = false, callbackViaOS = false;
+  bool wrongStateIgnored = false, callbackViaOS = false, freshPKCE = false;
+  String? _state, _nonce, _challenge;
   OwnedLoginProvider(this.origin, this.role, this.source, this.completed);
   @override
   Future<bool> open(Uri uri) async {
@@ -41,6 +42,23 @@ final class OwnedLoginProvider implements BrowserLauncher {
         uri.hasFragment ||
         uri.userInfo.isNotEmpty)
       throw StateError('unowned authorize URI');
+    wrongStateIgnored = false;
+    callbackViaOS = false;
+    final state = uri.queryParameters['state'],
+        nonce = uri.queryParameters['nonce'],
+        challenge = uri.queryParameters['code_challenge'];
+    freshPKCE =
+        state != null &&
+        nonce != null &&
+        challenge != null &&
+        state != _state &&
+        nonce != _nonce &&
+        challenge != _challenge;
+    if (!freshPKCE || completed())
+      throw StateError('authorization attempt was reused');
+    _state = state;
+    _nonce = nonce;
+    _challenge = challenge;
     final client = HttpClient();
     try {
       final request = await client.getUrl(

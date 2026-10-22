@@ -92,6 +92,7 @@ void main() {
         final freshLogin = config['fresh_login'] == true;
         AppLinksSource? loginLinks;
         OwnedLoginProvider? loginProvider;
+        var loginAttemptCallbackBaseline = 0;
         var loginCallbackCompletions = 0,
             loginTokenRequests = 0,
             loginRefreshRequests = 0;
@@ -654,7 +655,7 @@ void main() {
               origin,
               role,
               loginLinks,
-              () => loginCallbackCompletions != 0,
+              () => loginCallbackCompletions != loginAttemptCallbackBaseline,
             );
             await mountNavigationLogin(restored: false, interactive: true);
             expect(loginApiCreations, 0);
@@ -1265,6 +1266,91 @@ void main() {
                 mounted = false;
                 await captureNavigationLogout();
                 details['logout_button_tapped'] = true;
+              case 'navigation_relogin':
+                expect(freshLogin, isTrue);
+                expect(loggedOut, isTrue);
+                await captureNavigationLogout();
+                final preRelogin = Map<String, Object?>.from(details);
+                details.clear();
+                final oldOwner = owner!, oldView = view!;
+                final oldDevice = device;
+                final samePage = tester.state(find.byType(LoginPage));
+                expect(loginTokenRequests, 1);
+                expect(loginRefreshRequests, 0);
+                expect(loginCallbackCompletions, 1);
+                loginAttemptCallbackBaseline = loginCallbackCompletions;
+                await tester.enterText(
+                  find.byType(TextField).first,
+                  origin.origin,
+                );
+                await tester.tap(find.widgetWithText(FilledButton, '使用企业账号登录'));
+                await until(
+                  () => find.text('登录成功').evaluate().isNotEmpty,
+                  'actual LoginPage re-login',
+                );
+                final pageRetained = identical(
+                  tester.state(find.byType(LoginPage)),
+                  samePage,
+                );
+                expect(pageRetained, isTrue);
+                expect(loginTokenRequests, 2);
+                expect(loginRefreshRequests, 0);
+                expect(loginCallbackCompletions, 2);
+                expect(loginProvider!.authorizeRequests, 2);
+                expect(loginProvider!.freshPKCE, isTrue);
+                expect(loginProvider!.wrongStateIgnored, isTrue);
+                expect(loginProvider!.callbackViaOS, isTrue);
+                await enterNavigationWorkspace(fresh: true);
+                expect(device, isNot(oldDevice));
+                expect(oldOwner.current, isNull);
+                expect(oldView.context, isNull);
+                expect(oldView.canSend, isFalse);
+                final saved = await tester.runAsync(() async {
+                  final account = AccountReference(
+                    origin: origin,
+                    tenantId: config['tenant'] as String,
+                    userId: config['user'] as String,
+                  );
+                  final ns = await accountNamespace(
+                    origin,
+                    account.tenantId,
+                    account.userId,
+                  );
+                  final complete =
+                      await vault.read(ns, 'session') != null &&
+                      await owner!.sessions.loadRefresh(account) != null &&
+                      await vault.read(bootstrapNamespace, 'account') != null;
+                  await recovery.writeAsString(
+                    jsonEncode({
+                      'nonce': nonce,
+                      'storage': storageName(),
+                      'device': device,
+                    }),
+                    flush: true,
+                  );
+                  return complete;
+                });
+                expect(saved, isTrue);
+                loggedOut = false;
+                details.addAll({
+                  'pre_relogin_logout': preRelogin,
+                  'old_device_id': oldDevice,
+                  'storage': storageName(),
+                  'relogin_from_same_page': pageRetained,
+                  'fresh_pkce': loginProvider!.freshPKCE,
+                  'wrong_state_ignored': loginProvider!.wrongStateIgnored,
+                  'callback_via_os': loginProvider!.callbackViaOS,
+                  'old_owner_stopped': oldOwner.current == null,
+                  'old_view_stopped':
+                      oldView.context == null && !oldView.canSend,
+                  'vault_saved': saved,
+                  'workspace_entered': true,
+                  'no_seed_refresh': !config.containsKey('refresh'),
+                  'token_requests': loginTokenRequests,
+                  'refresh_requests': loginRefreshRequests,
+                  'callback_completions': loginCallbackCompletions,
+                  'authorize_requests': loginProvider!.authorizeRequests,
+                });
               case 'navigation_reopen':
                 final before = loginApiCreations;
                 await mountNavigationLogin(restored: false);

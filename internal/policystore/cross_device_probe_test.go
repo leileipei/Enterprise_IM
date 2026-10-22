@@ -246,7 +246,11 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	if logoutNavigation {
 		wantMessages, wantReceipts, wantUserReads, wantAliceSends = 4, 4, 3, 3
 	}
-	if messages != wantMessages || devices != 3 || delivered != wantReceipts || reads != wantReceipts || userReads != wantUserReads || aliceSends != wantAliceSends || bobSends != 1 || minSeq != 1 || maxSeq != wantMessages || distinctIDs != wantMessages {
+	wantDevices, wantBobSends := 3, 1
+	if os.Getenv("IM_TEST_CROSS_RELOGIN") == "1" {
+		wantMessages, wantReceipts, wantUserReads, wantAliceSends, wantDevices, wantBobSends = 5, 11, 5, 3, 5, 2
+	}
+	if messages != wantMessages || devices != wantDevices || delivered != wantReceipts || reads != wantReceipts || userReads != wantUserReads || aliceSends != wantAliceSends || bobSends != wantBobSends || minSeq != 1 || maxSeq != wantMessages || distinctIDs != wantMessages {
 		t.Fatalf("cross final database mismatch: %s", b)
 	}
 	mu.Lock()
