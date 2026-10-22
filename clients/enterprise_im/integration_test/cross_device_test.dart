@@ -501,7 +501,7 @@ void main() {
             isNull,
           );
           api?.close();
-          if (loginLinks != null) await tester.runAsync(loginLinks!.close);
+          if (loginLinks != null) await tester.runAsync(loginLinks.close);
           adapter.dispose();
           if (storage != null) {
             await tester.runAsync(() => storage!.delete(recursive: true));
@@ -649,11 +649,11 @@ void main() {
           if (freshLogin) {
             expect(restarting, isFalse);
             loginLinks = AppLinksSource();
-            await tester.runAsync(loginLinks!.initialize);
+            await tester.runAsync(loginLinks.initialize);
             loginProvider = OwnedLoginProvider(
               origin,
               role,
-              loginLinks!,
+              loginLinks,
               () => loginCallbackCompletions != 0,
             );
             await mountNavigationLogin(restored: false, interactive: true);
@@ -665,8 +665,8 @@ void main() {
               'fresh LoginPage sign-in',
             );
             expect(loginCallbackCompletions, 1);
-            expect(loginProvider!.wrongStateIgnored, isTrue);
-            expect(loginProvider!.callbackViaOS, isTrue);
+            expect(loginProvider.wrongStateIgnored, isTrue);
+            expect(loginProvider.callbackViaOS, isTrue);
             expect(loginTokenRequests, 1);
             expect(loginRefreshRequests, 0);
             await enterNavigationWorkspace(fresh: true);
@@ -696,10 +696,10 @@ void main() {
               'fresh_login_button': true,
               'no_seed_refresh': !config.containsKey('refresh'),
               'real_mobile_callback': true,
-              'wrong_state_ignored': loginProvider!.wrongStateIgnored,
-              'callback_via_os': loginProvider!.callbackViaOS,
+              'wrong_state_ignored': loginProvider.wrongStateIgnored,
+              'callback_via_os': loginProvider.callbackViaOS,
               'callback_completions': loginCallbackCompletions,
-              'authorize_requests': loginProvider!.authorizeRequests,
+              'authorize_requests': loginProvider.authorizeRequests,
               'token_requests': loginTokenRequests,
               'refresh_requests': loginRefreshRequests,
               'workspace_entered': true,
