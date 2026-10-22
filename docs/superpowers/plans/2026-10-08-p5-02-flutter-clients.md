@@ -233,3 +233,10 @@ Task2将SDK安装到独立任务工具目录，产生 `docs/verification/p5-02-t
 固定源 `e60fa443b306ca83171e83fc2c5129a6cd145243`，本轮测试扩展、产品实现未改。Android API36×2＋iOS26.5三原生进程及生产API／Outbox／Receipt、PG／Redis：Bob双端实际LoginPage恢复、点击进入工作空间／任职／会话，原设备renew200、seq1已读；从消息页返回并点实际Shell退出按钮，回LoginPage且安全存储／账号选择／DB文件清空，无工作空间或恢复登录入口。同进程重建页面无新API；Androidforce-stop／iOSSIGKILL后同安装同私有目录、新PID且旧进程消失，重启无seedrefresh，实际LoginPage保持未登录，无OAuth／新注册。iOS退出后Android回复seq2、Alice读；seq3只有存活Android读；双端退出冷启动后seq4不增加回执，3秒静默无设备请求／新认证。8SQL阶段最终4消息／3设备／0撤销／4设备D+R／3用户read。Flutter250／analyzer0／Python320执行313唯一零失败错误跳过，HTTP Go2项普通及race通过；76旧JSON／3894原件及主工作区不变，截图与自有资源清理核实。详情见[专项结果](../../verification/p5-02-logout-navigation-results.json)。
 
 真实UI使用保存refresh和合成IdP恢复，不替代客户交互式SSO或退出后重新登录；退出中途崩溃／存储故障及原生客户回调仍另验。Task9及Tasks5—8原BASE／进行中和真机暂缓保持；无全仓Go／race重跑、完整四平台或远端发布声明。
+
+
+### Task9 新登录及真实移动端回调增量（2026-10-22）
+
+固定测试源 `af128f1c6a223a0f4c48b36af0d7ca497aa7a290`，仅测试扩展，产品实现未改。Android API36×2＋iOS26.5三独立进程，私有配置均无seed refresh；真实LoginPage输入服务地址并点击企业账号登录，生产NativeAuth PKCE／state／nonce、真实AppLinks／MobileLoginCallback和生产token broker串联。合成授权适配器用自有CA获取授权结果，再经生产ExternalBrowserLauncher实际交付OS：错误state被收到但200ms内不完成attempt，有效回调完成一次；每端1token／0refresh，系统安全存储与生产loadRefresh核对、真实任职／会话UI入场通过。Alice两条消息由Bob双端分别送达／已读，iOS回复由Alice送达／已读，5SQL阶段最终3消息／3设备／5设备D+R／3用户read。Flutter250／analyzer0／Python322执行315唯一零失败错误跳过，相关Go普通与race通过。77旧JSON／4333原件及主工作区保持，失败轮次原件保留，截图与自有资源清理核实。详情见[专项结果](../../verification/p5-02-fresh-login-callback-results.json)。
+
+授权适配器不含系统浏览器HTTPS授权页面，不替代客户SSO／MFA／企业身份源；无OS信任修改。退出后重新登录、OAuth进程销毁恢复、真机／桌面签名／通知／完整四平台和远端CI另验；Task9及Tasks5—8原BASE／进行中及真机暂缓保持。无全仓Go／race重跑或远端发布声明。
