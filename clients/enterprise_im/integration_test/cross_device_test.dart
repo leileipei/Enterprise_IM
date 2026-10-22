@@ -1277,8 +1277,19 @@ void main() {
               case 'logout_stable':
                 await captureLogout();
               case 'notification_permission':
+                details['notification_stage'] = 'message_route';
                 expect(find.byType(MessagePage), findsOneWidget);
+                details['notification_back_tooltip_count'] = find
+                    .byTooltip('返回会话列表')
+                    .evaluate()
+                    .length;
+                details['notification_back_icon_count'] = find
+                    .byIcon(Icons.arrow_back)
+                    .evaluate()
+                    .length;
+                details['notification_stage'] = 'back_click';
                 await tester.tap(find.byTooltip('返回会话列表'));
+                details['notification_stage'] = 'back_wait';
                 await until(
                   () =>
                       find.byType(MessagePage).evaluate().isEmpty &&
@@ -1291,7 +1302,13 @@ void main() {
                       .notificationPort,
                   isNull,
                 );
+                details['notification_stage'] = 'permission_click';
+                details['notification_enable_count'] = find
+                    .byTooltip('启用消息通知')
+                    .evaluate()
+                    .length;
                 await tester.tap(find.byTooltip('启用消息通知'));
+                details['notification_stage'] = 'permission_result';
                 final allowed = cmd['allowed'] == true;
                 final notice = allowed
                     ? '已请求消息通知，显示方式由系统设置决定。'

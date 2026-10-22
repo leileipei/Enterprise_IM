@@ -211,6 +211,11 @@ def main():
             dbphase('done');(backend.root/'scenario-done').touch(mode=0o600);result['scenario_passed']=True
     except Exception as exc:
         result['failure_type']=type(exc).__name__;result['failure_reason']=str(exc);save()
+        if args.scenario=='mobile-notifications':
+            for role,actor in actors.items():
+                try:actor.screenshot('notification-failure')
+                except Exception as capture:result.setdefault('failure_screenshot_errors',{})[role]=type(capture).__name__
+            save()
     finally:
         cleanup=[]
         if blocked:
