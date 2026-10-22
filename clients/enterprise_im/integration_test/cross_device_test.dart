@@ -362,7 +362,7 @@ void main() {
                       if (request.method == 'POST' &&
                           request.uri.path == '/api/v1/native/oauth/refresh')
                         loginRefreshRequests++;
-                      if (response.status != 200)
+                      if (response.status < 200 || response.status >= 300)
                         details['navigation_http_failure'] = {
                           'method': request.method,
                           'path': request.uri.path,
@@ -676,12 +676,15 @@ void main() {
                 config['tenant'] as String,
                 config['user'] as String,
               );
-              expect(await vault.read(ns, 'session'), isNotNull);
-              expect(await vault.read(ns, 'refresh'), isNotNull);
-              expect(
-                await vault.read(bootstrapNamespace, 'account'),
-                isNotNull,
+              final account = AccountReference(
+                origin: origin,
+                tenantId: config['tenant'] as String,
+                userId: config['user'] as String,
               );
+              final complete =
+                  await vault.read(ns, 'session') != null &&
+                  await owner!.sessions.loadRefresh(account) != null &&
+                  await vault.read(bootstrapNamespace, 'account') != null;
               await recovery.writeAsString(
                 jsonEncode({
                   'nonce': nonce,
@@ -690,8 +693,9 @@ void main() {
                 }),
                 flush: true,
               );
-              return true;
+              return complete;
             });
+            expect(saved, isTrue);
             details.addAll({
               'fresh_login_button': true,
               'no_seed_refresh': !config.containsKey('refresh'),
