@@ -4,7 +4,7 @@ from .cross_login import admission
 from .cross_navigation import logged_out_page
 from .cross_relogin import relogin
 
-def run(actors,backend,out,result,save):
+def run(actors,backend,out,result,save,restart=False):
  schema=backend.config['schema']
  if not re.fullmatch('im_policy_[a-zA-Z0-9_]+',schema):raise ValueError('relogin_schema_unverified')
  known={'alice':actors['alice'].state['admission']['device_id'],'bob_ios_old':actors['bob_ios'].state['admission']['device_id'],'bob_android_old':actors['bob_android'].state['admission']['device_id']}
@@ -52,13 +52,18 @@ def run(actors,backend,out,result,save):
  readmit(android);row=android.command('read',seqs=['1','2','4']);result['backfill']['bob_android']=row;android.screenshot('relogin-backfill-read');phase('android_relogin_backfill_read',4,5,1,1,2,3,3,1,3)
  android.command('send',text='Android 重新登录后回复五',seq='5');alice.command('received_read',seq='5');android.command('summary',seq='5',status='read');phase('android_relogin_reply_read',5,5,2,1,2,3,3,2,3)
  for actor in actors.values():actor.screenshot('relogin-final-read')
+ if restart:
+  from .cross_relogin_restart import run as restart_run
+  restart_run(actors,backend,out,result,save,phase,events,known)
  for role in ['bob_ios','bob_android']:
   boundary=result['quiet_windows'][role]['start_event'];old=known[role+'_old']
   if any(e.get('device')==old for e in events()[boundary:]):raise ValueError('relogin_old_device_resumed')
- for path,status,count in [('/api/v1/native/oauth/token',200,5),('/api/v1/native/oauth/refresh',200,0),('/api/v1/devices',201,5)]:
+ for path,status,count in [('/api/v1/native/oauth/token',200,5),('/api/v1/native/oauth/refresh',200,2 if restart else 0),('/api/v1/devices',201,5)]:
   if len([e for e in events() if e['method']=='POST' and e['path']==path and e['status']==status])!=count:raise ValueError('relogin_api_counts')
- if any(e['path']=='/api/v1/native/oauth/refresh' for e in events()):raise ValueError('relogin_used_refresh')
+ if not restart and any(e['path']=='/api/v1/native/oauth/refresh' for e in events()):raise ValueError('relogin_used_refresh')
  result['device_ids']=known;save()
  for actor in actors.values():
   if actor.command('done').get('cleanup') is not True:raise ValueError('relogin_cleanup')
- phase('done',5,5,2,1,2,3,3,2,3);(backend.root/'scenario-done').touch(mode=0o600);result['scenario_passed']=True
+ if restart:phase('done',8,5,4,1,2,4,4,4,4)
+ else:phase('done',5,5,2,1,2,3,3,2,3)
+ (backend.root/'scenario-done').touch(mode=0o600);result['scenario_passed']=True

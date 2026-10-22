@@ -37,6 +37,11 @@ func TestCrossReloginBackendFixture(t *testing.T) {
 	TestCrossDeviceBackendFixture(t)
 }
 
+func TestCrossReloginRestartBackendFixture(t *testing.T) {
+	t.Setenv("IM_TEST_CROSS_RELOGIN_RESTART", "1")
+	TestCrossReloginBackendFixture(t)
+}
+
 type crossLoginGrant struct{ role, client, redirect, challenge, nonce string }
 type crossLoginProvider struct {
 	key     *rsa.PrivateKey

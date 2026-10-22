@@ -250,6 +250,9 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	if os.Getenv("IM_TEST_CROSS_RELOGIN") == "1" {
 		wantMessages, wantReceipts, wantUserReads, wantAliceSends, wantDevices, wantBobSends = 5, 11, 5, 3, 5, 2
 	}
+	if os.Getenv("IM_TEST_CROSS_RELOGIN_RESTART") == "1" {
+		wantMessages, wantReceipts, wantUserReads, wantAliceSends, wantDevices, wantBobSends = 8, 15, 8, 4, 5, 4
+	}
 	if messages != wantMessages || devices != wantDevices || delivered != wantReceipts || reads != wantReceipts || userReads != wantUserReads || aliceSends != wantAliceSends || bobSends != wantBobSends || minSeq != 1 || maxSeq != wantMessages || distinctIDs != wantMessages {
 		t.Fatalf("cross final database mismatch: %s", b)
 	}

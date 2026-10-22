@@ -23,6 +23,7 @@ import 'package:enterprise_im/features/conversations/conversation_view.dart';
 import 'package:enterprise_im/platform/mobile_activity.dart';
 import 'package:enterprise_im/platform/native_storage.dart';
 import 'package:enterprise_im/ui/message_page.dart';
+import 'package:enterprise_im/ui/message_list.dart';
 import 'package:enterprise_im/ui/login_page.dart';
 import 'package:enterprise_im/ui/client_shell.dart';
 import 'owned_backend_fixture.dart';
@@ -986,6 +987,36 @@ void main() {
                 );
                 expect(view!.receipts.locallyReadSeqs, isEmpty);
                 details['automatic_catchup'] = true;
+              case 'visible_read':
+              case 'visible_summary':
+                await mount();
+                final targetSeq = Seq.parse(cmd['seq'] as String);
+                final row = find.byKey(ValueKey('message-$targetSeq'));
+                final scroll = find.descendant(
+                  of: find.byType(MessageList),
+                  matching: find.byType(Scrollable),
+                );
+                expect(scroll, findsOneWidget);
+                await tester.scrollUntilVisible(row, 260, scrollable: scroll);
+                final sender = cmd['action'] == 'visible_summary';
+                await until(
+                  () => sender
+                      ? view!.summaries[targetSeq]?.status == 'read'
+                      : view!.receipts.locallyReadSeqs.contains(targetSeq),
+                  'scrolled message and actual read ACK',
+                );
+                expect(row, findsOneWidget);
+                if (sender)
+                  expect(
+                    find.descendant(of: row, matching: find.text('已读')),
+                    findsOneWidget,
+                  );
+                details.addAll({
+                  'actual_ui_scroll': true,
+                  'scroll_target_seq': targetSeq.toString(),
+                  'target_read': true,
+                  'sender_badge_checked': sender,
+                });
               case 'received_read':
                 await until(
                   () =>
