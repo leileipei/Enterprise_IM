@@ -38,6 +38,7 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	ctx := context.Background()
 	conn := db(t)
 	seedDirectConversation(t, conn)
+	freshLogin := os.Getenv("IM_TEST_CROSS_FRESH_LOGIN") == "1"
 	logoutNavigation := os.Getenv("IM_TEST_CROSS_LOGOUT_NAVIGATION") == "1"
 	logoutRace := os.Getenv("IM_TEST_CROSS_LOGOUT_RACE") == "1"
 	permissionChange := os.Getenv("IM_TEST_CROSS_PERMISSION_CHANGE") == "1"
@@ -77,7 +78,7 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	startRealtime := startRealtimeProcess
 	startAPI := startProductionAPI
 	receiptRetry := os.Getenv("IM_TEST_CROSS_RECEIPT_RETRY") == "1"
-	if ackRestart || receiptRetry || permissionChange || logoutRace || logoutNavigation {
+	if ackRestart || receiptRetry || permissionChange || logoutRace || logoutNavigation || freshLogin {
 		startRealtime = crossRetainedRealtime
 		startAPI = crossRetainedAPI
 	}
@@ -86,7 +87,14 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 	receiptWorker := fileProductCommand(productionTestBinary(t, "im-receipt-worker"), []string{"IM_DATABASE_URL=" + dsn, "IM_RECEIPT_REDIS_URL=" + os.Getenv("IM_TEST_REDIS_URL"), "IM_RECEIPT_STREAM=" + receipts})
 	startRealtime(t, receiptWorker, func() bool { return cache.Exists(ctx, receiptoutbox.PublisherPresenceKey(receipts)).Val() == 1 })
 	// Real broker refresh uses the platform-bound synthetic identity issuer.
-	env, refresh := crossRefreshIssuer(t, conn)
+	var env []string
+	var refresh map[string]string
+	var authorize http.Handler
+	if freshLogin {
+		env, refresh, authorize = crossLoginIssuer(t, conn)
+	} else {
+		env, refresh = crossRefreshIssuer(t, conn)
+	}
 	upstream, _ := url.Parse(startAPI(t, productionTestBinary(t, "im-api"), append(env, "IM_DATABASE_URL="+dsn, "IM_HTTP_ADDR=127.0.0.1:0", "IM_RECEIPTS_ENABLED=true", "IM_RECEIPT_WRITES_PER_SECOND=100", "IM_REALTIME_REDIS_URL="+os.Getenv("IM_TEST_REDIS_URL"), "IM_REALTIME_STREAM="+stream, "IM_RECEIPT_STREAM="+receipts)))
 
 	var mu sync.Mutex
@@ -159,6 +167,16 @@ func TestCrossDeviceBackendFixture(t *testing.T) {
 			event["n"] = len(events) + 1
 			events = append(events, event)
 			saveEvents()
+		})
+	}
+	if freshLogin {
+		next := handler
+		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/fixture/authorize" {
+				authorize.ServeHTTP(w, r)
+				return
+			}
+			next.ServeHTTP(w, r)
 		})
 	}
 	proxy, ca := nativeProbeTLS(t, handler)

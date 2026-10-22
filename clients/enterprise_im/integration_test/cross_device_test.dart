@@ -26,6 +26,8 @@ import 'package:enterprise_im/ui/message_page.dart';
 import 'package:enterprise_im/ui/login_page.dart';
 import 'package:enterprise_im/ui/client_shell.dart';
 import 'owned_backend_fixture.dart';
+import 'owned_login_provider.dart';
+import 'package:enterprise_im/platform/login_callback.dart';
 import 'files_and_devices_test.dart' show FixtureTrust, NoInteractiveBrowser;
 
 // Passive test observer: delegates every request/cancellation to the original
@@ -87,6 +89,12 @@ void main() {
         final recovery = File('${documents.path}/cross-recovery.json');
         final restarting = config['restart'] == true;
         final loggedOutRestart = config['logged_out_restart'] == true;
+        final freshLogin = config['fresh_login'] == true;
+        AppLinksSource? loginLinks;
+        OwnedLoginProvider? loginProvider;
+        var loginCallbackCompletions = 0,
+            loginTokenRequests = 0,
+            loginRefreshRequests = 0;
         ClientSession? owner;
         MembershipController? membership;
         ApiClient? api;
@@ -292,7 +300,10 @@ void main() {
           });
         }
 
-        Future<void> mountNavigationLogin({required bool restored}) async {
+        Future<void> mountNavigationLogin({
+          required bool restored,
+          bool interactive = false,
+        }) async {
           // Live widget frames run outside the test's zone. This disposable app
           // needs its fixture CA for UI-owned HTTP and WebSocket clients too.
           // TLS verification stays enabled; no OS trust store is modified.
@@ -321,9 +332,17 @@ void main() {
               home: LoginPage(
                 platform: Platform.operatingSystem,
                 activity: adapter.activity,
-                callbackFactory: (_, __) =>
-                    throw StateError('saved refresh only; no callback'),
-                browser: NoInteractiveBrowser(),
+                callbackFactory: (_, state) {
+                  if (!interactive)
+                    throw StateError('saved refresh only; no callback');
+                  return ObservedMobileCallback(
+                    MobileLoginCallback(state, loginLinks!),
+                    () {
+                      loginCallbackCompletions++;
+                    },
+                  );
+                },
+                browser: interactive ? loginProvider! : NoInteractiveBrowser(),
                 storeFactory: () async =>
                     navigationStore = SessionStore(vault, directory: storage!),
                 apiFactory: (address) {
@@ -337,6 +356,12 @@ void main() {
                       request,
                       response,
                     ) {
+                      if (request.method == 'POST' &&
+                          request.uri.path == '/api/v1/native/oauth/token')
+                        loginTokenRequests++;
+                      if (request.method == 'POST' &&
+                          request.uri.path == '/api/v1/native/oauth/refresh')
+                        loginRefreshRequests++;
                       if (response.status != 200)
                         details['navigation_http_failure'] = {
                           'method': request.method,
@@ -371,6 +396,47 @@ void main() {
               'real LoginPage logged out ready',
             );
           }
+        }
+
+        Future<void> enterNavigationWorkspace({bool fresh = false}) async {
+          await tester.tap(find.text('进入工作空间'));
+          await until(
+            () => find
+                .byKey(ValueKey('membership-${config['membership']}'))
+                .evaluate()
+                .isNotEmpty,
+            'actual workspace membership choice',
+          );
+          await tester.tap(
+            find.byKey(ValueKey('membership-${config['membership']}')),
+          );
+          final tile = find.widgetWithText(
+            ListTile,
+            role == 'alice' ? '用户 A' : '管理员',
+          );
+          await until(
+            () => tile.evaluate().isNotEmpty,
+            'actual conversation tile',
+          );
+          await tester.tap(tile);
+          await until(
+            () => find.byType(MessagePage).evaluate().isNotEmpty,
+            'actual MessagePage route',
+          );
+          final page = tester.widget<MessagePage>(find.byType(MessagePage));
+          view = page.view;
+          summary = page.conversation;
+          membership = view!.memberships;
+          owner = membership!.owner;
+          api = owner!.auth.api;
+          await until(
+            () => view!.context != null && view!.canSend,
+            'actual UI view admitted',
+          );
+          context = view!.context;
+          if (!fresh) expect(context!.device.deviceId, device);
+          device = context!.device.deviceId;
+          mounted = true;
         }
 
         Future<void> captureNavigationLogout() async {
@@ -435,6 +501,7 @@ void main() {
             isNull,
           );
           api?.close();
+          if (loginLinks != null) await tester.runAsync(loginLinks!.close);
           adapter.dispose();
           if (storage != null) {
             await tester.runAsync(() => storage!.delete(recursive: true));
@@ -516,7 +583,7 @@ void main() {
               tenantId: config['tenant'] as String,
               userId: config['user'] as String,
             );
-            if (!restarting) {
+            if (!restarting && !freshLogin) {
               final seed = await auth.restore(
                 account,
                 Platform.operatingSystem,
@@ -542,6 +609,9 @@ void main() {
                 }),
                 flush: true,
               );
+            } else if (freshLogin) {
+              expect(config.containsKey('refresh'), isFalse);
+              expect(await owner!.accounts.load(), isNull);
             } else if (loggedOutRestart) {
               expect(config.containsKey('refresh'), isFalse);
               expect(await owner!.accounts.load(), isNull);
@@ -576,6 +646,69 @@ void main() {
               });
             }
           });
+          if (freshLogin) {
+            expect(restarting, isFalse);
+            loginLinks = AppLinksSource();
+            await tester.runAsync(loginLinks!.initialize);
+            loginProvider = OwnedLoginProvider(
+              origin,
+              role,
+              loginLinks!,
+              () => loginCallbackCompletions != 0,
+            );
+            await mountNavigationLogin(restored: false, interactive: true);
+            expect(loginApiCreations, 0);
+            await tester.enterText(find.byType(TextField).first, origin.origin);
+            await tester.tap(find.widgetWithText(FilledButton, '使用企业账号登录'));
+            await until(
+              () => find.text('登录成功').evaluate().isNotEmpty,
+              'fresh LoginPage sign-in',
+            );
+            expect(loginCallbackCompletions, 1);
+            expect(loginProvider!.wrongStateIgnored, isTrue);
+            expect(loginProvider!.callbackViaOS, isTrue);
+            expect(loginTokenRequests, 1);
+            expect(loginRefreshRequests, 0);
+            await enterNavigationWorkspace(fresh: true);
+            final saved = await tester.runAsync(() async {
+              final ns = await accountNamespace(
+                origin,
+                config['tenant'] as String,
+                config['user'] as String,
+              );
+              expect(await vault.read(ns, 'session'), isNotNull);
+              expect(await vault.read(ns, 'refresh'), isNotNull);
+              expect(
+                await vault.read(bootstrapNamespace, 'account'),
+                isNotNull,
+              );
+              await recovery.writeAsString(
+                jsonEncode({
+                  'nonce': nonce,
+                  'storage': storageName(),
+                  'device': device,
+                }),
+                flush: true,
+              );
+              return true;
+            });
+            details.addAll({
+              'fresh_login_button': true,
+              'no_seed_refresh': !config.containsKey('refresh'),
+              'real_mobile_callback': true,
+              'wrong_state_ignored': loginProvider!.wrongStateIgnored,
+              'callback_via_os': loginProvider!.callbackViaOS,
+              'callback_completions': loginCallbackCompletions,
+              'authorize_requests': loginProvider!.authorizeRequests,
+              'token_requests': loginTokenRequests,
+              'refresh_requests': loginRefreshRequests,
+              'workspace_entered': true,
+              'vault_saved': saved,
+              'same_process': pid == initialPid,
+              'storage': storageName(),
+              'membership_selected': context!.actingMembershipId,
+            });
+          }
           expect(owner, isNotNull);
           expect(
             restarting ? owner!.current == null : membership?.current != null,
@@ -1092,42 +1225,7 @@ void main() {
                 await captureLogout();
               case 'navigation_open':
                 await mountNavigationLogin(restored: true);
-                await tester.tap(find.text('进入工作空间'));
-                await until(
-                  () => find
-                      .byKey(ValueKey('membership-${config['membership']}'))
-                      .evaluate()
-                      .isNotEmpty,
-                  'actual workspace membership choice',
-                );
-                await tester.tap(
-                  find.byKey(ValueKey('membership-${config['membership']}')),
-                );
-                final tile = find.widgetWithText(ListTile, '管理员');
-                await until(
-                  () => tile.evaluate().isNotEmpty,
-                  'actual conversation tile',
-                );
-                await tester.tap(tile);
-                await until(
-                  () => find.byType(MessagePage).evaluate().isNotEmpty,
-                  'actual MessagePage route',
-                );
-                final page = tester.widget<MessagePage>(
-                  find.byType(MessagePage),
-                );
-                view = page.view;
-                summary = page.conversation;
-                membership = view!.memberships;
-                owner = membership!.owner;
-                api = owner!.auth.api;
-                await until(
-                  () => view!.context != null && view!.canSend,
-                  'actual UI view admitted',
-                );
-                context = view!.context;
-                expect(context!.device.deviceId, device);
-                mounted = true;
+                await enterNavigationWorkspace();
                 details.addAll({
                   'login_restore_via_ui': true,
                   'workspace_entered': true,

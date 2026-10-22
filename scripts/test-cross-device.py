@@ -25,6 +25,9 @@ from integration.mobile_backend import Backend, preflight as backend_preflight
 from integration.cross_device import actor_config, validate_participants, checkpoint, network_rule, verify_integrity, confirm_recovery_sender, validate_offline_observation
 from integration.cross_native import AndroidActor, IOSActor, digest
 
+class FreshLoginBackend(Backend):
+    fixture_test='TestCrossFreshLoginBackendFixture'
+
 class LogoutNavigationBackend(Backend):
     fixture_test='TestCrossLogoutNavigationBackendFixture'
 
@@ -48,7 +51,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('flutter-sdk','pub-cache','android-sdk','java-home','gradle-cache','go','developer-dir','output'):
         parser.add_argument('--'+name,type=Path,required=True)
-    parser.add_argument('--scenario',choices=['logout-navigation','logout-race','permission-change','receipt-retry','ack-restart','messaging','group-files-devices','retention-restart','retention-restart-android'],default='messaging')
+    parser.add_argument('--scenario',choices=['fresh-login','logout-navigation','logout-race','permission-change','receipt-retry','ack-restart','messaging','group-files-devices','retention-restart','retention-restart-android'],default='messaging')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parents[1]
     sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -63,6 +66,7 @@ def main():
     owner=secrets.token_hex(16);root=Path(tempfile.mkdtemp(prefix='im-cross-',dir='/private/tmp')).resolve();root.chmod(0o700)
     reg=Registry(root/'registry.jsonl',owner,sha);private=root/owner;client=private/'client'
     result={'status':'failed','source_commit':sha,'owner':owner,'root':str(root),'preflight':pre,'scenario':args.scenario,'commands':[],'actors':{},'backend':{},'checkpoints':[], 'scope':'two owned Android API36 and one iOS26.5 native process; production API and workers; synthetic platform-bound refresh IdP; no physical hardware or interactive customer SSO'}
+    if args.scenario=='fresh-login':result['scope']='three owned Android/iOS native processes; real LoginPage fresh sign-in, PKCE, OS AppLinks callback and production broker; synthetic authorize adapter, no system browser HTTPS or customer SSO/physical acceptance'
     if android_only:result['scope']='two owned Android API36 native processes; production API and workers; synthetic refresh IdP; iOS blocked by operator Xcode initialization; no physical hardware'
     actors={};backend=None;blocked=None
     def save():(out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
@@ -116,7 +120,7 @@ def main():
                 if any(Path(n).name in ('cross-input.json','owned_backend.json') for n in z.namelist()):raise ValueError('runtime_credentials_bundled')
         if digest(client/'pubspec.lock')!=sources['clients/enterprise_im/pubspec.lock']:raise ValueError('cross_lock_changed')
         result['binaries']={'android':{'file':apk.name,'sha256':digest(apk)},**({'ios':{'file':archive.name,'sha256':digest(archive)}} if not android_only else {}),'credentials_created_after_build':True};save()
-        backend_type=LogoutNavigationBackend if args.scenario=='logout-navigation' else LogoutRaceBackend if args.scenario=='logout-race' else PermissionChangeBackend if args.scenario=='permission-change' else ReceiptRetryBackend if args.scenario=='receipt-retry' else AckRestartBackend if args.scenario=='ack-restart' else CrossBackend
+        backend_type=FreshLoginBackend if args.scenario=='fresh-login' else LogoutNavigationBackend if args.scenario=='logout-navigation' else LogoutRaceBackend if args.scenario=='logout-race' else PermissionChangeBackend if args.scenario=='permission-change' else ReceiptRetryBackend if args.scenario=='receipt-retry' else AckRestartBackend if args.scenario=='ack-restart' else CrossBackend
         if args.scenario in ('group-files-devices','retention-restart','retention-restart-android'):
             from integration.cross_group_backend import GroupFilesBackend
             backend_type=GroupFilesBackend
@@ -126,7 +130,11 @@ def main():
             actorout=out/role;actorout.mkdir(mode=0o700);state={};result['actors'][role]=state
             if role=='bob_ios':actor=IOSActor(role,ia,actorout,secrets.token_hex(16),state,save,ienv);binary=app
             else:actor=AndroidActor(role,aa,private/role,actorout,secrets.token_hex(16),reg,pre['android']['simulator'],state,save);binary=apk
-            actors[role]=actor;bootstrap=actor_config(config,role,secrets.token_hex(16))
+            actors[role]=actor
+            if args.scenario=='fresh-login':
+                from integration.cross_login import bootstrap as login_bootstrap
+                bootstrap=login_bootstrap(config,role,secrets.token_hex(16))
+            else:bootstrap=actor_config(config,role,secrets.token_hex(16))
             if role=='bob_ios':actor.start(binary,bootstrap)
             else:actor.start(binary,port,bootstrap)
             actor.config=bootstrap
@@ -134,7 +142,10 @@ def main():
         if not android_only:validate_participants({role:a.state['admission'] for role,a in actors.items()})
         elif len({a.state['admission']['device_id'] for a in actors.values()})!=2 or actors['alice'].state['admission']['user']==actors['bob_android'].state['admission']['user']:raise ValueError('android_independent_accounts_devices_unproven')
         if actors['alice'].sim.name==actors['bob_android'].sim.name or actors['alice'].sim.console==actors['bob_android'].sim.console:raise ValueError('independent_android_vms_unproven')
-        if args.scenario=='logout-navigation':
+        if args.scenario=='fresh-login':
+            from integration.cross_login_scenario import run as run_login_scenario
+            run_login_scenario(actors,backend,out,result,save)
+        elif args.scenario=='logout-navigation':
             from integration.cross_navigation_scenario import run as run_navigation_scenario
             run_navigation_scenario(actors,backend,out,result,save)
         elif args.scenario=='logout-race':
