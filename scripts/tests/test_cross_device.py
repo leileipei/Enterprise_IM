@@ -121,3 +121,13 @@ class LegacyInstalledHashTests(unittest.TestCase):
    for sim in [Sim(b'truncated'),Sim(boot=b'other-boot')]:
     with self.assertRaises(ValueError):native.installed_apk_hash(sim,'/data/app/owned/base.apk',expected)
     self.assertEqual(list(Path(folder).iterdir()),[])
+
+class IdentityFailureEvidenceTests(unittest.TestCase):
+ def test_pid_guard_still_rejects_and_saves_exact_transport_or_pid_failure(self):
+  from unittest.mock import patch
+  for code,text,error in [(1,b'',b'error: device offline'),(0,b'999\n',b'')]:
+   actor=object.__new__(native.AndroidActor);actor.sim=SimpleNamespace(adb_base=['adb','-P','12345'],serial='emulator-5554');actor.env={};actor.state={};saved=[];actor.save=lambda:saved.append(True)
+   with patch.object(native.subprocess,'run',return_value=SimpleNamespace(returncode=code,stdout=text,stderr=error)) as call:
+    with self.assertRaisesRegex(ValueError,'android_actor_process_changed'):actor.identity(123)
+   self.assertEqual(call.call_count,1);self.assertEqual(len(saved),1)
+   self.assertEqual(actor.state['identity_failure'],{'stage':'pidof','expected_pid':123,'actual_exit':code,'stdout':text.decode(),'stderr':error.decode()})

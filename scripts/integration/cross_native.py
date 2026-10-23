@@ -123,7 +123,9 @@ class AndroidActor(Actor):
         return json.loads(p.stdout)
     def identity(self,pid):
         p=subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell','pidof',PACKAGE],env=self.env,capture_output=True,timeout=8)
-        if p.returncode or p.stdout.strip()!=str(pid).encode():raise ValueError('android_actor_process_changed')
+        if p.returncode or p.stdout.strip()!=str(pid).encode():
+            self.state['identity_failure']={'stage':'pidof','expected_pid':pid,'actual_exit':p.returncode,'stdout':p.stdout.decode(errors='replace')[:1024],'stderr':p.stderr.decode(errors='replace')[:2048]}
+            self.save();raise ValueError('android_actor_process_changed')
         p=subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell','run-as',PACKAGE,'cat','/proc/'+str(pid)+'/stat'],env=self.env,capture_output=True,timeout=8)
         if p.returncode:raise ValueError('android_actor_start_unproven')
         fields=p.stdout.decode().rsplit(')',1)[-1].split();ticks=fields[19]
