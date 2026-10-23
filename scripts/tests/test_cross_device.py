@@ -99,3 +99,24 @@ class OfflineRegression(unittest.TestCase):
   for key,value in [('network_error','cancelled'),('network_error','invalid_response'),('network_status',503),('network_status',401),('cursor','2'),('seqs',['1','2']),('read_seqs',['1'])]:
    bad=copy.deepcopy(state);bad['details'][key]=value
    with self.assertRaises(ValueError):m.validate_offline_observation(bad)
+
+class LegacyInstalledHashTests(unittest.TestCase):
+ def test_api24_framed_pull_requires_exact_bytes_and_same_boot_then_removes_copy(self):
+  from types import SimpleNamespace
+  import tempfile,hashlib
+  payload=b'owned installed apk bytes';expected=hashlib.sha256(payload).hexdigest()
+  with tempfile.TemporaryDirectory() as folder:
+   class Sim:
+    private=Path(folder)
+    state={'boot_id':'owned-boot','configuration':{'api':24}}
+    def __init__(self,content=payload,boot=b'owned-boot'):self.content=content;self.boot=boot;self.calls=[]
+    def adb(self,label,args,required=False):
+     self.calls.append(args)
+     if args[0]=='pull':Path(args[-1]).write_bytes(self.content);return SimpleNamespace(returncode=0,stdout=b'framed pull complete')
+     if args[:2]==['shell','cat']:return SimpleNamespace(returncode=0,stdout=self.boot)
+     return SimpleNamespace(returncode=127,stdout=b'',stderr=b'sha256sum: not found')
+   sim=Sim();self.assertEqual(native.installed_apk_hash(sim,'/data/app/owned/base.apk',expected),expected)
+   self.assertTrue(any(x[0]=='pull' for x in sim.calls));self.assertEqual(list(Path(folder).iterdir()),[])
+   for sim in [Sim(b'truncated'),Sim(boot=b'other-boot')]:
+    with self.assertRaises(ValueError):native.installed_apk_hash(sim,'/data/app/owned/base.apk',expected)
+    self.assertEqual(list(Path(folder).iterdir()),[])
