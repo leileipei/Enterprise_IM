@@ -2,6 +2,19 @@
 import json,time,re,uuid
 from .cross_login import admission
 
+def permission(actor,android_only,gate):
+ if actor.role=='bob_ios' or not android_only:
+  platform='iOS' if actor.role=='bob_ios' else 'Android'
+  row=gate(actor,('ios' if platform=='iOS' else 'android')+'_notification_permission','notification_permission',allowed=actor.role!='alice')
+  return row,'actual_'+platform+'_system_prompt'
+ actor.sim.adb('notification-permission-state',['shell','pm','grant' if actor.role=='bob_android' else 'revoke','com.enterpriseim.client','android.permission.POST_NOTIFICATIONS'])
+ if actor.role=='alice':actor.sim.adb('notification-denial-fixed',['shell','pm','set-permission-flags','com.enterpriseim.client','android.permission.POST_NOTIFICATIONS','user-set','user-fixed'])
+ return actor.command('notification_permission',allowed=actor.role!='alice'),'controlled_Android_OS_permission_state'
+
+def visual_proof(row,expected):
+ if any(row.get(k)!=v for k,v in expected.items()) or row.get('status')!='passed' or type(row.get('actual_exit')) is not int or row['actual_exit']!=0 or row.get('same_product_process') is not True or not isinstance(row.get('xctest_result_bundle'),str) or not row['xctest_result_bundle']:
+  raise ValueError('notification_visual_proof_unverified')
+
 def run(actors,backend,out,result,save,android_only=False):
  schema=backend.config['schema']
  if not re.fullmatch('im_policy_[a-zA-Z0-9_]+',schema):raise ValueError('notification_schema_unverified')
@@ -28,11 +41,8 @@ def run(actors,backend,out,result,save,android_only=False):
  result['notification_OS_UI_tap']='deferred_host_Mac_locked' if android_only else 'required'
  for role,actor in actors.items():
   admission(actor.read()['details'])
-  if role!='bob_ios':
-   args=['shell','pm','grant' if role=='bob_android' else 'revoke','com.enterpriseim.client','android.permission.POST_NOTIFICATIONS'];actor.sim.adb('notification-permission-state',args)
-   if role=='alice':actor.sim.adb('notification-denial-fixed',['shell','pm','set-permission-flags','com.enterpriseim.client','android.permission.POST_NOTIFICATIONS','user-set','user-fixed'])
-  row=gate(actor,'ios_notification_permission','notification_permission',allowed=True) if role=='bob_ios' else actor.command('notification_permission',allowed=role!='alice')
-  result['notification_proofs'][role]={'permission':row,'permission_mode':'actual_iOS_system_prompt' if role=='bob_ios' else 'controlled_Android_OS_permission_state'};save();actor.screenshot('notification-permission')
+  row,mode=permission(actor,android_only,gate)
+  result['notification_proofs'][role]={'permission':row,'permission_mode':mode};save();actor.screenshot('notification-permission')
   actor.command('notification_open')
  phase('notification_registered',0,0,0,0,0,0)
  alice.command('send',text='移动通知验证消息一',seq='1')
@@ -51,6 +61,15 @@ def run(actors,backend,out,result,save,android_only=False):
  result['notification_proofs']['alice']['denied_no_notification']=alice.command('notification_status',count=0)
  for actor in recipients:
   proof=result['notification_proofs'][actor.role];proof['logout']=actor.command('navigation_logout');proof['after_logout']=actor.command('notification_status',count=0);save();actor.screenshot('notification-logout-empty')
+  if actor.role=='bob_ios':
+   expected={'role':actor.role,'kind':'ios_logout_visual','owner':actor.state['name'],'udid':actor.udid,'nonce':uuid.uuid4().hex,'source_commit':result['source_commit']}
+   result['ui_gate']=dict(expected,state='awaiting_real_OS_UI');save();path=out/('visual-proof-'+expected['nonce']+'.json');end=time.monotonic()+180
+   while not path.exists():
+    if time.monotonic()>end:raise TimeoutError('notification_visual_gate_timeout')
+    time.sleep(.2)
+   row=json.loads(path.read_text());visual_proof(row,expected);proof['logout_visual']=row
+   proof['after_visual_inspection']=actor.command('notification_status',count=0);actor.screenshot('notification-logout-visual-settled')
+   result['ui_gate']['state']='native_command_completed';save()
  alice.command('send',text='双端退出后不再产生通知四',seq='4');time.sleep(3);phase('notification_both_out_no_receipts',4,1,2,2,1,2)
  for actor in recipients:actor.command('notification_status',count=0)
  for actor in actors.values():
