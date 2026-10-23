@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-23",
+  "status": "partial",
+  "source_commit": "51f58fae5831f562fdab8f9a1cbb9c6a63b3af2e",
+  "baseline_commit": "51f58fae5831f562fdab8f9a1cbb9c6a63b3af2e",
+  "scope": "Independent local UIKit input diagnostic on one owned iOS26.5 simulator, not the Enterprise IM binary, backend or product acceptance.",
+  "product_changes": [],
+  "diagnostic_helper_actual_exit": 0,
+  "diagnostic_build_actual_exit": 0,
+  "diagnostic_sign_actual_exit": 0,
+  "observations": {
+    "ordinary_coordinate_button_click_count": 1,
+    "ordinary_AX_button_click_count": 2,
+    "counts_are_cumulative": true,
+    "real_permission_granted": true,
+    "notification_presented": 1,
+    "notification_response": 0,
+    "expanded_window_attempts": "Notification center observed; no accepted notification response.",
+    "compact_window_attempts": "Card exposes Open; Open and explicit 500ms left click produced no native notification response.",
+    "paired_AX_observation": "Screenshot shows system notification center; simultaneous AX tree exposes underlying UIKit app buttons.",
+    "window_mode_restored": true
+  },
+  "native_events": [
+    {
+      "event": "launched",
+      "time": 1792757108.0681992
+    },
+    {
+      "count": 1,
+      "event": "button_touch",
+      "time": 1792757119.104698
+    },
+    {
+      "count": 2,
+      "event": "button_touch",
+      "time": 1792757126.483504
+    },
+    {
+      "time": 1792757132.1882792,
+      "event": "permission_result",
+      "error": 0,
+      "granted": true
+    },
+    {
+      "error": 0,
+      "event": "notification_submitted",
+      "time": 1792757144.352248
+    },
+    {
+      "event": "notification_presented",
+      "time": 1792757145.371419
+    }
+  ],
+  "real_OS_notification_tap_accepted": false,
+  "interpretation": "Same interaction failure reproduced without Flutter or Enterprise IM business code. This narrows investigation to system/UI interaction; it does not establish an exact tool or OS root cause, prove the product callback is correct, or satisfy product notification-opening acceptance.",
+  "source_review": {
+    "status": "source_review_only",
+    "finding": "No proven product root cause. Independent UIKit reproduction omits Flutter, MessageNotifications, authentication and backend.",
+    "getActiveNotifications": "Getter delegates to platform implementation; no initialize call in getter.",
+    "plugin_factory": "Singleton; constructing for read does not reset response callback.",
+    "native_delegate": "AppDelegate sets UNUserNotificationCenter delegate; plugin registers as application delegate for non-background engine. Static wiring observed, delivery remains unverified.",
+    "lifecycle_hypothesis": "Membership admission is not replaced by SyncCoordinator pause/resume; no supported fix from this hypothesis.",
+    "files_sha256": {
+      "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/clients/enterprise_im/lib/platform/notifications.dart": "09e077353e165a64883c715d97f4bf5bc19104882a33622f28dacf81f683e1ba",
+      "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/clients/enterprise_im/ios/Runner/AppDelegate.swift": "217486a791b9b6303d94e4f8be8ab788da4fdb65189f871f27c844d742e59f7e",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-e8113bf-20261015/pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1/lib/src/flutter_local_notifications_plugin.dart": "9eac61181cf3281a9d707fa7890c636d64823c5d83b60bd9140fd24c1cde3e26",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-e8113bf-20261015/pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1/ios/flutter_local_notifications/Sources/flutter_local_notifications/FlutterLocalNotificationsPlugin.m": "42d8a987645116e599bf887b0211851636033418d63a45a414ff162acb5b7bd7",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-e8113bf-20261015/pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1/ios/flutter_local_notifications/Sources/flutter_local_notifications/FlutterEngineManager.m": "9e384bbe2668854e11b0b7341de2bfd53ee06acaf5a4f04726ef38dc3031086b"
+    }
+  },
+  "preservation_and_cleanup": {
+    "passed": true,
+    "scope": "resource preservation and diagnostic observations, not notification-open feature acceptance",
+    "source_commit": "51f58fae5831f562fdab8f9a1cbb9c6a63b3af2e",
+    "old_reports_verified": 83,
+    "old_raw_verified": 6160,
+    "source_blobs_verified": 1361,
+    "main_status_unchanged": true,
+    "worktree_clean": true,
+    "owned_native_pid_absent": 23983,
+    "owned_ios_udid_absent": "59636DFA-132F-4397-B528-69436E9A497A",
+    "owned_root_removed": "/private/tmp/im-notification-input-6fzhdgxp",
+    "CUA_root_removed": "/private/tmp/im-input-cua-6NQY1d",
+    "native_events": 6,
+    "ordinary_button_counts": [
+      1,
+      2
+    ],
+    "permission_granted": true,
+    "notification_presented": 1,
+    "notification_response": 0,
+    "product_acceptance": false,
+    "product_changes": [],
+    "Android_or_backend_resources_created": false,
+    "diagnostic_binary_archive_retained": false,
+    "diagnostic_source_build_commands_manifest_retained": true
+  },
+  "CUA_evidence_cleanup": {
+    "passed": true,
+    "owned_root": "/private/tmp/im-input-cua-6NQY1d",
+    "root_removed": true,
+    "copied_sha256": {
+      "actions.json": "8fd3c63ff3c6b45d3774196a281a9b744595e2ce595b0bc51dc7e1d4256d8c87",
+      "compact-open-unaccepted.png": "af37b241ceb053f6b1897c44edda47060dea1e2094d7d419017d82b486f43e49",
+      "initial.png": "5c9a2164ba0ae9a2b0b6173f5d53b72a6663d41744ae5f355e55bc1e9ac74b94",
+      "notification-center.png": "7a75b0f95a80bbfd3e66c5a8b473ba370ab3a4236b5b8686d6fd021c91712494",
+      "system-notification-with-app-tree.png": "9ef88cfc97e341649ac89c117cdaf86566218f504e13f3983251c8976687174d",
+      "system-notification-with-app-tree.txt": "8b2cfd46b611a78a135f4a163b66ba0626a9d0e1459e7e02796b55e21206f77b"
+    }
+  },
+  "visual_review": {
+    "reviewed_individually": true,
+    "diagnostic_only": true,
+    "screenshots": {
+      "initial.png": {
+        "sha256": "5c9a2164ba0ae9a2b0b6173f5d53b72a6663d41744ae5f355e55bc1e9ac74b94",
+        "observation": "UIKit diagnostic app with ordinary buttons and count0. Not product UI."
+      },
+      "notification-center.png": {
+        "sha256": "7a75b0f95a80bbfd3e66c5a8b473ba370ab3a4236b5b8686d6fd021c91712494",
+        "observation": "System notification center contains diagnostic notification; no message body or user data."
+      },
+      "compact-open-unaccepted.png": {
+        "sha256": "af37b241ceb053f6b1897c44edda47060dea1e2094d7d419017d82b486f43e49",
+        "observation": "Compact DeviceHub shows Open for diagnostic notification; response still0."
+      },
+      "system-notification-with-app-tree.png": {
+        "sha256": "9ef88cfc97e341649ac89c117cdaf86566218f504e13f3983251c8976687174d",
+        "observation": "System notification center is visible while paired AX text still exposes underlying app buttons."
+      }
+    },
+    "product_acceptance": false,
+    "window_mode_restored": true
+  },
+  "binary_retention": "Probe source, build command and binary manifest retained. Compiled diagnostic bundle was removed with its owned root; no binary archive retained.",
+  "prior_product_results": "docs/verification/p5-02-mobile-notification-tap-results.json retained unchanged. No fresh Flutter, Go, Python full suite or Android/iOS product build in this diagnostic increment.",
+  "remaining_gate": "Explicit choice required for Android ADB and iOS XCTest targeted system notification clicks on new owned simulators, or manual assistance; alternative input not used.",
+  "task_state": "Tasks5-9 original BASE and in_progress retained; physical validation deferred by user.",
+  "remote_actions": "none",
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/CUA-transfer-cleanup.json": "ee699a0273b4393fbef96ba9abcee87d344a6dd24fa7943015277b6f65c4d319",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/baseline.json": "54e57a7eb8471535a7938983fb30080b220a750997845a90d1b0b88d3d25c6c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/bootstatus.log": "11c89c7875827406c2932e81c22e4450977f2943c7aaaee29b49221f08476854",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/build.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/create.log": "3bc7af904d34ce558563bb51b2a32a326ffac8ba9884053344f62a62085352f9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/cua/actions.json": "8fd3c63ff3c6b45d3774196a281a9b744595e2ce595b0bc51dc7e1d4256d8c87",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/cua/compact-open-unaccepted.png": "af37b241ceb053f6b1897c44edda47060dea1e2094d7d419017d82b486f43e49",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/cua/initial.png": "5c9a2164ba0ae9a2b0b6173f5d53b72a6663d41744ae5f355e55bc1e9ac74b94",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/cua/notification-center.png": "7a75b0f95a80bbfd3e66c5a8b473ba370ab3a4236b5b8686d6fd021c91712494",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/cua/system-notification-with-app-tree.png": "9ef88cfc97e341649ac89c117cdaf86566218f504e13f3983251c8976687174d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/cua/system-notification-with-app-tree.txt": "8b2cfd46b611a78a135f4a163b66ba0626a9d0e1459e7e02796b55e21206f77b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/data-path.log": "893cfee29bf141cf64bd8d05f47c1252d6ad100da171f3a5e89ab31f6292cb07",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/helper.py": "70c0db67e010000c4e350dafdd0fc7b06c732393032e5d9c6c11d19313f66abf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/helpers/im-notification-input-audit.py": "b92a3c998d407df4280c7be59caf67c566716037eaa6dd1717e1bb2a5b61e301",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/helpers/im-notification-input-checkpoint.py": "6895a9dd822e55965231e620bec7cb6eafd5cc167fe3a53a2d4aa1f6429a0184",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/helpers/im-notification-input-postcheck.py": "00181417b0a01d05dc70333c5edb3aba88138dbd7636600c4f1818d89aadb6f3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-0.log": "7b4caf6ca6aeab6c6b0363dde0dd904ce53dc51e9196287723f28b93abe361fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-11.log": "7b4caf6ca6aeab6c6b0363dde0dd904ce53dc51e9196287723f28b93abe361fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-11.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-2.log": "1ecaec359a1c3560124938f803d6ecdceca62c49c9064f9174d40f871714f075",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-8.log": "a8caea3951a0841c7da42dffb361a8f1a416f1566998f2ef53d2a83d4f526354",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/inventory-8.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/launch.log": "756dd7b0f90d14e049a607e94ad08176d5c46858bc5fc852dde02f467efb3b9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/native-events.jsonl": "8027559660ad97280dada665b50af8f7e1c8a24f4165228bec61b2dd56ff99a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/probe.m": "81c5da9a640e69ee81cda047ae6e88a7ebe24a83d2c296762d91394bdc344072",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/resource-and-preservation-audit.json": "66266ecf23ca212df99a8fb3bc2634fef3fad938ff473fc31aea51d91f44649a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/result.json": "9014b8afc17b17fe465ce70afba8acd836d04b080eae4143309c9910a03470cf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/runner-observed-exit.json": "f3a27a0d5f39ea0d49d1224c80682c537bc2cb4a470ea1d2960a1e06db4d0c62",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/sdk.log": "fc0e1f390e49274ccc3b9484c8af9047f9e78868439ada0261b8fcda80a25990",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/sdk.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/sign.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/sign.log.stderr": "4f780d504bdd9e4468d2711cd16a2472e351eb60fac81ff7c6d7186caccf599a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/source-review.json": "4ca8e21469f463bcff0f82d98588f51748adf0dd806ad49bc2703fbda2085559",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/stop": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/tracked-source-sha256.json": "a41c71c13cb0838b8f5cf0460f0f40cc135c2d7cb3c181851ae0fdac12cdb82f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/visual-review.json": "1ba6afb45897e5b2e2d90f84b2c96e01ef617a703b501e2e00b00b639f04e5e7"
+  },
+  "postcommit_audit_outputs_expected": [
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/postcommit-audit.json",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-notification-input/postcommit-host.log"
+  ]
+}
