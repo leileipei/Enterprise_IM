@@ -131,3 +131,18 @@ class IdentityFailureEvidenceTests(unittest.TestCase):
     with self.assertRaisesRegex(ValueError,'android_actor_process_changed'):actor.identity(123)
    self.assertEqual(call.call_count,1);self.assertEqual(len(saved),1)
    self.assertEqual(actor.state['identity_failure'],{'stage':'pidof','expected_pid':123,'actual_exit':code,'stdout':text.decode(),'stderr':error.decode()})
+
+class LegacyIdentityTransportTests(unittest.TestCase):
+ def test_api24_255_with_expected_pid_requires_fresh_success_same_boot_and_start_ticks(self):
+  from unittest.mock import patch
+  def actor(boot=b'own-boot',ticks='17'):
+   a=object.__new__(native.AndroidActor);a.sim=SimpleNamespace(adb_base=['adb','-P','12345'],serial='emulator-5554',adb=lambda *args,**kw:SimpleNamespace(returncode=0,stdout=boot,stderr=b''));a.env={};a.state={'configuration':{'api':24},'boot_id':'own-boot'};a.save=lambda:None;a.start_ticks=ticks;return a
+  pid255=SimpleNamespace(returncode=255,stdout=b'123\n',stderr=b'');pid0=SimpleNamespace(returncode=0,stdout=b'123\n',stderr=b'');stat=SimpleNamespace(returncode=0,stdout=('123 (owned) '+' '.join(['S']+['0']*18+['17'])+'\n').encode(),stderr=b'')
+  a=actor()
+  with patch.object(native.subprocess,'run',side_effect=[pid255,pid0,stat]) as call:
+   a.identity(123)
+  self.assertEqual(call.call_count,3);self.assertEqual(a.state['identity_transport_recoveries'],1);self.assertEqual(a.state['identity_transport_observations'][0]['actual_exit'],255)
+  for a,responses,error in [(actor(b'new-boot'),[pid255,pid0],'android_actor_vm_boot_unproven'),(actor(ticks='18'),[pid255,pid0,stat],'android_actor_pid_reused'),(actor(),[pid255]*5,'android_actor_process_changed'),(actor(),[SimpleNamespace(returncode=255,stdout=b'999\n',stderr=b'')],'android_actor_process_changed')]:
+   with patch.object(native.subprocess,'run',side_effect=responses):
+    with self.assertRaisesRegex(ValueError,error):a.identity(123)
+   self.assertEqual(a.state.get('identity_transport_recoveries',0),0)

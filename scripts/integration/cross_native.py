@@ -122,15 +122,27 @@ class AndroidActor(Actor):
         if p.returncode:return None
         return json.loads(p.stdout)
     def identity(self,pid):
-        p=subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell','pidof',PACKAGE],env=self.env,capture_output=True,timeout=8)
-        if p.returncode or p.stdout.strip()!=str(pid).encode():
-            self.state['identity_failure']={'stage':'pidof','expected_pid':pid,'actual_exit':p.returncode,'stdout':p.stdout.decode(errors='replace')[:1024],'stderr':p.stderr.decode(errors='replace')[:2048]}
-            self.save();raise ValueError('android_actor_process_changed')
+        retried=False
+        for attempt in range(5):
+            p=subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell','pidof',PACKAGE],env=self.env,capture_output=True,timeout=8)
+            if p.returncode==0 and p.stdout.strip()==str(pid).encode():break
+            observation={'stage':'pidof','expected_pid':pid,'actual_exit':p.returncode,'stdout':p.stdout.decode(errors='replace')[:1024],'stderr':p.stderr.decode(errors='replace')[:2048]}
+            if self.state.get('configuration',{}).get('api')==24 and p.returncode==255 and p.stdout.strip()==str(pid).encode() and not p.stderr and attempt<4:
+                self.state.setdefault('identity_transport_observations',[]).append(observation)
+                self.save();retried=True;time.sleep(.05);continue
+            self.state['identity_failure']=observation;self.save();raise ValueError('android_actor_process_changed')
+        if retried:
+            boot=self.sim.adb('identity-retry-boot-'+str(len(self.state['identity_transport_observations'])),['shell','cat','/proc/sys/kernel/random/boot_id'],required=False)
+            if boot.returncode or boot.stdout.decode().strip()!=self.state['boot_id']:raise ValueError('android_actor_vm_boot_unproven')
         p=subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell','run-as',PACKAGE,'cat','/proc/'+str(pid)+'/stat'],env=self.env,capture_output=True,timeout=8)
         if p.returncode:raise ValueError('android_actor_start_unproven')
         fields=p.stdout.decode().rsplit(')',1)[-1].split();ticks=fields[19]
         if self.start_ticks is not None and ticks!=self.start_ticks:raise ValueError('android_actor_pid_reused')
         self.start_ticks=ticks;self.state['process_start_ticks']=ticks
+        if retried:
+            self.state['identity_transport_recoveries']=self.state.get('identity_transport_recoveries',0)+1
+            self.state.setdefault('identity_transport_revalidated',[]).append({'pid':pid,'pid_query_exit':0,'boot_id':self.state['boot_id'],'start_ticks':ticks})
+            self.save()
     def screenshot(self,label):
         path=self.out/(label+'.png');path.write_bytes(self.sim.adb('screen-'+label,['exec-out','screencap','-p'],binary=True).stdout);validate_png(path.read_bytes())
     def stop_for_restart(self):
