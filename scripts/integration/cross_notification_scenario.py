@@ -2,7 +2,14 @@
 import json,time,re,uuid
 from .cross_login import admission
 
-def permission(actor,android_only,gate):
+def permission(actor,android_only,gate,legacy_android=False):
+ if legacy_android:
+  if actor.role not in ('alice','bob_android') or actor.state.get('configuration',{}).get('api')!=24:raise ValueError('notification_legacy_API24_identity_required')
+  mode='ignore' if actor.role=='alice' else 'allow'
+  actor.sim.adb('notification-legacy-state',['shell','appops','set','com.enterpriseim.client','POST_NOTIFICATION',mode])
+  actual=actor.sim.adb('notification-legacy-readback',['shell','appops','get','com.enterpriseim.client','POST_NOTIFICATION']).stdout.decode()
+  if re.findall(r'^\s*POST_NOTIFICATION: (allow|ignore)(?:;|\s*$)',actual,re.M)!=[mode]:raise ValueError('notification_legacy_state_unverified')
+  return actor.command('notification_permission',allowed=actor.role!='alice'),'controlled_Android_API24_app_notification_state'
  if actor.role=='bob_ios' or not android_only:
   platform='iOS' if actor.role=='bob_ios' else 'Android'
   row=gate(actor,('ios' if platform=='iOS' else 'android')+'_notification_permission','notification_permission',allowed=actor.role!='alice')
@@ -15,7 +22,7 @@ def visual_proof(row,expected):
  if any(row.get(k)!=v for k,v in expected.items()) or row.get('status')!='passed' or type(row.get('actual_exit')) is not int or row['actual_exit']!=0 or row.get('same_product_process') is not True or not isinstance(row.get('xctest_result_bundle'),str) or not row['xctest_result_bundle']:
   raise ValueError('notification_visual_proof_unverified')
 
-def run(actors,backend,out,result,save,android_only=False):
+def run(actors,backend,out,result,save,android_only=False,legacy_android=False):
  schema=backend.config['schema']
  if not re.fullmatch('im_policy_[a-zA-Z0-9_]+',schema):raise ValueError('notification_schema_unverified')
  def phase(name,n,a,i,d,ua,ub):
@@ -38,10 +45,10 @@ def run(actors,backend,out,result,save,android_only=False):
   result['ui_gate']['state']='native_command_completed';save();return row
  result['notification_proofs']={}
  alice=actors['alice'];ios=actors.get('bob_ios');android=actors['bob_android'];recipients=[ios,android] if ios else [android]
- result['notification_OS_UI_tap']='deferred_host_Mac_locked' if android_only else 'required'
+ result['notification_OS_UI_tap']='deferred_host_Mac_locked' if android_only and not legacy_android else 'required'
  for role,actor in actors.items():
   admission(actor.read()['details'])
-  row,mode=permission(actor,android_only,gate)
+  row,mode=permission(actor,android_only,gate,legacy_android=legacy_android)
   result['notification_proofs'][role]={'permission':row,'permission_mode':mode};save();actor.screenshot('notification-permission')
   actor.command('notification_open')
  phase('notification_registered',0,0,0,0,0,0)
@@ -50,7 +57,7 @@ def run(actors,backend,out,result,save,android_only=False):
  alice.command('summary',seq='1',status='read');phase('notification_first_read',1,0,1,1,0,1)
  for actor in recipients:
   proof=result['notification_proofs'][actor.role];proof['shown']=actor.command('notification_status',count=1);actor.screenshot('notification-shown');save()
-  if android_only:continue
+  if android_only and not legacy_android:continue
   proof['armed']=actor.command('notification_arm_tap');save()
   proof['tapped']=gate(actor,'ios_notification_tap' if actor.role=='bob_ios' else 'android_notification_tap','notification_tapped');save();actor.screenshot('notification-tap-recovered')
  alice.command('send',text='移动通知退出清理消息二',seq='2')

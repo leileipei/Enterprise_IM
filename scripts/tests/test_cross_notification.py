@@ -28,3 +28,27 @@ class NotificationGateTests(unittest.TestCase):
    with self.assertRaises(ValueError,msg=key):m.visual_proof(dict(row,**{key:value}),expected)
   for key in row:
    with self.assertRaises(ValueError,msg=key):m.visual_proof({k:v for k,v in row.items() if k!=key},expected)
+
+class LegacyNotificationGateTests(unittest.TestCase):
+ def test_api24_permission_uses_verified_app_state_and_rejects_wrong_api_or_readback(self):
+  from types import SimpleNamespace
+  m=importlib.import_module('integration.cross_notification_scenario')
+  class Actor:
+   def __init__(self,role,api=24,reply=None):self.role=role;self.state={'configuration':{'api':api}};self.sim=self;self.calls=[];self.reply=reply
+   def adb(self,label,args):
+    self.calls.append(args)
+    return SimpleNamespace(stdout=(self.reply if self.reply is not None else 'POST_NOTIFICATION: '+('ignore' if self.role=='alice' else 'allow')+'; time=+1s ago\n').encode())
+   def command(self,action,**kwargs):self.calls.append((action,kwargs));return {'ok':True}
+  def no_dialog(*a,**kw):self.fail('API24 must not wait for nonexistent runtime prompt')
+  for role in ['alice','bob_android']:
+   a=Actor(role);row,mode=m.permission(a,True,no_dialog,legacy_android=True)
+   self.assertEqual(row,{'ok':True});self.assertEqual(mode,'controlled_Android_API24_app_notification_state')
+   self.assertFalse(any('pm' in x for x in a.calls));self.assertEqual(a.calls[-1],('notification_permission',{'allowed':role!='alice'}))
+  for api in [23,25,36,None]:
+   a=Actor('alice',api)
+   with self.assertRaises(ValueError):m.permission(a,True,no_dialog,legacy_android=True)
+   self.assertEqual(a.calls,[])
+  for reply in ['','No operations.','POST_NOTIFICATION: allow;\n','POST_NOTIFICATION: ignore;\nPOST_NOTIFICATION: allow;\n']:
+   a=Actor('alice',reply=reply)
+   with self.assertRaises(ValueError):m.permission(a,True,no_dialog,legacy_android=True)
+   self.assertTrue(all(not isinstance(x,tuple) for x in a.calls))
