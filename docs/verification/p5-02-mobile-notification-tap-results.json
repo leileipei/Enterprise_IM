@@ -1,0 +1,443 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-23",
+  "status": "partial",
+  "source_commit": "7d436f0d3809e6f191cd63787a357acbfcda089c",
+  "baseline_commit": "7d436f0d3809e6f191cd63787a357acbfcda089c",
+  "scope": "Owned Android API36 and iOS26.5 simulator processes; actual production messaging API/workers with synthetic login adapter. Physical devices deferred.",
+  "product_changes": [],
+  "fresh_verification": {
+    "Flutter_shared": {
+      "actual_exit": 0,
+      "passed": 260
+    },
+    "analysis": {
+      "actual_exit": 0,
+      "issues": 0
+    },
+    "Android_integration_build_actual_exit": 0,
+    "iOS_integration_build_actual_exit": 0,
+    "native_host_actual_exit": 1,
+    "native_backend_actual_exit": 1,
+    "backend_command_failures": []
+  },
+  "native_attempts": [
+    {
+      "run": "run01",
+      "source": "7d436f0d3809e6f191cd63787a357acbfcda089c",
+      "status": "failed",
+      "failure": "native_actor_failed_bob_ios",
+      "backend_exit": 1
+    }
+  ],
+  "accepted_prefix": {
+    "real_iOS_system_permission_allow": true,
+    "real_iOS_generic_notification_display": true,
+    "proof": {
+      "permission": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "29f651304abeaed060c62c3114cdce1d",
+        "pid": 4636,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "14f59cf5-ba93-4c8a-8b08-0623b2f7aba7",
+        "id": 1,
+        "status": "ok",
+        "details": {
+          "notification_stage": "permission_result",
+          "notification_back_tooltip_count": 1,
+          "notification_back_icon_count": 1,
+          "notification_enable_count": 1,
+          "notification_default_port": true,
+          "notification_explicit_click": true,
+          "notification_allowed": true,
+          "cursor": null,
+          "observed_failures": [],
+          "observed_receipt_http": [],
+          "latest_network_code": null,
+          "latest_network_status": null,
+          "loading": false,
+          "observed_503": false,
+          "seqs": [],
+          "read_seqs": [],
+          "summaries": {}
+        },
+        "cleanup": false
+      },
+      "permission_mode": "actual_iOS_system_prompt",
+      "shown": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "29f651304abeaed060c62c3114cdce1d",
+        "pid": 4636,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "14f59cf5-ba93-4c8a-8b08-0623b2f7aba7",
+        "id": 4,
+        "status": "ok",
+        "details": {
+          "notification_count": 1,
+          "notification_generic_only": true,
+          "notification_payload_check": "opaque43",
+          "cursor": "1",
+          "observed_failures": [],
+          "observed_receipt_http": [],
+          "latest_network_code": null,
+          "latest_network_status": null,
+          "loading": false,
+          "observed_503": false,
+          "seqs": [
+            "1"
+          ],
+          "read_seqs": [
+            "1"
+          ],
+          "summaries": {}
+        },
+        "cleanup": false
+      },
+      "armed": {
+        "role": "bob_ios",
+        "platform": "ios",
+        "nonce": "29f651304abeaed060c62c3114cdce1d",
+        "pid": 4636,
+        "user": "00000000-0000-4000-8000-000000000232",
+        "device_id": "14f59cf5-ba93-4c8a-8b08-0623b2f7aba7",
+        "id": 5,
+        "status": "ok",
+        "details": {
+          "tap_list_before": 1,
+          "tap_sync_before": 8,
+          "cursor": "1",
+          "observed_failures": [],
+          "observed_receipt_http": [],
+          "latest_network_code": null,
+          "latest_network_status": null,
+          "loading": false,
+          "observed_503": false,
+          "seqs": [
+            "1"
+          ],
+          "read_seqs": [
+            "1"
+          ],
+          "summaries": {}
+        },
+        "cleanup": false
+      }
+    },
+    "database_first_read": {
+      "messages": 1,
+      "devices": 3,
+      "roles": {
+        "alice": {
+          "delivered": 0,
+          "read": 0
+        },
+        "bob_ios": {
+          "delivered": 1,
+          "read": 1
+        },
+        "bob_android": {
+          "delivered": 1,
+          "read": 1
+        }
+      },
+      "users": {
+        "alice": 0,
+        "bob": 1
+      }
+    }
+  },
+  "real_OS_notification_tap_accepted": false,
+  "tap_diagnostics": {
+    "condition": "real OS notification tap fresh list and sync",
+    "observations": {
+      "lists": 1,
+      "syncs": 13,
+      "armed_lists": 1,
+      "armed_syncs": 8,
+      "foreground": false,
+      "focused": false,
+      "same_notification_view": true,
+      "message_route_present": true
+    },
+    "meaning": "Authorized list count stayed 1. Sync count 8 to 13 alone is insufficient; same MessagePage remained. No accepted notification-open command.",
+    "CUA": "Notification card and Open action visible. App returned once, but later same notification remained in notification center. No confirmed OS activation; root cause unproven.",
+    "host": "Fresh CUA inventory stayed accessible; this attempt is not attributed to Mac relocking.",
+    "Android": "Owned visible process verified. CUA exact executable path and name returned Invalid app. Android tap phase not reached.",
+    "manual_assistance": "Requested during live window; no response before native timeout. All referenced devices now removed; earlier click request superseded.",
+    "next_gate": "Explicit user choice requested for Android ADB targeted notification click and iOS XCTest system notification click on new owned simulators, or manual assistance. No alternative UI input used."
+  },
+  "preservation_and_cleanup": {
+    "passed": true,
+    "feature_acceptance": "partial_UI_tap_not_verified",
+    "failed_condition": "real OS notification tap fresh list and sync",
+    "native_failure_observations": {
+      "lists": 1,
+      "syncs": 13,
+      "armed_lists": 1,
+      "armed_syncs": 8,
+      "foreground": false,
+      "focused": false,
+      "same_notification_view": true,
+      "message_route_present": true
+    },
+    "tested_source_commit": "7d436f0d3809e6f191cd63787a357acbfcda089c",
+    "old_reports_verified": 82,
+    "old_raw_verified": 5999,
+    "main_status_unchanged": true,
+    "source_blobs_verified": 1360,
+    "owned_process_registration_observations_absent": 19,
+    "native_ios_process_identity_observations_absent": 1,
+    "owned_roots_removed": [
+      "/private/tmp/im-cross-7bxdct2f"
+    ],
+    "owned_ios_udids_removed": [
+      "22EF38D2-AFB7-46CF-8F6E-037BDC021237"
+    ],
+    "owned_containers_and_ports_absent": true,
+    "selected_tools_unchanged": true,
+    "runtime_runs": [
+      {
+        "run": "run01",
+        "source": "7d436f0d3809e6f191cd63787a357acbfcda089c",
+        "status": "failed",
+        "failure": "native_actor_failed_bob_ios",
+        "backend_exit": 1
+      }
+    ],
+    "no_product_changes_this_increment": true,
+    "product_delta": [],
+    "physical_validation": "deferred_by_user"
+  },
+  "CUA_evidence_cleanup": {
+    "passed": true,
+    "owned_temporary_root": "/private/tmp/im-notification-tap-cua-YJ0gNz",
+    "removed": true,
+    "copied_files_sha256": {
+      "events.json": "2c5df05df8fa3d82222a65c60217b99ff19076da7460ea7c376904a0c1296880",
+      "initial-device-hub.png": "8c2e0b13be5658f48ac6b366819a47470fd10635797ba48e5a21f10d9fad7d8f",
+      "initial-device-hub.txt": "6174ba5c02edbb072f43ecab9a044cad6aa58121561a0aaa6e2648520ce7a468",
+      "ios-notification-center.png": "772f3fdda339306176058809ab7674548bb39d581c9b9e08b3d0837c2a5cf865",
+      "ios-open-action-unaccepted.png": "b13e7644f2034d11c92605fd8e2be03dc640ea90e4951faed00475a0304b1e95",
+      "ios-permission-prompt.png": "c4868746bff6147eae94c4cb06392f7dbc42d6bcb549777ff199eab04eedfc13",
+      "ios-returned-app-no-accepted-tap.png": "5787bcfed8a590688c24b790924cee3b8e5869899f1e221bec3e1bf93ca54b57"
+    }
+  },
+  "visual_review": {
+    "reviewed_individually": true,
+    "screenshots": {
+      "initial-device-hub.png": {
+        "sha256": "8c2e0b13be5658f48ac6b366819a47470fd10635797ba48e5a21f10d9fad7d8f",
+        "observation": "No device selected; default external iPhone18Pro untouched."
+      },
+      "ios-permission-prompt.png": {
+        "sha256": "c4868746bff6147eae94c4cb06392f7dbc42d6bcb549777ff199eab04eedfc13",
+        "observation": "Real owned iOS26.5 enterprise IM system permission prompt before CUA Allow."
+      },
+      "ios-notification-center.png": {
+        "sha256": "772f3fdda339306176058809ab7674548bb39d581c9b9e08b3d0837c2a5cf865",
+        "observation": "Real OS notification card has generic title/body; not an accepted opening."
+      },
+      "ios-returned-app-no-accepted-tap.png": {
+        "sha256": "5787bcfed8a590688c24b790924cee3b8e5869899f1e221bec3e1bf93ca54b57",
+        "observation": "MessagePage visible again; no fresh authorized-list evidence. Later notification center still contained same notification."
+      },
+      "ios-open-action-unaccepted.png": {
+        "sha256": "b13e7644f2034d11c92605fd8e2be03dc640ea90e4951faed00475a0304b1e95",
+        "observation": "Open action visible on OS notification; no authorized-list plus sync acceptance."
+      }
+    },
+    "real_permission_allowed_and_generic_notification_display": true,
+    "tap_accepted": false,
+    "manual_assistance": "Requested; no response during this run. Device now removed, old prompt superseded.",
+    "host_lock": "Fresh CUA inventory accessible during failure; no relock assertion this increment.",
+    "Android_binding": "CUA exact running executable path and qemu name both returned Invalid app; no alternate UI injection."
+  },
+  "Go_Python_reference": {
+    "reference_source": "0efff54a0b69ff80aca00b6b94a3989703460a21",
+    "tested_source": "7d436f0d3809e6f191cd63787a357acbfcda089c",
+    "unchanged_trees": [
+      "scripts",
+      "cmd",
+      "internal",
+      "migrations",
+      "testdata"
+    ],
+    "fresh_execution_this_increment": false,
+    "prior_results_referenced": true
+  },
+  "remaining_gates": [
+    "Both platforms must open a real OS notification, fetch a fresh authorized list and sync, and keep the same MessagePage.",
+    "Complete subsequent reply and logout notification-empty checks in the full three-process scenario.",
+    "Android interactive permission dialog, API24 notifications, signed release and physical acceptance remain unverified."
+  ],
+  "physical_validation": "deferred_by_user",
+  "task_state": "Tasks5-9 original BASE and in_progress retained.",
+  "remote_actions": "none: no push, merge or deploy",
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/Go-Python-code-parity.json": "41bb945a39b3fb3d5051083de41d41db8bfea7f5ac6657d6f085f7c6a9f977da",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/baseline.json": "2193ea374763a94a11dd617e6c8f7d69dd88c9595af08673a01dae9f87cec3b7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua/events.json": "2c5df05df8fa3d82222a65c60217b99ff19076da7460ea7c376904a0c1296880",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua/initial-device-hub.png": "8c2e0b13be5658f48ac6b366819a47470fd10635797ba48e5a21f10d9fad7d8f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua/initial-device-hub.txt": "6174ba5c02edbb072f43ecab9a044cad6aa58121561a0aaa6e2648520ce7a468",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua/ios-notification-center.png": "772f3fdda339306176058809ab7674548bb39d581c9b9e08b3d0837c2a5cf865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua/ios-open-action-unaccepted.png": "b13e7644f2034d11c92605fd8e2be03dc640ea90e4951faed00475a0304b1e95",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua/ios-permission-prompt.png": "c4868746bff6147eae94c4cb06392f7dbc42d6bcb549777ff199eab04eedfc13",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua/ios-returned-app-no-accepted-tap.png": "5787bcfed8a590688c24b790924cee3b8e5869899f1e221bec3e1bf93ca54b57",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/cua-transfer-cleanup.json": "63dbfcbc4fe6662d640093c51480fb609769546df49abf666674687b1abb275c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/documentation-helper-encoding-failure.json": "c61d7aa61ef2fa3f6323bf124778302fca2cf79c3fa3302dd87e4301a45aa7a1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/helpers/im-mobile-notification-tap-setup.py": "ce40ee488c0abd057c51b726ecb817bb70a37021c223437df2aabc4e2a0b99d9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/helpers/im-notification-tap-checkpoint-encoding-failed.py": "f72899cba1f464cc7e50534036004857df5c30cd5eab116a34a73501d01fb6fc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/helpers/im-notification-tap-checkpoint.py": "023e8ad97720a0427270ddeb946cd7e62bc18c3cb6503dc4dcb45dcc1fa47c0f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/helpers/im-notification-tap-partial-audit.py": "8c28b29dd859cf5581e110c5de8c41d43c5d061b4b7bc9f09ed3edce4dbecdf2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/helpers/im-notification-tap-postcheck.py": "d571ef574980667fe6a007cbe367ccb257c24226280ec45a9ee14872aae43e41",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/helpers/im-run-mobile-notification-tap.py": "a4155d7edd2d904d63bab0c8b476d52e2e4c874ae8a76830a0e1e14408cdcd62",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/owned-ios-absence.json": "72ab15912920444b9c27e1093fa3a3913a60c9560e181dde6db417436ecf31cf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/resource-and-preservation-audit.json": "68e2c7e2a1f2015018b477bf38f489a572c13227718f69823ac05c7bb7b93d1c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-adb-server.log": "557f3313d42fd4f7e49478d52109ce912b1e5ca2b3d3f380fab4842364434b09",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-avd-create.log": "6e5537e7df104ac51509c26dba6fcb3ad5c9ed859dee3a62ebc4cc776aa824f8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-backend-reverse.log": "1299b3f25b5006360f4ff6a845e4acdc576e5e19b49418b7a8d29025d4693800",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-boot-id.log": "a6a0712f7ca97262fc3a5d6c8f422ea6f5a700254481eb3ecd6ed6bd4f1853ff",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-canonical-ro.boot.qemu.avd_name.log": "355eaa2f81b8c8a5d6fff6ca0a4a6177c2d4470768cf8870fcd40848127833f5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-cleanup-owned-avd.log": "a550b4ffc601a19bfbcf4642ba3ef701b214d95b700d11eeacddcbd5dfe8ab0a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-emulator.log": "34bc0d80082f71c92d60a51b6b64bfb2f68a1a3fdcfead738cafcbbafb1f00dd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-identity-ro.boot.qemu.avd_name.log": "355eaa2f81b8c8a5d6fff6ca0a4a6177c2d4470768cf8870fcd40848127833f5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-initial-pid.log": "6f0a174a1b732e7dca848839784cce1639055d232ef07a5a25c74dc032d15e03",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-install.log": "318552ac77a9334ec336f8a4187e29cdffc66e185fd06e0adf52d52163ec7ddf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-installed-boot-0.log": "a6a0712f7ca97262fc3a5d6c8f422ea6f5a700254481eb3ecd6ed6bd4f1853ff",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-installed-path.log": "681f0267d58b7ea342f61bf358a0055fb39a8b9786efaa530ebb8507a59f4493",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-installed-sha256-0.log": "965ef2472bc31707252c47460920d813a22489d151d5f019913b5c4df669b8c7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-notification-denial-fixed.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-notification-permission-state.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-package.log": "e762ac58c835eaca5cffcf2cecb6fb6155f23cfcd80ff658f6039f465fe31d47",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-start.log": "99baac4724f4d63ee9f3e99c4026c7b734437e380e173723993b58c5ba2b1f94",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/android-user-unlocked.log": "809d18fd03b676a1dac587c7a35219483c3be0694d2aa368cf0946aa172bb487",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/notification-failure.png": "00697dc188e1d72e74a583f13fb1ee64cbfa1d54f86d0cb4145ffd9809a8d85a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/notification-permission.png": "6c34b7985679ebf01e33938bc72ece9eba71fdce085d55da03b2e3ddbb5c3d33",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/state-0.json": "271f9138693f13e0a86ee919a7c288ec8926d0aaba2770221523c7445a8df127",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/state-1.json": "c27f8b03b847e77833658c335bd5c9891a503a822b6581bc53c4ac211904d793",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/state-2.json": "ae3f3dd5598bb97dda7d35fad9816680ec106b1f5390af63300008d1f889e2f3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/state-3.json": "8afdd743d61578c6a6d10038c945ff5984cf3ac241affeaafc8e617c43112a7b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/alice/state-4.json": "5469b1a2f41758e961a6d34ed8c833dbb4a524f3d32e1f90685a2a0c0449fe86",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/analysis.log": "68d2ae03f8b2972f55a8644171c6cc50e8ee28d52bdce2834b4dc948b8f31702",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/analysis.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/backend-api-events.json": "37a5b8214babd3f4d174d88664a7c9684b97cb14e28c79663303028ba8dff78d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/backend-facts.json": "05670314724ae76315cb0985b7de38008cf39974801a2c8033ba05908234575c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/backend.log": "5a39e1357846a37674508d9b9093166ef3aa253698a2b9e08c2003d4693440cf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/backend.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-adb-server.log": "d8ba379d4d2ecfaee77b1cc68bd10ba722bf0bb0d4b631ac03db25c1d2b68900",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-avd-create.log": "ea6a26ea2ce47dbe52b41fd13536daaf21527c688178ed6d1f2ce4c1d3dfbe1e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-backend-reverse.log": "1299b3f25b5006360f4ff6a845e4acdc576e5e19b49418b7a8d29025d4693800",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-boot-id.log": "1fd0853fe097c68d54d45a3d5b878a8a642ee5b436c826a4e27a25416820e3f4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-canonical-ro.boot.qemu.avd_name.log": "772172a0b72fad3ba214019ac4d347a6668639ac13c9db17bad9ec141113d017",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-canonical-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-canonical-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-cleanup-owned-avd.log": "cc48e75a42354cbaff6d97200428b4cb78d9ba0e9dcab00d9b3377210c3c8d0b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-emulator.log": "7d977f6805f350f815d4febc22db3bd615474e534cff8af3c11f4338693526fa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-identity-ro.boot.qemu.avd_name.log": "772172a0b72fad3ba214019ac4d347a6668639ac13c9db17bad9ec141113d017",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-identity-ro.build.version.sdk.log": "a4b2c5db15348c29451e18b8307e5ef81625ea638e807935f39ceaa8d9ac7758",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-identity-ro.kernel.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-initial-pid.log": "b64c984ddf872565eeb7cea6a5b783bec0d663c5756b050b14dd016d615bc8ee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-install.log": "e72088c28a727ef7c4a43bfdedc4d6b483fdbe0069595565f0b49d4970da9c5d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-installed-boot-0.log": "1fd0853fe097c68d54d45a3d5b878a8a642ee5b436c826a4e27a25416820e3f4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-installed-path.log": "2f0b57eadbdd65310eb3a72321c2ef5f8d2348ced8f72cfce8b14c388efe123b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-installed-sha256-0.log": "0cb892e11c9f9494bc22633017bcd133a978a9f6f8b751a39f5ea549476622dc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-notification-permission-state.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-package.log": "2eaf562f3f2895616af9937d99a973f9406c2ec6ad13739df7672792641dfa63",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-start.log": "74ba0db5be380dd417dd5df48e961004663a6b0559cc11a6591c8679bab5ddcf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/android-user-unlocked.log": "109340561fcdede4f569a6a010b378e34df74a8ddc02d90f4fe260f1ca12d7cd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/notification-failure.png": "1db9cfbc92b8b9bb84d52cee53b18a03cba656ec9e6f37a389da7fd0f33e0286",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/notification-permission.png": "955ff4d3eff01c70bacc469c698fff8dc5550f421ad75bf197cab1c7a70b1753",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/state-0.json": "9d5db646d399732771913c53ad8508254151a4edb954b03b3611a36337877f4b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/state-1.json": "20759d8dc559560b7610c8bdd7d0b50977b43540f8b8cc62ce02e62c76c5ef8c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/state-2.json": "b52db73016ae6394430018f91fa150af8c0e5e2348ee51b3083332e5966d76f8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_android/state-3.json": "44e71b9aeb07025f8d4187bc44089d3fb55fef4e6434cf1417794cd954a1a7ba",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/bootstatus.log": "8ed10f8a3c6689c1a199610bf9432b81bb8676c398175aa4dd8e7021754d0adc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/create.log": "33fb7630914424d2bdaf77bdad0e4948f2d44510428f3ba0f97d16037815d618",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/data-path.log": "896d60e1d2e71a7d3683e0efcbca91a781c7495d27e24b2ec6363681398e6f9b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/data-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/failed-state-6.json": "4ed7dff009782665ee35d82ab200b0e6c4f8de8bfb8d983c56138d9924fb0e46",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/install.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/installed-path.log": "6e37a08d5e0b99a90053944b1f5365e50c65c85412bcd2e2cde716759459e665",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/installed-path.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-0.log": "7b4caf6ca6aeab6c6b0363dde0dd904ce53dc51e9196287723f28b93abe361fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-0.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-12.log": "d54d42f5af1444c790bc4d2b767d2b964773c0530647f9ff6bf7f2a4ad3160fc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-12.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-15.log": "7b4caf6ca6aeab6c6b0363dde0dd904ce53dc51e9196287723f28b93abe361fe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-15.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-2.log": "b0a93b6ac9fa328e5aaca74761b97465b7ec9ddb07b10d4e34ca79829632de92",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/inventory-2.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/launch.log": "8d3cb0b67c7a1b17a705fc6c90a554b9590ca4613a882854124f628544f3373a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/notification-failure.png": "bc95333c23a1fe83e0ac69877cde93bd5af3633446d7660b8e3a60e34eefb4cb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/notification-permission.png": "7afafbe685905a3f9654788e1667bc9024108e5526e2cf3fdd3726deef9b5b01",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/notification-shown.png": "087195ae852eb9aaf763312c2c600efb702bd87b8d0ea9035330d3c0aed90b0b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/screen-notification-failure.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/screen-notification-failure.log.stderr": "82022ae6eb5cca430a244d54e4b3d747497af9ac48b5958ecefcf9b9e6414eed",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/screen-notification-permission.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/screen-notification-permission.log.stderr": "a54eb8fc4ce4bcd0d3b00b41cb723e88a64e599f9434e909addd7c0fb6df688d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/screen-notification-shown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/screen-notification-shown.log.stderr": "2be766e3ad2cd5e3fbc73d6108fbfb9ec1632c6dd91f5c542eae1679ab77ab0b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/state-0.json": "ba46a347a1606ef1ac3d6757ed1c497968cd9ddc16ed6c6a4ca6f4c7a4feff3d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/state-1.json": "6304c7012aa446f809ff246cdd0f8f7920c3f687270d294857bde2678769301e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/state-2.json": "b232c4d658ba0642bc0c620ea9d276fd36d0af4a7253d2ec6bad65ab675b423b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/state-3.json": "d7bf0b55b20dc9abc826c43ca29af7de9a7e22dd3f9c46cdab8f59c5238a26b2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/state-4.json": "399f6c2e20e121c1f9164a357c8fd33e1b2b05463faba08dff2e3666e8414a76",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/bob_ios/state-5.json": "f79e5c109ec1e9cd509384c6a6b033776b7de0b510215fcbfce0e733e4d8d64a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/build-android.log": "6e8008e827e5967f8da6263068159c03c365bf167f460a1b5b14febc3936f8be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/build-android.log.stderr": "e2fd0d402d623059143d3ac3243e501055898221efd778f2de8568bc6f45a11a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/build-ios.log": "f4e7f20f16a32106609b808d702242324489fbb4b9bed80c3dacce75f2d73912",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/build-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/checkpoint-notification_first_read.json": "9a07d0b9d757bf688f3c2dc0f6d6285c6f136bf8f7d029883d076a80ba429377",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/checkpoint-notification_registered.json": "a8c86d71d30e690f8b796ecdf34a9da0a2b14d840eb3d74ae1e5585de508aca8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/cross-debug.apk": "c5166febfbd7b854e6774cb602dc467ddc6191307c8cc36275feb019569feb6e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/cross-ios-debug.zip": "25e7c1fa39e65abf5c95f0f34f8f6956a7530a763485936c063653e8b387b142",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/product/api.log": "9a42fd7624be9ba1ce547873d5e4a00391d0bc8729d15986dd50023219e2904a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/product/im-outbox-worker.log": "684ae765c2ad47b63ebd5666d3980e7804d6af97d3ca8480981059ada2ae5a21",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/product/im-receipt-worker.log": "b237badf606c3024b371410ec255472744e2bcb1f63d1e060a44a726900d557d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/pub-android.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/pub-android.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/pub-ios.log": "d4cb7a3c68b4133b4f6e58c67ff5bfd13725d8021e930388cdc98da8a575919d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/pub-ios.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/registry.jsonl": "03697deb3e08aaac03c52ce8a822f1da01f954e700e9b3306a7ea9da7d34a1c2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/result.json": "126abb05848198d060677f223f3cb907cfa5f1edc5eaf9562825f4274f4410c8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/shared.log": "b0092186b08e6e1ab5495b1b474059131e9243254c87a1d1dd2904de8610911a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01/shared.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01-host-exit.json": "0cefc3c4465fc75640ac704f637507d0f4cfd0708338bbab19ea140e5b66bc5e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/run01-host.log": "066dfe758ed936075ea603eb3838bc00581652563f6aad85cf8f60bed10db31d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/visual-review.json": "82bd09cd043847353dac5bf2a76dd3ba9fc155781b7d8cca1c27938266902c1f"
+  },
+  "postcommit_audit_outputs_expected": [
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/postcommit-audit.json",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-mobile-notification-tap/postcommit-host.log"
+  ]
+}
