@@ -7,7 +7,6 @@ import re
 import subprocess
 import shlex
 import time
-import tempfile
 from .android_simulator import AndroidSimulator, package_installation
 from .android_build import android_environment
 from .mobile import simulator_id, owned_simulator
@@ -25,22 +24,19 @@ def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 def installed_apk_hash(sim,path,expected):
     if sim.state.get('configuration',{}).get('api')==24:
-        # API24 has no sha256sum. Use the framed ADB file protocol, then
-        # require the exact host checksum and the same guest boot identity.
-        with tempfile.TemporaryDirectory(prefix='installed-apk-',dir=sim.private) as folder:
-            target=Path(folder)/'base.apk'
-            for attempt in range(12):
-                if target.exists():target.unlink()
-                response=sim.adb('installed-pull-'+str(attempt),['pull',path,str(target)],required=False)
-                if response.returncode==0:
-                    if digest(target)!=expected:raise ValueError('actor_apk_mismatch')
-                    boot=sim.adb('installed-boot-'+str(attempt),['shell','cat','/proc/sys/kernel/random/boot_id'],required=False)
-                    if boot.returncode==0:
-                        if boot.stdout.decode().strip()!=sim.state['boot_id']:raise ValueError('actor_vm_boot_replaced')
-                        sim.state['installed_apk_verification']='framed_ADB_pull_exact_SHA256_same_boot'
-                        return expected
-                sim.adb('installed-reconnect-'+str(attempt),['reconnect','offline'],required=False)
-                time.sleep(.5)
+        # This prepared API24 image has no sha256sum and its file-sync stat
+        # rejects a path readable by shell. Accept only complete matching bytes.
+        for attempt in range(12):
+            response=sim.adb('installed-bytes-'+str(attempt),['exec-out','cat',path],required=False,binary=True)
+            if response.returncode==0:
+                if hashlib.sha256(response.stdout).hexdigest()!=expected:raise ValueError('actor_apk_mismatch')
+                boot=sim.adb('installed-boot-'+str(attempt),['shell','cat','/proc/sys/kernel/random/boot_id'],required=False)
+                if boot.returncode==0:
+                    if boot.stdout.decode().strip()!=sim.state['boot_id']:raise ValueError('actor_vm_boot_replaced')
+                    sim.state.update(installed_apk_verification='complete_exec_out_exact_SHA256_same_boot',installed_apk_bytes=len(response.stdout))
+                    return expected
+            sim.adb('installed-reconnect-'+str(attempt),['reconnect','offline'],required=False)
+            time.sleep(.5)
         raise ValueError('actor_installed_apk_transport_unavailable')
     # Hash inside the guest: avoid an unframed large exec-out stream being
     # truncated when the first-boot ADB transport reconnects. Never accept a
