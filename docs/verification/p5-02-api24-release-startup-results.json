@@ -1,0 +1,272 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-24",
+  "status": "scoped_passed_API24_existing_Release_startup",
+  "source_commit": "247993f2c0fce6c58b39a893578622fd55ac5f47",
+  "tested_artifact_source_commit": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+  "source_equivalence": "artifact-source-equivalence.json; no client/scripts changes; original APK source not rewritten",
+  "scope": "Existing ordinary nondebuggable Release APK from delivered local test package, installed on one newly owned API24 ARM64 Google APIs rev29 emulator. Startup/LoginPage, HOME/MAIN same-incarnation return, force-stop/new-incarnation launch with unchanged installation. No business, backend, customer SSO, hardware or distribution signing acceptance.",
+  "product_changes": [],
+  "test_implementation_changes": [],
+  "rebuild_or_resign": false,
+  "APK": {
+    "package": "com.enterpriseim.client",
+    "minimum_api": 24,
+    "target_api": 36,
+    "compile_api": 36,
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ],
+    "signature_kind": "temporary_debug_certificate",
+    "certificate_sha256": "d23c7ffe19131875831b530521b2ba94eb013db088704253adc062333d04bbe4",
+    "distribution_acceptance": false,
+    "path": "android-release-test.apk",
+    "sha256": "eb5aeaf86dd9564bae6790200c1e32aec413e3df5fcaf7e887bd4d2c9c9b6bcf",
+    "size": 58802365,
+    "manifest_sha256": "7eea2de08299f5c6a1699b7f6018178ab752698665e237d856890471f34c2961",
+    "test_fixture_classes_absent": true
+  },
+  "installed_bytes": {
+    "size": 58802365,
+    "sha256": "eb5aeaf86dd9564bae6790200c1e32aec413e3df5fcaf7e887bd4d2c9c9b6bcf"
+  },
+  "actual_exits": {
+    "initial_helper_before_simulator": 1,
+    "accepted_native_host": 0,
+    "independent_audit_host": 0,
+    "emulator_graceful_teardown": 0,
+    "private_ADB_server_owned_teardown": -15,
+    "native_app_leaf_exit": "unknown; force-stop disappearance observed, no clean-exit code claim"
+  },
+  "API24_runtime": {
+    "package": "system-images;android-24;google_apis;arm64-v8a",
+    "api": 24,
+    "abi": "arm64-v8a",
+    "revision": "29",
+    "device_type": "pixel_7",
+    "tool_sha256": {
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/emulator": "5e2249e94368759aabd8fa942d2961cfef07b980a44639a2ec9b7ced3fbe2281",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/emulator/source.properties": "ba13085f647fb8389a4d06a1de0e4104ac4e841733e50f67223ac230e1ce685a",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/adb": "1811e253b21b12cbfda7201ebaf86c10e7ddcb5c606a7a81f7c82b4c429c2d3b",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/platform-tools/source.properties": "2dccd788c0234d8cf7f7457377e57f57527a86a629c6ed54feb8af0f549dac38",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/cmdline-tools/23.0/bin/avdmanager": "09199f7bca5dc7eb4e4b4ff459dc125579c3e08c61ddc078dcd2c6e8e61efbb6",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-android-20261015/sdk/system-images/android-24/google_apis/arm64-v8a/source.properties": "00bb7434abf93ccbf3880bcdbca35808f42883e0f9e53dacdb0e5a33275956a5"
+    },
+    "image_archive_hash_claimed": false
+  },
+  "phases": [
+    {
+      "name": "initial_launch",
+      "identity": {
+        "pid": 2249,
+        "boot_id": "4fce9bda-477b-49c5-a094-068e9609f439",
+        "process_start_ticks": "543"
+      },
+      "screen": {
+        "screenshot": "first-login.png",
+        "sha256": "f1069e3659f72356d5dc2895025a33ca71552b2b2bd711d56b461c8c7a11752d",
+        "owned_MainActivity_focused": true,
+        "visual_acceptance": "pending_manual_review"
+      }
+    },
+    {
+      "name": "HOME_MAIN_same_process",
+      "identity": {
+        "pid": 2249,
+        "boot_id": "4fce9bda-477b-49c5-a094-068e9609f439",
+        "process_start_ticks": "543"
+      },
+      "screen": {
+        "screenshot": "resumed-login.png",
+        "sha256": "f1069e3659f72356d5dc2895025a33ca71552b2b2bd711d56b461c8c7a11752d",
+        "owned_MainActivity_focused": true,
+        "visual_acceptance": "pending_manual_review"
+      }
+    },
+    {
+      "name": "force_stop_new_process",
+      "old_identity": {
+        "pid": 2249,
+        "boot_id": "4fce9bda-477b-49c5-a094-068e9609f439",
+        "process_start_ticks": "543"
+      },
+      "identity": {
+        "pid": 3656,
+        "boot_id": "4fce9bda-477b-49c5-a094-068e9609f439",
+        "process_start_ticks": "1503"
+      },
+      "same_installation": true,
+      "screen": {
+        "screenshot": "restarted-login.png",
+        "sha256": "f1069e3659f72356d5dc2895025a33ca71552b2b2bd711d56b461c8c7a11752d",
+        "owned_MainActivity_focused": true,
+        "visual_acceptance": "pending_manual_review"
+      }
+    }
+  ],
+  "identity": {
+    "strict_nonce_frames": 23,
+    "live_queries_host0_remote0": 22,
+    "old_process_absent_host0_remote1_empty": 1,
+    "reads": "Only owned app pidof, boot_id and public /proc/<own-pid>/stat via ordinary shell. No run-as, app-private data access, guest root or permission escalation.",
+    "same_boot": true,
+    "HOME_MAIN_same_PID_and_start_ticks": true,
+    "restart_different_PID_and_start_ticks": true,
+    "installation_UID_and_first_install_unchanged": true
+  },
+  "visual_acceptance": {
+    "status": "passed",
+    "review_file": "visual-review.json",
+    "images_reviewed": 3,
+    "observation": "Normal LoginPage with empty service URL and enterprise login control in each phase.",
+    "identical_image_hashes": true,
+    "interpretation": "Three separately executed OS captures during the same displayed clock minute rendered the same static LoginPage; byte equality alone does not prove process recovery. Independent OS-focus and PID/boot/start-tick records prove the three runtime phases.",
+    "original_runtime_result_preserved": "runtime_passed_visual_review_pending is retained in raw run02; this report adds the subsequently completed manual reviews."
+  },
+  "new_crash_interval_clean": true,
+  "preserved_failure": {
+    "run": "run01",
+    "actual_exit": 1,
+    "reason": "Temporary helper omitted pub_cache property required by existing android_environment; failed before any emulator or product process.",
+    "root_removed": true,
+    "original_host_log_and_helper_preserved": true,
+    "product_defect_inferred": false
+  },
+  "independent_audit": {
+    "path": "acceptance-audit.json",
+    "status": "passed",
+    "old_reports_preserved": 88,
+    "old_raw_preserved": 8882,
+    "tracked_files_unchanged_before_documentation": 1368,
+    "main_unchanged": true,
+    "owned_process_observations_absent": 6,
+    "owned_roots_and_ports_absent": true
+  },
+  "delivery_package": {
+    "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-release-readiness/delivery/enterprise_im_local_test_f3d50f6.zip",
+    "sha256": "be067989a74f8d92971651f6fb4237fbfe32ca9f98a14cde83e175cfd4a64eee",
+    "size": 136345548,
+    "source_commit": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+    "artifact_manifest_sha256": "055a97294b0da0758b2782a8f79f50fef3f3caf6066e0583854fb17f567ce728",
+    "archive_entries_verified": 6,
+    "aggregate_actual_exit": 2,
+    "status": "local_test_package_verified",
+    "production_acceptance": false
+  },
+  "delivery_unchanged": true,
+  "regression_scope": {
+    "fresh_build": false,
+    "fresh_Flutter_Python_Go_full_suites": false,
+    "reason": "No product or canonical test implementation changes. The existing tested artifact was reused; historical shared/regression passes remain historical."
+  },
+  "remaining_gates": [
+    "Current ordinary Release logged-in messaging/files/receipt matrix including minimum OS",
+    "Windows native environment, build/run and remote CI",
+    "macOS intended team/development certificate and actual signed native business acceptance; distribution signing/notarization separate",
+    "iOS customer signing/provisioning/IPA and device execution",
+    "Customer authorized HTTPS endpoint, OIDC browser login and callback configuration",
+    "Physical device validation remains deferred per user",
+    "Full four-platform/source-consistent acceptance remains incomplete"
+  ],
+  "customer_environment_request": "Pending user-provided authorized HTTPS test service and non-secret access instructions; independent API24 checks proceeded without it.",
+  "four_platform_complete": false,
+  "customer_acceptance": false,
+  "production_acceptance": false,
+  "physical_validation": "deferred_per_user",
+  "task_state": "Original Tasks5-9 BASE and in_progress retained; no repeated whole-branch review.",
+  "remote_actions": false,
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/acceptance-audit.json": "1ff3ee96e48191f794fe17291f0c4a3cfe895863e238512ce5a10642ce0773fd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/artifact-source-equivalence.json": "878f1235092a0f9745c4929fc08626cbf668da04c4214b6289982a8fcfeb2724",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/audit-host-exit.json": "8932e7d809a370d94dc9a946f4c0099eddb80bb99731c7e57a1f3fd623e0ab90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/audit-host.log": "c88f7389bb5182cda4fd629963a8cf2cdb48adedc48a3b121f03a21c0cf42a5c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/baseline.json": "874d08ec591a4522adc1df0b4f29296b2be1e61972593c34865bab3fa6c077d4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-audit-wrapper.py": "925934ddb8919de9e39720996dd2a6c14f985148f0a9397cccbc0c97260a43ce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-audit.py": "3224b53a1ac064d4171e904bedeb8c4017ddb4ccfe1c0b413c44f4ce2452ea16",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-prepare.py": "aaa879eef1282c867662377635710e87969df3241477231cc53ee37a72b5b4cf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-publish.py": "787dbaa2d6d76b7378ec5e321d50b84ebce96f68c0b3bbeb5e455aacfe2cfa4d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-run-v2.py": "92f30a3bc73447d653e10760c479ce0fc89b93ccceb14b4e03689df00884d2ad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-run.py": "987dd02086bba5404e695dcc73d057036442b6393306a0ebfc9e9abaefb137e7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-wrapper-v2.py": "47867cbc86744187c40864dfd59bf788ca70ec0b2de2416320b3e6b045755f5f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/helpers/im-api24-release-wrapper.py": "97c9173992ceb4020328daac73777cd62ed23051e776f503274ea5ede0f209ee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run01/preparation-failure.json": "f2ad10c9100fdc236963942ea56a2ac2d59cb7899670da5fc3c201fb541e9123",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run01/registry.jsonl": "1e57e44a7ab5f0644992b20b44377d48c503da715ef3a299ad97c3963b57054f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run01-host-exit.json": "7cf686e199c504f97c0f26e9e48c35dad941f7cddafe4572014e136994cfc325",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run01-host.log": "32f8470490c6e2dc41e0092a74db158df5362ff129e8dade028669a1ac11eff6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-adb-server.log": "fec1122903bfe7cdfcd6d04348c6e614781aa7e637bb3fc91579e8ef8f7cb014",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-after-restart-package.log": "c91a8057d3118b943dfb074c79a89c63f89ade1a6c842b7fdbc8628346ed07b4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-avd-create.log": "aa08c3a621ca48dab74818144b3758a2221a1b28f052d3d9f28d6bf564e91823",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-boot-id.log": "d83c09a65ded14427957ba6cdab6d3716065263e299aa7f03345e5972d576021",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-canonical-ro.boot.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-canonical-ro.build.version.sdk.log": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-canonical-ro.kernel.qemu.avd_name.log": "3640dadedea0f5d23409f1d822f3643b792a498ba924a2d643da4eadb776931d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-canonical-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-canonical-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-cleanup-emulator-stop.log": "c8688fc34ee1d36f2e975dad0607555ba84d8951ccb39e69b7ab7a5d159ec81f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-cleanup-owned-avd.log": "b51392aff809b1fda135902ee01daae704b5956403ff915913b27d912a4223be",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-cleanup-package-absent.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-cleanup-uninstall.log": "7fc0023a6402c7bd7abd98bb3e580968de4833eed07d88d1cc8d70819d69c7a0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-crash-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-crash-before.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-emulator.log": "0deb077714a7b65adc9e5b2d5afceb85a26decbe3db96042c9eded9b9c2ea501",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-first-launch.log": "3dd5eb0a9a88147309410a4e8a637c3e9cdb14a83d6665123233d7c594f4c273",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-first-login-window.log": "b9799b6789ffaf5181beea9409dd1be1273730e7df8b5d37e6a4c9f47e099c50",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-force-stop.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-after-installed-boot.log": "5fa83c5e4aa6d99b0cf75502fce7bf06b8a86523b077d87824a157a07dd45046",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-background-boot.log": "fe3fd08f7905f8c3576753879144fe56d08836ef35785c31c7872447f24b5e9d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-background-pid.log": "e899bcb42ac7a45237f0d4eca7e9fe5255cd909fb4c2eb17609ac9a317838320",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-background-stat.log": "09fdd5f69f31fae139f236c2d4c941a2ca238d5a2bfca776dae350b93115f1e7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-first-after-screenshot-boot.log": "d73d794054e13b943d43c41625371077c522582657dad49ed2bbe3418138c0d1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-first-after-screenshot-pid.log": "645afff92d5137c82ee5c08e7b5a59141bbd8ffc5754dd138687ec62afe80fac",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-first-after-screenshot-stat.log": "300dd811c4db72f7a84aa1813f4309b7440ec00fbb4afb9ca8ade433d28e18a7",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-first-boot.log": "a6448004c1ced5ac314b15d9798433326986b1b856d1272ce3617870ff11d4cf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-first-pid.log": "d9fbc4a1212222db997f73377c4eccff9d645b8f3c33534e548be7270195ed20",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-first-stat.log": "d00bc1573c2f549a092333a6be1842d350d998de7cf4f51deee1e8ab1e055640",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-old-absent.log": "5fa6c48ebaf02ddfe79eae2b4e0678f4e84a3c8a8f38226dab97a7664a450646",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-restart-after-screenshot-boot.log": "dbf8cd058bebb0a8f29f16d28c22d8c02bf05b2249ab870833d94fd3ed33c3f3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-restart-after-screenshot-pid.log": "bdcc9860608ab6a4cec897058da1fba675be77b48a85f3bd090a942ade060afe",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-restart-after-screenshot-stat.log": "daaaaa0e11dfba68374a9b18a776df333e2030bf8553e73d5dcd4974d09dcdd1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-restart-boot.log": "992af2b5a727dc7c84ab2109843711655fbceca00c42af856caf731aa152999f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-restart-pid.log": "3206bd81866a5041db9e6c216ec4a617d0a9b8f9e87b982f0529b0c4e2721167",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-restart-stat.log": "1e02194fecafed81132fc1acfd877ced9bc3a34cc2d97f193569a1b278f3c597",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-resume-after-screenshot-boot.log": "2be9ea5a62f4a8b410f2c17be0c5d0c740507ea782a971a23fd1d2d1cbaccda9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-resume-after-screenshot-pid.log": "a5568fb25a511af5d1bbbf97c4cc251a46c288ff685059028b6f8aaaceaa629e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-resume-after-screenshot-stat.log": "8082a7aec34221f318056b109ce54e95a18569bd132aa24d1f676e3f6fcdca53",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-resume-boot.log": "39ec8a4b21d0dcaf6772a891edf1fe4ce27868f210493e40f80922de72dd7b6b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-resume-pid.log": "cca8e4bad36d467dd586f9948f064044c4654292992898e469d2df10c8c211a5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-framed-resume-stat.log": "41573f424912b5289501bd40675413f19af5d3c235979c9e0dc2aac21dc05371",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-home-window.log": "a622b46b70d059e012d9b04a902edb0846356c2307edf39352e415a9d5a8c421",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-home.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-identity-ro.boot.qemu.avd_name.log": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-identity-ro.build.version.sdk.log": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-identity-ro.kernel.qemu.avd_name.log": "3640dadedea0f5d23409f1d822f3643b792a498ba924a2d643da4eadb776931d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-identity-ro.kernel.qemu.log": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-identity-ro.product.cpu.abi.log": "7f10c3cd4593d1d6ded27d658e7c05216011c955c200aac551caad0c979d4d90",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-initial-package.log": "226895b89104f1cad7f321efd0a680a29691b261ebcbac682bbf8fe7c0550744",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-install.log": "cc43e525e2eef1b74b6fb0ab8e33248d32c8f8b860353c9c060047c34c023320",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-installed-path.log": "4941574a13237965d735c10cc6200294816b0b2f6265db1bf4e233db0b04a883",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-restart-launch.log": "913fa0c3844880d9fc790f7472360ca036cc572f43c023c243f165b29be3cbe3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-restarted-login-window.log": "a278bb42447936b7872fd3b0ae53d723449bd77744c0815893bf0b80bc2afcf9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-resume-launch.log": "5c0740433f9d6526d30cfbac43cc0650aff928acc7ae6c557b9b3c952f036718",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-resumed-login-window.log": "1c2f861ee2445465d31b779c9930153ee842c82aaa15d355f65c6174e25a80aa",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/android-user-unlocked.log": "ecf33b0f208dd70af931673632524b840febcf73a95e77de2378b99ff25c4688",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/badging.log": "ade444aa25f026153850c1af4fa51c2ed2be8cdde51e3ed25318739044a6a1bd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/badging.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/first-login.png": "f1069e3659f72356d5dc2895025a33ca71552b2b2bd711d56b461c8c7a11752d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/registry.jsonl": "1fd79fc5021274177252710d648b1d58f2aa98ca8a4ac1b798c3daf3ad901b4c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/restarted-login.png": "f1069e3659f72356d5dc2895025a33ca71552b2b2bd711d56b461c8c7a11752d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/result.json": "b29714adabe5d0a5bf9499decc0da57561f8d1c62f00871547c42838098616a1",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/resumed-login.png": "f1069e3659f72356d5dc2895025a33ca71552b2b2bd711d56b461c8c7a11752d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/signature.log": "e9eea6415dd092b2784cef0aacdb886ca1baa31ecd61c3a4003c212b2e64e10b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02/signature.log.stderr": "9086a8fe28aff5ea66357422bcdacb4b3d4e93bb212912e935516497616b7e5b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02-host-exit.json": "c2fc7d02abb90c246c0418f58466b7de0e4bb6e10eac3b75d8e50d76532adb4e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/run02-host.log": "1798515dcec79d8ca8647dfd763f24aba4199a6b5fae73482c70b05925dd3be3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-api24-release/visual-review.json": "f5fc86dd42ef16eb3848f7abad5875dfd9273f19d5b1fae1331d2fdf56c5d2eb"
+  },
+  "postcommit_audit_outputs_expected": [
+    "postcommit-audit.json",
+    "postcommit-host.log"
+  ]
+}
