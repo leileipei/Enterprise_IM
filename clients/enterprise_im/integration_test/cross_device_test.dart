@@ -1368,8 +1368,9 @@ void main() {
                 await until(
                   () =>
                       notificationLists > tapLists &&
-                      notificationSyncs > tapSyncs,
-                  'real OS notification tap fresh list and sync',
+                      notificationSyncs > tapSyncs &&
+                      view?.canSend == true,
+                  'real OS notification tap fresh list, committed sync and usable view',
                   timeoutSeconds: 240,
                 );
                 expect(
@@ -1544,6 +1545,7 @@ void main() {
                 .byType(MessagePage)
                 .evaluate()
                 .isNotEmpty,
+            'can_send': view?.canSend,
           };
           try {
             await snapshot('failed');
