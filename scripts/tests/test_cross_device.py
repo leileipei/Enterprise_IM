@@ -133,16 +133,48 @@ class IdentityFailureEvidenceTests(unittest.TestCase):
    self.assertEqual(actor.state['identity_failure'],{'stage':'pidof','expected_pid':123,'actual_exit':code,'stdout':text.decode(),'stderr':error.decode()})
 
 class LegacyIdentityTransportTests(unittest.TestCase):
- def test_api24_255_with_expected_pid_requires_fresh_success_same_boot_and_start_ticks(self):
+ def test_api24_framed_reads_require_guest_zero_same_boot_and_same_start_ticks(self):
+  import re
   from unittest.mock import patch
-  def actor(boot=b'own-boot',ticks='17'):
-   a=object.__new__(native.AndroidActor);a.sim=SimpleNamespace(adb_base=['adb','-P','12345'],serial='emulator-5554',adb=lambda *args,**kw:SimpleNamespace(returncode=0,stdout=boot,stderr=b''));a.env={};a.state={'configuration':{'api':24},'boot_id':'own-boot'};a.save=lambda:None;a.start_ticks=ticks;return a
-  pid255=SimpleNamespace(returncode=255,stdout=b'123\n',stderr=b'');pid0=SimpleNamespace(returncode=0,stdout=b'123\n',stderr=b'');stat=SimpleNamespace(returncode=0,stdout=('123 (owned) '+' '.join(['S']+['0']*18+['17'])+'\n').encode(),stderr=b'')
+  def actor(boot='own-boot',ticks='17',observed='123',remote='0'):
+   a=object.__new__(native.AndroidActor);a.state={'configuration':{'api':24},'boot_id':'own-boot'};a.env={};a.save=lambda:None;a.start_ticks=ticks
+   def adb(label,args,**kw):
+    script=args[-1];nonce=re.search('IM_BEGIN_([a-f0-9]{32})',script).group(1)
+    text=(observed+'\n' if 'pidof' in script else boot+'\n' if '/random/boot_id' in script else '123 (owned) '+' '.join(['S']+['0']*18+['17'])+'\n')
+    return SimpleNamespace(returncode=0,stdout=('IM_BEGIN_'+nonce+'\n'+text+'\nIM_END_'+nonce+':'+remote+'\n').encode(),stderr=b'')
+   a.sim=SimpleNamespace(state=a.state,adb=adb,save=a.save,adb_base=['adb'],serial='emulator-5554');return a
   a=actor()
-  with patch.object(native.subprocess,'run',side_effect=[pid255,pid0,stat]) as call:
-   a.identity(123)
-  self.assertEqual(call.call_count,3);self.assertEqual(a.state['identity_transport_recoveries'],1);self.assertEqual(a.state['identity_transport_observations'][0]['actual_exit'],255)
-  for a,responses,error in [(actor(b'new-boot'),[pid255,pid0],'android_actor_vm_boot_unproven'),(actor(ticks='18'),[pid255,pid0,stat],'android_actor_pid_reused'),(actor(),[pid255]*5,'android_actor_process_changed'),(actor(),[SimpleNamespace(returncode=255,stdout=b'999\n',stderr=b'')],'android_actor_process_changed')]:
-   with patch.object(native.subprocess,'run',side_effect=responses):
-    with self.assertRaisesRegex(ValueError,error):a.identity(123)
-   self.assertEqual(a.state.get('identity_transport_recoveries',0),0)
+  with patch.object(native.subprocess,'run',side_effect=AssertionError('API24 must use framed read protocol')):a.identity(123)
+  self.assertEqual(a.state['identity_framed_revalidations'],1)
+  for a,error in [(actor(boot='new-boot'),'android_actor_vm_boot_unproven'),(actor(ticks='18'),'android_actor_pid_reused'),(actor(observed='999'),'android_actor_process_changed'),(actor(remote='255'),'android_actor_legacy_read_unproven')]:
+   with self.assertRaisesRegex(ValueError,error):a.identity(123)
+   self.assertEqual(a.state.get('identity_framed_revalidations',0),0)
+
+class ProcStatFailureEvidenceTests(unittest.TestCase):
+ def test_start_guard_preserves_exact_proc_stat_failure_and_still_rejects(self):
+  from unittest.mock import patch
+  actor=object.__new__(native.AndroidActor);actor.sim=SimpleNamespace(adb_base=['adb'],serial='emulator-5554');actor.env={};actor.state={};actor.start_ticks='17';saved=[];actor.save=lambda:saved.append(True)
+  responses=[SimpleNamespace(returncode=0,stdout=b'123\n',stderr=b''),SimpleNamespace(returncode=255,stdout=b'123 (owned) S partial',stderr=b'')]
+  with patch.object(native.subprocess,'run',side_effect=responses):
+   with self.assertRaisesRegex(ValueError,'android_actor_start_unproven'):actor.identity(123)
+  self.assertEqual(actor.state['identity_failure'],{'stage':'proc_stat','expected_pid':123,'actual_exit':255,'stdout':'123 (owned) S partial','stderr':''});self.assertEqual(saved,[True])
+
+class LegacyIdentityFrameTests(unittest.TestCase):
+ def test_complete_nonce_bound_remote_exit_zero_is_required_for_read_only_api24_probe(self):
+  import re
+  class Sim:
+   def __init__(self,mode='ok',api=24):self.state={'configuration':{'api':api}};self.calls=[];self.mode=mode
+   def save(self):pass
+   def adb(self,label,args,**kw):
+    self.calls.append(args);self_test.assertEqual(args[:3],['exec-out','sh','-c']);self_test.assertTrue(args[-1].startswith('printf '));nonce=re.search('IM_BEGIN_([a-f0-9]{32})',args[-1]).group(1)
+    body=('IM_BEGIN_'+nonce+'\n123\n\nIM_END_'+nonce+':'+('1' if self.mode=='remote1' else '0')+'\n').encode()
+    if self.mode=='partial':body=body[:-8]
+    if self.mode=='nonce':body=body.replace(('IM_END_'+nonce).encode(),b'IM_END_other')
+    if self.mode=='extra':body+=b'unframed'
+    return SimpleNamespace(returncode=255 if self.mode=='host255' else 0,stdout=body,stderr=b'error' if self.mode=='stderr' else b'')
+  self_test=self;sim=Sim();self.assertEqual(native.legacy_identity_read(sim,['pidof',native.PACKAGE],'pidof'),b'123\n')
+  for mode in ['partial','nonce','extra','remote1','host255','stderr']:
+   with self.assertRaises(ValueError,msg=mode):native.legacy_identity_read(Sim(mode),['pidof',native.PACKAGE],'pidof')
+  for sim,command in [(Sim(api=36),['pidof',native.PACKAGE]),(Sim(),['sh','-c','write anything'])]:
+   with self.assertRaises(ValueError):native.legacy_identity_read(sim,command,'pidof')
+   self.assertEqual(sim.calls,[])

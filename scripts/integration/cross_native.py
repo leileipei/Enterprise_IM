@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import shlex
+import secrets
 import time
 from .android_simulator import AndroidSimulator, package_installation
 from .android_build import android_environment
@@ -20,6 +21,22 @@ FILES={'cross-input.json','cross-command.json','cross-state.json'}
 
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def legacy_identity_read(sim,command,stage):
+    allowed=(stage=='pidof' and command==['pidof',PACKAGE]) or (stage=='boot_id' and command==['cat','/proc/sys/kernel/random/boot_id']) or (stage=='proc_stat' and len(command)==4 and command[:3]==['run-as',PACKAGE,'cat'] and re.fullmatch(r'/proc/[1-9][0-9]*/stat',command[3]))
+    if sim.state.get('configuration',{}).get('api')!=24 or not allowed:raise ValueError('legacy_identity_read_scope')
+    nonce=secrets.token_hex(16)
+    script="printf 'IM_BEGIN_"+nonce+"\\n'; "+shlex.join(command)+"; im_identity_status=$?; printf '\\nIM_END_"+nonce+":%s\\n' \"$im_identity_status\""
+    probes=sim.state.setdefault('legacy_identity_probes',[]);label='legacy-'+stage+'-'+str(len(probes)+1)
+    response=sim.adb(label,['exec-out','sh','-c',script],required=False)
+    frame=re.fullmatch(b'IM_BEGIN_'+nonce.encode()+rb'\n(.*)\nIM_END_'+nonce.encode()+rb':([0-9]{1,3})\n',response.stdout,re.S)
+    remote=int(frame.group(2)) if frame else None
+    row={'label':label,'stage':stage,'nonce':nonce,'host_exit':response.returncode,'remote_exit':remote,'complete_frame':frame is not None,'raw_sha256':hashlib.sha256(response.stdout).hexdigest(),'body_sha256':hashlib.sha256(frame.group(1)).hexdigest() if frame else None}
+    probes.append(row);sim.save()
+    if response.returncode or response.stderr or not frame or remote!=0:
+        sim.state['legacy_identity_failure']=row;sim.save();raise ValueError('android_actor_legacy_read_unproven_'+stage)
+    return frame.group(1)
 
 
 def installed_apk_hash(sim,path,expected):
@@ -108,7 +125,7 @@ class AndroidActor(Actor):
         self.sim.adb('backend-reverse',['reverse','tcp:'+str(origin_port),'tcp:'+str(origin_port)])
         self.write('cross-input.json',config)
         self.sim.adb('start',['shell','am','start','-W','-a','android.intent.action.MAIN','-c','android.intent.category.LAUNCHER','-n',PACKAGE+'/.MainActivity'])
-        text=self.sim.adb('initial-pid',['shell','pidof',PACKAGE]).stdout.decode().strip()
+        text=(legacy_identity_read(self.sim,['pidof',PACKAGE],'pidof') if self.state.get('configuration',{}).get('api')==24 else self.sim.adb('initial-pid',['shell','pidof',PACKAGE]).stdout).decode().strip()
         if not re.fullmatch('[1-9][0-9]*',text):raise ValueError('actor_pid_invalid')
         self.state['pid']=int(text);self.identity(int(text));self.save()
     def write(self,name,data):
@@ -122,26 +139,28 @@ class AndroidActor(Actor):
         if p.returncode:return None
         return json.loads(p.stdout)
     def identity(self,pid):
-        retried=False
-        for attempt in range(5):
-            p=subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell','pidof',PACKAGE],env=self.env,capture_output=True,timeout=8)
-            if p.returncode==0 and p.stdout.strip()==str(pid).encode():break
-            observation={'stage':'pidof','expected_pid':pid,'actual_exit':p.returncode,'stdout':p.stdout.decode(errors='replace')[:1024],'stderr':p.stderr.decode(errors='replace')[:2048]}
-            if self.state.get('configuration',{}).get('api')==24 and p.returncode==255 and p.stdout.strip()==str(pid).encode() and not p.stderr and attempt<4:
-                self.state.setdefault('identity_transport_observations',[]).append(observation)
-                self.save();retried=True;time.sleep(.05);continue
-            self.state['identity_failure']=observation;self.save();raise ValueError('android_actor_process_changed')
-        if retried:
-            boot=self.sim.adb('identity-retry-boot-'+str(len(self.state['identity_transport_observations'])),['shell','cat','/proc/sys/kernel/random/boot_id'],required=False)
-            if boot.returncode or boot.stdout.decode().strip()!=self.state['boot_id']:raise ValueError('android_actor_vm_boot_unproven')
-        p=subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell','run-as',PACKAGE,'cat','/proc/'+str(pid)+'/stat'],env=self.env,capture_output=True,timeout=8)
-        if p.returncode:raise ValueError('android_actor_start_unproven')
-        fields=p.stdout.decode().rsplit(')',1)[-1].split();ticks=fields[19]
+        legacy=self.state.get('configuration',{}).get('api')==24
+        def read(command,stage):
+            if legacy:return subprocess.CompletedProcess(command,0,stdout=legacy_identity_read(self.sim,command,stage),stderr=b'')
+            return subprocess.run([*self.sim.adb_base,'-s',self.sim.serial,'shell',*command],env=self.env,capture_output=True,timeout=8)
+        p=read(['pidof',PACKAGE],'pidof')
+        if p.returncode or p.stdout.strip()!=str(pid).encode():
+            self.state['identity_failure']={'stage':'pidof','expected_pid':pid,'actual_exit':p.returncode,'stdout':p.stdout.decode(errors='replace')[:1024],'stderr':p.stderr.decode(errors='replace')[:2048]}
+            self.save();raise ValueError('android_actor_process_changed')
+        if legacy:
+            boot=read(['cat','/proc/sys/kernel/random/boot_id'],'boot_id')
+            if boot.stdout.decode().strip()!=self.state['boot_id']:raise ValueError('android_actor_vm_boot_unproven')
+        p=read(['run-as',PACKAGE,'cat','/proc/'+str(pid)+'/stat'],'proc_stat')
+        if p.returncode:
+            self.state['identity_failure']={'stage':'proc_stat','expected_pid':pid,'actual_exit':p.returncode,'stdout':p.stdout.decode(errors='replace')[:4096],'stderr':p.stderr.decode(errors='replace')[:2048]}
+            self.save();raise ValueError('android_actor_start_unproven')
+        fields=p.stdout.decode().rsplit(')',1)[-1].split()
+        if legacy and (len(fields)<20 or not fields[19].isdigit() or p.stdout.split(b' ',1)[0]!=str(pid).encode()):raise ValueError('android_actor_start_unproven')
+        ticks=fields[19]
         if self.start_ticks is not None and ticks!=self.start_ticks:raise ValueError('android_actor_pid_reused')
         self.start_ticks=ticks;self.state['process_start_ticks']=ticks
-        if retried:
-            self.state['identity_transport_recoveries']=self.state.get('identity_transport_recoveries',0)+1
-            self.state.setdefault('identity_transport_revalidated',[]).append({'pid':pid,'pid_query_exit':0,'boot_id':self.state['boot_id'],'start_ticks':ticks})
+        if legacy:
+            self.state['identity_framed_revalidations']=self.state.get('identity_framed_revalidations',0)+1
             self.save()
     def screenshot(self,label):
         path=self.out/(label+'.png');path.write_bytes(self.sim.adb('screen-'+label,['exec-out','screencap','-p'],binary=True).stdout);validate_png(path.read_bytes())
