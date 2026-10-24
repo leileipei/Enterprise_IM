@@ -65,4 +65,13 @@ class LocalSimulatorAdmissionTests(unittest.TestCase):
   for patch in [{'serial':'R58USB123'},{'adb_server_port':5037},{'name':'Existing'},{'console_port':5556}]:
    with self.assertRaises(ValueError):m.admit_android_transport(dict(good,**patch),'a'*32)
 
+class LocalOrdinaryArtifactPrepareTests(unittest.TestCase):
+ def test_prepare_ios_rejects_changed_archive_before_any_simctl(self):
+  from unittest.mock import patch
+  from integration import local_env_simulators as m
+  with tempfile.TemporaryDirectory(prefix='im-local-ios-') as temp:
+   archive=Path(temp).resolve()/'ordinary.zip';archive.write_bytes(b'not the fixed archive')
+   with patch('subprocess.run') as command,self.assertRaises(ValueError):m.prepare_ios({},'a'*32,'b'*40,archive,Path('/not-used'))
+   command.assert_not_called()
+
 if __name__=='__main__':unittest.main()

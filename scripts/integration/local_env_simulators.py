@@ -84,3 +84,84 @@ def environment_CA(root,owner,source):
  except (OSError,ValueError,ssl.SSLError):raise ValueError('invalid_environment_CA') from None
  if hashlib.sha256(der).hexdigest()!=observed['ca_fingerprint']:raise ValueError('environment_CA_fingerprint_changed')
  return ca
+
+IOS_ARCHIVE_SHA256='3244f4eda3b4c8af79459164c6d25067db5304abb2be2c505f8aa7c63ecf3ade'
+ANDROID_APK_SHA256='eb5aeaf86dd9564bae6790200c1e32aec413e3df5fcaf7e887bd4d2c9c9b6bcf'
+PACKAGE='com.enterpriseim.client'
+
+def extract_ios(archive,private):
+ import zipfile
+ target=private/'ordinary-ios';target.mkdir(mode=0o700)
+ with zipfile.ZipFile(archive) as zipped:
+  if len(zipped.namelist())!=len(set(zipped.namelist())):raise ValueError('ambiguous_ordinary_archive')
+  for member in zipped.infolist():
+   path=Path(member.filename)
+   if path.is_absolute() or '..' in path.parts or path.parts[0]!='Runner.app' or stat.S_ISLNK(member.external_attr>>16):raise ValueError('invalid_ordinary_archive_path')
+   dest=target/path
+   if member.is_dir():dest.mkdir(mode=0o700,parents=True,exist_ok=True);continue
+   dest.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+   with dest.open('xb') as f:f.write(zipped.read(member))
+   dest.chmod(0o700 if member.external_attr>>16&0o111 else 0o600)
+ return target/'Runner.app'
+
+class OwnedIOS:
+ """Ordinary app and CA only in a newly reserved exact iOS UUID."""
+ def __init__(self,env,owner,source,archive,ca):
+  from .mobile import simulator_choice
+  self.env=env;self.owner=owner;self.source=source;self.private=_private(env['private'],owner,source);self.out=Path(env['out']);self.out.mkdir(mode=0o700,exist_ok=True);self.udid=None;self.reserved=False;self.ca=Path(ca);self.name='IM-Local-'+owner;self.runtime='com.apple.CoreSimulator.SimRuntime.iOS-26-5';self.device_type='com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro';self.state={'owner':owner,'source':source,'name':self.name,'runtime':self.runtime,'device_type':self.device_type,'commands':[],'status':'preparing','artifact_source':'f3d50f65c5e840635a04ccfe9674303ac070aac5','archive_sha256':IOS_ARCHIVE_SHA256}
+  self.context();simulator_choice(json.loads(self.call('runtime-inventory',['list','runtimes','-j'])),self.runtime,self.device_type);self.app=extract_ios(archive,self.private)
+ def save(self):
+  path=self.out/'ios-state.json';temporary=self.out/'.ios-state-new';temporary.write_text(json.dumps(self.state,indent=2)+'\n');temporary.chmod(0o600);temporary.replace(path)
+ def context(self):
+  if self.ca!=environment_CA(self.env['environment'],self.env['host_owner'],self.env['host_source']):raise ValueError('foreign_simulator_CA')
+ def call(self,label,args,timeout=90):
+  import subprocess
+  p=subprocess.run(['/usr/bin/xcrun','simctl',*args],env=self.env['process_env'],capture_output=True,timeout=timeout);index=len(self.state['commands']);file=self.out/('%03d-'%index+label+'.log');file.write_bytes(p.stdout);file.chmod(0o600);error=Path(str(file)+'.stderr');error.write_bytes(p.stderr);error.chmod(0o600);self.state['commands'].append({'label':label,'argv':['/usr/bin/xcrun','simctl',*args],'actual_exit':p.returncode,'stdout_sha256':digest(file),'stderr_sha256':digest(error)});self.save()
+  if p.returncode:raise ValueError('owned_ios_'+label.replace('-','_')+'_failed')
+  return p.stdout.decode()
+ def inventory(self):return json.loads(self.call('inventory',['list','devices','-j']))
+ def owned(self):
+  from .mobile import owned_simulator
+  row=owned_simulator(self.inventory(),self.runtime,self.name,self.udid)
+  if row is not None and row.get('deviceTypeIdentifier')!=self.device_type:raise ValueError('owned_ios_type_changed')
+  return row
+ def start(self):
+  from .mobile import simulator_id
+  from .ios_app_launch import bundle_manifest,launched_pid
+  from .registry import process_fingerprint
+  import time
+  self.context();admit_new_ios(self.inventory(),self.runtime,self.name,self.udid);self.reserved=True;self.udid=simulator_id(self.call('create',['create',self.name,self.device_type,self.runtime]).strip());self.state['udid']=self.udid;self.save()
+  if self.owned() is None:raise ValueError('new_ios_not_owned')
+  self.call('boot',['boot',self.udid]);self.call('bootstatus',['bootstatus',self.udid,'-b'],240);self.context()
+  if self.owned().get('state')!='Booted':raise ValueError('new_ios_not_booted')
+  self.call('trust-exact-CA',['keychain',self.udid,'add-root-cert',str(self.ca)]);self.state['ca_fingerprint']=state.read(self.env['environment'])['ca_fingerprint'];self.call('install-ordinary',['install',self.udid,str(self.app)]);installed=Path(self.call('installed-app',['get_app_container',self.udid,PACKAGE,'app']).strip());expected=Path.home()/'Library/Developer/CoreSimulator/Devices'/self.udid/'data/Containers/Bundle/Application'
+  if installed.parent.parent!=expected or installed.name!='Runner.app' or installed.resolve()!=installed or bundle_manifest(installed)!=bundle_manifest(self.app):raise ValueError('ordinary_ios_installed_manifest_changed')
+  self.state['installed_app']=str(installed);self.state['installed_manifest']=bundle_manifest(installed);self.save();pid=launched_pid(self.call('ordinary-launch',['launch',self.udid,PACKAGE]));end=time.monotonic()+3;fp=None
+  while time.monotonic()<end:
+   try:fp=process_fingerprint(pid)
+   except ValueError:fp=None
+   if fp and fp['executable_path']==str(installed/'Runner'):break
+   time.sleep(.05)
+  if not fp or fp['executable_path']!=str(installed/'Runner') or fp['executable_sha256']!=digest(installed/'Runner'):raise ValueError('ordinary_ios_process_unproven')
+  self.state.update(pid=pid,process_identity=fp,status='ordinary_ready');self.save();return self
+ def close(self):
+  import os
+  failures=[]
+  try:
+   if self.reserved:
+    row=self.owned()
+    if row is not None:
+     from .mobile import simulator_id
+     self.udid=simulator_id(row['udid'])
+     if row.get('state')=='Booted':self.call('shutdown',['shutdown',self.udid])
+     self.call('delete',['delete',self.udid])
+     if self.owned() is not None:raise ValueError('owned_ios_remains')
+    self.state['owned_simulator_removed']=True
+  except Exception as exc:failures.append(type(exc).__name__+':'+str(exc))
+  self.state['cleanup_failures']=failures;self.save();return failures
+
+def prepare_ios(env,owner,source,archive,ca):
+ pinned_artifact(archive,IOS_ARCHIVE_SHA256);actor=OwnedIOS(env,owner,source,archive,ca)
+ try:return actor.start()
+ except Exception:
+  actor.close();raise
