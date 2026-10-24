@@ -1,0 +1,1463 @@
+{
+  "schema": "native_evidence_index_v1",
+  "date": "2026-10-24",
+  "assessment_source_commit": "95f78c5eb1cd5fe6429e97d370945ec8bd83b87e",
+  "status": "index_verified_acceptance_incomplete",
+  "mode": "offline_evidence_index_and_documentation_reconciliation_only",
+  "not_case_evidence": true,
+  "four_platform_complete": false,
+  "customer_acceptance": false,
+  "production_acceptance": false,
+  "physical_validation": "deferred_per_user",
+  "task_state": "Original Tasks5-9 BASE/in_progress retained",
+  "runtime_or_build_or_test_execution_this_increment": false,
+  "remote_actions": false,
+  "integrity": {
+    "status": "passed",
+    "source": "95f78c5eb1cd5fe6429e97d370945ec8bd83b87e",
+    "old_reports_verified": 89,
+    "protected_old_raw_verified": 8970,
+    "selected_report_count": 13,
+    "selected_unique_raw_verified": 6886,
+    "tracked_before_edit_verified": 1369,
+    "prior_overview_sha256": "49a99056007f120ea32597be655c6c74faf0b764cac203ab72856d4e2d49036a",
+    "package_sha256": "be067989a74f8d92971651f6fb4237fbfe32ca9f98a14cde83e175cfd4a64eee",
+    "runtime_resources_created": false
+  },
+  "historical_reports": [
+    {
+      "path": "docs/verification/p4-29-results.json",
+      "sha256": "a3c70e4bea9a015451239bc7006b6005fb0441ae289ea8d8d9d3322dc3fb93b6",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "367d80acc7b34cf1350d73713fec5735614aba96"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p4-30-results.json",
+      "sha256": "436f772eac8526d58a4168e351cd2561be8101ca58b20a03145c195497a59aa3",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "24cc1ffaf218cd73a7066f1affc73501b34e4024",
+        "full_suite_source_commit": "ac8bef72f68ee834cdaa728e5378abc5fcc6fa47"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "full_suite_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p4-31-fixture-preflight.json",
+      "sha256": "d04b2e7bd3c00f9ddc31f8877b1f3311c5d63093ab7c05679ae02dd35d54c81a",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "4fb6623a0013f1400e6d727103fa4d576ad6e3e2"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p4-31-interrupted-and-timeout-audit.json",
+      "sha256": "057b7833dfed88cb403d18e4cd36565c1b0193bb66e1b8c1b8710eff8e7e330d",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "4bd39947effbcbedfafc96f5c04e7fe051828e09"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p4-31-mc-rebuild.json",
+      "sha256": "6d589788e53abadc51d6e945065b029ad025cd8339626b7bbadb22412c8fa0f4",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "6ac18619cf881074fe6edcc79ab62c9c85da60b9"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": false
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p4-31-results.json",
+      "sha256": "89cebba71b50e8f97f92dc823a75ff60bf2e94cce7bba7924acbca5ce135a5cf",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "cd6e4fc6adb025a1634e4952f9382a962b7b389e",
+        "reviewed_source_commit": "b2f4e5a758a61c17b142c824dd6333169742bf92"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "reviewed_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p4-31-scanner-browser-preflight.json",
+      "sha256": "683a4c0a1d96995e1c4f89e6aed12550c4e89b5a8c12a5965b0882f3c8a48ab2",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "27fddbd91ce11c481f158037837be9a463d17e99"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-01-design-review-20261008.json",
+      "sha256": "e696606e4a4a7d72468e6f516a7645b3d9c9bf3a22f4df95ac920715c12e712d",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {},
+      "local_project_object_availability_without_namespace_inference": {},
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-01-doc-baseline.json",
+      "sha256": "bcb9e287fe7588a160b82c265678c93bdde1350f92715844a2b4f2f44206c8cb",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "b3b706c96a3f99e853163f88545437558fe4709a"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-01-legacy-browser-fixture-results.json",
+      "sha256": "0d234742c504ab03c9f3022e74a585bce44b9c4b3a51474b4a97bcf3b3c93b46",
+      "declared_status": "targeted_pass_only",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "3558f25b01a595b757975f724d456a140db1b6be"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-01-results.json",
+      "sha256": "9cf6ce28f8d4ce7287494451ce10d19bf852c8de7c2bd574b176d83031693ed5",
+      "declared_status": "fixed_source_acceptance_passed",
+      "declared_top_level_commit_fields": {
+        "web_implementation_commit": "99aced555d226bbbd1494aa58d56de565a1cf8ea",
+        "current_attempt_source_commit": "b20d01679b38f704f42ea9daaad111f0188362eb"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "web_implementation_commit": true,
+        "current_attempt_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-01-toolchain-metadata-20261008.json",
+      "sha256": "0ad3f40156b6907f131d4e83106551db64014cf71d2222878fcde7b3025b8e15",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {},
+      "local_project_object_availability_without_namespace_inference": {},
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-acceptance-input.json",
+      "sha256": "a99b95e79f0f03463bfbc96c6428f7f602da7dfc9b192251dc6984a27110638c",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "source_commit": "62e0c05edbf4734ab538272d3fa3a1bba6cb4215",
+        "backend_source_commit": "24d71cd9c9ff3ba2322cf4ff5f1a2bebdbd1ec53"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "backend_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-ack-restart-results.json",
+      "sha256": "b5d16bd06ff2c2f5d95fafc1b5ecf1a31c5a985a5fa18f22dd285f4bde72c555",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "6a2b69ec07ab950ab7333bb49fde9a5cdfc06125"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 220,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-api24-notification-results.json",
+      "sha256": "7b5816f436a2860ac6b83b233c19dd31fbbeb40aae84a1b2dae9afb8cac7c844",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "baseline_commit": "e7fd66f2bc1f217845cfe92f0a8604e97d7f8b86",
+        "source_commit": "a77c1693e4e3ca0f9e85a8b1ab05a461feeb523f"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "baseline_commit": true,
+        "source_commit": true
+      },
+      "declared_raw_references": 1319,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-api24-release-startup-results.json",
+      "sha256": "6142643c66859f93fe9079711992487d6c412f3f1f2824ae019f71c573f3754b",
+      "declared_status": "scoped_passed_API24_existing_Release_startup",
+      "declared_top_level_commit_fields": {
+        "source_commit": "247993f2c0fce6c58b39a893578622fd55ac5f47",
+        "tested_artifact_source_commit": "f3d50f65c5e840635a04ccfe9674303ac070aac5"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "tested_artifact_source_commit": true
+      },
+      "declared_raw_references": 86,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-cross-process-group-files-devices-results.json",
+      "sha256": "9129d80076856613c95430c3f23075872e5a5b2be6e8579a3a91dbc2a41210e6",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "c61194d9fe07d10ae6c6e24f04c6e8af5d63ca6b"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 1166,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-cross-process-messaging-results.json",
+      "sha256": "ed75dcc9d9dcff57d265ced739c584d9cdb7e894ad8df738ac86945124a3a689",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "60fe84b2eaf19b424d76c7450380fe74d527f1bd"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 507,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-desktop-entitlements-proposal.json",
+      "sha256": "13aaf6a9211362205e59160aca663058971fb8215587dc415f972f8e1534738e",
+      "declared_status": "applied_native_validation_pending",
+      "declared_top_level_commit_fields": {},
+      "local_project_object_availability_without_namespace_inference": {},
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-download-device-stream-results.json",
+      "sha256": "284411a56c8ae216159d3fa0464bc4affe78d935207c7ea02ee64eae3104a8d0",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "b70634dfad9d4476f3eb4a40e7870645e47d7729"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 66,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-fresh-login-callback-results.json",
+      "sha256": "cea7c22ae7871d8e98ca227cc97c99977d5a81259dbb883ee4ebd20f9d7f4176",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "af128f1c6a223a0f4c48b36af0d7ca497aa7a290"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 317,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-full-go-python-results.json",
+      "sha256": "cb1114bcda3563140478f4ea954e9d855c84a651b721f9539e2c372364e3064e",
+      "declared_status": "passed_local_full_go_python",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "91df68d913eeac7a862799776dc9896dd823a5ee",
+        "tested_source_commit": "24d71cd9c9ff3ba2322cf4ff5f1a2bebdbd1ec53"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true,
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 726,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-ios-normal-launch-readiness.json",
+      "sha256": "657366cc677ff122d3ffbeefebb7cc78068872191b3440bb67de7ef58e3a8b24",
+      "declared_status": "ios_same_artifact_build_and_launch_verified_partial",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "9be0ccc09eb7dd9e4d832a089633e1af82b295fd"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 83,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-ios-normal-launch-results.json",
+      "sha256": "7a78e088a6f5199cf61c4e1169ee85da7d210e01b334a4b5bd61674435471230",
+      "declared_status": "incomplete",
+      "declared_top_level_commit_fields": {
+        "source_commit": "9be0ccc09eb7dd9e4d832a089633e1af82b295fd",
+        "sdk_commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+        "backend_source_commit": "9be0ccc09eb7dd9e4d832a089633e1af82b295fd"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "sdk_commit": false,
+        "backend_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-logout-navigation-results.json",
+      "sha256": "92909468452e3b48ed5ef209ed07552fb5eacbf558cc9eb390f0b3bd5d9ff399",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "e60fa443b306ca83171e83fc2c5129a6cd145243"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 437,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-logout-race-results.json",
+      "sha256": "cd7e60300287fa3d9ea75fb84093056374f7b41a0e622a81b5bd6641a54415d1",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "28ebe98b795f71f97859d55bf274988ce817591a"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 185,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-mobile-notification-automation-results.json",
+      "sha256": "3a367dc15cb6db78f985ea2a7158ddcfdf0dddb8cef194f83030bef60f2f081a",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "source_commit": "5f285e6152fd4784d7a83fc35b82cd5b84383859",
+        "baseline_commit": "6ce7d37ac36bdbe9a444d39b1ab05d111bc69176"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "baseline_commit": true
+      },
+      "declared_raw_references": 567,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-mobile-notification-completion-results.json",
+      "sha256": "17f35afff83edfa6f14486b21465f3d274ff17e4fd4795f4a50c0cfe77cffe47",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "baseline_commit": "2c2ab7ff759cdc854b5f7fa7ff369c856ab4c8bc",
+        "source_commit": "523d3706ca2ec5978e6e47fcdf3e34a0da8f0e3a"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "baseline_commit": true,
+        "source_commit": true
+      },
+      "declared_raw_references": 613,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-mobile-notification-tap-results.json",
+      "sha256": "36a38d58e4119a2e4d464930870896ed31c24067b999669bb757cac2b6da48da",
+      "declared_status": "partial",
+      "declared_top_level_commit_fields": {
+        "source_commit": "7d436f0d3809e6f191cd63787a357acbfcda089c",
+        "baseline_commit": "7d436f0d3809e6f191cd63787a357acbfcda089c"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "baseline_commit": true
+      },
+      "declared_raw_references": 159,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-mobile-notification-ui-results.json",
+      "sha256": "79f73897237634e7aacb62d4550e23964a6af9885573857a445d793c7e7b6d7d",
+      "declared_status": "partial",
+      "declared_top_level_commit_fields": {
+        "source_commit": "f0863e725d9d0e0ccd19a4de415c563ff381df75",
+        "baseline_commit": "efda79b59457253300604973da1a673f60c9dd6f"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "baseline_commit": true
+      },
+      "declared_raw_references": 425,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-mobile-notifications-results.json",
+      "sha256": "1f30997595a82a49e6b99a5398182b7dedb1fdb431670fd6ed81dd07acf7cdc9",
+      "declared_status": "partial",
+      "declared_top_level_commit_fields": {
+        "source_commit": "0efff54a0b69ff80aca00b6b94a3989703460a21",
+        "baseline_commit": "a4a935fb68707c190f6ba64a6cab1b7783744dd2"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "baseline_commit": true
+      },
+      "declared_raw_references": 454,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-notification-input-diagnostics-results.json",
+      "sha256": "ebddd0308f78b2c012e308a793332a4e37ff38db32cb69f6c14ff8fb0db20216",
+      "declared_status": "partial",
+      "declared_top_level_commit_fields": {
+        "source_commit": "51f58fae5831f562fdab8f9a1cbb9c6a63b3af2e",
+        "baseline_commit": "51f58fae5831f562fdab8f9a1cbb9c6a63b3af2e"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "baseline_commit": true
+      },
+      "declared_raw_references": 51,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-permission-change-results.json",
+      "sha256": "efdf468005ca1b78b419fdca6dba77d6a836668d7cb39596f156d492e0df0afb",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "e926330325c95ebbc15ce46ff7d93fc0ccae3b06"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 195,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-read-timer-results.json",
+      "sha256": "aa0847931a2e6edfb1b9edd91f66fb0709cffc651fe9a2dfc465b23f294c1588",
+      "declared_status": "scoped_passed_read_timer_test_repair",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "c2957c7f212190a86dd7549a3cec5b0532171b05"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 34,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-receipt-retry-results.json",
+      "sha256": "73fafdaf4f445fd18db2da3bfd790ad6941fc3bdc5fd2b140a9644ba505bd27c",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "45107705e8ec2be2039bab5f9a834f5fb8dcd3de"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 638,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-release-readiness-results.json",
+      "sha256": "39d36713597da9523e9bff5480e2a2ce019b826a4a38ec323d679aea7466f053",
+      "declared_status": "local_test_delivery_passed_distribution_incomplete",
+      "declared_top_level_commit_fields": {
+        "source_commit": "f3d50f65c5e840635a04ccfe9674303ac070aac5"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true
+      },
+      "declared_raw_references": 162,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-relogin-restart-results.json",
+      "sha256": "fe43721cb0e4b66be0e766b9f380e83a97f4b5474861af6edfd8e8222987ebaf",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "cf932898497c35c53982c0ca6d06de1214434ea0"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 234,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-relogin-results.json",
+      "sha256": "deb725fb3f361b06bdbc957f007c9f14634c5bab0e16cea05f2e1084265d71bf",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "9efaa08c9ced4ffdd17b2efaa025eb4ad7fbe845"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 226,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-results.json",
+      "sha256": "bdb5288691808bdd63747c6093578c1087e2fe87a70e43aed000bbb57b9ca2d6",
+      "declared_status": "incomplete",
+      "declared_top_level_commit_fields": {
+        "source_commit": "62e0c05edbf4734ab538272d3fa3a1bba6cb4215",
+        "sdk_commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+        "backend_source_commit": "24d71cd9c9ff3ba2322cf4ff5f1a2bebdbd1ec53"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "sdk_commit": false,
+        "backend_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-retention-restart-results.json",
+      "sha256": "db7c760a3b54ca203cae27768220f2e48196bbee50271aeae708726502902a81",
+      "declared_status": "passed",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "abb6edebd2c1fdecb0e7ec1f200aff1d3ff110c1"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": 904,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-runner-adapter-readiness.json",
+      "sha256": "010dc8b8258814c4558d4c95d5debdc8b215beb79c1b78c48e630fd6ff590abe",
+      "declared_status": "partial_mobile_runner_adapter_verified",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "f4041320241232f775a24fcd25633074e3b28777",
+        "intermediate_source_commit": "be4637484a711588c932ae02dbbd6ec7c9481d99"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true,
+        "intermediate_source_commit": true
+      },
+      "declared_raw_references": 227,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-runner-adapter-results.json",
+      "sha256": "c66d383ab4e5b4e9cc3870b91cb4af42c04e9fbaf5d3b609ad6d17633868ff78",
+      "declared_status": "incomplete",
+      "declared_top_level_commit_fields": {
+        "source_commit": "f4041320241232f775a24fcd25633074e3b28777",
+        "sdk_commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+        "backend_source_commit": "f4041320241232f775a24fcd25633074e3b28777"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true,
+        "sdk_commit": false,
+        "backend_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task1-local-results.json",
+      "sha256": "343c71e7830c8cac6c57bea9e68e37a09dd3a92e8fcf478c02cc14e354e1d9dd",
+      "declared_status": "backend_local_checks_passed",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "d14811da142677c15d5d77aba6a14d34b981ee40"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task2-shared-results.json",
+      "sha256": "74c256db823226420f62adbb10572b7b8d1966830b763a60581ba9557f1c7e87",
+      "declared_status": "in_progress",
+      "declared_top_level_commit_fields": {
+        "base_commit": "beb161e2bf4f39bf59dbf3f4c3990a96fa5ea1a0"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task3-auth-handoff-results.json",
+      "sha256": "f8455c8d08217b97baf2f4bfe1f21cc78a1c3ac2f37e50bf9d1d998249cf7880",
+      "declared_status": "shared_authentication_handoff_checkpoint_passed",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "8bb4b3273a9b92118720ab6b83758abda2d7cf67"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task3-cold-start-results.json",
+      "sha256": "c9c92a302b960b8602438401e29cd5f0403dbeca64014a5c5029bf877ad020fd",
+      "declared_status": "shared_cold_start_checkpoint_passed",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "3cd56b3bcad40c83c051bd8c10a59a4dfa680492"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task3-lease-clock-results.json",
+      "sha256": "224847a08d581df3ec2f63b7bf9df28396a91c15ac3766b072ecde2f93835c06",
+      "declared_status": "in_progress",
+      "declared_top_level_commit_fields": {},
+      "local_project_object_availability_without_namespace_inference": {},
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task3-page-session-results.json",
+      "sha256": "1c0521868f822ccaeab5263984893f5d53a4cfe768ca071400dde9b6a12f7aaa",
+      "declared_status": "in_progress",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "758480d333fd49f79c88cd798b55d05c429dd06e"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task3-storage-foundation-results.json",
+      "sha256": "1a759bcc94814160f4045b6831cb17b695ce996964aeb6056d3b4cb6a264de59",
+      "declared_status": "in_progress",
+      "declared_top_level_commit_fields": {
+        "base_commit": "d57c0aae1db5b0f8ff3dcfed007c799ad3168373"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task4-foreground-results.json",
+      "sha256": "d59d379bd4762e655133a1cb5df883dc4d2093a57a9b3bce80daccee20a03388",
+      "declared_status": "in_progress",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "0e5829d38d5ca2f9fd507361c3c900d6b1569598"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task4-online-authorization-results.json",
+      "sha256": "355f8028c356845509b053817f72b2ee331090f21df20117bc639d9601fe286b",
+      "declared_status": "shared_online_authorization_checkpoint_passed",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "4604a5bdea3304277cccfd776bdf8a910fa7299c"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task4-real-backend-results.json",
+      "sha256": "f578d9b05970d633149e188cd947e375f5065f4ad5d3887f061aefc5ae382ae9",
+      "declared_status": "targeted_protocol_passed",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "a0380fb10f2565285c704aa9798f41d608bb9b5a"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task4-realtime-results.json",
+      "sha256": "8c47e7cfbea042dd6346c339bd8bdc8429244b004a378493467168f1a1cbe638",
+      "declared_status": "in_progress",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "624761a4a55f6ff32c718eb4fdcf583925c30a2d"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task4-sync-core-results.json",
+      "sha256": "f8cb794c5596d283fc71103851707e4bfd6d04ec433af80728f459fc6b4f85a0",
+      "declared_status": "in_progress",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "69633b2befde2287557e82ea91a724d1280c5637"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task5-directory-group-results.json",
+      "sha256": "589a70c3891423259da214849cf695aef318a901bfc27bf6092371a5b63f5210",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "8c9c497a0c30a1c6075bb06e73633b559a805ec8"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task5-message-ui-results.json",
+      "sha256": "c170a894f18f94d599991c3584f30aa86dbb7e0f426d4876cb7fb23da6b23047",
+      "declared_status": "shared_message_ui_and_visibility_checkpoint_passed",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "f50f73015878383c224dc1e35d3cce3295c7cfbd"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task5-real-messaging-results.json",
+      "sha256": "0661428be23378b6a7b4912241fed435490e963fed5dda02b6bb10a74673698e",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "9484a33c6bda84b9ba2ea123ebfbed4a5da6587a"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task5-workspace-send-results.json",
+      "sha256": "79397cb2651481b93782efc64568788fa9f52032aecda685e7522e11d9b82c0b",
+      "declared_status": "shared_membership_device_ui_and_reliable_send_core_checkpoint_passed",
+      "declared_top_level_commit_fields": {
+        "source_base_commit": "2ec34734e50627392cbda7d340bb14f658a97216"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_base_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task6-device-results.json",
+      "sha256": "34e30b5b5e7041a1c19d6b0171d0500cebb3f31fc98ba8c3f4f55798049e379b",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "2314d7077068d7af253ee94b136418e642f5cc07"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task6-files-results.json",
+      "sha256": "07f5419a0ed70149759cffb63afd7fe2196f0e5e54e004aa3f131372196d0747",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "b4ce81e67078f1118133abe001ff94933d10e966"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task6-real-files-results.json",
+      "sha256": "041f52ef8cd7f1bd843e86fdf6ec43440a67e3797b19698cd795090bafb578c3",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "99361504af86e68e027c43a0dcba89f954236188"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-approved-entitlements-results.json",
+      "sha256": "13f1c8b5999828cca34e9913e608fc9800f29066d3bb59f6bed5ebc223dac71c",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "3d393d0aad64954b081dd8621fb35c1282f34e67"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-desktop-foundation-results.json",
+      "sha256": "ca44012382a16ce8d2d64d2dc8c2e9d6b0a941fae3b66a5cd3920192c168e366",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "265540be9c1a228853236e586be1ccdd52958b4e"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-files-host-results.json",
+      "sha256": "f675d416d0ee15ae7f633727fad6cd6ab8362f066763d1c5781dd02048238d0f",
+      "declared_status": "formal_host_gate_passed_native_not_run",
+      "declared_top_level_commit_fields": {
+        "tested_source_commit": "a13d7e81eac3f0d60bb1b46c4417494e9ea2cef4"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-files-orchestration-results.json",
+      "sha256": "cf47edc5a845e615e505da0de7858eed778fa97ac921265bf2ae567bf6aba3ca",
+      "declared_status": "source_prepared_native_and_files_not_run",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "ca7d4ad906739559f1b0f6413b84115ce0dc9c75"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-macos-compile-results.json",
+      "sha256": "01b2d616c3cfd3d52a5d6a27f8e68807f54f1325cdde7c89b67d8e18387c57e8",
+      "declared_status": "compile-only passed; certificate signing and installed native acceptance blocked",
+      "declared_top_level_commit_fields": {
+        "source_commit": "3e4ec46a1e265074642ffffa64212d8ba9428c8d"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "source_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-native-entry-results.json",
+      "sha256": "52a18fb483728cd767408502e99930828ea8ff40390ece4222b4998b7e9d088c",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "b4c46dfa1b10c2122d0eaf40fa1dc985f3d8b97a"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-native-orchestration-results.json",
+      "sha256": "1983134d8fbe7c10d770b1e3c52361fd94a27bb0a73c690e8061588b9be487a7",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "5fde68f3fc394d160b3f756b07c78945506e524b"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task7-startup-gates-results.json",
+      "sha256": "bf9ed66cdbb76386b6bb91c656d6f1ab07f9da1226bf8f981c7064666f66f7fa",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "parent_commit": "22d0fee6b922860544eceb5f7ed7b2f1b6eda9cd"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-api24-results.json",
+      "sha256": "522c1c1c756f8adca36c657f33c46e264b166e4dbfeb713417ba134994836af8",
+      "declared_status": "passed_scoped_api24_arm64_emulator_compatibility_and_export_recovery",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "646f02c185ae5e2edfce79690a9aea89b8f0c530"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 1183,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-cli-results.json",
+      "sha256": "66a487428636c566be43d66c6edb96928c32a1ee2f289101f28cb3f0a479970b",
+      "declared_status": "scoped_passed_android_cli_build_only",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "0511021b6fb80fa924f3c767bc2ab39eea6cad08"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 53,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-directory-handoff-results.json",
+      "sha256": "689877d400bef9ed707bfcda7ee0857097e09bb352f8a9340987f7515a2c38aa",
+      "declared_status": "passed_scoped_api36_arm64_directory_created_before_ack_recovery",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "6790fad63ee932a5df9bf91158e824ec979fef85"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 694,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-mobile-boundary-results.json",
+      "sha256": "ebc529433bbbf01e4f756dd32d72dc7eeb77184a05cd925f5a4650b263567fd9",
+      "declared_status": "scoped_passed_android_os_callback_and_activity_boundary",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "6e42f5a4227e3508cf9e06631ee45c6c598cd3ac"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 436,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-partial-export-results.json",
+      "sha256": "90a2b29155aa69b89bfedae48f8a98f4dc0142e6371a172d08f180b3bbaa3a34",
+      "declared_status": "passed_source_error_cancellation_and_size_limit_cleanup_on_aosp36_local_provider",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "0ee89aa6ae46eb4cde26a2c0eb338e3fb0521fe4"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 347,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-picker-results.json",
+      "sha256": "b6e6af8d0309cb169d87e4234f53c343b892c48d5c29c0a2dda14ffb7f0aaa15",
+      "declared_status": "passed_real_local_aosp36_system_picker_scope",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "e5aaaed3aeb35c7e586ef53c2af24eae77894df7"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 128,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-provider-fault-results.json",
+      "sha256": "830930cad0bfcfacc3c0bab2bf49e9459edd1c3cf1bb8dede9fdb38b718563ae",
+      "declared_status": "passed_controlled_synchronous_write_close_and_delete_fault_cleanup_on_api36",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "bf3fefbca7725f3ad38d51446aeb2dab5216410d"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 431,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-recovery-results.json",
+      "sha256": "4426999763991f305e64fb3c049a696d612895ea34d743f4e51aff57f54d8484",
+      "declared_status": "passed_acknowledged_ticket_recovery_before_next_export_on_controlled_api36",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "d592aeb3ac0610a37175a1dc95dfb3af4877fcf0"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 711,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-release-receipts-results.json",
+      "sha256": "736dbf3b2da1150b1b7f8a0a1c83ad2e8e584542b1b439ec97391a22db0a438b",
+      "declared_status": "scoped_passed",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "d91ec7291a8f7cff9ca54219e8bb59adb1e7dac2"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 1911,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-results.json",
+      "sha256": "0da1a3b1ccaa9a2350de9f0c11f7bdad37c9c4d71c2e4b33ebdfd940bafc4e62",
+      "declared_status": "passed_scoped_api36_arm64_emulator_checks",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "36491c13220084487f4995cf09a72d7e00936f83"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 185,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-simulator-cli-results.json",
+      "sha256": "43417ff90b084113d056f2369b85148d42baf7c57a2948d0da6d0cc852b9526a",
+      "declared_status": "scoped_passed_android_simulator_cli",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "a4200a8345e3b7bc52c75720b51da063b561cf61"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 211,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-android-system-reboot-results.json",
+      "sha256": "4f82acff942604a8e26897cfda072f27e38570dfcfbe436cc61589406986e31d",
+      "declared_status": "partial_reauthorization_verified_os_reboot_resource_acceptance_failed",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "d91ec7291a8f7cff9ca54219e8bb59adb1e7dac2"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 1643,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-ios-export-results.json",
+      "sha256": "6a8870650cdbff231b5aab12bf25a3100c31da380a410850f9e0cb509df94167",
+      "declared_status": "implemented_with_partial_native_verification_picker_interaction_unverified",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "5f902dd3d78115074544a1c532ddebf3496f20c5"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-ios-foundation-results.json",
+      "sha256": "a4a721819e3ee3c0d403135c00cb14afa3bb8b6ff6e960b09afbe6a0ed23a1de",
+      "declared_status": "partial_ios_simulator_validation",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "069e55ff3ba58d09262d96beed7cfaaaafa61614"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-ios-picker-results.json",
+      "sha256": "1e4c40128975d541d40d79724e4e5a2336934018492517e9d1f8ba83d4564445",
+      "declared_status": "passed_local_provider_ios27_simulator",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "f2868969ce20e44897cf3fc3152e0b35191a9495"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-mobile-backend-results.json",
+      "sha256": "3f7f41aa562dcf6d7118abd35b022f0eb8ca342cf5dda4ed26e4e19e23c5110e",
+      "declared_status": "scoped_passed_native_mobile_with_real_backend",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "0b86b4833fe95942cced5615838943ef8ad369a2"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 783,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-mobile-orchestration-results.json",
+      "sha256": "bb9cfea01c545d29823f415ce4c14cdfe829b39108f8c77e8d95481b38fabc63",
+      "declared_status": "ios_simulator_orchestration_passed_partial_platform_acceptance",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "9ef0ce1187a0258aa3d79793d59de463e76f290d"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task8-mobile-resume-results.json",
+      "sha256": "9687bd487dab6ad6626cd94eafa7627a1875dee383a8cd3a74b80273fd71e12d",
+      "declared_status": "scoped_passed_actual_mobile_os_resume_with_controlled_api",
+      "declared_top_level_commit_fields": {
+        "parent_commit": "c59d80ef484161b8d48456cbd1024ebd6507437d"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "parent_commit": true
+      },
+      "declared_raw_references": 743,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-task9-evaluator-results.json",
+      "sha256": "84b58cdc2ad1fc9fef24af4953fc3ca789891ae05c6c6c0a8cc7741e566c0740",
+      "declared_status": null,
+      "declared_top_level_commit_fields": {
+        "tested_evaluator_source_commit": "62e0c05edbf4734ab538272d3fa3a1bba6cb4215"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "tested_evaluator_source_commit": true
+      },
+      "declared_raw_references": 25,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    },
+    {
+      "path": "docs/verification/p5-02-toolchain-lock.json",
+      "sha256": "4e50b0fc59e42d1a5cc85765d5930aba7c1132723cffc45d9ef0540840cab006",
+      "declared_status": "source_and_dependency_preparation",
+      "declared_top_level_commit_fields": {
+        "framework_commit": "e8113bf45620cbeb8aff64947ee4c93e16adb4cf",
+        "engine_commit": "06a2e2a110089dff50fe635cffd2a61e1b24fbcd"
+      },
+      "local_project_object_availability_without_namespace_inference": {
+        "framework_commit": false,
+        "engine_commit": false
+      },
+      "declared_raw_references": null,
+      "scope": "report bytes verified; raw declarations fully traversed only for selected_evidence below or protected baseline set"
+    }
+  ],
+  "selected_evidence": [
+    {
+      "label": "本地 Go／Python／集成门禁",
+      "path": "docs/verification/p5-02-full-go-python-results.json",
+      "sha256": "cb1114bcda3563140478f4ea954e9d855c84a651b721f9539e2c372364e3064e",
+      "original_declared_status": "passed_local_full_go_python",
+      "original_commit_fields": {
+        "parent_commit": "91df68d913eeac7a862799776dc9896dd823a5ee",
+        "tested_source_commit": "24d71cd9c9ff3ba2322cf4ff5f1a2bebdbd1ec53"
+      },
+      "source_display": "24d71cd9c9ff3ba2322cf4ff5f1a2bebdbd1ec53",
+      "summary_scope": "历史固定源全量及race／Python／17门禁；不累计到当前源码或平台验收",
+      "declared_raw_references_verified": 726,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "跨端独立进程消息",
+      "path": "docs/verification/p5-02-cross-process-messaging-results.json",
+      "sha256": "ed75dcc9d9dcff57d265ced739c584d9cdb7e894ad8df738ac86945124a3a689",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "60fe84b2eaf19b424d76c7450380fe74d527f1bd"
+      },
+      "source_display": "60fe84b2eaf19b424d76c7450380fe74d527f1bd",
+      "summary_scope": "两台Android API36＋一台iOS26.5的独立Debug原生进程；发送／送达／已读／断线恢复",
+      "declared_raw_references_verified": 507,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "跨端群聊／附件／设备失效",
+      "path": "docs/verification/p5-02-cross-process-group-files-devices-results.json",
+      "sha256": "9129d80076856613c95430c3f23075872e5a5b2be6e8579a3a91dbc2a41210e6",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "c61194d9fe07d10ae6c6e24f04c6e8af5d63ca6b"
+      },
+      "source_display": "c61194d9fe07d10ae6c6e24f04c6e8af5d63ca6b",
+      "summary_scope": "三原生进程、真实API和文件服务专项；不等于普通Release完整业务验收",
+      "declared_raw_references_verified": 1166,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "丢ACK／回执重试／重启",
+      "path": "docs/verification/p5-02-ack-restart-results.json",
+      "sha256": "b5d16bd06ff2c2f5d95fafc1b5ecf1a31c5a985a5fa18f22dd285f4bde72c555",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "6a2b69ec07ab950ab7333bb49fde9a5cdfc06125"
+      },
+      "source_display": "6a2b69ec07ab950ab7333bb49fde9a5cdfc06125",
+      "summary_scope": "原生模拟器专项；保留其独立测试产物与固定源",
+      "declared_raw_references_verified": 220,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "保留期变化／重启",
+      "path": "docs/verification/p5-02-retention-restart-results.json",
+      "sha256": "db7c760a3b54ca203cae27768220f2e48196bbee50271aeae708726502902a81",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "abb6edebd2c1fdecb0e7ec1f200aff1d3ff110c1"
+      },
+      "source_display": "abb6edebd2c1fdecb0e7ec1f200aff1d3ff110c1",
+      "summary_scope": "原生模拟器正文授权、清理与恢复专项",
+      "declared_raw_references_verified": 904,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "任职／权限变化",
+      "path": "docs/verification/p5-02-permission-change-results.json",
+      "sha256": "efdf468005ca1b78b419fdca6dba77d6a836668d7cb39596f156d492e0df0afb",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "e926330325c95ebbc15ce46ff7d93fc0ccae3b06"
+      },
+      "source_display": "e926330325c95ebbc15ce46ff7d93fc0ccae3b06",
+      "summary_scope": "真实管理API结束一个任职后的移动端授权变化专项",
+      "declared_raw_references_verified": 195,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "退出／导航／冷启动",
+      "path": "docs/verification/p5-02-logout-navigation-results.json",
+      "sha256": "92909468452e3b48ed5ef209ed07552fb5eacbf558cc9eb390f0b3bd5d9ff399",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "e60fa443b306ca83171e83fc2c5129a6cd145243"
+      },
+      "source_display": "e60fa443b306ca83171e83fc2c5129a6cd145243",
+      "summary_scope": "真实页面退出及原生同安装进程冷启动专项",
+      "declared_raw_references_verified": 437,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "首次登录／PKCE／OS回调",
+      "path": "docs/verification/p5-02-fresh-login-callback-results.json",
+      "sha256": "cea7c22ae7871d8e98ca227cc97c99977d5a81259dbb883ee4ebd20f9d7f4176",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "af128f1c6a223a0f4c48b36af0d7ca497aa7a290"
+      },
+      "source_display": "af128f1c6a223a0f4c48b36af0d7ca497aa7a290",
+      "summary_scope": "实际LoginPage和OS回调；synthetic authorize adapter，不是系统浏览器客户SSO",
+      "declared_raw_references_verified": 317,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "重新登录／补拉／再次重启",
+      "path": "docs/verification/p5-02-relogin-restart-results.json",
+      "sha256": "fe43721cb0e4b66be0e766b9f380e83a97f4b5474861af6edfd8e8222987ebaf",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "tested_source_commit": "cf932898497c35c53982c0ca6d06de1214434ea0"
+      },
+      "source_display": "cf932898497c35c53982c0ca6d06de1214434ea0",
+      "summary_scope": "原生模拟器双Bob平台退出后重登录、补拉、收发回执及冷恢复专项",
+      "declared_raw_references_verified": 234,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "API36／iOS进程活跃通知",
+      "path": "docs/verification/p5-02-mobile-notification-completion-results.json",
+      "sha256": "17f35afff83edfa6f14486b21465f3d274ff17e4fd4795f4a50c0cfe77cffe47",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "baseline_commit": "2c2ab7ff759cdc854b5f7fa7ff369c856ab4c8bc",
+        "source_commit": "523d3706ca2ec5978e6e47fcdf3e34a0da8f0e3a"
+      },
+      "source_display": "523d3706ca2ec5978e6e47fcdf3e34a0da8f0e3a",
+      "summary_scope": "实际权限选项、系统卡片点击与补拉；iOS退出后最终消失，不保证即时消失或后台杀进程推送",
+      "declared_raw_references_verified": 613,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "API24进程活跃通知",
+      "path": "docs/verification/p5-02-api24-notification-results.json",
+      "sha256": "7b5816f436a2860ac6b83b233c19dd31fbbeb40aae84a1b2dae9afb8cac7c844",
+      "original_declared_status": "passed",
+      "original_commit_fields": {
+        "baseline_commit": "e7fd66f2bc1f217845cfe92f0a8604e97d7f8b86",
+        "source_commit": "a77c1693e4e3ca0f9e85a8b1ab05a461feeb523f"
+      },
+      "source_display": "a77c1693e4e3ca0f9e85a8b1ab05a461feeb523f",
+      "summary_scope": "受控AppOps允许／拒绝与真实OS卡片点击；API24没有API33运行时通知弹框",
+      "declared_raw_references_verified": 1319,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "普通测试包构建／启动",
+      "path": "docs/verification/p5-02-release-readiness-results.json",
+      "sha256": "39d36713597da9523e9bff5480e2a2ce019b826a4a38ec323d679aea7466f053",
+      "original_declared_status": "local_test_delivery_passed_distribution_incomplete",
+      "original_commit_fields": {
+        "source_commit": "f3d50f65c5e840635a04ccfe9674303ac070aac5"
+      },
+      "source_display": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+      "summary_scope": "Android Release及iOS模拟器Debug普通包；macOS仅compile-only，标准签名构建失败",
+      "declared_raw_references_verified": 162,
+      "acceptance_transfer_to_current_source": false
+    },
+    {
+      "label": "同一普通Release的最低API24启动",
+      "path": "docs/verification/p5-02-api24-release-startup-results.json",
+      "sha256": "6142643c66859f93fe9079711992487d6c412f3f1f2824ae019f71c573f3754b",
+      "original_declared_status": "scoped_passed_API24_existing_Release_startup",
+      "original_commit_fields": {
+        "source_commit": "247993f2c0fce6c58b39a893578622fd55ac5f47",
+        "tested_artifact_source_commit": "f3d50f65c5e840635a04ccfe9674303ac070aac5"
+      },
+      "source_display": "247993f2c0fce6c58b39a893578622fd55ac5f47",
+      "summary_scope": "未登录阶段安装／HOME-MAIN／强停后新进程；不证明消息或用户数据恢复",
+      "declared_raw_references_verified": 86,
+      "acceptance_transfer_to_current_source": false
+    }
+  ],
+  "remaining_gates": [
+    {
+      "gate": "ordinary_release_authenticated_business",
+      "state": "not_verified",
+      "need": "已授权HTTPS测试服务、企业OIDC接入与测试账号使用方式；实际普通安装包的完整消息/附件/回执/恢复矩阵",
+      "next_action": "客户环境信息到位后执行；不把synthetic IdP或专项Debug结果补到普通Release"
+    },
+    {
+      "gate": "macos_native_business",
+      "state": "blocked_on_conditions",
+      "need": "指定开发团队和既有开发证书、独立可丢弃OS测试账号",
+      "next_action": "执行现有标准签名构建、实际安装及业务/重启验证；公证与正式分发另列"
+    },
+    {
+      "gate": "windows_native",
+      "state": "not_run",
+      "need": "可用隔离Windows x64 runner及锁定工具链",
+      "next_action": "执行现有构建/原生启动/业务脚本，Windows10产品基线单独核对"
+    },
+    {
+      "gate": "ios_physical_distribution",
+      "state": "not_verified",
+      "need": "客户Apple团队、签名/配置描述文件流程与设备条件",
+      "next_action": "条件到位后实际签名安装和IPA；iOS15最低版本实际运行仍未验收"
+    },
+    {
+      "gate": "physical_android",
+      "state": "deferred_per_user",
+      "need": "仅在用户恢复真机项时提供两台Android硬件",
+      "next_action": "保持暂缓，不重复索要设备"
+    },
+    {
+      "gate": "remote_ci",
+      "state": "not_run",
+      "need": "远端执行授权及准备好的平台runner",
+      "next_action": "工作流存在不是运行成功；本轮不push、不触发CI"
+    },
+    {
+      "gate": "source_consistent_final_handoff",
+      "state": "incomplete",
+      "need": "同一交付源与各产物的真实门禁、回归及资源证据",
+      "next_action": "缺项保留incomplete，不将跨提交历史报告合并为当前源全通过"
+    }
+  ],
+  "existing_local_package": {
+    "path": ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-release-readiness/delivery/enterprise_im_local_test_f3d50f6.zip",
+    "sha256": "be067989a74f8d92971651f6fb4237fbfe32ca9f98a14cde83e175cfd4a64eee",
+    "size": 136345548,
+    "source_commit": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+    "artifact_manifest_sha256": "055a97294b0da0758b2782a8f79f50fef3f3caf6066e0583854fb17f567ce728",
+    "archive_entries_verified": 6,
+    "aggregate_actual_exit": 2,
+    "status": "local_test_package_verified",
+    "production_acceptance": false
+  },
+  "prior_overview_preserved": "Exact prior overview saved in raw overview-before.md and included verbatim in collapsed historical section of the central overview.",
+  "scope_rules": [
+    "Historical scoped passing reports keep original sources, artifacts, failed attempts and non-coverage.",
+    "Raw SHA verification does not execute product tests or prove current environment/runtime cleanup.",
+    "No global pass counts summed across repeated test suites, attempts or report sources.",
+    "13 selected report raw declarations are fully checked; other89 report inventory entries are checked as report files plus the protected8970 baseline raw set, not a claim of exhaustive raw traversal for every older report."
+  ],
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/baseline.json": "21efed2ce525e7bb97f3f6242c950310e7da704a339f88d721bedd82ad86fff6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/helpers/im-native-overview-prepare.py": "a1ba3e32cd293ce4b2d40bef4f53f59489db9a2973e467b9579bded35ef3d3de",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/helpers/im-native-overview-publish-v1.py": "e4b63c3e55000227097906f63a7043b39dd5358918d7006c6b1dffc5a7cc347c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/helpers/im-native-overview-publish-v2.py": "e552374e1e9804c479d45bf7039c201092f41f2723dbfe7cab3f9005a6ea2d45",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/inventory-preparation-failure.json": "d3b11854e92cf6df00fc046dcdaa3ff85195b5356957a6f1c244aebd45f85ccf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/overview-before.md": "49a99056007f120ea32597be655c6c74faf0b764cac203ab72856d4e2d49036a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/prepublication-audit.json": "7addb403207996748b65e42884b765226da8c3f5b41d99832e99b748abc19fb8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-evidence-overview/selected-raw-integrity.json": "2cc7ff370f846d1d01ce8a4d77d323a0e5f32c7f655baa6d7aeb74afe53a8906"
+  },
+  "postcommit_audit_outputs_expected": [
+    "postcommit-audit.json",
+    "postcommit-host.log"
+  ]
+}
