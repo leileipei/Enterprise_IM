@@ -26,19 +26,19 @@
 
 **Files:** Create `internal/testfixtures/localoidc/{provider.go,tokens.go,provider_test.go}`。
 **Interfaces:** `Config{Issuer,Audience string; Clients map[string]Client; Users []User; Now func()time.Time; Random io.Reader; MaxPending int}`；`Client{ID,RedirectURI string; Loopback bool}`；`User{Subject,Name string}`；`New(Config)(*Provider,error)`；Provider实现`http.Handler`，路径`/oidc/authorize`,`/oidc/token`,`/oidc/keys`,`/oidc/.well-known/openid-configuration`。
-- [ ] 先写真实httptest端点测试：`TestBrowserCodePKCENonceAndRotatingRefresh`、`TestRejectMalformedDuplicateAndWrongBinding`、`TestExpiryReplayAndCapacity`、`TestConcurrentCodeSingleUse`；缺实现RED。
-- [ ] 实现HTML标注本地合成身份源，POST一次性选择令牌；code60秒、选择请求300秒、refresh3600秒、access900秒；默认各状态上限256；state/nonce/challenge均43字符base64url，verifier43—128合法字符；严格重复参数和4KiB请求预算。
-- [ ] 现有RS256 JWT库；access typ at+jwt/aud API/client_id；ID token aud client/nonce；token响应no-store，无日志令牌；wrong binding/expired/used拒绝。
-- [ ] 运行`go test ./internal/testfixtures/localoidc -count=1`与同包race，观察GREEN；只提交本任务包。
+- [x] 先写真实httptest端点测试：`TestBrowserCodePKCENonceAndRotatingRefresh`、`TestRejectMalformedDuplicateAndWrongBinding`、`TestExpiryReplayAndCapacity`、`TestConcurrentCodeSingleUse`；缺实现RED。
+- [x] 实现HTML标注本地合成身份源，POST一次性选择令牌；code60秒、选择请求300秒、refresh3600秒、access900秒；默认各状态上限256；state/nonce/challenge均43字符base64url，verifier43—128合法字符；严格重复参数和4KiB请求预算。
+- [x] 现有RS256 JWT库；access typ at+jwt/aud API/client_id；ID token aud client/nonce；token响应no-store，无日志令牌；wrong binding/expired/used拒绝。
+- [x] 运行`go test ./internal/testfixtures/localoidc -count=1`与同包race，观察GREEN；只提交本任务包。
 
 ### Task2：独立CA、严格TLS与HTTPS代理命令
 
-**Files:** Create `internal/testfixtures/localoidc/{tls.go,tls_test.go,frontend.go,frontend_test.go}`、`cmd/im-local-test-idp/{main.go,main_test.go}`。
+**Files:** Create `internal/testfixtures/localoidc/{tls.go,tls_test.go,frontend.go,frontend_test.go}`、`cmd/im-local-test-idp/{main.go,tls.go,main_test.go}`。
 **Interfaces:** `GenerateTLS(privateDir,owner string,now time.Time)(TLSFiles,error)`返回CA/服务器cert/key路径及指纹；`Frontend(provider http.Handler,upstream *url.URL)(http.Handler,error)`；命令读取0600私有JSON配置，拒绝非回环监听／目标，启动后只写非秘密readyJSON；租期及SIGTERM关闭。
-- [ ] RED：新CA彼此不同、SAN仅127.0.0.1/localhost、证书验证成功／错误CA失败、私有路径链接或宽权限拒绝；代理严格回环且WS/Authorization仍交真实API，错误路径无泄密。
-- [ ] Go标准crypto/x509生成独立CA、服务器key与JWT签名key；测试包不含私钥。TLS1.2最低，身份源与API同一HTTPS前端。
-- [ ] GREEN：真实HTTPS Client使用精确CA；跨CA拒绝；前端路由、命令输入正反例通过。
-- [ ] 只提交该独立测试命令和组件。
+- [x] RED：新CA彼此不同、SAN仅127.0.0.1/localhost、证书验证成功／错误CA失败、私有路径链接或宽权限拒绝；代理严格回环且WS/Authorization仍交真实API，错误路径无泄密。
+- [x] Go标准crypto/x509生成独立CA、服务器key与JWT签名key；测试包不含私钥。TLS1.2最低，身份源与API同一HTTPS前端。
+- [x] GREEN：真实HTTPS Client使用精确CA；跨CA拒绝；前端路由、命令输入正反例通过。
+- [x] 只提交该独立测试命令和组件。
 
 ### Task3：隔离后端运行工具与合成人员初始化
 
