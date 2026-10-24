@@ -33,7 +33,7 @@ def _inventory(root,exclude=()):
   for name in files:
    path=Path(parent)/name;relative=path.relative_to(root).as_posix()
    if relative not in exclude:result[relative]=digest(path)
- if not {'system.img','userdata.img','ramdisk.img','kernel-ranchu','source.properties'}<=set(result):raise ValueError('incomplete_private_system_image')
+ if not {'system.img','ramdisk.img','kernel-ranchu','source.properties'}<=set(result) or not ({'userdata.img','data/empty_data_disk'}&set(result)):raise ValueError('incomplete_private_system_image')
  return result
 
 def stage_private_image(base,private,owner,source):

@@ -20,6 +20,8 @@ class LocalSimulatorAdmissionTests(unittest.TestCase):
   before={p.name:p.read_bytes() for p in self.base.iterdir()};result=self.stage();target=self.private/'android-system-image';self.assertEqual(result['owner'],'a'*32);self.assertEqual(result['source'],self.source);self.assertEqual(result['base'],str(self.base));self.assertEqual(result['target'],str(target));self.assertEqual(before,{p.name:p.read_bytes() for p in self.base.iterdir()});self.assertEqual({p.name:p.read_bytes() for p in target.iterdir() if p.is_file() and p.name!='im-private-image.json'},before)
   self.assertNotEqual((target/'system.img').stat().st_ino,(self.base/'system.img').stat().st_ino)
   with self.assertRaises(ValueError):self.stage()
+ def test_API36_directory_userdata_seed_is_preserved_without_legacy_userdata_img(self):
+  (self.base/'userdata.img').unlink();(self.base/'data').mkdir();(self.base/'data/empty_data_disk').write_bytes(b'prepared API36 empty data disk');value=self.stage();self.assertIn('data/empty_data_disk',value['sha256']);self.assertNotIn('userdata.img',value['sha256'])
  def test_stage_rejects_foreign_owner_link_and_hardlink_before_copy(self):
   m=self.module()
   with self.assertRaises(ValueError):m.stage_private_image(self.base,self.private,'c'*32,self.source)
