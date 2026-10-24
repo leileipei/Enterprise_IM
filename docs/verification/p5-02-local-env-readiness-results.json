@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-24",
+  "source_commit": "487cce9f4a74602cf36ffccf14d64fb31d513568",
+  "status": "targeted_local_backend_readiness_passed_manual_environment_not_deployed",
+  "scope": "Stage1 preparation using existing disposable PG/Redis, synthetic scoped-HTTPS IdP and actual production Go API/workers. Three existing integration tests only. No persistent/manual browser environment, new IdP installation, native application execution or trust-store changes.",
+  "product_or_canonical_test_changes": [],
+  "accepted_attempt": "run03",
+  "actual_exits": {
+    "run01_before_Go": 1,
+    "run02_before_Go": 1,
+    "accepted_Go_and_wrapper": 0,
+    "independent_audit": 0
+  },
+  "tests": {
+    "passed": [
+      "TestNativeOAuthExchangeThroughRealAPIIdentityMapping",
+      "TestProductionAPIWithOIDCAndRealtimeProcesses",
+      "TestReceiptWorkerCrashReplayTwoAPIProcesses"
+    ],
+    "failed_or_skipped": [],
+    "package_pass_events": 1
+  },
+  "service_readiness": {
+    "postgres_final_TCP_ready": true,
+    "redis_authenticated_PING": true
+  },
+  "protocol_checks_from_existing_cases": [
+    "Native public config, PKCE-bound token exchange, local identity mapping via /me, rotating refresh and shared quota/denials through actual API",
+    "Actual OIDC/JWKS-authenticated production realtime API and outbox process",
+    "Receipt worker crash/replay with two API processes and durable device/user facts"
+  ],
+  "transport_limits": {
+    "database": "Loopback-only disposable fixture PostgreSQL, sslmode=disable; not production database TLS acceptance",
+    "redis": "Loopback-only fixture with random password; authenticated stdin AUTH/PING checked",
+    "API": "Existing test API transport is loopback HTTP; not an ordinary Release trusted HTTPS frontend",
+    "IdP": "Scoped HTTPS test issuer and CA passed through child process configuration only; not system/browser/customer trust"
+  },
+  "images": {
+    "postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+    "redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+    "alpine:3.22": "sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce"
+  },
+  "image_reference_limits": "PG/Redis immutable digest pins; existing receipt process test uses already-cached alpine:3.22, so exact local image ID captured and checked unchanged; no claim that mutable tag is a production pin.",
+  "source_archive_sha256": "8bc2c5271d2137ffe71506a0e38d8f573b18f01bc996c5b3d293653e04ce7eb0",
+  "protected_source_files_before_documentation": 1370,
+  "preserved_failures": [
+    {
+      "attempt": "run01",
+      "actual_exit": 1,
+      "error": "docker_exec_failed",
+      "diagnostic_limit": "Initial helper did not preserve failing Docker stdout/stderr; exact root not proven, do not retrospectively label it identical to run02.",
+      "cleaned": true
+    },
+    {
+      "attempt": "run02",
+      "actual_exit": 1,
+      "captured_psql_exit": 2,
+      "captured_error": "database system is shutting down",
+      "cause": "Unix-socket pg_isready could admit initialization temporary PostgreSQL; final TCP readiness used in run03",
+      "cleaned": true
+    }
+  ],
+  "resource_audit": {
+    "status": "passed",
+    "file": "acceptance-audit.json",
+    "registered_container_observations_absent": 10,
+    "registered_process_observations_absent": 7,
+    "recorded_service_ports_closed": 6,
+    "roots_removed": 3,
+    "expected_child_exits": [
+      {
+        "kind": "process",
+        "test": "TestNativeOAuthExchangeThroughRealAPIIdentityMapping",
+        "actual_exit": "signal:killed",
+        "expected_exit": "signal:killed"
+      },
+      {
+        "kind": "process",
+        "test": "TestNativeOAuthExchangeThroughRealAPIIdentityMapping",
+        "actual_exit": "signal:killed",
+        "expected_exit": "signal:killed"
+      },
+      {
+        "kind": "process",
+        "test": "TestNativeOAuthExchangeThroughRealAPIIdentityMapping",
+        "actual_exit": "signal:killed",
+        "expected_exit": "signal:killed"
+      },
+      {
+        "kind": "process",
+        "test": "TestProductionAPIWithOIDCAndRealtimeProcesses",
+        "actual_exit": "signal:killed",
+        "expected_exit": "signal:killed"
+      },
+      {
+        "kind": "process",
+        "test": "TestProductionAPIWithOIDCAndRealtimeProcesses",
+        "actual_exit": "signal:killed",
+        "expected_exit": "signal:killed"
+      },
+      {
+        "kind": "process",
+        "test": "TestProductionAPIWithOIDCAndRealtimeProcesses",
+        "actual_exit": "signal:killed",
+        "expected_exit": "signal:killed"
+      },
+      {
+        "kind": "process",
+        "test": "TestReceiptWorkerCrashReplayTwoAPIProcesses",
+        "actual_exit": "exit:0",
+        "expected_exit": "exit:0"
+      },
+      {
+        "kind": "process",
+        "test": "TestReceiptWorkerCrashReplayTwoAPIProcesses",
+        "actual_exit": "exit:0",
+        "expected_exit": "exit:0"
+      },
+      {
+        "kind": "container",
+        "test": "TestReceiptWorkerCrashReplayTwoAPIProcesses",
+        "actual_exit": "exit:137",
+        "expected_exit": "exit:137"
+      },
+      {
+        "kind": "container",
+        "test": "TestReceiptWorkerCrashReplayTwoAPIProcesses",
+        "actual_exit": "exit:0",
+        "expected_exit": "exit:0"
+      },
+      {
+        "kind": "container",
+        "test": "TestReceiptWorkerCrashReplayTwoAPIProcesses",
+        "actual_exit": "exit:0",
+        "expected_exit": "exit:0"
+      },
+      {
+        "kind": "container",
+        "test": "TestReceiptWorkerCrashReplayTwoAPIProcesses",
+        "actual_exit": "exit:0",
+        "expected_exit": "exit:0"
+      }
+    ],
+    "completed_compiles": 2,
+    "old_JSON_preserved": 90,
+    "old_raw_preserved": 8980,
+    "main_unchanged": true,
+    "source_and_tools_images_unchanged": true,
+    "credential_and_CA_runtime_directories_removed": true,
+    "secure_erasure_not_claimed": true
+  },
+  "runtime_services_still_running": false,
+  "manual_test_environment_ready": false,
+  "new_IdP_or_CA_deployment": "Not implemented; short proposed design needs approval of explicit owned-simulator trust boundary.",
+  "fresh_full_Go_race_Python_Flutter_platform_tests": false,
+  "native_Release_browser_customer_acceptance": false,
+  "four_platform_complete": false,
+  "customer_acceptance": false,
+  "production_acceptance": false,
+  "physical_validation": "deferred_per_user",
+  "task_state": "Original Tasks5-9 BASE/in_progress retained",
+  "remote_actions": false,
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/acceptance-audit.json": "3c93436ddaf2153a7bfc9a1494c60726f3ab2f0b8e33bf1f43028ed52c5ab2dc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/audit-host-exit.json": "caa8430cc1ae1424775ba8a40fce17e36088c58bba9673d450d889055de0f538",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/audit-host.log": "70ec4e8c03c9a1729a6c9bf8c85012d912258fde21f2741f5eb23145f552ef97",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/baseline.json": "b53c3d27393209431f73c80c6f3cdaeba77bef89f49236bf56e0c2dd85bde0c4",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-audit-wrapper.py": "9d3a0ada1ca9ef07d9f11a66feb3894efbc8cb20e8c35a076215bd0f89ba5c9d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-audit.py": "709279a7824368a5eac184885ae970ced9323e4e37723874e2389d60a0743526",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-prepare.py": "e8938e37d92fb950ceed37ccf9c23151295a96a2affad45f1547ad00d4a73550",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-publish.py": "34b673880385c01d97ef215006e485573b0504a43954c306c3c25461958754db",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-run-v2.py": "00ae396f8349b97649192605f4bc4cb922957f55469d7dc163f3f6b84754a997",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-run-v3.py": "154e8fe5183a5e2cc0ad3f60585a03a8e58c1b77029c8ccb1c37770a99e2e163",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-run.py": "5672fdb59c9b1fc8a3c9de3fa03d1d332af38d6fae863ff0965da94b31d861c3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-wrapper-v2.py": "df2e1e6ddcf4b0391bdbc80a1de49be3d9db604617e605415b4baae3c7a8842b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-wrapper-v3.py": "90442239855eada3991212e2c0b8474cbec61c21df9b91ef13d2945517cb041f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/helpers/im-local-env-wrapper.py": "bfddaa3bdc71547060990023884ae1bf9ddfa0662318dd215b770816dc0fa8d9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run01/registry.jsonl": "f18812d0489514de3d6c84adddcd1b5d28d5c86c5dfc931bbc2bcfc7b1da9fe6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run01/result.json": "9a55aba1b430c6a1b2b950bff5a933b6a7f4e74bbaa02a796a0d8b1eef068ee5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run01-host-exit.json": "c0d09b554b88d4004d9af6dd83f85fca148d6094c64829f5b61d58275f03fa29",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run01-host.log": "ab2fd2a5a6861b3d50bffb51ab107d9581b78003124df330902c86b0cb99ea35",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run02/failure-interpretation.json": "8e8e12a6f5e81bb66006c94cc0bd47f922e2eb651037080e5a22ed176ae698e9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run02/registry.jsonl": "4a8b2435297cb8e9c5a158f0102908614528d787011cf4faa6a5a63b6d8bb0e8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run02/result.json": "ff631ffa7e771a685ddb4fd0027028004277b9a703e6534cd22dd5115221fd35",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run02-host-exit.json": "8c4d660bddc70c8a542f74ac98d2f9847dbff4205671d8f67c70bc6299690fb3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run02-host.log": "ab2fd2a5a6861b3d50bffb51ab107d9581b78003124df330902c86b0cb99ea35",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run03/backend-readiness.log": "0b826ec0880afa32f37a6d87ee5a3979fbd73f0929df0ef18f58c30cfadf5656",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run03/backend-readiness.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run03/registry.jsonl": "f2dd516855e08fd918e15baff324fd01dd86d0281bc4f51e052722b3c17debbf",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run03/result.json": "cdc5d18447927d92160383b6d1c72eda83c4e16b368442a1cfdbe119626e4fc0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run03-host-exit.json": "f1c0135838a58512fc8be34b0b70f56436e6dc574c53b458dedfbb0d1cbb69d6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-env-readiness/run03-host.log": "1e7cb4ac17a60bc87296a06f00dafb75998880684c472d36827561aaa290a79e"
+  },
+  "postcommit_audit_outputs_expected": [
+    "postcommit-audit.json",
+    "postcommit-host.log"
+  ]
+}
