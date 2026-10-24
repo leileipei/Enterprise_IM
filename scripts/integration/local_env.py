@@ -60,8 +60,12 @@ def ready_metadata(value,owner,source):
  if not isinstance(value,dict) or set(value)!=keys or value.get('owner')!=owner or value.get('source')!=source or not isinstance(value.get('ca_fingerprint'),str) or not re.fullmatch('[a-f0-9]{64}',value['ca_fingerprint']):raise ValueError('foreign_identity_ready_metadata')
  _origin(value['origin'])
  if value['issuer']!=value['origin']+'/oidc' or not Path(value['ca_cert']).is_absolute():raise ValueError('invalid_identity_ready_metadata')
- try:datetime.datetime.fromisoformat(value['expires_at'].replace('Z','+00:00'))
- except (AttributeError,ValueError):raise ValueError('invalid_identity_ready_expiry') from None
+ try:
+  stamp=value['expires_at'];match=re.fullmatch(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z',stamp)
+  if match is None:raise ValueError()
+  # Go emits RFC3339Nano with 0..9 fraction digits; Python3.9 accepts only 3/6.
+  datetime.datetime.fromisoformat(match[1]+'.'+(match[2] or '').ljust(6,'0')[:6]+'+00:00')
+ except (TypeError,ValueError):raise ValueError('invalid_identity_ready_expiry') from None
  return {k:value[k] for k in ['origin','issuer','ca_cert','ca_fingerprint']}
 
 class ControlledStop(Exception):pass

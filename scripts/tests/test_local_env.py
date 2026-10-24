@@ -80,6 +80,12 @@ class LocalEnvironmentRuntimeContractTests(unittest.TestCase):
   m=self.module()
   for origin,db,redis,stream in [('http://127.0.0.1:18443','postgresql://u:p@127.0.0.1:15432/local','redis://:p@127.0.0.1:16379/0','im:other'),('https://customer.invalid:18443','postgresql://u:p@127.0.0.1:15432/local','redis://:p@127.0.0.1:16379/0','im:other'),('https://127.0.0.1:18443','postgresql://u:p@external.invalid:15432/local','redis://:p@127.0.0.1:16379/0','im:other'),('https://127.0.0.1:18443','postgresql://u:p@127.0.0.1:15432/local','redis://:p@external.invalid:16379/0','im:other'),('https://127.0.0.1:18443','postgresql://u:p@127.0.0.1:15432/local','redis://:p@127.0.0.1:16379/0','im:local:messages')]:
    with self.assertRaises(ValueError):m.native_environment(origin,self.ca,db,redis,'im:local:messages',stream)
+ def test_ready_expiry_accepts_Go_RFC3339Nano_but_rejects_naive_or_invalid_time(self):
+  m=self.module();ready={'owner':'a'*32,'source':'b'*40,'origin':'https://127.0.0.1:18443','issuer':'https://127.0.0.1:18443/oidc','ca_cert':str(self.ca),'ca_fingerprint':'c'*64,'expires_at':''}
+  for fraction in ['', '.1','.12','.123','.1234','.12345','.123456','.1234567','.12345678','.123456789']:
+   with self.subTest(fraction=fraction):m.ready_metadata(dict(ready,expires_at='2026-10-25T00:00:00'+fraction+'Z'),'a'*32,'b'*40)
+  for value in ['2026-10-25T00:00:00','2026-10-25','2026-10-25T00:00:00.1234567890Z','2026-13-25T00:00:00Z','2026-10-25T24:00:00Z']:
+   with self.subTest(invalid=value),self.assertRaises(ValueError):m.ready_metadata(dict(ready,expires_at=value),'a'*32,'b'*40)
  def test_ready_metadata_never_imports_secrets_or_foreign_owner(self):
   m=self.module();ready={'owner':'a'*32,'source':'b'*40,'origin':'https://127.0.0.1:18443','issuer':'https://127.0.0.1:18443/oidc','ca_cert':str(self.ca),'ca_fingerprint':'c'*64,'expires_at':'2026-10-25T00:00:00Z'};m.ready_metadata(ready,'a'*32,'b'*40)
   for value in [dict(ready,owner='d'*32),dict(ready,access_token='secret'),dict(ready,ca_fingerprint='short')]:
