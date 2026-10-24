@@ -149,10 +149,12 @@ class AndroidSimulator:
         return current
 
     def start(self):
+        from .local_env_simulators import private_image_arguments
+        image_flags = private_image_arguments(self.private,getattr(self.args,'android_private_image',None),self.registry.owner,self.registry.commit)
         avd = self.args.android_sdk / 'cmdline-tools/23.0/bin/avdmanager'
         self._launch('avd-create', [str(avd),'create','avd','--name',self.name,'--package',self.configuration['package'],'--path',str(self.private / 'avds/device.avd'),'--device',self.configuration['device_type']], b'no\n')
         self._launch('adb-server', [*self.adb_base[:1],'--one-device','emulator-' + str(self.console),'-L','tcp:' + str(self.port),'server','nodaemon'])
-        self._launch('emulator', [str(self.args.android_sdk / 'emulator/emulator'),'-avd',self.name,'-port',str(self.console),*([] if getattr(self.args,'visible_simulator',False) else ['-no-window']),'-no-metrics','-no-snapshot','-no-audio','-no-boot-anim','-gpu','software','-memory','2048','-cores','2'])
+        self._launch('emulator', [str(self.args.android_sdk / 'emulator/emulator'),'-avd',self.name,'-port',str(self.console),*image_flags,*([] if getattr(self.args,'visible_simulator',False) else ['-no-window']),'-no-metrics','-no-snapshot','-no-audio','-no-boot-anim','-gpu','software','-memory','2048','-cores','2'])
         end = time.monotonic() + 300; candidate = 'emulator-' + str(self.console)
         while time.monotonic() < end:
             if any(e['process'].poll() is not None for e in self.services if e['name'] in ('emulator','adb-server')):raise RuntimeError('android_boot_service_exited')

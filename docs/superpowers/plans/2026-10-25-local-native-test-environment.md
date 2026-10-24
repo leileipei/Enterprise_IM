@@ -44,10 +44,10 @@
 
 **Files:** Create `scripts/run-local-native-env.py`、`scripts/integration/{local_env.py,local_env_state.py}`、`scripts/tests/test_local_env.py`、`testdata/local-native-env/seed.sql`。
 **Interfaces:** CLI `start --state-dir NEW_ABS --lease-seconds 1800 --go ABS`前台监督；`status --state-dir ABS`只读；`stop --state-dir ABS`写owner/source绑定停止请求；状态只含公开origin/CA指纹/资源标识，不含秘密。
-- [ ] RED：目录链接／复用／宽权限／外部目标、停止PID复用与非归属、租期过期／失败部分回收、状态泄密拒绝。
-- [ ] 固定源archive建四个二进制；新PG/Redis随机凭据与loopback端口；数值顺序迁移、合成Alice/Bob及双组织任职／通信策略、issuer绑定；不连接既有数据库。
-- [ ] 启动独立HTTPS/IdP、生产Worker/API；进程指纹／ready／实际退出都登记；停止/过期只回收本轮且失败留恢复记录。
-- [ ] GREEN：Python合同与实际新环境health/config、合成OAuth/me/refresh验证；源／工具／秘密及资源独立核验后本地提交。
+- [x] RED：目录链接／复用／宽权限／外部目标、停止PID复用与非归属、租期过期／失败部分回收、状态泄密拒绝。
+- [x] 固定源archive建四个二进制；新PG/Redis随机凭据与loopback端口；数值顺序迁移、合成Alice/Bob及双组织任职／通信策略、issuer绑定；不连接既有数据库。
+- [x] 启动独立HTTPS/IdP、生产Worker/API；进程指纹／ready／实际退出都登记；停止/过期只回收本轮且失败留恢复记录。
+- [x] GREEN：Python合同与实际新环境health/config、合成OAuth/me/refresh验证；源／工具／秘密及资源独立核验后本地提交。
 
 ### Task4：仅自有模拟器的CA与原普通包
 
