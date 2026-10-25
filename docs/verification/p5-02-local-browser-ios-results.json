@@ -1,0 +1,505 @@
+{
+  "schema_version": "p5_02_local_browser_ios_v1",
+  "recorded_at": "2026-10-25T02:12:38.768676+00:00",
+  "overall_status": "incomplete",
+  "scoped_iOS_flow_status": "passed",
+  "runtime_and_verification_source": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+  "test_IdP_code_checkpoint": "206605a7f61e022471013060cd882184a95207db",
+  "ordinary_iOS_archive_source": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+  "ordinary_iOS_archive_sha256": "3244f4eda3b4c8af79459164c6d25067db5304abb2be2c505f8aa7c63ecf3ade",
+  "authorization": "Previously approved Plan A resumed after direct human answer Mac unlocked; physical devices still deferred.",
+  "scope": "Two newly owned iOS26.5/iPhone17Pro simulator ordinary Debug main apps, strict per-environment CA, actual Safari synthetic Alice/Bob and production loopback API/PG/Redis/workers. No native product source changes or client rebuild.",
+  "client_and_backend_product_source_changed_this_turn": false,
+  "ordinary_artifact_rebuilt_or_resigned": false,
+  "tests_or_fixtures_injected_into_main_app": false,
+  "CA_validation_bypassed": false,
+  "runtime_builds": "Four Go server binaries built from immutable archive; ordinary iOS archive unchanged.",
+  "cases": {
+    "real_Safari_OS_callback": {
+      "status": "passed",
+      "synthetic_identities": [
+        "Alice",
+        "Bob"
+      ],
+      "live_CUA_observed_open_application_sheet": true,
+      "login_success_and_roles_observed": true,
+      "screenshots": [
+        "alice-login-success-alice.png",
+        "bob-login-success-bob.png"
+      ],
+      "selection_server_diagnostics": [
+        {
+          "event": "local_selection",
+          "stage": "accepted",
+          "origin": "same",
+          "cookie_present": true
+        },
+        {
+          "event": "local_selection",
+          "stage": "accepted",
+          "origin": "same",
+          "cookie_present": true
+        }
+      ]
+    },
+    "same_org_ordinary_bidirectional_message_receipts": {
+      "status": "passed",
+      "messages": [
+        {
+          "seq": "1",
+          "sender": "00000000-0000-4000-8000-000000000231",
+          "id": "b806db93-15c3-4038-b30f-1ac358ed6384",
+          "client_msg_id": "01a170c4-57b3-7c62-affc-b8eeefc6fbe7",
+          "text": "aliceone"
+        },
+        {
+          "seq": "2",
+          "sender": "00000000-0000-4000-8000-000000000232",
+          "id": "921ab040-f3b3-44d8-b5cc-835a0121e743",
+          "client_msg_id": "01a170c5-6f5f-783b-b1cf-12bfec35e75c",
+          "text": "bobone"
+        },
+        {
+          "seq": "3",
+          "sender": "00000000-0000-4000-8000-000000000231",
+          "id": "62563afd-cd4b-4f14-8145-52776093a41e",
+          "client_msg_id": "01a170c7-6afc-7996-991d-9afbb6515845",
+          "text": "afterpause"
+        }
+      ],
+      "device_receipts": [
+        {
+          "seq": "1",
+          "user_id": "00000000-0000-4000-8000-000000000232",
+          "device_id": "8a28b710-b218-4e03-bda2-f8bc589ef313",
+          "delivered": true,
+          "read": true
+        },
+        {
+          "seq": "2",
+          "user_id": "00000000-0000-4000-8000-000000000231",
+          "device_id": "af79d9f6-1609-4e8c-95a5-f7f3731ffa1a",
+          "delivered": true,
+          "read": true
+        },
+        {
+          "seq": "3",
+          "user_id": "00000000-0000-4000-8000-000000000232",
+          "device_id": "8a28b710-b218-4e03-bda2-f8bc589ef313",
+          "delivered": true,
+          "read": true
+        }
+      ],
+      "user_receipts": [
+        {
+          "seq": "1",
+          "user_id": "00000000-0000-4000-8000-000000000232",
+          "delivered": true,
+          "read": true
+        },
+        {
+          "seq": "2",
+          "user_id": "00000000-0000-4000-8000-000000000231",
+          "delivered": true,
+          "read": true
+        },
+        {
+          "seq": "3",
+          "user_id": "00000000-0000-4000-8000-000000000232",
+          "delivered": true,
+          "read": true
+        }
+      ],
+      "sender_UI_read_labels_observed": true,
+      "message_count": 3,
+      "automatic_delivery_while_Bob_only_in_list": false,
+      "before_Bob_opened_conversation_receipts_absent": true,
+      "list_delivery_observation_not_promoted_to_pass": true
+    },
+    "actual_background_disconnect_and_resume": {
+      "status": "passed",
+      "same_original_Bob_PID": 85346,
+      "actual_Home_UI_observed": true,
+      "frontend_TCP_connections_while_backgrounded": 0,
+      "third_message_committed_published_without_Bob_receipt": true,
+      "resumed_automatic_third_body_and_delivered_read": true,
+      "manual_refresh_used_for_recovery": false,
+      "external_network_fault_or_killed_process_tested": false,
+      "TCP_records_not_used_alone_as_message_delivery_proof": true
+    },
+    "body_expiry_and_refresh_observation": {
+      "status": "follow_up",
+      "ordinary_refresh_did_not_immediately_restore_earlier_bodies": true,
+      "leaving_and_reentering_restored_all3": true,
+      "SQL_all3_bodies_remained": true,
+      "client_artifact_and_source_unchanged": true,
+      "long_lived_body_renewal_UX_accepted": false
+    }
+  },
+  "offline_case_contract": {
+    "status": "passed_for_scoped_iOS_flow",
+    "source": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+    "artifact_source": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+    "verified_at": 1792894063.110286,
+    "two_distinct_processes": {
+      "alice": {
+        "pid": 85235,
+        "uid": 501,
+        "start_time": "Sun Oct 25 01:50:15 2026",
+        "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/2C25B105-834B-4428-A70E-3E6F545FFBC0/data/Containers/Bundle/Application/3B72F57C-2AD8-44E7-B0E9-2D63AE7EF7EA/Runner.app/Runner",
+        "executable_sha256": "2c73b1cc2b4c6a3972ffbd224f7fbd0e02a28dc181aad1d165f498b9f1de0b75"
+      },
+      "bob": {
+        "pid": 85346,
+        "uid": 501,
+        "start_time": "Sun Oct 25 01:50:20 2026",
+        "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/1B693388-16F3-44A3-B130-5788DCB94CC1/data/Containers/Bundle/Application/0EEB3E36-0907-4874-AFB7-447F4DCC04D3/Runner.app/Runner",
+        "executable_sha256": "2c73b1cc2b4c6a3972ffbd224f7fbd0e02a28dc181aad1d165f498b9f1de0b75"
+      }
+    },
+    "SQL_snapshot_count": 10,
+    "message_count": 3,
+    "device_delivery_receipts": 3,
+    "device_read_receipts": 3,
+    "user_read_receipts": 3,
+    "message_outbox_published": 3,
+    "no_receipt_before_Bob_opened_conversation": true,
+    "background_third_message_committed_without_Bob_receipt": true,
+    "same_process_no_frontend_TCP_while_backgrounded": true,
+    "resumed_new_TCP_and_third_delivery_read": true,
+    "UI_assessment": "Actual live CUA observed two Safari app-open sheets, two success identities/roles, receiver bodies, sender read labels, Bob Home and automatic resumed third body. UI not replayed or OCR-asserted by this offline checker. Screenshots are retained per SQL snapshot.",
+    "remaining_body_refresh_observation": "Earlier bodies became unavailable in Alice view; ordinary refresh did not immediately restore; leaving and re-entering restored all3. SQL bodies remained throughout. No client source/binary modified in this run.",
+    "overall_acceptance": "incomplete; Android/browser/cross-platform/hardware and long-lived body refresh UX not accepted"
+  },
+  "actors": {
+    "alice": {
+      "source": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+      "artifact_source": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+      "archive_sha256": "3244f4eda3b4c8af79459164c6d25067db5304abb2be2c505f8aa7c63ecf3ade",
+      "udid": "2C25B105-834B-4428-A70E-3E6F545FFBC0",
+      "name": "IM-Local-1f3c0d35453b7e090e5fdeedc8984836",
+      "original_process_identity": {
+        "pid": 85235,
+        "uid": 501,
+        "start_time": "Sun Oct 25 01:50:15 2026",
+        "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/2C25B105-834B-4428-A70E-3E6F545FFBC0/data/Containers/Bundle/Application/3B72F57C-2AD8-44E7-B0E9-2D63AE7EF7EA/Runner.app/Runner",
+        "executable_sha256": "2c73b1cc2b4c6a3972ffbd224f7fbd0e02a28dc181aad1d165f498b9f1de0b75",
+        "workdir": "/",
+        "pgid": 85235
+      },
+      "CA_fingerprint": "644c65b25587043b23e2d1da2e4f47d90f50f2f31d54e91de6b44502c36a721a",
+      "installed_bundle_manifest_sha256": "25ff992ff2e303fb6f13db92ab561bfa4df40a72f44e7d09f3e4899431de444f",
+      "removed": true
+    },
+    "bob": {
+      "source": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+      "artifact_source": "f3d50f65c5e840635a04ccfe9674303ac070aac5",
+      "archive_sha256": "3244f4eda3b4c8af79459164c6d25067db5304abb2be2c505f8aa7c63ecf3ade",
+      "udid": "1B693388-16F3-44A3-B130-5788DCB94CC1",
+      "name": "IM-Local-4dc881b6f42e54674b2be54ae7a2b78b",
+      "original_process_identity": {
+        "pid": 85346,
+        "uid": 501,
+        "start_time": "Sun Oct 25 01:50:20 2026",
+        "executable_path": "/Users/leo.cui/Library/Developer/CoreSimulator/Devices/1B693388-16F3-44A3-B130-5788DCB94CC1/data/Containers/Bundle/Application/0EEB3E36-0907-4874-AFB7-447F4DCC04D3/Runner.app/Runner",
+        "executable_sha256": "2c73b1cc2b4c6a3972ffbd224f7fbd0e02a28dc181aad1d165f498b9f1de0b75",
+        "workdir": "/",
+        "pgid": 85346
+      },
+      "CA_fingerprint": "644c65b25587043b23e2d1da2e4f47d90f50f2f31d54e91de6b44502c36a721a",
+      "installed_bundle_manifest_sha256": "25ff992ff2e303fb6f13db92ab561bfa4df40a72f44e7d09f3e4899431de444f",
+      "removed": true
+    }
+  },
+  "SQL_snapshot_count": 10,
+  "network_snapshot_count": 4,
+  "cleanup": {
+    "status": "passed",
+    "checked_at": 1792894171.1601212,
+    "source": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+    "owner": "26dca5eb23714c7f8e0947802ca110a2",
+    "frozen_runtime_archive_sha256": "6f4ef8093595dfb8370b2fb81ccab4cc568a35c02da32ca94594a72c66317947",
+    "process_observations_absent": [
+      84048,
+      84063,
+      84098,
+      84109,
+      84136,
+      84149,
+      84154,
+      84171
+    ],
+    "supervisor_absent": 84034,
+    "containers_absent": [
+      "532d16773db7f20745183221a07b29b59e684f7a59405883f2b251fb3cd05c29",
+      "ca3f44b0fac49a2fc9bb59116e1dc7b0fc93970bbe7f94c25e0e51bfd3ba2f55"
+    ],
+    "ports_closed": [
+      33111,
+      33112,
+      51151,
+      51152
+    ],
+    "backend_private_credentials_CA_keys_removed": true,
+    "actors": {
+      "alice": {
+        "udid_absent": "2C25B105-834B-4428-A70E-3E6F545FFBC0",
+        "ordinary_pid_absent": 85235,
+        "private_removed": true,
+        "driver_actual_exit": 0,
+        "CA_fingerprint": "644c65b25587043b23e2d1da2e4f47d90f50f2f31d54e91de6b44502c36a721a",
+        "native_leaf_exit_independently_observed": false,
+        "native_leaf_exit": null
+      },
+      "bob": {
+        "udid_absent": "1B693388-16F3-44A3-B130-5788DCB94CC1",
+        "ordinary_pid_absent": 85346,
+        "private_removed": true,
+        "driver_actual_exit": 0,
+        "CA_fingerprint": "644c65b25587043b23e2d1da2e4f47d90f50f2f31d54e91de6b44502c36a721a",
+        "native_leaf_exit_independently_observed": false,
+        "native_leaf_exit": null
+      }
+    },
+    "old_reports_preserved": 92,
+    "old_raw_preserved": 9586,
+    "main_unchanged": true,
+    "worktree_clean": true,
+    "no_private_PEM_material_in_evidence": true,
+    "native_leaf_or_container_exit_codes_claimed": false
+  },
+  "wrappers": {
+    "host": {
+      "source_before_launch": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+      "argv": [
+        "/usr/bin/python3",
+        "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/scripts/run-local-native-env.py",
+        "start",
+        "--state-dir",
+        "/private/tmp/im-local-browser-resume-20261025-host01",
+        "--go",
+        "/opt/homebrew/bin/go",
+        "--lease-seconds",
+        "1800"
+      ],
+      "started_at": 1792892972.21133,
+      "ended_at": 1792893907.7865212,
+      "actual_exit": 0,
+      "stdout_sha256": "4fed214ec710f2876ed5ea2d9fd8847e0e45d13f945af4d58218063d8af4b678"
+    },
+    "alice": {
+      "source_before_launch": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+      "argv": [
+        "/usr/bin/python3",
+        "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/ios-alice.py"
+      ],
+      "started_at": 1792892981.64718,
+      "ended_at": 1792893862.325925,
+      "actual_exit": 0,
+      "stdout_sha256": "d873342ffb161c2cb733b0e338994c526e5329721171f308bd5f9cc02f203879"
+    },
+    "bob": {
+      "source_before_launch": "faaeeda953e08eb27ef68f502cc05bc734463cd1",
+      "argv": [
+        "/usr/bin/python3",
+        "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/ios-bob.py"
+      ],
+      "started_at": 1792892986.141838,
+      "ended_at": 1792893862.325997,
+      "actual_exit": 0,
+      "stdout_sha256": "fede8bb1331bef047953db4cae17365550e7e50a0ca906f220bab1e6b8ebefde"
+    }
+  },
+  "evidence_boundaries": {
+    "actual_CUA_UI_observation_and_PNGs": "Live interaction and inspected screenshots; offline checker does not pretend to replay UI or OCR the screenshots.",
+    "native_leaf_OS_exit_independently_observed": false,
+    "native_leaf_OS_exit": null,
+    "container_native_exit_independently_observed": false,
+    "new_Go_Python_full_suite_run": false,
+    "prior_related_suite_results": "Previous immutable206 checks remain in prior report; no new code this turn and not summed with scenario evidence.",
+    "two_iOS_processes_are_not_cross_platform_acceptance": true,
+    "customer_IdP_MFA_hardware_or_distribution_accepted": false,
+    "attachments_groups_device_revocation_tested_this_turn": false,
+    "iOS_wrong_CA_native_negative_tested": false
+  },
+  "preservation": {
+    "old_JSON_files": 92,
+    "old_raw_files": 9586,
+    "main_unchanged": true,
+    "prior_reports_and_failures_unmodified": true,
+    "APK_iOS_ZIP_and_delivery_ZIP_unchanged": true
+  },
+  "next_gates": [
+    "Review/fix ordinary refresh reauthorization after earlier body grant expires",
+    "Provide reviewed real Android browser and complete unchanged Release equivalent flow",
+    "Complete platform negative CA and broader network/process restart matrix separately",
+    "Keep physical devices/customerSSO/MFA/Windows/macOS distribution and production gates distinct"
+  ],
+  "prior_report": "docs/verification/p5-02-local-manual-environment-results.json",
+  "raw_manifest_scope": "Closed files before publication only; publisher stdout/exit and postcommit checks added after this manifest.",
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-admission.json": "5672f8dde1f0a93f58fc8af58e7b83c9aa78317b6364c595fe924ce488b4a192",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-exit.json": "0d02d1506f18442258d41c0958974f515b65a25db490d2e92f16f0b9a3836b91",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-host.log": "d873342ffb161c2cb733b0e338994c526e5329721171f308bd5f9cc02f203879",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-login-success-alice.png": "8d1b5b2318048624a525800c7354187f95f4c63cfeea3793cc8628d217e9177f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-login-success-bob.png": "cbde971b3cd7c05e20d93f7c7670c7cc166b16a36ff783baec4330e56e92ee62",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-login-success-observation.json": "bf5724ad3b8e78ab6e77be6f484c548ddfa02d679004f2896e26620ad0d1ef1d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-one-sent-before-bob-open-alice.png": "13a2ee5b82badd53026e0c2f21f25c806630bd450be219f4acf097ca54ce2bc0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-one-sent-before-bob-open-bob.png": "9e78f9f0b1a0b760f4f652389009ef8a4a8229b84d6f110949a6f46fecec5ce9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/alice-one-sent-before-bob-open-observation.json": "89b7257b77f84a978733c5b67b85b176735442f1bb79c3bc65d2fc42ae3d4811",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-api.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-api.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-local-test-idp.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-local-test-idp.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-outbox-worker.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-outbox-worker.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-receipt-worker.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/build-im-receipt-worker.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/im-api.log": "0df348d399c0e0603207645ceba7873d95b76da217783fb0768b11890d3b5897",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/im-local-test-idp.log": "aa9fa933e654ca460f18cf79593491143d45cdd41fe90e0e1065a77d93a9cbb5",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/im-outbox-worker.log": "097e6f20e93c63c71de88a901d088b69779ac017664e3d8d0f4e2f46b158a936",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/im-receipt-worker.log": "42261f7661a90ae5dae996f7fdbb91c3c930b88f96f7129fab1a648bd66a224a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/registry.jsonl": "31aed504e8bbb86db5d5c2f43293cb7d0e91f8dbfe3191ac666d222ae565cbdd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/runtime-summary.json": "bb1f54f159a393c3603d2286b461842956b2716d87b5cd373a51db8f311a0df6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/backend-closed-evidence/state.json": "3b22d5d67e5cf619ba3f736e584eb52a5c4354b9ed8b0782843829ef353c266e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/baseline.json": "b45d5ff4aef09f0d4a208ac3cf48fa4fa4aad0bc3a5c657e24d2e7a9b13e3201",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-admission.json": "33f973177d03860bd0289b5ce0bbecefcf0044801d6c99da64f98f26ff1f223a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-background-before-third-alice-tcp.log": "4d26f8d7f93cd49c8ae28db1736586db83cbfc138df53e5f1b507e2186b7bc72",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-background-before-third-alice.png": "e7bbddb6083c2aa49abfa95249d482bf7fa7748f12a91342022bb3a18a2ce40f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-background-before-third-bob-tcp.log": "32cd5c953ee9ba4ac440d7f2e4c14326ea602fe291abd64139bb1d3de663231e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-background-before-third-bob.png": "b043af61b3c6b576b0454642dc6c4aff5ce8abcb32cc263b2b55e03f86bc0cbd",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-background-before-third-observation.json": "8d49f23d626dce42b7bef143bd6fde069c99815ebf275175f58044410f0dffee",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-background-before-third-tcp.json": "87519b24dea5c51b4d0041f33c32e3457823c01493df7b7cc25b0c85e361465a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-exit.json": "579b39a5625b059ea3bfc67e26b3c46a9f012057259ac6e707c9d83ca8d52133",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-host.log": "fede8bb1331bef047953db4cae17365550e7e50a0ca906f220bab1e6b8ebefde",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-login-success-alice.png": "6a283965deeb0b9b84f3023d0805fe92d47e49ef1b0d7f9d74c0bd27a123fffb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-login-success-bob.png": "c25d34f66e4517ba9ef4e9dcbea8f283f8e0419764c39cbcb6e347351f5b13ff",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-login-success-observation.json": "cdfacce3110555dfc7447e11029f3651632cc4cfccbc166a5fdcf79fbf35f075",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-one-sent-alice.png": "cd11de61f606b01639e014695f77d8f85ea44e73ac0fe058d2177ce4cec07d04",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-one-sent-bob.png": "9f5cb2594e1f437b87029810bdb4f0ee2023c34cb9b3df8cb4b904dee80b74a3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-one-sent-observation.json": "1213777ea89d1519fb0fd7415bbaa8755a54824a7b9f0e2ea5432d210df1c45d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-opened-alice-one-alice.png": "221aa8e7136a392e9d85e98b18348a3ee81f8621ca8e581c5bf88b7342ee45ce",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-opened-alice-one-bob.png": "053202fe39dad28e24b8a07b6c2930e3accbf82c477e583885846420f49e7c61",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-opened-alice-one-observation.json": "2f9245a3369985143c770ca3576c873f165ac3a2bfdb97cf6570b7315e779f62",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-resumed-third-recovered-alice-tcp.log": "0249d4849c3a60f0ad3ad7beed0b63bd933ed6fea81eb3e38b557324dd3e848a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-resumed-third-recovered-alice.png": "41c1d3a2c6116387190e33f787dc2a5300900d7100c5607c02a401c6576940ef",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-resumed-third-recovered-bob-tcp.log": "5753f3a9a6e27e5b31817fbbb219db9d2b5d0f19a632d0290e7f1b6424c116f0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-resumed-third-recovered-bob.png": "51163cd7ade97644a09b938aebf157ade4b0762d44e2000b5fb3946ef96e38fc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-resumed-third-recovered-observation.json": "32845b1f8e4c178e461757e5f087b6dea601de3e4c72dce0c5e3c92fd1dd46a2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/bob-resumed-third-recovered-tcp.json": "cdf309a1dac6772580795687ba48413adab1bf39790e8013d8aba389c631e575",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/body-refresh-source-observation.json": "e246c08f515b18dbc0728d52e45611d752711658401bc931baaca9ba80f5ef5f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/case-verification-exit.json": "6794128a8082bfbae28e447e570bfaa324d1eb56fbdb7bc415d93a100ae089eb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/case-verification.json": "fff68c22e4ad619159dbe41d5959aa8c3f07e7d85db22ca7aea46a08896959ec",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/case-verification.log": "3187788d2607464888168bb468f7b85cb16e288d87ead1731652a4a4dd653ac8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/final-ios-inventory.json": "4ece39f7b9deae1cfdf9c39007a0004ed5a96dfe5c7309b5adf90a0913544d9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/final-sender-read-confirmed-alice.png": "485bace45fe3d9c8a311da2a465f5672374bad7c63c2402c400cb9a52c9298ae",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/final-sender-read-confirmed-bob.png": "1b50b330cb144e46c3cea4d515adbc4b8cc70cdd943102cd5acb4588cb12b989",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/final-sender-read-confirmed-observation.json": "10dc478fad82d6421439ec8d51925cc51ba82890a5c06e56f70ba2624eaeac04",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/foreground-before-background-alice-tcp.log": "4d26f8d7f93cd49c8ae28db1736586db83cbfc138df53e5f1b507e2186b7bc72",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/foreground-before-background-bob-tcp.log": "fb32c86fc05fad7ddc8d0d126e7dedc2ba79f14e50d4f30d02558ef777de1770",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/foreground-before-background-tcp.json": "d11afb461014a4ee0f9389796a1eb19f65e0cb6c4f7434240527593871de0e65",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/guide-before-ios-browser-resume.md": "1b05f66dc4792dd7f3a8e3eadb8bb14c3b0f8c65b4a5be4fae081c21d7991b8d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/im-browser-cleanup-audit.py": "68f89517b4fc0c1cb2407bd8f16ef6c9d8e219032b88c62641aaed620af6fd16",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/im-browser-network-observe.py": "0d5fe23a1f4a0e3ed11ff141ccb80e0bf5a36ea8f72351b84b8552b495c67882",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/im-browser-observe.py": "0297cae0d1481e3dba2e07653985e2d3ead30f590a9bd7b1de9436a736ac4922",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/im-browser-publish.py": "ef3271d9c5986f247b40c45ec48423efcd6d1ce9f89df9557ef41cf1765ac2eb",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/im-browser-resume-launch.py": "374d4361e0f423f95b75c5348891b26d7512c485abb0d4b6b15eba95b65bcec0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/im-browser-resume-setup.py": "07622c04e5c69b44169745c5488623c310cfc783fc6ea8fd71040b891b6956e6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/im-browser-verify-cases.py": "af5b95bbc06cd3c7664cf69bb5b0376301456f33e5ff89ea955fb0150b0c6996",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/ios-alice.py": "8840b711f86de4eb9351cbdfca7ba42bd6e5b9d7ab86b2ee6333c68eb7d95d53",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/helpers/ios-bob.py": "bb558501159c664284fe26fee6c00f1c52fa5a80ffdc0c292b5b5350cd62022b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/history-reopened-restored-alice.png": "8f7debe32fa53153b19bd3a53be86e82ccb522421780fdfd2ccc9fb914c5718f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/history-reopened-restored-bob.png": "4d904826109d5813c711d939a10107a4d0e2510d01aa5369932337fe3521bf69",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/history-reopened-restored-observation.json": "0da8410aad5f6621ed5ffdd01ce1f37a7df46e8170cdcbd84db973c8cadf2117",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/host-admission.json": "b0472a041da5e87d3072eb24542583bad54e2b8d42fadc13ed45f58d31983d75",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/host-exit.json": "6429ef14af277f1444002b92417b8db9ebb0176c62e650bddf238255a4068b51",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/host-host.log": "4fed214ec710f2876ed5ea2d9fd8847e0e45d13f945af4d58218063d8af4b678",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/host-stop-exit.json": "652d9ac4053a2f07c3ac30dd9f734d0116be237548c0eaf6f41f9f0a67f4cdda",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/host-stop.log": "3db7318621ee4159d0ec6a983bb8c90847211a94d6a518261c6a78391e04f3ea",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/independent-cleanup-audit-exit.json": "0a8b9bf1a328a481f3ae128028b43e66a2318f5b999f8ebc1be117ea7b69c55a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/independent-cleanup-audit.json": "c4511e9625bf555ab05f5abb84bc4e2cda86efe138272dc402df0ba8e44c7202",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/independent-cleanup-audit.log": "758c24f926c6971b1be4b0b4d60e03b2ea0eea6f19a063be5516014e0b3b0a85",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/000-runtime-inventory.log": "18aa77ff89b9f5350254614ddd319a1700dbd1ec6f3bfa0be792600b0c11392f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/000-runtime-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/001-inventory.log": "4ece39f7b9deae1cfdf9c39007a0004ed5a96dfe5c7309b5adf90a0913544d9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/001-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/002-create.log": "9e70085f1dbf66fb63b3133b09357fac1933a172ac08b99e727d83c0f425a1ed",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/002-create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/003-inventory.log": "10f8a8d34237ccc90c3403fb0f97ed47cf6df89ee617a08a5fa73c2cc4362581",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/003-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/004-boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/004-boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/005-bootstatus.log": "c41f585abb13a21ad142d5f275580d374df256066dd6a27462bf058e7258f8f0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/005-bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/006-inventory.log": "2736a2211866087a23fd63e833ed0ed1868391701fb77f3c055a2440c425e492",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/006-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/007-trust-exact-CA.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/007-trust-exact-CA.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/008-install-ordinary.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/008-install-ordinary.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/009-installed-app.log": "33703147c72d2a9c7d66f47684195d12e8c2b77319cc9f5c2876cbe0ff0cf4bc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/009-installed-app.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/010-ordinary-launch.log": "28b3822c85c874782f832ba51e99da5d911f70a88aeb39965093d20507a82f3b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/010-ordinary-launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/011-screen-ordinary-login.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/011-screen-ordinary-login.log.stderr": "1ad1f9d5adef7e2f091ab928feef9cd63ab14b5b1cf54e1b6d10911bd6b77ffc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/012-inventory.log": "4fc9d46478d48a855c7729af64f6590f4262b9e138a132c855fd024e4b5cb5f8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/012-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/013-shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/013-shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/014-delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/014-delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/015-inventory.log": "4ece39f7b9deae1cfdf9c39007a0004ed5a96dfe5c7309b5adf90a0913544d9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/015-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/environment-ca.pem": "25445511f5e116f2a9bd0d59584f8690c34f4896e19b614e8ab8cdf533a72aa2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/ios-state.json": "aabb0e737d8f0f233da1cbf9d2a7f67c898b73b531431a4751e18f0e9a9f68a9",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/ordinary-login.png": "c4b666c1ce3c1b57666e725175c528affe75f1224c63f2819b9f2863ff63487c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/registry.jsonl": "31d34016a27c99db45f8f361bbaf23149772960f7c0a1f5ce8457432fdef8f88",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-alice/run-state.json": "17ca643f64a87c7c1acc3dffae4eb334694fcffa95bdf4670768ee55aa066d2d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/000-runtime-inventory.log": "8805f36e9b9768d4bbc3f0cc36adb533b25fae9be4c636562c59e35d669dc131",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/000-runtime-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/001-inventory.log": "bcc9c50984292fff657c3106e309b9dca95ce84e44f26f67f7faaa63a24c8e51",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/001-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/002-create.log": "fb6f76da71d27f70b2d01e431319234502691a28a6090918e3f8e2357d0fe923",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/002-create.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/003-inventory.log": "92490cdd7cb32efc1e694af5bf298cec4ec416a5d1712e365938f23ccc1b0141",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/003-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/004-boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/004-boot.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/005-bootstatus.log": "fc9e7cc45d69617b0341ea2d13db9956fc683aab0c16be37b82e670e09e37058",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/005-bootstatus.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/006-inventory.log": "e071d62d0243e5b451306c6edadd3b02de4f0826bfde99d65552b3a8db3e301d",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/006-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/007-trust-exact-CA.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/007-trust-exact-CA.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/008-install-ordinary.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/008-install-ordinary.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/009-installed-app.log": "e4ae63bf575491bc139e724df6a066214e6b81b759430582f847e6b4cdfa53b0",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/009-installed-app.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/010-ordinary-launch.log": "98ff80f1093397c0610beb771d1bf16a99ffad50c71bb93031eddbd8b45ed453",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/010-ordinary-launch.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/011-screen-ordinary-login.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/011-screen-ordinary-login.log.stderr": "585345c2a4f16f438d7b3b5de180e730db83a212e51315fa74f855ee4655e84a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/012-inventory.log": "4fc9d46478d48a855c7729af64f6590f4262b9e138a132c855fd024e4b5cb5f8",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/012-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/013-shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/013-shutdown.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/014-delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/014-delete.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/015-inventory.log": "4ece39f7b9deae1cfdf9c39007a0004ed5a96dfe5c7309b5adf90a0913544d9f",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/015-inventory.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/environment-ca.pem": "25445511f5e116f2a9bd0d59584f8690c34f4896e19b614e8ab8cdf533a72aa2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/ios-state.json": "4810e4eb1eaf85ca2cb367892f0ae6d73415ca9601a06e007e6ec1eee3587abc",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/ordinary-login.png": "c4b666c1ce3c1b57666e725175c528affe75f1224c63f2819b9f2863ff63487c",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/registry.jsonl": "c2239ef9d7ac91eed5abae33d71f95befb467a4fb5c21cc2efdc4275c7bcaa2a",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/ios-bob/run-state.json": "f857e7732ac6257c647b7bffff90d9ab7f58e3d66f7f5d3a4c8d9ff13f2262d3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/overview-before-ios-browser-resume.md": "38de09143ebf79d36accfb9c2755171c0e6f007b8b610b78508a9f233c987ec6",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/plan-before-ios-browser-resume.md": "d5bda250e1b6a72ab703ccf9046a1a2a5df5f1c1336e80681f1a173f96c1edad",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/third-sent-bob-background-alice-tcp.log": "c28c62798da6cc80471f56e53c311979a18c5bb90f58d364d8222695a5941ac3",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/third-sent-bob-background-alice.png": "4d98d6bcfa0e0ab241234fb7db3d2214b9fb89d446a05f46e601231fb95989a2",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/third-sent-bob-background-bob-tcp.log": "32cd5c953ee9ba4ac440d7f2e4c14326ea602fe291abd64139bb1d3de663231e",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/third-sent-bob-background-bob.png": "d081bfa7bc6acd02740ab8108b5552a26158fe1ea816763729029c7e7325c21b",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/third-sent-bob-background-observation.json": "c85da49d5d8c567d6fa02da6d97b145234039c2440646dc31b2d5fea80361333",
+    ".superpowers/sdd/2026-10-08-p5-02-flutter-clients/task-9-local-manual-browser-resume/third-sent-bob-background-tcp.json": "f0d418298af655d8d34895e9e6c44eec7711523894655d918880346b8130439b"
+  }
+}
