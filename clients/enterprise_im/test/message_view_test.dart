@@ -66,6 +66,245 @@ ApiResponse metadata(ApiRequest request) => oidc.response(
         },
 );
 void main() {
+  for (final denied in [false, true]) {
+    test(
+      'manual refresh reauthorizes expired history denied=$denied',
+      () async {
+        final afters = <String>[];
+        var revoke = false;
+        final owner = await nav.owner((r, _) async {
+          if (r.uri.path.endsWith('/tickets'))
+            throw const ApiFailure('unavailable');
+          if (r.uri.path.endsWith('/sync')) {
+            final after = r.uri.queryParameters['after_seq']!;
+            afters.add(after);
+            if (after == '1') return oidc.response(page(empty: true));
+            final fresh = page(cacheSeconds: afters.length == 1 ? 1 : 300);
+            if (revoke)
+              fresh['messages'] = [
+                {'seq': '1', 'redacted': true},
+              ];
+            return oidc.response(fresh);
+          }
+          if (r.uri.path.endsWith('/delivered'))
+            return oidc.response(disk.state());
+          return metadata(r);
+        });
+        addTearDown(owner.logout);
+        final (roles, context) = await sending.admission(owner);
+        addTearDown(roles.close);
+        final activity = AppActivity()
+          ..update(foreground: true, focused: true, activeConversation: nav.dm);
+        addTearDown(activity.dispose);
+        final view = ConversationView(
+          roles,
+          activity,
+          connector: OfflineSocket(),
+        );
+        addTearDown(view.close);
+        final expired = Completer<void>();
+        view.addListener(() {
+          if (view.messages.isNotEmpty &&
+              view.messages.single.redacted &&
+              !expired.isCompleted) {
+            expired.complete();
+          }
+        });
+        await view.select(context, ConversationSummary.fromJson(nav.direct()));
+        expect(view.messages.single.text, '真实授权正文');
+        await expired.future.timeout(const Duration(seconds: 4));
+        expect(view.messages.single.redacted, isTrue);
+        revoke = denied;
+        await view.refresh();
+        expect(afters, ['0', '1', '0']);
+        expect(view.messages.single.redacted, denied);
+        expect(view.messages.single.text, denied ? isNull : '真实授权正文');
+        expect(
+          (await roles.current!.client.store.committedCursor(
+            nav.dm,
+          )).toString(),
+          '1',
+        );
+      },
+    );
+  }
+
+  for (final paginated in [false, true]) {
+    test(
+      'manual refresh finishes in-flight proof retry before history replay paginated=$paginated',
+      () async {
+        final afters = <String>[], proofs = <String>[];
+        final entered = Completer<void>(), recovered = Completer<void>();
+        final blocked = Completer<ApiResponse>();
+        final proofA = page()['sync_proof'] as String;
+        final proofB = '${'Ag' * 21}A',
+            proofC = '${'Aw' * 21}A',
+            proofD = '${'BA' * 21}A';
+        Map<String, Object?> second() {
+          final result = page();
+          result['sync_proof'] = proofB;
+          result['next_after_seq'] = '2';
+          (result['messages'] as List).single['seq'] = '2';
+          return result;
+        }
+
+        final owner = await nav.owner((r, _) async {
+          if (r.uri.path.endsWith('/tickets'))
+            throw const ApiFailure('unavailable');
+          if (r.uri.path.endsWith('/sync')) {
+            final after = r.uri.queryParameters['after_seq']!;
+            afters.add(after);
+            if (afters.length == 1) return oidc.response(page());
+            if (afters.length == 2) {
+              entered.complete();
+              return blocked.future;
+            }
+            if (paginated) {
+              final replay = after == '0' ? page() : second();
+              replay['sync_proof'] = after == '0' ? proofC : proofD;
+              replay['has_more'] = after == '0';
+              return oidc.response(replay);
+            }
+            final full = second();
+            full['sync_proof'] = proofC;
+            full['messages'] = [
+              ...page()['messages'] as List,
+              ...full['messages'] as List,
+            ];
+            return oidc.response(full);
+          }
+          if (r.uri.path.endsWith('/delivered')) {
+            final proof =
+                (jsonDecode(utf8.decode(r.body!)) as Map)['sync_proof']
+                    as String;
+            proofs.add(proof);
+            if (proofs.length == 2) {
+              return ApiResponse(
+                503,
+                utf8.encode('{"error_code":"unavailable"}'),
+                {'retry-after': '1'},
+              );
+            }
+            return oidc.response(
+              disk.state(scanned: proofs.length == 1 ? 1 : 2),
+            );
+          }
+          return metadata(r);
+        });
+        addTearDown(owner.logout);
+        final (roles, context) = await sending.admission(owner);
+        addTearDown(roles.close);
+        final activity = AppActivity()
+          ..update(foreground: true, focused: true, activeConversation: nav.dm);
+        addTearDown(activity.dispose);
+        final view = ConversationView(
+          roles,
+          activity,
+          connector: OfflineSocket(),
+        );
+        addTearDown(view.close);
+        view.addListener(() {
+          if (proofs.length >= 4 &&
+              view.messages.length == 2 &&
+              view.messages.every((m) => !m.redacted) &&
+              !recovered.isCompleted)
+            recovered.complete();
+        });
+        await view.select(context, ConversationSummary.fromJson(nav.direct()));
+        final incremental = view.coordinator.resume();
+        await entered.future;
+        final refresh = view.refresh();
+        final coalesced = view.refresh();
+        blocked.complete(oidc.response(second()));
+        await Future.wait([incremental, refresh, coalesced]);
+        expect(
+          (await roles.current!.client.store.pendingReceipts())
+              .single
+              .syncProof,
+          proofB,
+        );
+        await view.refresh();
+        expect(proofs, [
+          proofA,
+          proofB,
+        ], reason: 'manual refresh cannot bypass Retry-After');
+        expect(afters, ['0', '1']);
+        await recovered.future.timeout(const Duration(seconds: 5));
+        expect(
+          proofs,
+          paginated
+              ? [proofA, proofB, proofB, proofC, proofD]
+              : [proofA, proofB, proofB, proofC],
+        );
+        expect(afters, paginated ? ['0', '1', '0', '1'] : ['0', '1', '0']);
+        expect(await roles.current!.client.store.pendingReceipts(), isEmpty);
+        expect(
+          (await roles.current!.client.store.committedCursor(
+            nav.dm,
+          )).toString(),
+          '2',
+        );
+        expect(view.messages.every((m) => !m.redacted), isTrue);
+      },
+    );
+  }
+
+  test(
+    'manual refresh does not replay a late page after backgrounding',
+    () async {
+      final afters = <String>[];
+      final blocked = Completer<ApiResponse>(), entered = Completer<void>();
+      var delivered = 0;
+      final owner = await nav.owner((r, _) async {
+        if (r.uri.path.endsWith('/tickets'))
+          throw const ApiFailure('unavailable');
+        if (r.uri.path.endsWith('/sync')) {
+          afters.add(r.uri.queryParameters['after_seq']!);
+          if (afters.length == 1) return oidc.response(page());
+          entered.complete();
+          return blocked.future;
+        }
+        if (r.uri.path.endsWith('/delivered')) {
+          delivered++;
+          return oidc.response(disk.state());
+        }
+        return metadata(r);
+      });
+      addTearDown(owner.logout);
+      final (roles, context) = await sending.admission(owner);
+      addTearDown(roles.close);
+      final activity = AppActivity()
+        ..update(foreground: true, focused: true, activeConversation: nav.dm);
+      addTearDown(activity.dispose);
+      final view = ConversationView(
+        roles,
+        activity,
+        connector: OfflineSocket(),
+      );
+      addTearDown(view.close);
+      await view.select(context, ConversationSummary.fromJson(nav.direct()));
+      final syncing = view.coordinator.resume();
+      await entered.future;
+      final refresh = view.refresh();
+      activity.update(
+        foreground: false,
+        focused: false,
+        activeConversation: nav.dm,
+      );
+      blocked.complete(oidc.response(page(empty: true)));
+      await Future.wait([syncing, refresh]);
+      await view.refresh();
+      expect(afters, ['0', '1']);
+      expect(
+        delivered,
+        1,
+        reason: 'a cancelled late page has no delivery authority',
+      );
+      expect(view.messages.every((m) => m.redacted), isTrue);
+      expect(view.canSend, isFalse);
+    },
+  );
+
   test(
     'decorative notification failure cannot stop authorized messaging',
     () async {

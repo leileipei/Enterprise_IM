@@ -25,7 +25,7 @@ final class SyncCoordinator {
   Timer? _poll, _reconnect, _syncRetry, _purge, _online;
   SyncResult? _onlineResult;
   final _onlinePages = <SyncResult>{};
-  bool _requiresFocus = false, _onlineRecovery = false;
+  bool _requiresFocus = false, _historyRecovery = false;
   Future<void>? _refreshFlight, _connectFlight, _reset;
   bool _reauthorize = false;
   bool _dirty = false, _suspended = true, _disposed = false, _purging = false;
@@ -94,12 +94,15 @@ final class SyncCoordinator {
     await Future.wait([_refresh(), _connect()]);
   }
 
-  Future<void> resume() async {
+  Future<void> resume({bool reauthorizeHistory = false}) async {
     if (_context == null) throw const ApiFailure('invalid_context');
     if (!_foreground) return;
     if (_suspended) {
       await _activate();
     } else {
+      // Complete any in-flight page / pending proof before replaying history.
+      // Keep this intent through Retry-After; never reset an unconfirmed proof.
+      if (reauthorizeHistory) _historyRecovery = true;
       await _refresh();
     }
   }
@@ -157,9 +160,9 @@ final class SyncCoordinator {
         _dirty = _dirty || result.hasMore;
         // Finish an existing pending page/proof retry before replaying history.
         // This preserves identical-proof503 recovery while obtaining new body
-        // authorization after an offline/failed online grant.
-        if (_onlineRecovery && !result.hasMore) {
-          _onlineRecovery = false;
+        // authorization after an explicit refresh or offline/failed online grant.
+        if (_historyRecovery && !result.hasMore) {
+          _historyRecovery = false;
           _reauthorize = true;
           _dirty = true;
         }
@@ -228,7 +231,7 @@ final class SyncCoordinator {
       return;
     }
     if (_requiresFocus) {
-      _onlineRecovery = true;
+      _historyRecovery = true;
       _redactOnline();
       if (!_running) return;
     }
@@ -288,7 +291,7 @@ final class SyncCoordinator {
       if (_refreshFlight == null) {
         _reauthorize = true;
       } else {
-        _onlineRecovery = true; // Preserve an in-flight pending proof.
+        _historyRecovery = true; // Preserve an in-flight pending proof.
       }
       unawaited(_refresh()); // Retry-After still gates this request.
     });
@@ -343,7 +346,7 @@ final class SyncCoordinator {
     _poll = _reconnect = _syncRetry = _purge = _online = null;
     _onlineResult = null;
     _onlinePages.clear();
-    _onlineRecovery = false;
+    _historyRecovery = false;
   }
 
   Future<void> _pause() async {

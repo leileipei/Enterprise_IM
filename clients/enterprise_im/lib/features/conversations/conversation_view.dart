@@ -495,7 +495,7 @@ final class ConversationView extends ChangeNotifier {
     if (_active && epoch == _epoch) notifyListeners();
   }
 
-  Future<void> refresh() => coordinator.resume();
+  Future<void> refresh() => coordinator.resume(reauthorizeHistory: true);
   void _clear() {
     _readFailure = null;
     _expiry?.cancel();
