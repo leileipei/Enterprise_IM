@@ -262,6 +262,7 @@ func (p *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 		deny(w, 400, "invalid_request")
 		return
 	}
+	w.Header().Set("Content-Security-Policy", callbackCSP(q.Get("redirect_uri")))
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	now := p.cfg.Now()
@@ -377,8 +378,18 @@ func (p *Provider) selectUser(w http.ResponseWriter, r *http.Request) {
 	location, _ := url.Parse(req.redirect)
 	location.RawQuery = url.Values{"code": {code}, "state": {req.state}}.Encode()
 	observation.Stage = "accepted"
+	w.Header().Set("Content-Security-Policy", callbackCSP(req.redirect))
 	w.Header().Set("Location", location.String())
 	w.WriteHeader(http.StatusFound)
 }
 
 var selector = template.Must(template.New("selector").Parse(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>本地合成身份源</title><style>body{font:18px system-ui;max-width:600px;margin:4rem auto;padding:1rem}button{display:block;margin:1rem 0;padding:1rem;width:100%}.note{color:#8a3300}</style><h1>本地合成身份源</h1><p class="note">仅供 Enterprise IM 本机测试，不是企业账号登录，不接收密码。</p><form method="post" action="/oidc/authorize"><input type="hidden" name="request_id" value="{{.ID}}"><input type="hidden" name="selection_token" value="{{.Token}}">{{range .Users}}<button type="submit" name="user" value="{{.Subject}}">{{.Name}}</button>{{end}}</form></html>`))
+
+// Called only after the public-client redirect allowlist has accepted the URI.
+func callbackCSP(redirect string) string {
+	target := redirect
+	if redirect == "com.enterpriseim.client:/oauth/callback" {
+		target = "com.enterpriseim.client:"
+	}
+	return "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' " + target + "; frame-ancestors 'none'"
+}

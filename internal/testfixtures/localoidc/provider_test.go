@@ -516,3 +516,32 @@ func TestSelectionDiagnosticsExposeOnlyFixedClasses(t *testing.T) {
 		t.Fatal("accepted selection not observable")
 	}
 }
+
+func TestBrowserCSPAllowsOnlyValidatedCallbackDestination(t *testing.T) {
+	f := fixture(t, 256)
+	for _, tc := range []struct{ client, redirect, allowed string }{
+		{"im-android", "com.enterpriseim.client:/oauth/callback", "com.enterpriseim.client:"},
+		{"im-ios", "com.enterpriseim.client:/oauth/callback", "com.enterpriseim.client:"},
+		{"im-macos", "http://127.0.0.1:49152/oauth/callback", "http://127.0.0.1:49152/oauth/callback"},
+	} {
+		q := f.query()
+		q.Set("client_id", tc.client)
+		q.Set("redirect_uri", tc.redirect)
+		response, html := f.authorize(t, q)
+		expected := "form-action 'self' " + tc.allowed + ";"
+		if response.StatusCode != 200 || !strings.Contains(response.Header.Get("Content-Security-Policy"), expected) || strings.Contains(response.Header.Get("Content-Security-Policy"), "*") {
+			t.Fatal("callback cannot navigate under bounded CSP", tc.client)
+		}
+		response = f.choose(t, html, "local-alice")
+		body(t, response)
+		if response.StatusCode != 302 || !strings.Contains(response.Header.Get("Content-Security-Policy"), expected) {
+			t.Fatal("redirect response lost bound callback CSP")
+		}
+	}
+	q := f.query()
+	q.Set("redirect_uri", "https://external.invalid/steal")
+	response, _ := f.authorize(t, q)
+	if response.StatusCode != 400 || strings.Contains(response.Header.Get("Content-Security-Policy"), "external.invalid") {
+		t.Fatal("unvalidated callback in CSP")
+	}
+}
