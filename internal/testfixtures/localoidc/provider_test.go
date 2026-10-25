@@ -155,7 +155,7 @@ func TestBrowserCodePKCENonceAndRotatingRefresh(t *testing.T) {
 	if r.StatusCode != 200 || !bytes.Contains(b, []byte("本地合成身份源")) || !bytes.Contains(b, []byte("Alice")) || !bytes.Contains(b, []byte("Bob")) {
 		t.Fatal("identity selector missing")
 	}
-	if r.Header.Get("Referrer-Policy") != "no-referrer" || !strings.Contains(r.Header.Get("Content-Security-Policy"), "frame-ancestors 'none'") {
+	if r.Header.Get("Referrer-Policy") != "origin" || !strings.Contains(r.Header.Get("Content-Security-Policy"), "frame-ancestors 'none'") {
 		t.Fatal("unsafe browser headers")
 	}
 	res := f.choose(t, b, "local-alice")
@@ -458,5 +458,29 @@ func TestConfigurationIsCopiedAndSelectorEscapesNames(t *testing.T) {
 	p.ServeHTTP(out, request)
 	if out.Code != 200 || bytes.Contains(out.Body.Bytes(), []byte("<script>")) || !bytes.Contains(out.Body.Bytes(), []byte("&lt;script&gt;")) {
 		t.Fatal("config alias or HTML injection")
+	}
+}
+
+// A browser form needs its tuple Origin, while its referrer must omit query.
+// Keep rejecting null origins instead of accepting opaque cross-site posts.
+func TestBrowserSelectionStillRejectsNullOrigin(t *testing.T) {
+	f := fixture(t, 256)
+	_, html := f.authorize(t, f.query())
+	v := url.Values{"request_id": {field(t, html, "request_id")}, "selection_token": {field(t, html, "selection_token")}, "user": {"local-alice"}}
+	req, _ := http.NewRequest("POST", f.cfg.Issuer+"/authorize", strings.NewReader(v.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "null")
+	res, err := f.client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body(t, res)
+	if res.StatusCode != 400 {
+		t.Fatal("null Origin accepted", res.StatusCode)
+	}
+	valid := f.choose(t, html, "local-alice")
+	body(t, valid)
+	if valid.StatusCode != 302 {
+		t.Fatal("valid same-origin selection rejected", valid.StatusCode)
 	}
 }
