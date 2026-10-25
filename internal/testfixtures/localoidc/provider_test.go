@@ -28,11 +28,14 @@ type browserFixture struct {
 	cfg    Config
 }
 
-func fixture(t *testing.T, capacity int) *browserFixture {
+func fixture(t *testing.T, capacity int, observers ...func(SelectionObservation)) *browserFixture {
 	t.Helper()
 	f := &browserFixture{now: time.Now().UTC().Truncate(time.Second)}
 	f.server = httptest.NewUnstartedServer(nil)
 	f.cfg = Config{Issuer: "https://" + f.server.Listener.Addr().String() + "/oidc", Audience: "enterprise-im-api", MaxPending: capacity, Now: func() time.Time { return f.now }, Clients: map[string]Client{"im-android": {ID: "im-android", RedirectURI: "com.enterpriseim.client:/oauth/callback"}, "im-ios": {ID: "im-ios", RedirectURI: "com.enterpriseim.client:/oauth/callback"}, "im-macos": {ID: "im-macos", RedirectURI: "http://127.0.0.1/oauth/callback", Loopback: true}}, Users: []User{{Subject: "local-alice", Name: "Alice"}, {Subject: "local-bob", Name: "Bob"}}}
+	if len(observers) > 0 {
+		f.cfg.ObserveSelection = observers[0]
+	}
 	p, err := New(f.cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -482,5 +485,34 @@ func TestBrowserSelectionStillRejectsNullOrigin(t *testing.T) {
 	body(t, valid)
 	if valid.StatusCode != 302 {
 		t.Fatal("valid same-origin selection rejected", valid.StatusCode)
+	}
+}
+
+func TestSelectionDiagnosticsExposeOnlyFixedClasses(t *testing.T) {
+	observed := make(chan SelectionObservation, 4)
+	f := fixture(t, 256, func(o SelectionObservation) { observed <- o })
+	_, html := f.authorize(t, f.query())
+	v := url.Values{"request_id": {field(t, html, "request_id")}, "selection_token": {field(t, html, "selection_token")}, "user": {"local-alice"}}
+	req, _ := http.NewRequest("POST", f.cfg.Issuer+"/authorize", strings.NewReader(v.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "secret-origin-never-log")
+	res, err := f.client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body(t, res)
+	observation := <-observed
+	if observation.Stage != "origin" || observation.Origin != "other" || !observation.CookiePresent {
+		t.Fatal("wrong diagnostic class", observation)
+	}
+	raw, _ := json.Marshal(observation)
+	if bytes.Contains(raw, []byte("secret")) || bytes.Contains(raw, []byte(field(t, html, "selection_token"))) {
+		t.Fatal("diagnostic exposed private input")
+	}
+	res = f.choose(t, html, "local-alice")
+	body(t, res)
+	observation = <-observed
+	if res.StatusCode != 302 || observation.Stage != "accepted" || observation.Origin != "same" {
+		t.Fatal("accepted selection not observable")
 	}
 }

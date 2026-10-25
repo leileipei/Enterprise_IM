@@ -146,7 +146,15 @@ func run(parent context.Context, args []string, stdout io.Writer) error {
 		}
 		clients[id] = c
 	}
-	provider, e := localoidc.New(localoidc.Config{Issuer: origin + "/oidc", Audience: "enterprise-im-api", Clients: clients, Users: []localoidc.User{{Subject: "local-alice", Name: "Alice"}, {Subject: "local-bob", Name: "Bob"}}})
+	audit := log.New(stdout, "", 0)
+	observe := func(event localoidc.SelectionObservation) {
+		data, _ := json.Marshal(struct {
+			Event string `json:"event"`
+			localoidc.SelectionObservation
+		}{"local_selection", event})
+		audit.Print(string(data))
+	}
+	provider, e := localoidc.New(localoidc.Config{ObserveSelection: observe, Issuer: origin + "/oidc", Audience: "enterprise-im-api", Clients: clients, Users: []localoidc.User{{Subject: "local-alice", Name: "Alice"}, {Subject: "local-bob", Name: "Bob"}}})
 	if e != nil {
 		return e
 	}

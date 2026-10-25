@@ -29,6 +29,13 @@ type Client struct {
 	Loopback        bool
 }
 type User struct{ Subject, Name string }
+
+// SelectionObservation deliberately contains classes only, never request values.
+type SelectionObservation struct {
+	Stage         string `json:"stage"`
+	Origin        string `json:"origin"`
+	CookiePresent bool   `json:"cookie_present"`
+}
 type Config struct {
 	Issuer, Audience string
 	Clients          map[string]Client
@@ -36,6 +43,7 @@ type Config struct {
 	Now              func() time.Time
 	Random           io.Reader
 	MaxPending       int
+	ObserveSelection func(SelectionObservation)
 }
 type request struct {
 	client, redirect, state, nonce, challenge, selection, session string
@@ -295,24 +303,45 @@ func (p *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 	}{id, selection, p.cfg.Users})
 }
 func (p *Provider) selectUser(w http.ResponseWriter, r *http.Request) {
+	observation := SelectionObservation{Stage: "origin", Origin: "other"}
 	origins := r.Header.Values("Origin")
+	if len(origins) == 0 {
+		observation.Origin = "missing"
+	} else if len(origins) == 1 {
+		if origins[0] == strings.TrimSuffix(p.cfg.Issuer, "/oidc") {
+			observation.Origin = "same"
+		} else if origins[0] == "null" {
+			observation.Origin = "null"
+		}
+	}
+	cookie, cookieErr := r.Cookie(cookieName)
+	observation.CookiePresent = cookieErr == nil && opaque.MatchString(cookie.Value)
+	defer func() {
+		if p.cfg.ObserveSelection != nil {
+			p.cfg.ObserveSelection(observation)
+		}
+	}()
 	if len(origins) != 1 || origins[0] != strings.TrimSuffix(p.cfg.Issuer, "/oidc") {
 		deny(w, 400, "invalid_request")
 		return
 	}
+	observation.Stage = "form"
 	v, ok := form(w, r)
 	if !ok {
 		return
 	}
+	observation.Stage = "fields"
 	if !exact(v, "request_id", "selection_token", "user") {
 		deny(w, 400, "invalid_request")
 		return
 	}
+	observation.Stage = "cookie"
 	c, e := r.Cookie(cookieName)
 	if e != nil || !opaque.MatchString(c.Value) {
 		deny(w, 400, "invalid_request")
 		return
 	}
+	observation.Stage = "binding"
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	now := p.cfg.Now()
@@ -322,6 +351,7 @@ func (p *Provider) selectUser(w http.ResponseWriter, r *http.Request) {
 		deny(w, 400, "invalid_request")
 		return
 	}
+	observation.Stage = "user"
 	known := false
 	for _, u := range p.cfg.Users {
 		known = known || u.Subject == v.Get("user")
@@ -331,10 +361,12 @@ func (p *Provider) selectUser(w http.ResponseWriter, r *http.Request) {
 		deny(w, 400, "invalid_request")
 		return
 	}
+	observation.Stage = "capacity"
 	if len(p.codes) >= p.cfg.MaxPending {
 		deny(w, 429, "temporarily_unavailable")
 		return
 	}
+	observation.Stage = "random"
 	code, e := p.random()
 	if e != nil {
 		deny(w, 503, "temporarily_unavailable")
@@ -344,6 +376,7 @@ func (p *Provider) selectUser(w http.ResponseWriter, r *http.Request) {
 	p.codes[code] = grant{client: req.client, redirect: req.redirect, subject: v.Get("user"), nonce: req.nonce, challenge: req.challenge, expires: now.Add(60 * time.Second)}
 	location, _ := url.Parse(req.redirect)
 	location.RawQuery = url.Values{"code": {code}, "state": {req.state}}.Encode()
+	observation.Stage = "accepted"
 	w.Header().Set("Location", location.String())
 	w.WriteHeader(http.StatusFound)
 }
