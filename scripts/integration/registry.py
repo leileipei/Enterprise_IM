@@ -135,6 +135,17 @@ class Registry:
         if args[0]=='ps':
             if result.returncode:raise ValueError('docker_list_failed')
             return result.stdout.splitlines()
+        if args[:2]==['volume','inspect']:
+            if result.returncode:
+                message=result.stderr.strip().lower()
+                if (len(args)==3 and result.stdout.strip() in ('','[]') and
+                    (message.endswith('no such volume: '+args[2].lower()) or
+                     message.endswith('get '+args[2].lower()+': no such volume'))):return None
+                raise ValueError('docker_volume_inspect_failed')
+            values=json.loads(result.stdout)
+            if not isinstance(values,list) or len(values)!=1 or values[0].get('Name')!=args[2]:
+                raise ValueError('docker_volume_identity_mismatch')
+            return values[0]
         if args[0]=='inspect':
             if result.returncode:
                 message=result.stderr.strip().lower()
@@ -155,6 +166,85 @@ class Registry:
             labels.get('im.integration.owner')!=owner or labels.get('im.integration.source')!=self.commit):
             raise ValueError('container_identity_mismatch')
         return actual
+
+    def _container_mount_fingerprint(self,identity,owner,actual):
+        if (actual.get('Id')!=identity or
+            actual.get('Config',{}).get('Labels',{}).get('im.integration.owner')!=owner or
+            actual.get('Config',{}).get('Labels',{}).get('im.integration.source')!=self.commit):
+            raise ValueError('container_identity_mismatch')
+        mounts=actual.get('Mounts');host=actual.get('HostConfig')
+        if not isinstance(mounts,list) or not isinstance(host,dict):
+            raise ValueError('container_mounts_unproven')
+        binds=host.get('Binds') or [];configured=host.get('Mounts') or []
+        if not isinstance(binds,list) or not isinstance(configured,list) or host.get('VolumesFrom'):
+            raise ValueError('container_mount_ownership_unproven')
+        explicit=set()
+        for bind in binds:
+            if not isinstance(bind,str):raise ValueError('container_mounts_unproven')
+            parts=bind.split(':')
+            if len(parts) in (2,3) and parts[1].startswith('/'):explicit.add(parts[1])
+            elif not (len(parts) in (1,2) and parts[0].startswith('/')):
+                raise ValueError('container_mounts_unproven')
+        for mount in configured:
+            if not isinstance(mount,dict) or not isinstance(mount.get('Target'),str):
+                raise ValueError('container_mounts_unproven')
+            if mount.get('Source'):explicit.add(mount['Target'])
+        anonymous=[]
+        for mount in mounts:
+            if not isinstance(mount,dict) or not isinstance(mount.get('Destination'),str):
+                raise ValueError('container_mounts_unproven')
+            if mount.get('Type')=='volume' and mount['Destination'] not in explicit:
+                name=mount.get('Name','')
+                if not isinstance(name,str) or not re.fullmatch('[a-f0-9]{64}',name):
+                    raise ValueError('anonymous_volume_identity_unproven')
+                anonymous.append(name)
+        # Freeze the actual mapping in the private, fsynced ledger before rm can remove it.
+        return json.loads(json.dumps({'container_id':identity,
+            'mounts':sorted(mounts,key=lambda m:json.dumps(m,sort_keys=True)),
+            'mount_configuration':{'Binds':sorted(binds),
+                'Mounts':sorted(configured,key=lambda m:json.dumps(m,sort_keys=True))},
+            'anonymous_volumes':sorted(set(anonymous))}))
+
+    def record_container_mounts(self,identity,actual):
+        rows=self.records()
+        row=next((r for r in reversed(rows) if r['event']=='registered' and
+                  r['kind']=='container' and r['identity']==identity),None)
+        if row is None:raise ValueError('container_not_registered')
+        fingerprint=self._container_mount_fingerprint(identity,row['owner'],actual)
+        self.add(ResourceRef('container',row['owner'],identity,fingerprint))
+        return fingerprint
+
+    def _stop_container(self,row,deadline):
+        identity=row['identity'];fingerprint=row['fingerprint']
+        actual=self._owned_container(identity,row['owner'])
+        if actual is not None:
+            observed=self._container_mount_fingerprint(identity,row['owner'],actual)
+            if 'mounts' not in fingerprint:
+                fingerprint=self.record_container_mounts(identity,actual)
+            elif observed!=fingerprint:raise ValueError('container_mount_identity_mismatch')
+        if ('mounts' not in fingerprint or 'mount_configuration' not in fingerprint or
+            not isinstance(fingerprint.get('anonymous_volumes'),list)):
+            raise ValueError('container_mounts_unproven')
+        if actual and actual.get('State',{}).get('Status')!='removing':
+            # Docker removes only this container's anonymous volumes; named/bind mounts survive.
+            self.docker(['rm','-f','-v',identity])
+        while actual is not None and time.monotonic()<deadline:
+            time.sleep(0.02);actual=self._owned_container(identity,row['owner'])
+        if actual is not None:raise ValueError('container_still_present')
+        for name in fingerprint['anonymous_volumes']:
+            if not isinstance(name,str) or not re.fullmatch('[a-f0-9]{64}',name):
+                raise ValueError('anonymous_volume_identity_unproven')
+            if self.docker(['volume','inspect',name]) is not None:
+                # Keep the ticket for investigation. Never infer ownership of a standalone volume.
+                raise ValueError('anonymous_volume_still_present:'+name)
+
+    def cleanup_container(self,identity,deadline):
+        rows=self.records()
+        row=next((r for r in reversed(rows) if r['event']=='registered' and
+                  r['kind']=='container' and r['identity']==identity),None)
+        if row is None or not any(r['event']=='reserve' and r['owner']==row['owner'] for r in rows):
+            raise ValueError('container_not_registered')
+        self._stop_container(row,deadline)
 
     def _recover(self,rows):
         known={r['identity'] for r in rows if r['event']=='registered'}
@@ -186,7 +276,8 @@ class Registry:
             for cid in (self.docker(['ps','-a','--filter','label=im.integration.owner='+owner,'--format','{{.ID}}']) if self.recover_containers else []):
                 actual=self._owned_container(cid,owner)
                 if actual and actual['Id'] not in known:
-                    self.add(ResourceRef('container',owner,actual['Id'],{'container_id':actual['Id']}))
+                    self.add(ResourceRef('container',owner,actual['Id'],
+                        self._container_mount_fingerprint(actual['Id'],owner,actual)))
                     known.add(actual['Id'])
 
     def _stop_process(self,row,deadline):
@@ -207,25 +298,27 @@ class Registry:
             time.sleep(0.02)
         raise ValueError('process_still_running')
 
-    def cleanup(self,deadline):
+    def cleanup(self,deadline,preserve_directories=False):
         failures=[]
-        try:
-            rows=self.records();self._recover(rows);rows=self.records()
+        try:rows=self.records()
         except (ValueError,OSError,subprocess.SubprocessError) as exc:
             return CleanupResult(False,[str(exc)])
+        try:self._recover(rows)
+        except (ValueError,OSError,subprocess.SubprocessError) as exc:
+            failures.append(str(exc))
+        # A failed discovery is not permission to skip known, independently bound resources.
+        try:rows=self.records()
+        except (ValueError,OSError,subprocess.SubprocessError) as exc:
+            failures.append(str(exc))
         reserved={r['owner'] for r in rows if r['event']=='reserve'}
         resources={r['identity']:r for r in rows if r['event']=='registered'}
-        for row in resources.values():
+        for row in sorted(resources.values(),key=lambda r:r['kind']=='directory'):
+            if row['kind']=='directory' and (failures or preserve_directories):continue
             try:
                 if row['owner'] not in reserved:raise ValueError('owner_not_reserved')
                 if row['kind']=='process':self._stop_process(row,deadline)
                 elif row['kind']=='container':
-                    actual=self._owned_container(row['identity'],row['owner'])
-                    if actual and actual.get('State',{}).get('Status')!='removing':
-                        self.docker(['rm','-f',row['identity']])
-                    while actual is not None and time.monotonic()<deadline:
-                        time.sleep(0.02);actual=self._owned_container(row['identity'],row['owner'])
-                    if actual is not None:raise ValueError('container_still_present')
+                    self._stop_container(row,deadline)
                 elif row['kind']=='directory':
                     path=Path(row['identity'])
                     if path.is_symlink() or not path.resolve().is_relative_to(self.root) or path.resolve()==self.root:

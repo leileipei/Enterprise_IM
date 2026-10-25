@@ -90,6 +90,7 @@ class Backend:
         cid=self.docker(['create','--label','im.integration.owner='+self.registry.owner,'--label','im.integration.source='+self.registry.commit,'--publish','127.0.0.1::'+port,*extra,image,*command])
         if not re.fullmatch('[a-f0-9]{64}',cid):raise ValueError('backend_container_id_invalid')
         self.registry.add(ResourceRef('container',self.registry.owner,cid,{'container_id':cid}))
+        self.registry.record_container_mounts(cid,json.loads(self.docker(['inspect',cid]))[0])
         self.docker(['start',cid])
         row=json.loads(self.docker(['inspect',cid]))[0]
         binding=row['NetworkSettings']['Ports'][port+'/tcp']

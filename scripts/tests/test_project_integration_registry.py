@@ -122,7 +122,7 @@ class RegistryTests(unittest.TestCase):
             if args[0]=='inspect':
                 if not state['present']:return None
                 return {'Id':CID,'Config':{'Labels':{'im.integration.owner':OWNER,'im.integration.source':COMMIT}},
-                        'State':{'Status':'removing'},'HostConfig':{'AutoRemove':True}}
+                        'State':{'Status':'removing'},'Mounts':[],'HostConfig':{'AutoRemove':True}}
             self.fail('must not issue a second rm while auto-removal is in progress')
         with patch.object(self.registry,'docker',side_effect=docker):
             result=self.registry.cleanup(time.monotonic()+0.08)

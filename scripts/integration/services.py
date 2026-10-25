@@ -91,6 +91,7 @@ def prepare_services(snapshot,tools,registry,private,deadline):
             cid=_docker(tools,plan['argv'],deadline).strip()
             if len(cid)!=64 or any(c not in '0123456789abcdef' for c in cid):raise ValueError('service_identity_invalid')
             registry.add(ResourceRef('container',registry.owner,cid,{'container_id':cid}));ids[role]=cid
+            registry.record_container_mounts(cid,json.loads(_docker(tools,['inspect',cid],deadline))[0])
             _docker(tools,['start',cid],deadline)
             inspect=json.loads(_docker(tools,['inspect',cid],deadline))[0]
             binding=inspect['NetworkSettings']['Ports'][plan['port']+'/tcp']

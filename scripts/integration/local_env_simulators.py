@@ -116,9 +116,24 @@ class OwnedIOS:
   if self.ca!=environment_CA(self.env['environment'],self.env['host_owner'],self.env['host_source']):raise ValueError('foreign_simulator_CA')
  def call(self,label,args,timeout=90):
   import subprocess
-  p=subprocess.run(['/usr/bin/xcrun','simctl',*args],env=self.env['process_env'],capture_output=True,timeout=timeout);index=len(self.state['commands']);file=self.out/('%03d-'%index+label+'.log');file.write_bytes(p.stdout);file.chmod(0o600);error=Path(str(file)+'.stderr');error.write_bytes(p.stderr);error.chmod(0o600);self.state['commands'].append({'label':label,'argv':['/usr/bin/xcrun','simctl',*args],'actual_exit':p.returncode,'stdout_sha256':digest(file),'stderr_sha256':digest(error)});self.save()
-  if p.returncode:raise ValueError('owned_ios_'+label.replace('-','_')+'_failed')
-  return p.stdout.decode()
+  argv=['/usr/bin/xcrun','simctl',*args];expired=None
+  try:
+   p=subprocess.run(argv,env=self.env['process_env'],capture_output=True,timeout=timeout)
+   stdout,stderr,code=p.stdout,p.stderr,p.returncode
+  except subprocess.TimeoutExpired as exc:
+   expired=exc;stdout=exc.stdout or b'';stderr=exc.stderr or b'';code=None
+  index=len(self.state['commands']);file=self.out/('%03d-'%index+label+'.log');error=Path(str(file)+'.stderr')
+  try:
+   file.write_bytes(stdout);file.chmod(0o600);error.write_bytes(stderr);error.chmod(0o600)
+   record={'label':label,'argv':argv,'actual_exit':code,'stdout_sha256':digest(file),'stderr_sha256':digest(error)}
+   if expired is not None:record.update(timed_out=True,timeout_seconds=timeout)
+   self.state['commands'].append(record);self.save()
+  except (ValueError,OSError) as publication_error:
+   if expired is not None:raise expired from publication_error
+   raise
+  if expired is not None:raise expired
+  if code:raise ValueError('owned_ios_'+label.replace('-','_')+'_failed')
+  return stdout.decode()
  def inventory(self):return json.loads(self.call('inventory',['list','devices','-j']))
  def owned(self):
   from .mobile import owned_simulator

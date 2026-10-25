@@ -100,11 +100,12 @@ class ServiceFailureTests(unittest.TestCase):
             cid='d'*64;present={'value':False}
             def command(_tools,args,deadline,input=None):
                 if args[0]=='create':present['value']=True;return cid+'\n'
+                if args[0]=='inspect':return json.dumps([docker(args)])
                 raise ValueError('injected_service_start_failure')
             def docker(args):
                 if args[0]=='ps':return [cid] if present['value'] else []
                 if args[0]=='inspect':
-                    return {'Id':cid,'Config':{'Labels':{'im.integration.owner':owner,'im.integration.source':commit}},'State':{'Status':'created'}} if present['value'] else None
+                    return {'Id':cid,'Config':{'Labels':{'im.integration.owner':owner,'im.integration.source':commit}},'State':{'Status':'created'},'Mounts':[],'HostConfig':{}} if present['value'] else None
                 if args[0]=='rm':present['value']=False;return None
                 self.fail('unexpected cleanup command')
             with patch('integration.services._generate_tls'),patch('integration.services.docker_environment',return_value={}),patch('integration.services._docker',side_effect=command),patch.object(registry,'docker',side_effect=docker):

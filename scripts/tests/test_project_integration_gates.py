@@ -127,9 +127,9 @@ class GateTests(unittest.TestCase):
   def docker(args,**kwargs):
    calls.append(args)
    if args[0]=='create':return cid+'\n'
-   if args[0]=='inspect':return json.dumps([{'Id':cid,'Config':{'Labels':{'im.integration.owner':'b'*32,'im.integration.source':self.snapshot.commit}},'State':{'Running':False,'ExitCode':0},'HostConfig':{'Memory':536870912,'NanoCpus':1000000000,'Tmpfs':{'/limited':'size=1048576,mode=0700'}}}])
+   if args[0]=='inspect':return json.dumps([{'Id':cid,'Config':{'Labels':{'im.integration.owner':'b'*32,'im.integration.source':self.snapshot.commit}},'State':{'Running':False,'ExitCode':0},'Mounts':[],'HostConfig':{'Memory':536870912,'NanoCpus':1000000000,'Tmpfs':{'/limited':'size=1048576,mode=0700'}}}])
    if args[0]=='start':
-    self.assertTrue(any(r['identity']==cid and r['event']=='registered' for r in registry.records()))
+    self.assertTrue(any(r['identity']==cid and r['event']=='registered' and 'mounts' in r['fingerprint'] for r in registry.records()))
     return 'PASS\n'
    if args[0]=='rm':return ''
    self.fail(args)

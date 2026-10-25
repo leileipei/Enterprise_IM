@@ -97,7 +97,9 @@ class Environment:
  def service(self,role,image,port,extra,command=()):
   self.checkpoint();p=self.docker(['create','--name','im-local-'+role+'-'+self.owner,'--label','im.integration.owner='+self.owner,'--label','im.integration.source='+self.source,'--publish','127.0.0.1::'+port,*extra,image,*command]);cid=p.stdout.strip()
   if not re.fullmatch('[a-f0-9]{64}',cid):raise RuntimeError('container_identity_unproven')
-  self.registry.add(ResourceRef('container',self.owner,cid,{'container_id':cid}));self.docker(['start',cid]);row=json.loads(self.docker(['inspect',cid]).stdout)[0];binding=row['NetworkSettings']['Ports'][port+'/tcp']
+  self.registry.add(ResourceRef('container',self.owner,cid,{'container_id':cid}))
+  self.registry.record_container_mounts(cid,json.loads(self.docker(['inspect',cid]).stdout)[0])
+  self.docker(['start',cid]);row=json.loads(self.docker(['inspect',cid]).stdout)[0];binding=row['NetworkSettings']['Ports'][port+'/tcp']
   if len(binding)!=1 or binding[0]['HostIp']!='127.0.0.1':raise RuntimeError('container_not_loopback')
   result={'id':cid,'port':int(binding[0]['HostPort']),'image_id':row['Image'],'reference':image};self.public['resources'].setdefault('containers',{})[role]=result;self.save();return result
  def private_file(self,name,value):
@@ -183,7 +185,10 @@ class Environment:
  def close(self):
   if self.public is None:return []
   failures=[]
-  if self.public['phase'] not in ['failed','stopped']:self.public['phase']='stopping';self.save()
+  if self.public['phase'] not in ['failed','stopped']:
+   self.public['phase']='stopping'
+   try:self.save()
+   except (ValueError,OSError):failures.append('state_publish_failed')
   for entry in reversed(self.processes):
    p=entry['process']
    try:
@@ -195,23 +200,36 @@ class Environment:
     if p.returncode!=0:failures.append('local_process_nonzero_exit')
     if entry['fingerprint']:self.registry.lifecycle(str(p.pid),'exited',{'role':entry['role'],'actual_exit':p.returncode,'expected_exit':0})
    except Exception:failures.append('local_process_cleanup_failed')
-   finally:entry['stream'].close()
-  evidence=self.root/'evidence';evidence.mkdir(mode=0o700,exist_ok=True)
-  if self.private is not None:
-   for path in self.private.glob('*.log*'):
-    data=path.read_bytes()
-    for value in self.secret_values:data=data.replace(value.encode(),b'[REDACTED]')
-    (evidence/path.name).write_bytes(data);(evidence/path.name).chmod(0o600)
-   (evidence/'runtime-summary.json').write_text(json.dumps(self.metadata,indent=2)+'\n');(evidence/'runtime-summary.json').chmod(0o600)
-  cleanup=self.registry.cleanup(time.monotonic()+45) if self.registry else None
-  if cleanup:failures+=list(cleanup.failures)
+   finally:
+    try:entry['stream'].close()
+    except OSError:failures.append('local_process_log_close_failed')
+  try:
+   evidence=self.root/'evidence';evidence.mkdir(mode=0o700,exist_ok=True)
+   if self.private is not None:
+    for path in self.private.glob('*.log*'):
+     data=path.read_bytes()
+     for value in self.secret_values:data=data.replace(value.encode(),b'[REDACTED]')
+     (evidence/path.name).write_bytes(data);(evidence/path.name).chmod(0o600)
+    (evidence/'runtime-summary.json').write_text(json.dumps(self.metadata,indent=2)+'\n');(evidence/'runtime-summary.json').chmod(0o600)
+  except (ValueError,OSError):failures.append('evidence_publish_failed')
+  finally:
+   # Evidence publication must never gate independently verified resource cleanup.
+   try:
+    cleanup=self.registry.cleanup(time.monotonic()+45,preserve_directories=True) if self.registry else None
+    if cleanup:failures+=list(cleanup.failures)
+   except (ValueError,OSError,subprocess.SubprocessError):failures.append('resource_cleanup_failed')
   # Keep private recovery material unless every process/container is proven gone.
   if not failures and self.private is not None and self.private.exists():
-   info=self.private.stat();self.registry.add(ResourceRef('directory',self.owner,str(self.private),{'device':info.st_dev,'inode':info.st_ino}));cleanup=self.registry.cleanup(time.monotonic()+45);failures+=list(cleanup.failures)
+   try:
+    info=self.private.stat();self.registry.add(ResourceRef('directory',self.owner,str(self.private),{'device':info.st_dev,'inode':info.st_ino}));cleanup=self.registry.cleanup(time.monotonic()+45);failures+=list(cleanup.failures)
+   except (ValueError,OSError,subprocess.SubprocessError):failures.append('private_runtime_cleanup_failed')
   if self.private is not None and self.private.exists():failures.append('private_runtime_root_remains')
   self.public['phase']='failed' if failures or self.public.get('error') else 'stopped'
   if failures:self.public['error']='cleanup_failed'
-  self.save();return failures
+  try:self.save()
+  except (ValueError,OSError):
+   failures.append('state_publish_failed');self.public.update(phase='failed',error='cleanup_failed')
+  return failures
  def run(self):
   with StopSignals() as self.signals:return self._run()
  def _run(self):

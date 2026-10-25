@@ -19,7 +19,7 @@ def run_command(name: str,kind: str,source_commit: str,argv: List[str],cwd: Path
     if argv and Path(argv[0]).resolve()==Path(sys.executable).resolve():
         argv=[str(python_cli()),*argv[1:]]
     log=Path(log);log.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
-    proc=None;fingerprint=None;failure=[]
+    proc=None;fingerprint=None;registered=False;failure=[]
     fd=os.open(log,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
     with os.fdopen(fd,'wb') as stream:
       diagnostic_fd=os.open(str(log)+'.stderr',os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
@@ -29,7 +29,7 @@ def run_command(name: str,kind: str,source_commit: str,argv: List[str],cwd: Path
                                   stderr=diagnostic,start_new_session=True)
             fingerprint=process_fingerprint(proc.pid)
             if fingerprint:
-                registry.add(ResourceRef('process',registry.owner,str(proc.pid),fingerprint))
+                registry.add(ResourceRef('process',registry.owner,str(proc.pid),fingerprint));registered=True
             while proc.poll() is None:
                 remaining=deadline-time.monotonic()
                 if remaining<=0:
@@ -47,7 +47,7 @@ def run_command(name: str,kind: str,source_commit: str,argv: List[str],cwd: Path
                         proc.wait(timeout=1)
                 else:
                     failure.append('command_identity_unproven')
-            if proc and fingerprint:
+            if proc and registered:
                 registry.lifecycle(str(proc.pid),'exited',{'exit_code':proc.returncode,'gate':name})
     rc=proc.returncode if proc and proc.returncode is not None else 125
     return GateEvent(name,kind,source_commit,rc,log,failures=failure)

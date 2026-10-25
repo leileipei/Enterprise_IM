@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -21,6 +22,30 @@ def docker(args):
     return result.stdout
 
 
+def _private_json(path,value):
+    fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'w') as stream:
+        json.dump(value,stream,indent=2);stream.write('\n');stream.flush();os.fsync(stream.fileno())
+
+
+def _cleanup_ticket(registry,cid,primary_error,cleanup_error):
+    message=str(cleanup_error)
+    ticket={'source_commit':registry.commit,'owner':registry.owner,'container_id':cid,
+            'registry_path':str(registry.path),'cleanup':False,
+            'primary_error':None if primary_error is None else
+                {'type':type(primary_error).__name__,'errno':getattr(primary_error,'errno',None)},
+            'cleanup_error':message if re.fullmatch('[a-z_]{1,64}',message) else type(cleanup_error).__name__,
+            'observed_mount_fingerprint':None}
+    try:
+        actual=registry._owned_container(cid,registry.owner)
+        if actual is not None:
+            ticket['observed_mount_fingerprint']=registry._container_mount_fingerprint(cid,registry.owner,actual)
+    except (ValueError,OSError,subprocess.SubprocessError) as exc:
+        ticket['inspection_error']=type(exc).__name__
+    # Never copy Config.Env (credentials) from Docker inspect into a recovery report.
+    return ticket
+
+
 def launch(args,registry,proof,binary):
     proof=Path(proof)
     if not proof.resolve().is_relative_to(registry.root/registry.owner) or proof.is_symlink():raise ValueError('resource_proof_not_owned')
@@ -37,10 +62,12 @@ def launch(args,registry,proof,binary):
         options=[a for a in args if a!='--rm']
         cid=docker(['create','--label','im.integration.owner='+registry.owner,'--label','im.integration.source='+registry.commit,*options]).strip()
         if len(cid)!=64 or any(x not in '0123456789abcdef' for x in cid):raise ValueError('resource_invalid_container_id')
+        report['container_id']=cid
         registry.add(ResourceRef('container',registry.owner,cid,{'container_id':cid}))
         actual=json.loads(docker(['inspect',cid]))[0]
         if actual.get('Id')!=cid or actual.get('Config',{}).get('Labels',{}).get('im.integration.source')!=registry.commit or actual['Config']['Labels'].get('im.integration.owner')!=registry.owner:
             raise ValueError('resource_container_identity_mismatch')
+        registry.record_container_mounts(cid,actual)
         host=actual['HostConfig'];report.update(container_id=cid,image_id=actual.get('Image',''),memory=host.get('Memory'),nano_cpus=host.get('NanoCpus'),tmpfs=host.get('Tmpfs') or {})
         output=docker(['start','--attach',cid]);sys.stdout.write(output);sys.stdout.flush()
         finished=json.loads(docker(['inspect',cid]))[0]
@@ -48,15 +75,23 @@ def launch(args,registry,proof,binary):
         report['exit_code']=finished['State']['ExitCode']
         if report['exit_code']!=0:raise ValueError('resource_binary_failed')
     finally:
-        if cid:
-            actual=registry._owned_container(cid,registry.owner)
-            if actual and actual.get('State',{}).get('Status')!='removing':docker(['rm','-f',cid])
-            deadline=time.monotonic()+15
-            while registry._owned_container(cid,registry.owner) is not None and time.monotonic()<deadline:time.sleep(.1)
-            report['cleanup']=registry._owned_container(cid,registry.owner) is None
+        primary_error=sys.exc_info()[1];cleanup_error=None;publication_error=None;ticket=None
+        try:
+            if report['container_id']:
+                registry.cleanup_container(cid,time.monotonic()+15)
+                report['cleanup']=True
+        except (ValueError,OSError,subprocess.SubprocessError) as exc:
+            cleanup_error=exc;ticket=_cleanup_ticket(registry,cid,primary_error,exc)
         report['ended_at']=time.time();report['seconds']=round(report['ended_at']-started,3)
-        fd=os.open(proof,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600)
-        with os.fdopen(fd,'w') as stream:json.dump(report,stream,indent=2);stream.write('\n')
+        try:
+            if ticket is not None:_private_json(Path(str(proof)+'.cleanup.json'),ticket)
+            _private_json(proof,report)
+        except (ValueError,OSError) as exc:publication_error=exc
+        if primary_error is not None:
+            if publication_error is not None or cleanup_error is not None:
+                raise primary_error from (publication_error or cleanup_error)
+        elif cleanup_error is not None:raise cleanup_error from publication_error
+        elif publication_error is not None:raise publication_error
     if not report['cleanup']:raise ValueError('resource_cleanup_unconfirmed')
     return report
 
