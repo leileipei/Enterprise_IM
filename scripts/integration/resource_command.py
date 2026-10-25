@@ -49,6 +49,9 @@ def _cleanup_ticket(registry,cid,primary_error,cleanup_error):
 def launch(args,registry,proof,binary):
     proof=Path(proof)
     if not proof.resolve().is_relative_to(registry.root/registry.owner) or proof.is_symlink():raise ValueError('resource_proof_not_owned')
+    reservation=Path(str(proof)+'.reservation')
+    if any(p.exists() or p.is_symlink() for p in [proof,Path(str(proof)+'.cleanup.json'),reservation]):
+        raise ValueError('resource_evidence_path_exists')
     rows=registry.records()
     if not any(r['event']=='reserve' and r['owner']==registry.owner for r in rows):raise ValueError('resource_owner_not_reserved')
     binary=Path(binary)
@@ -58,6 +61,13 @@ def launch(args,registry,proof,binary):
                      'binary_name':binary.name,'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),
                      'started_at':started,'container_id':'','image_id':'','memory':0,'nano_cpus':0,'tmpfs':{}}
 
+    try:
+        _private_json(reservation,{'source_commit':registry.commit,'owner':registry.owner,
+            'proof':str(proof),'binary_sha256':report['binary_sha256'],'started_at':started})
+    except FileExistsError:raise ValueError('resource_evidence_path_exists') from None
+    # The check above is advisory; this exclusive ticket is the concurrent admission boundary.
+    if any(p.exists() or p.is_symlink() for p in [proof,Path(str(proof)+'.cleanup.json')]):
+        raise ValueError('resource_evidence_path_exists')
     try:
         options=[a for a in args if a!='--rm']
         cid=docker(['create','--label','im.integration.owner='+registry.owner,'--label','im.integration.source='+registry.commit,*options]).strip()

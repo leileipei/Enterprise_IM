@@ -180,13 +180,55 @@ class IOSCommandEvidenceRegressionTests(unittest.TestCase):
             self.assertEqual(err.stat().st_mode & 0o777, 0o600)
 
 
+    def test_retry_cannot_overwrite_partial_log_or_follow_old_log_link(self):
+        for existing in ['stdout','stderr','linked-stdout']:
+            with self.subTest(existing=existing),tempfile.TemporaryDirectory(prefix='im-ios-log-reuse-') as tmp:
+                root=Path(tmp).resolve();out=root/'evidence';out.mkdir(mode=0o700)
+                actor=local_env_simulators.OwnedIOS.__new__(local_env_simulators.OwnedIOS)
+                actor.out=out;actor.env={'process_env':{}};actor.state={'commands':[]}
+                foreign=root/'keep-foreign';foreign.write_bytes(b'foreign original')
+                name='000-create.log.stderr' if existing=='stderr' else '000-create.log'
+                log=out/name
+                if existing=='linked-stdout':log.symlink_to(foreign)
+                else:log.write_bytes(b'first failed attempt partial bytes')
+                before=log.read_bytes();refusal=None
+                with patch('subprocess.run',return_value=subprocess.CompletedProcess([],0,b'retry output',b'retry diagnostic')) as external:
+                    try:actor.call('create',['create','owned-fixture'],3)
+                    except ValueError as exc:refusal=str(exc)
+                self.assertEqual(log.read_bytes(),before,'retry overwrote an earlier failed attempt')
+                self.assertEqual(foreign.read_bytes(),b'foreign original')
+                self.assertEqual(refusal,'owned_ios_evidence_path_exists')
+                external.assert_not_called()
+                self.assertEqual(actor.state['commands'],[])
+
+    def test_timeout_stays_primary_when_reserved_log_close_fails(self):
+        with tempfile.TemporaryDirectory(prefix='im-ios-close-fault-') as tmp:
+            actor=local_env_simulators.OwnedIOS.__new__(local_env_simulators.OwnedIOS)
+            actor.out=Path(tmp).resolve();actor.env={'process_env':{}};actor.state={'commands':[]}
+            timeout=subprocess.TimeoutExpired(['simctl'],3,output=b'partial',stderr=b'diagnostic')
+            original=os.fdopen
+            class ClosingFault:
+                def __init__(self,stream):self.stream=stream
+                def __enter__(self):return self
+                def __getattr__(self,name):return getattr(self.stream,name)
+                def __exit__(self,*args):
+                    self.stream.close()
+                    raise OSError(errno.ENOSPC,'reserved log close failed')
+            with patch.object(local_env_simulators.os,'fdopen',side_effect=lambda *a,**kw:ClosingFault(original(*a,**kw))), \
+                 patch('subprocess.run',side_effect=timeout):
+                with self.assertRaises(subprocess.TimeoutExpired) as raised:actor.call('create',['create','owned-fixture'],3)
+            self.assertIs(raised.exception,timeout)
+            self.assertIsInstance(timeout.__cause__,OSError)
+            self.assertEqual((actor.out/'000-create.log').read_bytes(),b'partial')
+            self.assertEqual((actor.out/'000-create.log.stderr').read_bytes(),b'diagnostic')
+
     def test_timeout_remains_primary_when_evidence_write_or_state_save_also_fails(self):
         for stage in ['log','state']:
             with self.subTest(stage=stage),tempfile.TemporaryDirectory(prefix='im-timeout-publish-') as tmp:
                 actor=local_env_simulators.OwnedIOS.__new__(local_env_simulators.OwnedIOS)
                 actor.out=Path(tmp).resolve();actor.env={'process_env':{}};actor.state={'commands':[]}
                 timeout=subprocess.TimeoutExpired(['simctl'],3,output=b'partial',stderr=b'diagnostic')
-                context=patch.object(Path,'write_bytes',side_effect=OSError(errno.ENOSPC,'evidence full')) if stage=='log' else patch.object(actor,'save',side_effect=OSError(errno.ENOSPC,'state full'))
+                context=patch.object(local_env_simulators,'_write_command_log',side_effect=OSError(errno.ENOSPC,'evidence full')) if stage=='log' else patch.object(actor,'save',side_effect=OSError(errno.ENOSPC,'state full'))
                 with patch('subprocess.run',side_effect=timeout),context:
                     with self.assertRaises(subprocess.TimeoutExpired) as raised:actor.call('create',['create','owned-fixture'],3)
                 self.assertIs(raised.exception,timeout)
@@ -277,6 +319,51 @@ class ContainerVolumeRegressionTests(unittest.TestCase):
         self.assertFalse(result.removed)
         self.assertTrue(self.present)
         self.assertFalse(any(x[0]=='rm' for x in self.calls))
+
+    def test_concurrent_resource_launches_share_one_exclusive_admission(self):
+        from concurrent.futures import ThreadPoolExecutor
+        import threading
+        from integration import resource_command
+        binary=self.root/OWNER/'transfer.test';binary.write_bytes(b'owned protocol binary')
+        proof=binary.parent/'concurrent-proof.json';barrier=threading.Barrier(2)
+        seen=threading.local();original_exists=Path.exists;calls=[]
+        def exists(path):
+            value=original_exists(path)
+            if path==proof and not getattr(seen,'checked',False):
+                seen.checked=True;barrier.wait(timeout=5)
+            return value
+        def docker(args):
+            self.assertEqual(args[0],'create');calls.append(args)
+            raise ValueError('controlled_fixture_stop')
+        def attempt():
+            try:resource_command.launch(['fixture-image'],self.ledger,proof,binary)
+            except ValueError as exc:return str(exc)
+            self.fail('controlled create stop must not be reported successful')
+        with patch.object(Path,'exists',exists),patch.object(resource_command,'docker',side_effect=docker):
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                jobs=[workers.submit(attempt) for _ in range(2)]
+                results=[job.result(timeout=10) for job in jobs]
+        self.assertEqual(len(calls),1,'two participants crossed the same evidence admission')
+        self.assertEqual(sorted(results),['controlled_fixture_stop','resource_evidence_path_exists'])
+        reservation=Path(str(proof)+'.reservation')
+        ticket=json.loads(reservation.read_text())
+        self.assertEqual(ticket['owner'],OWNER);self.assertEqual(ticket['source_commit'],COMMIT)
+        self.assertEqual(ticket['proof'],str(proof))
+        self.assertEqual(reservation.stat().st_mode&0o777,0o600)
+
+    def test_resource_reused_proof_or_recovery_ticket_refuses_before_docker(self):
+        from integration import resource_command
+        binary=self.root/OWNER/'transfer.test';binary.write_bytes(b'owned protocol binary')
+        for suffix in ['', '.cleanup.json']:
+            with self.subTest(existing=suffix):
+                proof=binary.parent/('proof-'+('summary' if suffix=='' else 'recovery')+'.json')
+                previous=Path(str(proof)+suffix);previous.write_bytes(b'previous failure evidence')
+                with patch.object(resource_command,'docker',side_effect=AssertionError('Docker touched before evidence admission')) as external:
+                    with self.assertRaisesRegex(ValueError,'^resource_evidence_path_exists$'):
+                        resource_command.launch(['fixture-image'],self.ledger,proof,binary)
+                self.assertEqual(previous.read_bytes(),b'previous failure evidence')
+                external.assert_not_called()
+                self.assertEqual([r['event'] for r in self.ledger.records()],['reserve'])
 
     def test_resource_registration_io_failure_preserves_error_and_exact_recovery_ticket(self):
         from integration import resource_command
