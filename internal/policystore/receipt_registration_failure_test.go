@@ -37,7 +37,7 @@ func TestReceiptRegistrationFailurePreservesRecovery(t *testing.T) {
 	if err := os.Mkdir(bin, 0700); err != nil {
 		t.Fatal(err)
 	}
-	script := "#!/bin/sh\ncase \"$1\" in\ncreate) /usr/bin/touch \"$MOUNT_FAILURE_ROOT/present\"; printf '%s\\n' '" + cid + "';;\ninspect) /bin/cat <<'INSPECT_FIXTURE'\n" + string(actual) + "\nINSPECT_FIXTURE\n;;\nrm) /bin/rm -f \"$MOUNT_FAILURE_ROOT/present\";;\nstart) /usr/bin/touch \"$MOUNT_FAILURE_ROOT/started\";;\n*) exit 92;;\nesac\n"
+	script := "#!/bin/sh\ncase \"$1\" in\ncreate) previous=; last=; for arg in \"$@\"; do previous=\"$last\"; last=\"$arg\"; done; printf '%s\\n' \"$previous\" > \"$MOUNT_FAILURE_ROOT/image\"; /usr/bin/touch \"$MOUNT_FAILURE_ROOT/present\"; printf '%s\\n' '" + cid + "';;\ninspect) /bin/cat <<'INSPECT_FIXTURE'\n" + string(actual) + "\nINSPECT_FIXTURE\n;;\nrm) /bin/rm -f \"$MOUNT_FAILURE_ROOT/present\";;\nstart) /usr/bin/touch \"$MOUNT_FAILURE_ROOT/started\";;\n*) exit 92;;\nesac\n"
 	if err := os.WriteFile(filepath.Join(bin, "docker"), []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -56,6 +56,24 @@ func TestReceiptRegistrationFailurePreservesRecovery(t *testing.T) {
 	}
 	if _, err = os.Stat(filepath.Join(root, "present")); err != nil {
 		t.Fatal("registration failure discarded container before a durable mount ticket")
+	}
+	locks, err := os.ReadFile(filepath.Join("..", "..", "testdata", "file-runtime", "versions.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantImage := ""
+	for _, line := range strings.Split(string(locks), "\n") {
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 && strings.TrimSpace(parts[0]) == "alpine-resource-image" {
+			wantImage = strings.TrimSpace(parts[1])
+		}
+	}
+	image, err := os.ReadFile(filepath.Join(root, "image"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(wantImage, "alpine@sha256:") || strings.TrimSpace(string(image)) != wantImage {
+		t.Fatalf("receipt child must use the approved immutable image, got %q", strings.TrimSpace(string(image)))
 	}
 	if _, err = os.Stat(filepath.Join(root, "started")); !os.IsNotExist(err) {
 		t.Fatal("unproven child was started")

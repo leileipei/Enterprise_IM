@@ -86,7 +86,7 @@ func startReceiptChild(t *testing.T, dir, name, binary, ca string, env map[strin
 	if strings.HasPrefix(name, "api-") {
 		args = append(args, "--publish", "127.0.0.1::8080")
 	}
-	args = append(args, "alpine:3.22", "/run/product")
+	args = append(args, "alpine@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40", "/run/product")
 	id := strings.TrimSpace(string(receiptDocker(t, args...)))
 	proof, e := testfixtures.RegisterIntegrationContainer(id, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
 	if e != nil {
