@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "prepared_source_commit": "056408a7b9aa826a9b57169da568928d779a589e",
+  "status": "prepared_with_time_bound_execution_conditions",
+  "scope": "Dependencies and admission checks only; no full Go/race, services, browsers, simulators or physical devices",
+  "asset_root": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b",
+  "definitions": {
+    "path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/definitions",
+    "versions": {
+      "main.cvd": "63",
+      "daily.cvd": "28164",
+      "bytecode.cvd": "339"
+    },
+    "canonical_signature_and_freshness_check_passed": true,
+    "daily_expires_utc": "2026-10-26T06:24:00+00:00",
+    "daily_expires_local": "2026-10-26T14:24:00+08:00",
+    "updater_x509_diagnostic_retained": true,
+    "unique_diagnostic_root_cause_established": false,
+    "tls_verification_or_trust_not_relaxed": true,
+    "detached_fips_verification_claimed": false
+  },
+  "mc": {
+    "path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/tools/mc",
+    "source_rebuilt_path": "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/reproducible-tools/mc",
+    "sha256": "e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea",
+    "reproducible_source_build_passed": true,
+    "canonical_provisioner_passed": true
+  },
+  "mc_release": "RELEASE.2024-11-05T11-29-45Z",
+  "mc_release_source_commit": "6ac18619cf881074fe6edcc79ab62c9c85da60b9",
+  "canonical_toolchain_passed": true,
+  "toolchain_versions": {
+    "go": "1.27.1",
+    "node": "24.19.0",
+    "chrome": "155.0.8059.85",
+    "qpdf": "12.4.2",
+    "clamd": "1.5.4",
+    "sigtool": "1.5.4",
+    "freshclam": "1.5.4",
+    "python": "3.9.6",
+    "openssl": "LibreSSL 3.3.6",
+    "docker": "Docker version 29.8.2, build 7fc2dff",
+    "playwright": "1.62.1",
+    "mc": "mc version RELEASE.2024-11-05T11-29-45Z (commit-id=6ac18619cf881074fe6edcc79ab62c9c85da60b9)"
+  },
+  "go_metadata": {
+    "darwin_arm64_packages": 473,
+    "linux_arm64_packages": 473,
+    "dependency_errors": 0,
+    "incomplete_packages": 0,
+    "source_files_each_verified_unchanged": 1401,
+    "metadata_downloads_disabled": true,
+    "business_tests_executed": false
+  },
+  "bootstrap_admission": {
+    "passed": true,
+    "runtime_runner_executed": false,
+    "scanner_socket_bytes": 88,
+    "socket_limit_exclusive": 104,
+    "dryrun_root_removed": true,
+    "planned_output_not_created": true
+  },
+  "execution_profiles": {
+    "21600": {
+      "definition_window_ready_at_check": false,
+      "latest_start_exclusive_utc": "2026-10-26T00:24:00+00:00",
+      "latest_start_exclusive_local": "2026-10-26T08:24:00+08:00"
+    },
+    "8400": {
+      "definition_window_ready_at_check": true,
+      "latest_start_exclusive_utc": "2026-10-26T04:04:00+00:00",
+      "latest_start_exclusive_local": "2026-10-26T12:04:00+08:00"
+    }
+  },
+  "window_rechecked_at_utc": "2026-10-26T02:08:44.908847+00:00",
+  "window_rechecked_at_local": "2026-10-26T10:08:44.908847+08:00",
+  "profile_8400_still_ready": true,
+  "default_21600_ready": false,
+  "planned_cli": [
+    "/usr/bin/python3",
+    "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/\u4f01\u4e1aIM\u7cfb\u7edf/scripts/test-project-integration.py",
+    "--source-commit",
+    "056408a7b9aa826a9b57169da568928d779a589e",
+    "--output-dir",
+    "/private/tmp/im-fullgo26-06adcc86",
+    "--definition-source",
+    "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/definitions",
+    "--attempt-timeout-seconds",
+    "8400"
+  ],
+  "mc_handoff": {
+    "prepared_binary_canonical_provisioner_verified": true,
+    "prepared_source_archive_hash_verified": true,
+    "standard_cli_has_mc_seed_argument": false,
+    "standard_full_entrypoint_behavior": "A new private tools directory without mc triggers the existing hash-verified official source download/build path. The prepared binary is not automatically injected by this CLI.",
+    "selected_unmodified_entrypoint_option": "Retain canonical download/build behavior for a future authorized full attempt; no monkeypatch or unreviewed seed injection."
+  },
+  "cleanup": {
+    "all_preparation_processes_gone": true,
+    "exact_temporary_directories_removed": [
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/fcfbc99882ad82d639a1ace50afd2c0a",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/tools/acfbc99882ad82d639a1ace50afd2c0a",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/metadata-darwin",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/metadata-linux",
+      "/Users/leo.cui/Documents/Codex/.runtime-tools/enterprise-im-go-integration-20261026-056408a-07b5735b/mc-rebuild"
+    ],
+    "private_build_cache_removed": true,
+    "asset_root_intentionally_retained": true
+  },
+  "preservation": {
+    "historical_files_unchanged": 21670,
+    "external_seed_and_original_mc_files_unchanged": 5,
+    "product_source_changed": false,
+    "main_checkout_changed": false
+  },
+  "failure_history": [
+    {
+      "record": "sigtool-initial-collector-failure.json",
+      "classification": "sandbox evidence-directory write refusal",
+      "resolved_by": "independent captures and canonical definition check"
+    },
+    {
+      "record": "compiler-and-capacity.json",
+      "classification": "initial Docker info sandbox refusal; zero stdout not treated as engine facts",
+      "resolved_by": "same read-only probe under local socket access"
+    },
+    {
+      "record": "bootstrap-helper-initial-failure.json",
+      "classification": "Path+str TypeError before network/bootstrap",
+      "resolved_by": "corrected expression and canonical archive admission"
+    },
+    {
+      "record": "mc-source-build-result.json",
+      "classification": "post-build argv0 name assertion; compiler0 and digest matched",
+      "resolved_by": "standard mc basename and canonical provisioner without rebuilding"
+    },
+    {
+      "record": "documentation-encoding-failure.json",
+      "classification": "stdin source decoding before any document write",
+      "resolved_by": "ASCII publishing source with JSON Unicode escapes"
+    }
+  ],
+  "diagnostics": {
+    "freshclam_exit": 0,
+    "updater_x509_diagnostic_retained": true,
+    "local_root_cause_established": false,
+    "three_embedded_cvd_signatures_passed": true,
+    "detached_fips_chain_claimed": false,
+    "trust_and_signature_rules_unchanged": true
+  },
+  "remaining_requirements": [
+    "Recheck immutable source, tools/images/seed hashes, signed lifetime covering the entire attempt, new output path and active lease immediately before launch.",
+    "8400 seconds is an existing stricter total deadline including cleanup; no tests or assertions are removed; deadline still fails the attempt.",
+    "Default 21600 seconds is not currently covered by daily lifetime.",
+    "Canonical full entry has no mc seed CLI option and will download/build in a new private tools directory; that mechanism was reproduced successfully here, not silently patched.",
+    "Full Go/race and real runtime fixtures remain unexecuted; platform/customer acceptance unchanged.",
+    "Physical-device validation remains deferred."
+  ],
+  "official_references": [
+    "https://docs.clamav.net/manual/Usage/SignatureManagement.html",
+    "https://docs.clamav.net/faq/faq-freshclam.html",
+    "https://github.com/Cisco-Talos/clamav/issues/1421"
+  ],
+  "independent_preparation_report": ".superpowers/sdd/2026-10-26-go-integration-preparation/preparation-results.json",
+  "raw_evidence_count": 61,
+  "raw_evidence_sha256": {
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-build-confirmed-registry.jsonl": "0edc5471730e881a68dcb3e4e8033d1c43d40a9f3dc4f46c4255424699191bdd",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-source-build-result.json": "932c449943cc4929d03c4415c3fe8cc7fe91aaa806e3c11180467be0502cb98a",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/sigtool-initial-main.cvd.stdout": "ed8364b49b21e2b46a068ad7578e6a325a111260820324191e1baafe869e3257",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-linux-registry.jsonl": "fd20ea04f2e8e9600ac2d6effca250a7c4b35beb01e83eae291ad2a2cdb217d0",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-darwin.jsonl.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-linux.jsonl.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/documentation-encoding-failure.json": "189067572a5f2b87ce91406c16f956fe6bd51c4db9559f5748d03a0ec2ed7717",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/freshclam.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/freshclam-registry.jsonl": "c913f8e6ecff2950cbe4526b55f687117c680ccdca1e1510b479436ffb43def7",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/compiler-and-capacity.json": "bfbad9362374f30651adac5452afbf2edc22d66bfb367b7057d0c48ea77ee6ab",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-build-registry.jsonl": "80885c3e7dc0c58871002d4e99c0f756bf4e6ac33fcce5013b9ed148c98b4cd5",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/definitions-prepared.json": "baae48d58e4cc91cc1b0d66e416534c7d30f94cd7d323e36682e02596e8c2e26",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-reproduced-version.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-built-version.log": "ad88b4e057f169818a2e460adee5ba7d8d5c25bce6954eb5d1540a7fbd158101",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-version.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/sigtool-initial-bytecode.cvd.stdout": "9b460e20b84158171a74b0fc83942e68b57f15be6298274b1021be9d13860e04",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-darwin-admission.json": "9daa1e6c236185c81db0a396b50f35a38967bb1f31c06174a5b065b74cc920ca",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-darwin-result.json": "8f203f639d616b104b145c62c8a5618ce201bcf6d102df6a2e45a0aa37db6475",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/preparation-results.json": "e59f066f738529bb4e82d7ed860c827da97506283c231bdd1f331552b404f55f",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-build.log.stderr": "7516482ad0119a1b5373381999b4fbc686ac258bb2659343a49ec1cf2c0851a7",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/sigtool-initial-bytecode.cvd.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/sigtool-initial-collector-failure.json": "c2d1d85336058c5aaba33abd0aaaf7f45d80e7e764dc935c0251df185bf55bfc",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-built-version.log.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/source.tar": "2f39f735dea7a8f421a55e9d06f2d4f35a20316a0b542b22d358bdb4a43f6bb1",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/freshclam.log": "6d6d44f499d9f6a531e4f04e7a0c6c343df3d9c3b9c5186fc9b3ad6b809875d3",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-registry.jsonl": "6759aae145f060a36c5f2ba87786cb521cbfce141ec3c2b6503ae4f3be3c58c5",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/bootstrap-admission.json": "17041025a39d6008ae32e0e1c5a061fffe832ad0ad283a83f3043035f66961eb",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/asset-manifest.json": "454ca26332f9a97c9a33fd10ac96f8c31db54d674875f4f09e32c0bd53ae9032",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/sigtool-initial-main.cvd.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-source-archive.json": "5201111170dca3b4faede82ef2f1d59c5571448de7fbee7502214fb51b1d0e4e",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/freshclam-final-registry.jsonl": "25fc17580a2779156f4919bbde35d19b7813a04ec3e2b584016842c6bf07f7f7",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/sigtool-initial-daily.cvd.stdout": "c429e6883daf4f2399ca0e716dd87f42c4fb64c011785a01c7f0a8c2238922b9",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-linux-admission.json": "985a7d2688204d7f1f6811fb255232bffa6417be76a9f4a34316d7109acc6bca",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/baseline.json": "02b307bae8b18d42fd537e14964f67d4ed8b3509925385bbb37919d8ee0f921a",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-source-build-confirmed.json": "379e76682a3ddb56dbacdd65e88bebc365ad02cfe0bc89aaca5359b2fc0ad34b",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-version.log": "ad536accb1eb8c29d27dda20eb7db6980e8d8af19cef78b185ca069535713e79",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/preparation-failure-history.json": "381935e99055029725ac0202a1307011ffac871ba1a81cd76ed958ea88840510",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/freshclam-admission.json": "ae186ba80050aa2297841ce913e49dbd5f8bdf444fbcfba4ca8ede9164ea0fb4",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-linux-result.json": "c7c574c2b3c0e2a73700a51150ce00c3eabcb7159b8faebbe973d036872d2566",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-darwin.jsonl": "e6abebc160d0e0f916e3d486b39f2a28024b09790e8412e466977f55551a859f",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-build-admission.json": "14f1038aa1a17c839b2181d572b54113f3604c4beb743435d0007b145115d51c",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/freshclam-result.json": "af03971af35dc3af7d3e7273aff47c60b02b6d3a56e253e259f77fa33a5196f6",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-reproduced-version.log": "ad536accb1eb8c29d27dda20eb7db6980e8d8af19cef78b185ca069535713e79",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-darwin-registry.jsonl": "a7602d2b2ea3efcacea0efbcae8e3268747541e2740b75f0518beb0269b94bab",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/go-metadata-linux.jsonl": "7d4c31e33a102e632ddcd1ade2736237345b9a260c897a01cccb061a3f799643",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/canonical-toolchain-result.json": "2fed684489a8c6c25530f3b5b105e6cc163d06a985e999737681b4be81deb676",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-final-registry.jsonl": "76c5818c69126a31eca8543ce93b9fa28f813d2772792528dd6997e0a503d6eb",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/mc-prepared.json": "3a6c4177334c5b1ea07b2a0070f43f70a8ae557fcefb04932986a7daf798e018",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/bootstrap-helper-initial-failure.json": "f4b836ccac41d812f8708eb5193487c95898564da5b352512e561da832afc85b",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/sigtool-initial-daily.cvd.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/frozen-locks/testdata/file-runtime/versions.lock": "6f5f17ff6800d58f58bd21a81eb7794bf58de4141dfb6a84498096e23f9409dc",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/frozen-locks/testdata/project-integration/versions.lock": "becf2796de14e66bfa53a89eb4710a090d94445d92bd553e8609e8c325809446",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/audit-preparation.py": "58cc1a7b3083fbc4a35dddd5e7d2deb5d45bd95d97c5f9a5196417ad7eda726e",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/prepare-definitions.py": "c6be7a50f5c31032e47dda070170c85191ce468ac9d9423da7395895ce257ee7",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/bootstrap-admission-initial-failed.py": "b7835a62ef4fbd75f8a260fa247bb79ba2f9b6c25e5a876f3dd4687e9b8cbc1b",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/prepare-mc.py": "5424cd5c9da3b91fbc248fed26e7e395b2f1b37c1abc80c2f78ee1bfc61a47f1",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/finalize-inputs.py": "50d464ba57095b8f0e0713b2fd99e78b9a88ea73af7efd48b217c3df61ce7d3d",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/rebuild-mc.py": "0bb2a79672fd0b67d7f9fd14e9c63ceff1a95174c921756c8b4539c1cfb8d9b4",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/bootstrap-admission.py": "1698a478b188c142eccd4f54447985e8e9e03f00e660c9b47a194de0d279cf2d",
+    ".superpowers/sdd/2026-10-26-go-integration-preparation/helpers/check-go-metadata.py": "21dbfc2540340010322a11fc9b01a2325ef8f861665427613c13d04eb2ad1a11"
+  },
+  "asset_manifest_path": ".superpowers/sdd/2026-10-26-go-integration-preparation/asset-manifest.json",
+  "asset_manifest_sha256": "454ca26332f9a97c9a33fd10ac96f8c31db54d674875f4f09e32c0bd53ae9032",
+  "process_scope_note": "Tool version/help probes including Chrome --version and clamd --help ran as short foreground commands. No browser session, scanner daemon or full fixture was started."
+}
