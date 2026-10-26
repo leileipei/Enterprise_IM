@@ -1,0 +1,629 @@
+{
+  "schema_version": "p5_02_full_go_race_execution_v1",
+  "date": "2026-10-26",
+  "status": "attempt_completed_acceptance_failed",
+  "source_commit": "056408a7b9aa826a9b57169da568928d779a589e",
+  "source_archive_sha256": "2f39f735dea7a8f421a55e9d06f2d4f35a20316a0b542b22d358bdb4a43f6bb1",
+  "documentation_base_commit": "7ca592cbae503a766c638c51061a5d91b33958d2",
+  "attempt_timeout_seconds": 8400,
+  "admitted_at_utc": "2026-10-26T03:40:54.382604+00:00",
+  "manager_started_at_utc": "2026-10-26T03:41:03.870237+00:00",
+  "manager_ended_at_utc": "2026-10-26T04:39:42.998475+00:00",
+  "manager_actual_exit": 1,
+  "manager_seconds": 3519.173,
+  "outer_deadline_cancel_sent": false,
+  "wall_seconds_through_cleanup_and_audit": 3994.157,
+  "lease_status": "released",
+  "unused_lease_seconds": 4405.842914819717,
+  "required_gates_passed": false,
+  "full_suite_passed": false,
+  "race_suite_passed": false,
+  "native_gates_executed": 17,
+  "native_gates_passed": 14,
+  "gates": [
+    {
+      "name": "orchestrator_contract",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 121,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 0,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 1,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 30.298
+    },
+    {
+      "name": "toolchain",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {},
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 18.687
+    },
+    {
+      "name": "fixture_preflight",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {},
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 32.494
+    },
+    {
+      "name": "build_all",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {},
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 1.174
+    },
+    {
+      "name": "vet_all",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {},
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 1.837
+    },
+    {
+      "name": "message_realtime",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 157,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 154,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 3,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 65.429
+    },
+    {
+      "name": "file_components",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 334,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 638,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 8,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 940.452
+    },
+    {
+      "name": "file_resources",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 7,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 4,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 2,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 0.01
+    },
+    {
+      "name": "file_messages",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 8,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 6,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 2,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 43.432
+    },
+    {
+      "name": "file_download_retention",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 18,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 13,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 3,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 208.661
+    },
+    {
+      "name": "web_files",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 11,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 40,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 1,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 406.013
+    },
+    {
+      "name": "file_business_process",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 14,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 38,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 1,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 444.156
+    },
+    {
+      "name": "import_append",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {
+        "top_pass": 366,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 430,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 26,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": 160.689
+    },
+    {
+      "name": "full_repository",
+      "native_exit_code": 1,
+      "native_gate_passed": false,
+      "counts": {
+        "top_pass": 584,
+        "top_fail": 602,
+        "top_skip": 1,
+        "sub_pass": 563,
+        "sub_fail": 543,
+        "sub_skip": 0,
+        "package_pass": 22,
+        "package_fail": 11,
+        "package_skip": 0,
+        "ordinary_skip": 1,
+        "helper_skip": 0
+      },
+      "skips": [
+        "github.com/leileipei/Enterprise_IM/internal/policystore::TestRealtimeAPIChild"
+      ],
+      "failure_markers": 1156,
+      "seconds": 533.542
+    },
+    {
+      "name": "race_repository",
+      "native_exit_code": 1,
+      "native_gate_passed": false,
+      "counts": {
+        "top_pass": 486,
+        "top_fail": 700,
+        "top_skip": 1,
+        "sub_pass": 541,
+        "sub_fail": 565,
+        "sub_skip": 0,
+        "package_pass": 18,
+        "package_fail": 15,
+        "package_skip": 0,
+        "ordinary_skip": 1,
+        "helper_skip": 0
+      },
+      "skips": [
+        "github.com/leileipei/Enterprise_IM/internal/policystore::TestRealtimeAPIChild"
+      ],
+      "failure_markers": 1280,
+      "seconds": 579.313
+    },
+    {
+      "name": "evidence_integrity",
+      "native_exit_code": 0,
+      "native_gate_passed": true,
+      "counts": {},
+      "skips": [],
+      "failure_markers": 0,
+      "seconds": null
+    },
+    {
+      "name": "resource_cleanup",
+      "native_exit_code": 1,
+      "native_gate_passed": false,
+      "counts": {},
+      "skips": [],
+      "failure_markers": 7,
+      "seconds": null
+    }
+  ],
+  "native_failure_marker_count": 3787,
+  "failure_marker_count_is_not_failed_test_count": true,
+  "service_termination": {
+    "source": "056408a7b9aa826a9b57169da568928d779a589e",
+    "classification": "real_attempt_failed_after_shared_service_fixtures_received_termination_signals",
+    "first_full_test_failure": {
+      "Time": "2026-10-26T04:27:36.414093Z",
+      "Package": "github.com/leileipei/Enterprise_IM/internal/importapply",
+      "Test": "TestAppendPGCommitOutcome/beforeCommit"
+    },
+    "termination_signal_records": [
+      {
+        "log": "diagnostic-container-0fdc71dad39e.log",
+        "line": "2026-10-26T04:24:26.042515564Z 1:signal-handler (1792988666) Received SIGTERM scheduling shutdown..."
+      },
+      {
+        "log": "diagnostic-container-70a536be22cd.log",
+        "line": "2026-10-26T04:24:26.043055609Z 2026-10-26 04:24:26.034 UTC [1] LOG:  received fast shutdown request"
+      },
+      {
+        "log": "diagnostic-container-fa76a94fd063.log",
+        "line": "2026-10-26T04:24:26.045711667Z INFO: Exiting on signal: TERMINATED"
+      }
+    ],
+    "fixture_state_evidence": "diagnostic-live-fixtures.json",
+    "docker_event_query_actual_exit": 0,
+    "docker_event_records_returned": 0,
+    "empty_event_query_does_not_prove_no_events": true,
+    "termination_actor_established": false,
+    "outer_deadline_cancel_sent": false,
+    "fixtures_restarted_or_replaced": false,
+    "attempt_retried": false,
+    "all_failed_assertions_individually_attributed": false,
+    "checked_at_utc": "2026-10-26T04:35:48.944871+00:00"
+  },
+  "tool_drift": {
+    "expected_sha256": "4a728ee98f89005a90198a9be791e8fdaebbcb5e6af9721251efe0113df37759",
+    "current_metadata": {
+      "path": "/usr/local/bin/docker",
+      "resolved_path": "/Applications/OrbStack.app/Contents/MacOS/xbin/docker-tools",
+      "sha256": "927c58aed356a37f08f2586a90df4c6d8c5e890060de95ac3d11301d03959463",
+      "mtime_utc": "2026-10-23T15:20:16.109950+00:00",
+      "ctime_utc": "2026-10-26T04:24:25.461249+00:00",
+      "version_actual_exit": 0,
+      "version_stdout": "Docker version 29.8.2, build 7fc2dff\n",
+      "version_stderr": "",
+      "checked_at_utc": "2026-10-26T04:42:10.435344+00:00",
+      "update_or_replacement_performed_by_this_attempt": false,
+      "cause_and_actor_established": false,
+      "current_app_metadata": {
+        "CFBundleIdentifier": "dev.kdrag0n.MacVirt",
+        "CFBundleShortVersionString": "2.2.5",
+        "CFBundleVersion": "21124"
+      }
+    },
+    "tool_hashes_unchanged": 11,
+    "tool_hash_observations": [
+      {
+        "tool": "playwright_package",
+        "path": "/Users/leo.cui/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json",
+        "expected_sha256": "ca170ec143a88ed3043ac953eb3b2377b2b97304104f4e1e23316684ce2c35af",
+        "current_sha256": "ca170ec143a88ed3043ac953eb3b2377b2b97304104f4e1e23316684ce2c35af",
+        "unchanged": true
+      },
+      {
+        "tool": "go",
+        "path": "/opt/homebrew/bin/go",
+        "expected_sha256": "548608a910c46de32c65a3934f461b1787acf6ddd371044826068d8503b8509b",
+        "current_sha256": "548608a910c46de32c65a3934f461b1787acf6ddd371044826068d8503b8509b",
+        "unchanged": true
+      },
+      {
+        "tool": "python",
+        "path": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+        "expected_sha256": "295b2fd03b2b05f12b6f4887d70dbf43e5358173f8eec0909c121c9bdec2756f",
+        "current_sha256": "295b2fd03b2b05f12b6f4887d70dbf43e5358173f8eec0909c121c9bdec2756f",
+        "unchanged": true
+      },
+      {
+        "tool": "node",
+        "path": "/private/tmp/im-fullgo26-06adcc86/tools/node",
+        "expected_sha256": "dbedff294bab84a0a86c04e15fbcbeb1c97ca10bef1b32b0634cd24b36f62100",
+        "current_sha256": "dbedff294bab84a0a86c04e15fbcbeb1c97ca10bef1b32b0634cd24b36f62100",
+        "unchanged": true
+      },
+      {
+        "tool": "chrome",
+        "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "expected_sha256": "6e156f2271cef44afce9db36a5b920e94518857b94a4160f082696f8c3bd1c9d",
+        "current_sha256": "6e156f2271cef44afce9db36a5b920e94518857b94a4160f082696f8c3bd1c9d",
+        "unchanged": true
+      },
+      {
+        "tool": "qpdf",
+        "path": "/opt/homebrew/bin/qpdf",
+        "expected_sha256": "b36373c9388b1916a6ba02506782789184f35543573ba45b1839d18dc4a8fab2",
+        "current_sha256": "b36373c9388b1916a6ba02506782789184f35543573ba45b1839d18dc4a8fab2",
+        "unchanged": true
+      },
+      {
+        "tool": "clamd",
+        "path": "/opt/homebrew/sbin/clamd",
+        "expected_sha256": "9aad84e8d4b02d5ae54c153af783808b8ca9c147d2d8736c285d7f8742ae1ab2",
+        "current_sha256": "9aad84e8d4b02d5ae54c153af783808b8ca9c147d2d8736c285d7f8742ae1ab2",
+        "unchanged": true
+      },
+      {
+        "tool": "sigtool",
+        "path": "/opt/homebrew/bin/sigtool",
+        "expected_sha256": "d68048fb11540b55fe869287fbf755d2c10c2ee84645f7f12823b3ca8fa97eb0",
+        "current_sha256": "d68048fb11540b55fe869287fbf755d2c10c2ee84645f7f12823b3ca8fa97eb0",
+        "unchanged": true
+      },
+      {
+        "tool": "freshclam",
+        "path": "/opt/homebrew/bin/freshclam",
+        "expected_sha256": "d00a81f37161a94f827a2598bd1eaf2e6a9da0704a6df92baef48133c7af6a59",
+        "current_sha256": "d00a81f37161a94f827a2598bd1eaf2e6a9da0704a6df92baef48133c7af6a59",
+        "unchanged": true
+      },
+      {
+        "tool": "openssl",
+        "path": "/usr/bin/openssl",
+        "expected_sha256": "49db04c17e3a8c169ebc48a1149d78c165a86c04913203f46b2a14ce7f4a14fc",
+        "current_sha256": "49db04c17e3a8c169ebc48a1149d78c165a86c04913203f46b2a14ce7f4a14fc",
+        "unchanged": true
+      },
+      {
+        "tool": "docker",
+        "path": "/usr/local/bin/docker",
+        "expected_sha256": "4a728ee98f89005a90198a9be791e8fdaebbcb5e6af9721251efe0113df37759",
+        "current_sha256": "927c58aed356a37f08f2586a90df4c6d8c5e890060de95ac3d11301d03959463",
+        "unchanged": false
+      },
+      {
+        "tool": "mc",
+        "path": "/private/tmp/im-fullgo26-06adcc86/tools/mc",
+        "expected_sha256": "e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea",
+        "current_sha256": "e7358c1fd1f8cc291a1eca2b7ee98823c90a59528dd6bf21999d88b2a9c61dea",
+        "unchanged": true
+      }
+    ],
+    "expected_hash_not_replaced": true
+  },
+  "native_cleanup": {
+    "removed": false,
+    "failures": [
+      "container:be3af1f5eeb6488c1e35db21b3b0876034ae7194916c663547249bd0600d9755:container_mounts_unproven",
+      "container:b16999b9e31a5a4ab3f6c37a0bd5dd4d93a4cc755f30e2b1a5fee9d375eea321:container_mounts_unproven",
+      "container:9cb1a45322d4ea4833a23070f11e2abf8f1e9952d9878eef5794ad0f7006101e:container_mounts_unproven",
+      "container:bcb6c4cdb0ac1f42e7b42922a124a9eae2bafcfc7b2ae358c1a5a1cc3fd48ca6:container_mounts_unproven",
+      "container:df4a7d04fa835711484eead47d2677aba9461d31770372470f197106edce1387:container_mounts_unproven",
+      "container:d0c111eed062c4f0a7dd5bc8a089bb59831d21e864295a1ca483293daf64fcca:container_mounts_unproven",
+      "private_directory_retained"
+    ]
+  },
+  "independent_cleanup": {
+    "registered_process_identities_gone": 513,
+    "registered_containers_absent": 13,
+    "known_anonymous_volumes_absent": 1,
+    "reserved_private_roots_absent": true,
+    "ports": [
+      {
+        "port": 33117,
+        "connect_ex": 61,
+        "closed": true
+      },
+      {
+        "port": 33118,
+        "connect_ex": 61,
+        "closed": true
+      },
+      {
+        "port": 33119,
+        "connect_ex": 61,
+        "closed": true
+      }
+    ],
+    "baseline_volume_names_preserved": 949,
+    "new_volume_names": [],
+    "native_mount_ticket_gaps": [
+      {
+        "container_id": "be3af1f5eeb6488c1e35db21b3b0876034ae7194916c663547249bd0600d9755",
+        "native_registry_missing_mount_ticket": true,
+        "independent_live_mount_observation": ".superpowers/sdd/2026-10-26-full-go-race-validation/container-observations/be3af1f5eeb6488c1e35db21b3b0876034ae7194916c663547249bd0600d9755.json",
+        "live_mount_observation_available": false,
+        "observed_volume_mounts": null
+      },
+      {
+        "container_id": "b16999b9e31a5a4ab3f6c37a0bd5dd4d93a4cc755f30e2b1a5fee9d375eea321",
+        "native_registry_missing_mount_ticket": true,
+        "independent_live_mount_observation": ".superpowers/sdd/2026-10-26-full-go-race-validation/container-observations/b16999b9e31a5a4ab3f6c37a0bd5dd4d93a4cc755f30e2b1a5fee9d375eea321.json",
+        "live_mount_observation_available": false,
+        "observed_volume_mounts": null
+      },
+      {
+        "container_id": "9cb1a45322d4ea4833a23070f11e2abf8f1e9952d9878eef5794ad0f7006101e",
+        "native_registry_missing_mount_ticket": true,
+        "independent_live_mount_observation": ".superpowers/sdd/2026-10-26-full-go-race-validation/container-observations/9cb1a45322d4ea4833a23070f11e2abf8f1e9952d9878eef5794ad0f7006101e.json",
+        "live_mount_observation_available": false,
+        "observed_volume_mounts": null
+      },
+      {
+        "container_id": "bcb6c4cdb0ac1f42e7b42922a124a9eae2bafcfc7b2ae358c1a5a1cc3fd48ca6",
+        "native_registry_missing_mount_ticket": true,
+        "independent_live_mount_observation": ".superpowers/sdd/2026-10-26-full-go-race-validation/container-observations/bcb6c4cdb0ac1f42e7b42922a124a9eae2bafcfc7b2ae358c1a5a1cc3fd48ca6.json",
+        "live_mount_observation_available": false,
+        "observed_volume_mounts": null
+      },
+      {
+        "container_id": "df4a7d04fa835711484eead47d2677aba9461d31770372470f197106edce1387",
+        "native_registry_missing_mount_ticket": true,
+        "independent_live_mount_observation": ".superpowers/sdd/2026-10-26-full-go-race-validation/container-observations/df4a7d04fa835711484eead47d2677aba9461d31770372470f197106edce1387.json",
+        "live_mount_observation_available": false,
+        "observed_volume_mounts": null
+      },
+      {
+        "container_id": "d0c111eed062c4f0a7dd5bc8a089bb59831d21e864295a1ca483293daf64fcca",
+        "native_registry_missing_mount_ticket": true,
+        "independent_live_mount_observation": ".superpowers/sdd/2026-10-26-full-go-race-validation/container-observations/d0c111eed062c4f0a7dd5bc8a089bb59831d21e864295a1ca483293daf64fcca.json",
+        "live_mount_observation_available": true,
+        "observed_volume_mounts": 0
+      }
+    ],
+    "native_mount_ticket_mapping_not_reconstructed": true,
+    "native_verification_unchanged": true,
+    "original_logs_preserved_as_identical_share_copies": 204,
+    "evidence_output_retained_intentionally": "/private/tmp/im-fullgo26-06adcc86",
+    "physical_known_resource_absence_does_not_override_native_missing_mount_failures": true
+  },
+  "evidence_checks": {
+    "published_logs_verified": 207,
+    "independently_reparsed_gates": [
+      "orchestrator_contract",
+      "message_realtime",
+      "file_components",
+      "file_messages",
+      "file_download_retention",
+      "web_files",
+      "file_business_process",
+      "full_repository",
+      "race_repository"
+    ],
+    "import_child_raw_gates_verified": 14,
+    "resource_boundary_proof_revalidation_passed": true,
+    "archive_export_and_orchestrator_verified": true,
+    "durable_evidence_files_verified": 1614,
+    "historical_files_unchanged": 21737,
+    "external_original_files_unchanged": 5,
+    "prepared_assets_unchanged": 21
+  },
+  "audit_history": {
+    "initial_tool_drift_guard_failure_preserved": true,
+    "second_collector_case_matching_failure_preserved": true,
+    "exact_absence_collector_calibration_checks_passed": 9,
+    "collector_failures_not_added_to_go_failed_test_counts": true,
+    "final_audit_collector_actual_exit": 0,
+    "final_audit_did_not_pass_acceptance": true
+  },
+  "evidence": {
+    "native_verification": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/attempt-evidence/verification.json",
+      "sha256": "e51d9c3549371345cdf8d0d6c4d63811595f8446f2b3414b8f13563c4cf42b51"
+    },
+    "independent_audit": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/independent-final-audit.json",
+      "sha256": "0c053fd94e6c2674a004f61f45f129176cfeb20103f90b72d66094075f24be3b"
+    },
+    "independent_directory_cleanup": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/independent-owned-directory-cleanup.json",
+      "sha256": "b759149b75aa99fa7821be199d5eb4d3b0ed61e5304473312bdf66be77c5eb76"
+    },
+    "post_cleanup_reconciliation": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/post-cleanup-reconciliation.json",
+      "sha256": "c7f6c4b085cb7b436e6a1462f0801b0e8d8870159220c1c362496c8e2a09fac8"
+    },
+    "execution_manifest": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/execution-evidence-manifest.json",
+      "sha256": "70d24254761aa79515394c57f0ed53950d173dc0f55ca4bbf45bac326e694b51"
+    },
+    "execution_manifest_file_count": 1684,
+    "admission": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/admission.json",
+      "sha256": "5521d77bb5d24910199ae745cb9abd982edca2d2ec0f36dbf98b96559e0bfe68"
+    },
+    "lease": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/lease.json",
+      "sha256": "b5b0257e78873e1c3f3c67d7319af62366f8654c3c5c3bf2c264a0257295fc89"
+    },
+    "runtime_fixture_states": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/diagnostic-live-fixtures.json",
+      "sha256": "1a37eaa5b487e4ea1705b639d86008be03f74416407a1c0c409eb17555999033"
+    },
+    "docker_drift": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/diagnostic-docker-tool-drift.json",
+      "sha256": "00b17ee1af5a0bffdb76094181fb46a0a29cd8d2aade1debc5968f9872790895"
+    },
+    "container_shutdown_logs": {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-validation/diagnostic-container-logs-command.json",
+      "sha256": "28bef015ac3a3e9064b95343a8ca9bb8e28f6104b4b55c2720a32fc19b3ec178"
+    }
+  },
+  "remaining_requirements": [
+    "Investigate the actor/cause of service termination and Docker executable drift before a fresh attempt.",
+    "Record container mount mappings before Go child/import cleanup; five destroyed mappings remain historically unavailable in this attempt.",
+    "Prepare a new signed-lifetime window and re-admit all conditions for a new full Go/race attempt.",
+    "Tasks 4/5 and platform/customer/production acceptance remain incomplete; physical devices remain deferred."
+  ],
+  "product_source_changed": false,
+  "physical_devices": "deferred",
+  "customer_acceptance": "not_executed",
+  "production_acceptance": "not_executed",
+  "runtime_attempts": 1,
+  "runtime_retries": 0,
+  "remote_actions": false
+}
