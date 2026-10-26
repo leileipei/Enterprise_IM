@@ -11,6 +11,34 @@ from integration.services import docker_environment
 from integration.native_client import signing_choice_available,client_preflight
 
 
+
+def record_service_mounts(registry,identity,actual,role,private):
+ # Freeze the identity-bound mapping even when this runner's stricter service
+ # allowlist refuses to start it. Cleanup still has its original recovery ticket.
+ fingerprint=registry.record_container_mounts(identity,actual)
+ mounts=actual['Mounts'];host=actual['HostConfig']
+ if host.get('Binds') or host.get('VolumesFrom'):
+  raise ValueError('unexpected_service_mounts')
+ if role=='postgres':
+  target='/var/lib/postgresql/data'
+  if host.get('Mounts') or set(host.get('Tmpfs') or {})!={target} or len(mounts)>1:
+   raise ValueError('unexpected_postgres_mounts')
+  if any(m.get('Type')!='tmpfs' or m.get('Destination')!=target or m.get('Source') or m.get('RW') is not True for m in mounts):
+   raise ValueError('unexpected_postgres_mounts')
+ elif role=='redis':
+  source=str(private/'redis.conf');target='/run/im-redis.conf'
+  expected=[{'Type':'bind','Source':source,'Target':target,'ReadOnly':True}]
+  binds=[m for m in mounts if m.get('Type')=='bind'];volumes=[m for m in mounts if m.get('Type')=='volume']
+  if host.get('Mounts')!=expected or host.get('Tmpfs') or len(mounts)!=2 or len(binds)!=1 or len(volumes)!=1:
+   raise ValueError('unexpected_redis_mounts')
+  bind=binds[0];volume=volumes[0]
+  if (bind.get('Source')!=source or bind.get('Destination')!=target or bind.get('RW') is not False or
+      volume.get('Destination')!='/data' or volume.get('RW') is not True or
+      fingerprint['anonymous_volumes']!=[volume.get('Name')]):
+   raise ValueError('unexpected_redis_mounts')
+ else:raise ValueError('unknown_service_role')
+
+
 def main():
  parser=argparse.ArgumentParser(description='Owned production-backend messaging gate; host mode is not native acceptance.')
  parser.add_argument('--target', choices=('macos','host'), default='macos')
@@ -54,7 +82,9 @@ def main():
  try:
   result['source_sha256']=sources()
   cid=docker(['create','--label','im.integration.owner='+owner,'--label','im.integration.source='+commit,'--publish','127.0.0.1::5432','--env-file',str(envfile),'--tmpfs','/var/lib/postgresql/data:rw,mode=0700',_lock(repo/'testdata/file-runtime/versions.lock')['postgres-image']])
-  registry.add(ResourceRef('container',owner,cid,{'container_id':cid})); docker(['start',cid])
+  registry.add(ResourceRef('container',owner,cid,{'container_id':cid}))
+  record_service_mounts(registry,cid,json.loads(docker(['inspect',cid]))[0],'postgres',private)
+  docker(['start',cid])
   deadline=time.monotonic()+45
   while True:
    r=subprocess.run(['/usr/local/bin/docker','exec',cid,'pg_isready','-h','127.0.0.1','-U','postgres','-d','enterprise_im_p5'],env=env,capture_output=True,timeout=5)
@@ -65,7 +95,9 @@ def main():
   binding=json.loads(docker(['inspect',cid]))[0]['NetworkSettings']['Ports']['5432/tcp']
   if len(binding)!=1 or binding[0]['HostIp']!='127.0.0.1':raise RuntimeError('nonloopback_fixture')
   rcid=docker(['create','--label','im.integration.owner='+owner,'--label','im.integration.source='+commit,'--publish','127.0.0.1::6379','--user','0','--mount','type=bind,source='+str(redisconf)+',target=/run/im-redis.conf,readonly',_lock(repo/'testdata/project-integration/versions.lock')['redis-image'],'redis-server','/run/im-redis.conf'])
-  registry.add(ResourceRef('container',owner,rcid,{'container_id':rcid}));docker(['start',rcid])
+  registry.add(ResourceRef('container',owner,rcid,{'container_id':rcid}))
+  record_service_mounts(registry,rcid,json.loads(docker(['inspect',rcid]))[0],'redis',private)
+  docker(['start',rcid])
   deadline=time.monotonic()+30
   while True:
    rr=subprocess.run(['/usr/local/bin/docker','exec',rcid,'redis-cli','ping'],env=env,capture_output=True,text=True,timeout=5)
@@ -123,13 +155,10 @@ def main():
   result['cleanup']={'removed':cleanup.removed,'failures':cleanup.failures}
   result['registry_sha256']=hashlib.sha256(registry.path.read_bytes()).hexdigest()
   (out/(label+'.registry.jsonl')).write_bytes(registry.path.read_bytes())
-  if envfile.exists():envfile.unlink()
-  for child in list(private.iterdir()):
-   if child.is_dir() and not child.is_symlink():shutil.rmtree(child)
-   else:child.unlink()
-  private.rmdir(); registry.path.unlink(); root.rmdir()
-  result['private_root_removed']=not root.exists()
-  if not cleanup.removed:code=1
+  if cleanup.removed and not cleanup.failures:
+   shutil.rmtree(root);result['private_root_removed']=not root.exists()
+  else:
+   code=1;result['cleanup']['removed']=False;result['private_root_removed']=False;result['recovery_root']=str(root)
   result['source_unchanged']=result.get('source_sha256')==sources()
   if not result['source_unchanged']:code=1
   result['runner_exit']=code
