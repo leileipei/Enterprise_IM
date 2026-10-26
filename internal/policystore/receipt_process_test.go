@@ -90,8 +90,9 @@ func startReceiptChild(t *testing.T, dir, name, binary, ca string, env map[strin
 	id := strings.TrimSpace(string(receiptDocker(t, args...)))
 	proof, e := testfixtures.RegisterIntegrationContainer(id, os.Getenv("IM_TEST_INTEGRATION_GATE"), t.Name())
 	if e != nil {
-		receiptDocker(t, "rm", "-f", id)
-		t.Fatal(e)
+		// Keep the created child inspectable until the parent can persist its
+		// mounts. Deleting here would lose the only anonymous-volume mapping.
+		t.Fatalf("container %s registration failed; retained for parent recovery: %v", id, e)
 	}
 	child := &receiptChild{t: t, id: id, name: name, proof: proof, secrets: secrets}
 	t.Cleanup(func() {

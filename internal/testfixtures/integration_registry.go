@@ -3,18 +3,22 @@ package testfixtures
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf16"
 )
 
 type IntegrationProcess struct {
@@ -192,6 +196,117 @@ func IntegrationContainerLabels(gate, test string) ([]string, error) {
 	return []string{"--label", "im.integration.owner=" + p.owner, "--label", "im.integration.source=" + p.source}, nil
 }
 
+type integrationContainerInspect struct {
+	ID         string `json:"Id"`
+	Config     struct{ Labels map[string]string }
+	Mounts     []map[string]any
+	HostConfig *struct {
+		Binds       []string
+		Mounts      []map[string]any
+		VolumesFrom []string
+	}
+}
+
+// The Python cleanup ledger sorts by JSON with ASCII escaping. Preserve the same
+// ordering for Unicode paths while retaining the decoded mount objects verbatim.
+func sortContainerMounts(mounts []map[string]any) error {
+	type keyed struct {
+		key   string
+		mount map[string]any
+	}
+	items := make([]keyed, len(mounts))
+	for i, mount := range mounts {
+		var encoded bytes.Buffer
+		encoder := json.NewEncoder(&encoded)
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(mount); err != nil {
+			return err
+		}
+		var key strings.Builder
+		for _, r := range strings.TrimSpace(encoded.String()) {
+			if r < 127 {
+				key.WriteRune(r)
+			} else if r <= 0xffff {
+				fmt.Fprintf(&key, "\\u%04x", r)
+			} else {
+				hi, lo := utf16.EncodeRune(r)
+				fmt.Fprintf(&key, "\\u%04x\\u%04x", hi, lo)
+			}
+		}
+		items[i] = keyed{key.String(), mount}
+	}
+	sort.SliceStable(items, func(i, j int) bool { return items[i].key < items[j].key })
+	for i := range items {
+		mounts[i] = items[i].mount
+	}
+	return nil
+}
+
+func containerMountFingerprint(actual integrationContainerInspect) (map[string]any, error) {
+	if actual.Mounts == nil || actual.HostConfig == nil {
+		return nil, errors.New("integration container mounts unproven")
+	}
+	host := actual.HostConfig
+	if len(host.VolumesFrom) != 0 {
+		return nil, errors.New("integration container mount ownership unproven")
+	}
+	binds := append([]string{}, host.Binds...)
+	configured := append([]map[string]any{}, host.Mounts...)
+	explicit := make(map[string]bool)
+	for _, bind := range binds {
+		parts := strings.Split(bind, ":")
+		if (len(parts) == 2 || len(parts) == 3) && strings.HasPrefix(parts[1], "/") {
+			explicit[parts[1]] = true
+		} else if !((len(parts) == 1 || len(parts) == 2) && strings.HasPrefix(parts[0], "/")) {
+			return nil, errors.New("integration container mounts unproven")
+		}
+	}
+	for _, mount := range configured {
+		target, ok := mount["Target"].(string)
+		if !ok {
+			return nil, errors.New("integration container mounts unproven")
+		}
+		if source, exists := mount["Source"]; exists && source != nil {
+			value, ok := source.(string)
+			if !ok {
+				return nil, errors.New("integration container mounts unproven")
+			}
+			if value != "" {
+				explicit[target] = true
+			}
+		}
+	}
+	volumes := make(map[string]bool)
+	for _, mount := range actual.Mounts {
+		destination, ok := mount["Destination"].(string)
+		if !ok {
+			return nil, errors.New("integration container mounts unproven")
+		}
+		if mount["Type"] == "volume" && !explicit[destination] {
+			name, ok := mount["Name"].(string)
+			if !ok || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(name) {
+				return nil, errors.New("integration anonymous volume identity unproven")
+			}
+			volumes[name] = true
+		}
+	}
+	anonymous := make([]string, 0, len(volumes))
+	for name := range volumes {
+		anonymous = append(anonymous, name)
+	}
+	sort.Strings(anonymous)
+	sort.Strings(binds)
+	if err := sortContainerMounts(actual.Mounts); err != nil {
+		return nil, err
+	}
+	if err := sortContainerMounts(configured); err != nil {
+		return nil, err
+	}
+	return map[string]any{"container_id": actual.ID, "mounts": actual.Mounts,
+		"mount_configuration": map[string]any{"Binds": binds, "Mounts": configured},
+		"anonymous_volumes":   anonymous}, nil
+}
+
 func RegisterIntegrationContainer(identity, gate, test string) (*IntegrationProcess, error) {
 	p, err := integrationRecord(gate, test)
 	if err != nil {
@@ -207,16 +322,20 @@ func RegisterIntegrationContainer(identity, gate, test string) (*IntegrationProc
 	if err != nil {
 		return nil, errors.New("integration container inspect failed")
 	}
-	var actual []struct {
-		ID     string `json:"Id"`
-		Config struct{ Labels map[string]string }
-	}
-	if json.Unmarshal(raw, &actual) != nil || len(actual) != 1 || actual[0].ID != identity || actual[0].Config.Labels["im.integration.owner"] != p.owner || actual[0].Config.Labels["im.integration.source"] != p.source {
+	var actual []integrationContainerInspect
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	var trailing any
+	if decoder.Decode(&actual) != nil || decoder.Decode(&trailing) != io.EOF || len(actual) != 1 || actual[0].ID != identity || actual[0].Config.Labels["im.integration.owner"] != p.owner || actual[0].Config.Labels["im.integration.source"] != p.source {
 		return nil, errors.New("foreign integration container")
+	}
+	fingerprint, err := containerMountFingerprint(actual[0])
+	if err != nil {
+		return nil, err
 	}
 	p.kind = "container"
 	p.identity = identity
-	p.fingerprint = map[string]any{"container_id": identity}
+	p.fingerprint = fingerprint
 	if err = p.write("registered", nil); err != nil {
 		return nil, err
 	}

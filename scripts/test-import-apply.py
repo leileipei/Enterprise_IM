@@ -159,7 +159,9 @@ def main():
   labels=['--label','im.append.owner='+owner]
   if registry:labels+=['--label','im.integration.owner='+owner,'--label','im.integration.source='+commit]
   cid=checked(['docker','create','--rm','--name',name,*labels,'--tmpfs','/var/lib/postgresql/data:rw']+extra+[image['Id']]);containers.append(cid)
-  if registry:registry.add(ResourceRef('container',owner,cid,{'container_id':cid}))
+  if registry:
+   registry.add(ResourceRef('container',owner,cid,{'container_id':cid}))
+   registry.record_container_mounts(cid,json.loads(checked(['docker','inspect',cid]))[0])
   checked(['docker','start',cid])
   for _ in range(100):
    cp=subprocess.run(['docker','exec',cid,'pg_isready','-h','127.0.0.1','-U','postgres','-d','im_append'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
@@ -255,11 +257,7 @@ def main():
   for cid in containers:
    if registry:
     try:
-     actual=registry._owned_container(cid,owner)
-     if actual and actual.get('State',{}).get('Status')!='removing':registry.docker(['rm','-f',cid])
-     end=time.monotonic()+15
-     while registry._owned_container(cid,owner) is not None and time.monotonic()<end:time.sleep(.1)
-     if registry._owned_container(cid,owner) is not None:removed=False
+     registry.cleanup_container(cid,time.monotonic()+15)
     except (ValueError,OSError,subprocess.SubprocessError):removed=False
     continue
    cp=subprocess.run(['docker','inspect',cid],capture_output=True,text=True,timeout=10)
