@@ -1,0 +1,1229 @@
+{
+  "schema_version": "p5_02_full_go_race_retry_execution_v1",
+  "date": "2026-10-26",
+  "status": "acceptance_passed",
+  "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+  "source_archive_sha256": "2561ab992a6865af5e742036264709b8856d2254284c0c7b4e5cda076a334a46",
+  "repair_commits": [
+    "d0c88e7c8f57a0537dc0c3443b0c992398cbbc30",
+    "a927fdaa014556bd11a138f44d10761e514aa5da"
+  ],
+  "documentation_base_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+  "runtime_attempts": 1,
+  "runtime_retries": 0,
+  "prelaunch_refusals_retained": true,
+  "attempt_timeout_seconds": 8400,
+  "manager_actual_exit": 0,
+  "manager_seconds": 6696.282,
+  "wall_seconds_through_cleanup_and_audit": 6811.275,
+  "lease_status": "released",
+  "unused_lease_seconds": 1588.7247061729431,
+  "required_gates_passed": true,
+  "full_suite_passed": true,
+  "race_suite_passed": true,
+  "native_gates_executed": 17,
+  "native_gates_passed": 17,
+  "gates": [
+    {
+      "name": "orchestrator_contract",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 126,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 0,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 1,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 28.844
+    },
+    {
+      "name": "toolchain",
+      "native_exit_code": 0,
+      "counts": {},
+      "checks": [
+        "locked_versions",
+        "binary_hashes",
+        "local_docker",
+        "immutable_images",
+        "native_platform"
+      ],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 29.854
+    },
+    {
+      "name": "fixture_preflight",
+      "native_exit_code": 0,
+      "counts": {},
+      "checks": [
+        "postgres_ownership_loopback",
+        "redis_ownership_loopback",
+        "minio_ownership_loopback",
+        "postgres_actual_tls",
+        "btree_gist",
+        "ordinary_product_roles",
+        "redis_ping",
+        "minio_live_ready",
+        "bound_live_scanner_94320",
+        "bound_live_scanner_94331",
+        "browser_launched",
+        "browser_version_verified",
+        "browser_closed",
+        "actual_iam_permission_matrix"
+      ],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 30.753
+    },
+    {
+      "name": "build_all",
+      "native_exit_code": 0,
+      "counts": {},
+      "checks": [
+        "build_all_command_completed",
+        "im-import-compare_binary_sha256:2b7de0f8ed49ca2374c5ccea9ed6d1e2c8624214a92afe94f7e8d898582d8914",
+        "im-import-preflight_binary_sha256:82d48153633b749ed4669f51f3758ad258bb41d971cdaacc827887e496a3cda7"
+      ],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 1.08
+    },
+    {
+      "name": "vet_all",
+      "native_exit_code": 0,
+      "counts": {},
+      "checks": [
+        "vet_all_command_completed"
+      ],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 1.689
+    },
+    {
+      "name": "message_realtime",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 157,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 154,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 3,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 62.892
+    },
+    {
+      "name": "file_components",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 334,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 638,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 8,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 905.319
+    },
+    {
+      "name": "file_resources",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 7,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 4,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 2,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 0.008
+    },
+    {
+      "name": "file_messages",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 8,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 6,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 2,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 43.583
+    },
+    {
+      "name": "file_download_retention",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 18,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 13,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 3,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 208.323
+    },
+    {
+      "name": "web_files",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 11,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 40,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 1,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 405.849
+    },
+    {
+      "name": "file_business_process",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 14,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 38,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 1,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 442.581
+    },
+    {
+      "name": "import_append",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 366,
+        "top_fail": 0,
+        "top_skip": 0,
+        "sub_pass": 430,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 26,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 0
+      },
+      "checks": [
+        "fourteen_required_gates",
+        "same_source",
+        "archive_logs_binaries_hashed",
+        "child_owned_cleanup",
+        "full_suite_not_executed"
+      ],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": 154.749
+    },
+    {
+      "name": "full_repository",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 1191,
+        "top_fail": 0,
+        "top_skip": 1,
+        "sub_pass": 1305,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 33,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 1
+      },
+      "checks": [],
+      "skips": [
+        "github.com/leileipei/Enterprise_IM/internal/policystore::TestRealtimeAPIChild"
+      ],
+      "helper_proofs": [
+        {
+          "gate": "full_repository",
+          "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+          "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+          "identity": "13897",
+          "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+          "pid": 13897,
+          "uid": 501,
+          "start_time": "Mon Oct 26 08:36:57 2026",
+          "executable_sha256": "f789ec47e839207deebd5cdc4ac104561e4eac9a740538f18921276ac88ce090",
+          "registered": true,
+          "ready": true,
+          "exited": true,
+          "expected_exit": "signal:killed",
+          "actual_exit": "signal:killed"
+        },
+        {
+          "gate": "full_repository",
+          "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+          "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+          "identity": "13899",
+          "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+          "pid": 13899,
+          "uid": 501,
+          "start_time": "Mon Oct 26 08:36:57 2026",
+          "executable_sha256": "f789ec47e839207deebd5cdc4ac104561e4eac9a740538f18921276ac88ce090",
+          "registered": true,
+          "ready": true,
+          "exited": true,
+          "expected_exit": "signal:killed",
+          "actual_exit": "signal:killed"
+        }
+      ],
+      "seconds": 1973.54
+    },
+    {
+      "name": "race_repository",
+      "native_exit_code": 0,
+      "counts": {
+        "top_pass": 1191,
+        "top_fail": 0,
+        "top_skip": 1,
+        "sub_pass": 1305,
+        "sub_fail": 0,
+        "sub_skip": 0,
+        "package_pass": 33,
+        "package_fail": 0,
+        "package_skip": 0,
+        "ordinary_skip": 0,
+        "helper_skip": 1
+      },
+      "checks": [],
+      "skips": [
+        "github.com/leileipei/Enterprise_IM/internal/policystore::TestRealtimeAPIChild"
+      ],
+      "helper_proofs": [
+        {
+          "gate": "race_repository",
+          "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+          "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+          "identity": "27166",
+          "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+          "pid": 27166,
+          "uid": 501,
+          "start_time": "Mon Oct 26 09:13:58 2026",
+          "executable_sha256": "722f60adddf067a2e8cf6ea9691cd3bfd88ec7c23866bdfc52f525b30009cba8",
+          "registered": true,
+          "ready": true,
+          "exited": true,
+          "expected_exit": "signal:killed",
+          "actual_exit": "signal:killed"
+        },
+        {
+          "gate": "race_repository",
+          "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+          "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+          "identity": "27168",
+          "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+          "pid": 27168,
+          "uid": 501,
+          "start_time": "Mon Oct 26 09:13:58 2026",
+          "executable_sha256": "722f60adddf067a2e8cf6ea9691cd3bfd88ec7c23866bdfc52f525b30009cba8",
+          "registered": true,
+          "ready": true,
+          "exited": true,
+          "expected_exit": "signal:killed",
+          "actual_exit": "signal:killed"
+        }
+      ],
+      "seconds": 2343.692
+    },
+    {
+      "name": "evidence_integrity",
+      "native_exit_code": 0,
+      "counts": {},
+      "checks": [
+        "archive_export_unchanged",
+        "same_source_complete_gate_evidence"
+      ],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": null
+    },
+    {
+      "name": "resource_cleanup",
+      "native_exit_code": 0,
+      "counts": {},
+      "checks": [
+        "owned_resources_absent",
+        "private_directory_removed"
+      ],
+      "skips": [],
+      "helper_proofs": [],
+      "seconds": null
+    }
+  ],
+  "failures": [],
+  "native_cleanup": {
+    "removed": true,
+    "failures": []
+  },
+  "independent_cleanup": {
+    "source": "a927fdaa014556bd11a138f44d10761e514aa5da",
+    "status": "closed_acceptance_passed",
+    "native_actual_exit": 0,
+    "native_seconds": 6696.282,
+    "total_wall_seconds_through_cleanup_and_audit": 6811.275,
+    "attempt_timeout_seconds": 8400,
+    "within_authorized_window": true,
+    "closed_at_utc": "2026-10-26T09:27:56.130721+00:00",
+    "native_verification_sha256": "b182689e81228f16b50d6e24c9d8f4c3ce47b893515897555cae75d3d4073f6c",
+    "native_verification_unchanged_in_durable_copy": true,
+    "required_gates_passed": true,
+    "full_suite_passed": true,
+    "race_suite_passed": true,
+    "canonical_delivery_validation_passed": true,
+    "native_mount_ticket_gaps": [],
+    "process_identities_gone": 1032,
+    "containers_absent": 25,
+    "known_anonymous_volumes_absent": 1,
+    "fixture_ports_closed": [
+      {
+        "port": 32775,
+        "connect_ex": 61,
+        "closed": true
+      },
+      {
+        "port": 32776,
+        "connect_ex": 61,
+        "closed": true
+      },
+      {
+        "port": 32777,
+        "connect_ex": 61,
+        "closed": true
+      }
+    ],
+    "logs_verified": 319,
+    "durable_evidence_files_verified": 1731,
+    "historical_files_unchanged": 24260,
+    "external_originals_unchanged": 68,
+    "evidence_output_retained_intentionally": "/private/tmp/im-go26-r3-49c6ac8b",
+    "durable_evidence_copy": "/Users/leo.cui/.codex/worktrees/p5-02-native-clients/企业IM系统/.superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/attempt-evidence",
+    "lease_status": "released",
+    "unused_lease_seconds": 1588.7247061729431,
+    "physical_devices": "deferred",
+    "customer_acceptance": false,
+    "production_acceptance": false
+  },
+  "evidence_checks": {
+    "canonical_delivery_validation_passed": true,
+    "resource_boundary_proof_revalidation_passed": true,
+    "archive_export_and_orchestrator_verified": true,
+    "tool_hashes_verified": 12,
+    "independently_reparsed_gates": {
+      "orchestrator_contract": {
+        "counts": {
+          "top_pass": 126,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 0,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "semantic_validation_errors": [],
+        "started": 126,
+        "executed": 126,
+        "helper_proofs": []
+      },
+      "message_realtime": {
+        "counts": {
+          "top_pass": 157,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 154,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 3,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "semantic_validation_errors": [],
+        "started": 311,
+        "executed": 311,
+        "helper_proofs": []
+      },
+      "file_components": {
+        "counts": {
+          "top_pass": 334,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 638,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 8,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "semantic_validation_errors": [],
+        "started": 972,
+        "executed": 972,
+        "helper_proofs": []
+      },
+      "file_messages": {
+        "counts": {
+          "top_pass": 8,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 6,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 2,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "semantic_validation_errors": [],
+        "started": 14,
+        "executed": 14,
+        "helper_proofs": []
+      },
+      "file_download_retention": {
+        "counts": {
+          "top_pass": 18,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 13,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 3,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "semantic_validation_errors": [],
+        "started": 31,
+        "executed": 31,
+        "helper_proofs": []
+      },
+      "web_files": {
+        "counts": {
+          "top_pass": 11,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 40,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "semantic_validation_errors": [],
+        "started": 51,
+        "executed": 51,
+        "helper_proofs": []
+      },
+      "file_business_process": {
+        "counts": {
+          "top_pass": 14,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 38,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "semantic_validation_errors": [],
+        "started": 52,
+        "executed": 52,
+        "helper_proofs": []
+      },
+      "full_repository": {
+        "counts": {
+          "top_pass": 1191,
+          "top_fail": 0,
+          "top_skip": 1,
+          "sub_pass": 1305,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 33,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 1
+        },
+        "raw_failures": [],
+        "raw_skips": [
+          "github.com/leileipei/Enterprise_IM/internal/policystore::TestRealtimeAPIChild"
+        ],
+        "semantic_validation_errors": [],
+        "started": 2497,
+        "executed": 2497,
+        "helper_proofs": [
+          {
+            "gate": "full_repository",
+            "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+            "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+            "identity": "13897",
+            "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+            "pid": 13897,
+            "uid": 501,
+            "start_time": "Mon Oct 26 08:36:57 2026",
+            "executable_sha256": "f789ec47e839207deebd5cdc4ac104561e4eac9a740538f18921276ac88ce090",
+            "registered": true,
+            "ready": true,
+            "exited": true,
+            "expected_exit": "signal:killed",
+            "actual_exit": "signal:killed"
+          },
+          {
+            "gate": "full_repository",
+            "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+            "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+            "identity": "13899",
+            "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+            "pid": 13899,
+            "uid": 501,
+            "start_time": "Mon Oct 26 08:36:57 2026",
+            "executable_sha256": "f789ec47e839207deebd5cdc4ac104561e4eac9a740538f18921276ac88ce090",
+            "registered": true,
+            "ready": true,
+            "exited": true,
+            "expected_exit": "signal:killed",
+            "actual_exit": "signal:killed"
+          }
+        ]
+      },
+      "race_repository": {
+        "counts": {
+          "top_pass": 1191,
+          "top_fail": 0,
+          "top_skip": 1,
+          "sub_pass": 1305,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 33,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 1
+        },
+        "raw_failures": [],
+        "raw_skips": [
+          "github.com/leileipei/Enterprise_IM/internal/policystore::TestRealtimeAPIChild"
+        ],
+        "semantic_validation_errors": [],
+        "started": 2497,
+        "executed": 2497,
+        "helper_proofs": [
+          {
+            "gate": "race_repository",
+            "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+            "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+            "identity": "27166",
+            "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+            "pid": 27166,
+            "uid": 501,
+            "start_time": "Mon Oct 26 09:13:58 2026",
+            "executable_sha256": "722f60adddf067a2e8cf6ea9691cd3bfd88ec7c23866bdfc52f525b30009cba8",
+            "registered": true,
+            "ready": true,
+            "exited": true,
+            "expected_exit": "signal:killed",
+            "actual_exit": "signal:killed"
+          },
+          {
+            "gate": "race_repository",
+            "test": "github.com/leileipei/Enterprise_IM/internal/policystore::TestMultiProcessRealtimeWorkerFanoutAndReconnect",
+            "source_commit": "a927fdaa014556bd11a138f44d10761e514aa5da",
+            "identity": "27168",
+            "owner": "6399230ce687a6c3d90bc3e6e4ec141e",
+            "pid": 27168,
+            "uid": 501,
+            "start_time": "Mon Oct 26 09:13:58 2026",
+            "executable_sha256": "722f60adddf067a2e8cf6ea9691cd3bfd88ec7c23866bdfc52f525b30009cba8",
+            "registered": true,
+            "ready": true,
+            "exited": true,
+            "expected_exit": "signal:killed",
+            "actual_exit": "signal:killed"
+          }
+        ]
+      }
+    },
+    "import_child_raw_gates_verified": {
+      "unit": {
+        "counts": {
+          "top_pass": 87,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 88,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 8,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 175,
+        "executed": 175
+      },
+      "race": {
+        "counts": {
+          "top_pass": 7,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 9,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 3,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 16,
+        "executed": 16
+      },
+      "migration": {
+        "counts": {
+          "top_pass": 2,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 2,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 4,
+        "executed": 4
+      },
+      "authorization": {
+        "counts": {
+          "top_pass": 3,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 9,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 12,
+        "executed": 12
+      },
+      "append_database": {
+        "counts": {
+          "top_pass": 16,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 23,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 2,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 39,
+        "executed": 39
+      },
+      "http_oidc": {
+        "counts": {
+          "top_pass": 1,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 0,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 1,
+        "executed": 1
+      },
+      "concurrency": {
+        "counts": {
+          "top_pass": 7,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 11,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 18,
+        "executed": 18
+      },
+      "commit_fault": {
+        "counts": {
+          "top_pass": 1,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 5,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 6,
+        "executed": 6
+      },
+      "resources": {
+        "counts": {
+          "top_pass": 1,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 15,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 16,
+        "executed": 16
+      },
+      "groupdb_regression": {
+        "counts": {
+          "top_pass": 10,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 0,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 10,
+        "executed": 10
+      },
+      "access_regression": {
+        "counts": {
+          "top_pass": 82,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 20,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 102,
+        "executed": 102
+      },
+      "oidc_regression": {
+        "counts": {
+          "top_pass": 22,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 38,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 60,
+        "executed": 60
+      },
+      "ack_regression": {
+        "counts": {
+          "top_pass": 49,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 96,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 1,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 145,
+        "executed": 145
+      },
+      "readonly_regression": {
+        "counts": {
+          "top_pass": 78,
+          "top_fail": 0,
+          "top_skip": 0,
+          "sub_pass": 114,
+          "sub_fail": 0,
+          "sub_skip": 0,
+          "package_pass": 3,
+          "package_fail": 0,
+          "package_skip": 0,
+          "ordinary_skip": 0,
+          "helper_skip": 0
+        },
+        "raw_failures": [],
+        "raw_skips": [],
+        "started": 192,
+        "executed": 192
+      }
+    },
+    "published_logs_verified": 319,
+    "durable_files_verified": 1731,
+    "closed_evidence_manifest_files_verified": 1789,
+    "historical_files_unchanged": 24260,
+    "external_originals_unchanged": 68,
+    "old_failed_report_sha256": "77190d475f687d2a3a27d0daf699c9b0d60b9b1f150932de915d17ee374cf199",
+    "old_failed_report_preserved": true
+  },
+  "previous_failure_cause": {
+    "status": "orbstack_sparkle_update_and_vm_replacement_identified",
+    "confirmed_sender": {
+      "timestamp": "2026-10-26 12:24:24.864371+0800",
+      "processID": 62873,
+      "processImagePath": "/Users/leo.cui/Library/Caches/dev.kdrag0n.MacVirt/org.sparkle-project.Sparkle/Launcher/bNZ2Cmt2V/Updater.app/Contents/MacOS/Updater",
+      "senderImagePath": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/AE.framework/Versions/A/AE",
+      "eventMessage": "AESendMessage(aevt,quit {aevt,quit target='psn '[OrbStack]  returnID=-17179}..."
+    },
+    "confirmed_receiver": {
+      "timestamp": "2026-10-26 12:24:24.993442+0800",
+      "processID": 1680,
+      "processImagePath": "/Applications/OrbStack.app/Contents/MacOS/OrbStack",
+      "senderImagePath": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/AE.framework/Versions/A/AE",
+      "eventMessage": "RECEIVED:(aevt,quit) {aevt,quit target=Updater  returnID=-17179}..."
+    },
+    "new_app_process": {
+      "pid": 57493,
+      "first_observed_at": "2026-10-26 12:24:25.382105+0800"
+    },
+    "vm_replacement": {
+      "source": "/Users/leo.cui/.orbstack/log/vmgr.log",
+      "line": 1,
+      "message": "🌲 vmgr | time=\"10-26 12:24:33\" level=info msg=\"replaced running vmgr\" exe=\"/Applications/OrbStack.app/Contents/Frameworks/OrbStack Helper.app/Contents/MacOS/OrbStack Helper\" newBuild=\"macho:f05617e057d83e1c951ceb158b6406f3\" oldBuild=\"macho:6f9b53fdc5403603ae8426b9219e56a2\" outcome=stopped pid=1672"
+    },
+    "vm_old_stop_and_guest_signals": "lifecycle-vmgr.1.log",
+    "vm_new_start": "lifecycle-vmgr.log",
+    "prior_container_signals": ".superpowers/sdd/2026-10-26-full-go-race-validation/diagnostic-summary.json",
+    "docker_tool_before_sha256": "4a728ee98f89005a90198a9be791e8fdaebbcb5e6af9721251efe0113df37759",
+    "docker_tool_after_sha256": "927c58aed356a37f08f2586a90df4c6d8c5e890060de95ac3d11301d03959463",
+    "current_app_signature_verification": "current-orbstack-signature.json",
+    "automatic_vs_human_initiated": "not_established_from_available_logs",
+    "updater_settings_modified": false,
+    "vm_restart_or_update_performed_by_this_task": false,
+    "prior_failed_attempt_not_reclassified": true,
+    "source_fix_commit": "d0c88e7c8f57a0537dc0c3443b0c992398cbbc30",
+    "checked_at_utc": "2026-10-26T06:32:04.403863+00:00"
+  },
+  "repairs": [
+    "Persist and validate complete canonical container mount tickets before start in Go and Python; reject unknown mappings and validate exact cleanup.",
+    "Preserve a created child on registration failure for label-bound parent recovery.",
+    "Pin receipt child to the already approved immutable alpine digest; keep the shared floating tag unchanged."
+  ],
+  "signature_preparation": {
+    "daily_version": "28165",
+    "daily_sha256": "0eba7f1aa937afbb76887872aac5a5880c05e923b1462c123fe94c7a7ead7d85",
+    "daily_expires_utc": "2026-10-27T06:27:00+00:00",
+    "daily_expires_local": "2026-10-27T14:27:00+08:00",
+    "embedded_signatures_independently_verified": true,
+    "official_refresh_evidence": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-authoritative",
+    "official_no_dns_fallback_only_private_run": true,
+    "freshclam_null_x509_store_diagnostics_retained": 5,
+    "tls_or_signature_rules_relaxed": false,
+    "detached_fips_chain_acceptance_claimed": false
+  },
+  "current_docker": {
+    "sha256": "927c58aed356a37f08f2586a90df4c6d8c5e890060de95ac3d11301d03959463",
+    "version": "Docker version 29.8.2, build 7fc2dff",
+    "orbstack_version": "2.2.5",
+    "orbstack_build": "21124",
+    "settings_modified": false,
+    "update_or_vm_restart_performed_by_task": false
+  },
+  "sampled_service_health": {
+    "source": "a927fdaa014556bd11a138f44d10761e514aa5da",
+    "health_samples": 437,
+    "execution_samples_checked": 429,
+    "first_all_services_running_unix": 1793000137.829363,
+    "race_process_exit_unix": 1793006728.463665,
+    "sampled_service_interruptions": [],
+    "collector_errors": [],
+    "distinct_app_vm_process_sets": 1,
+    "max_sample_gap_seconds": 15.725631952285767,
+    "raw_health_sha256": "854abfcfcebb5492c97903b08b7cc6ffff6bf653fde306030ee6549e90b37165",
+    "inspection_is_sampled_not_continuous": true
+  },
+  "evidence": [
+    {
+      "path": ".superpowers/sdd/2026-10-26-docker-drift-mount-repair/cause-chain.json",
+      "sha256": "7fec3f25cbc3a9d8a09b0a5c9881129f4e6139eef8679d8f6ea4a548e574a469"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-docker-drift-mount-repair/source-fix-results.json",
+      "sha256": "7a8b5c5d3491ac589265d21af155f7e1b59892fd9fdd5964d5bf6ed3c4921d1f"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-docker-drift-mount-repair/final-unit-summary.json",
+      "sha256": "78f2f2a2934d7401eb5a6b21336ecb4f3b4a8d14d84a08189e1c7238e58866bb"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-docker-drift-mount-repair/review-findings-and-rulings.json",
+      "sha256": "03b52760921ad7195a60586df1c2a3eba7eca8fded046506d2b729dfb715c583"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-docker-drift-mount-repair/cross-language-ticket-validation.json",
+      "sha256": "3d4c0255a3a4bf2d07c94b41b26e9225578cdbeb4253aae8948c8e0c8cf41401"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-docker-drift-mount-repair/unit-cleanup.json",
+      "sha256": "18af0e417cca7801f637ff5f01e9d0e4db238df488ad5e011a301c2fcc98bdfc"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation/readmission-results.json",
+      "sha256": "7280345184647e1f6815e5b2ca46e6d47117b5b6ebfe1eb4afae0d4ee64cb7a6"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-authoritative/readmission-results.json",
+      "sha256": "05ec3bcf26301dee48cc6a8d345e23ea307ef82b06e3ded35a9728310b094c4d"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-authoritative/freshclam-result.json",
+      "sha256": "edd508275a492cf07eaa99ae17e49b40596d02bd140aa5f5038c492fdcf1f44f"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-authoritative/prepared-assets-manifest.json",
+      "sha256": "a9b0e5ab6173487d5a2b5c8c13edff70169136945e20e6c63974fabb8db38040"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/image-tag-drift-evidence.json",
+      "sha256": "0d651c995706e4a0d454703972752abfeb14d8b402effdeec572937b2468f17b"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/admission.json",
+      "sha256": "097a145f9ca672e460db1a2d2b7d9f9c76d81c0441db4031406c1c48c72d4a1b"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/image-pin-repair/results.json",
+      "sha256": "2e2198269a999d24355cb00cdc54589eb3fef7e4b4ec3fc05466db101fe2e220"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-pinned/readmission-results.json",
+      "sha256": "9fef38202d0267f55ec6e6d54e3230f84abd5a00aa2734c6ed91a345d8866ac8"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-pinned/canonical-toolchain.json",
+      "sha256": "fe53ca7d45c57c15677c8ae1f190929ec88c2c45e133d1e604b2f17ba12f8bcb"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-pinned/prepared-assets-manifest.json",
+      "sha256": "ac8adeebacbc4307635515e16df469c2e013606896d99a9b297cb7bc75f45ed4"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/preparation-pinned/dependency-metadata-results.json",
+      "sha256": "f22ecec046d0afbbe5b05d08bcc8e16ca111a76b09f1aa2138f3a31e52161681"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/admission.json",
+      "sha256": "43d70bc0c137df6e27df0e2f988a265018ffea19f090fedce737490e121f13e3"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/manager-start.json",
+      "sha256": "e68b66765357f4387e7ba0220614365363c8423e148808c64237b19a2530243a"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/manager-exit.json",
+      "sha256": "dbe6ddf7e7c4850bf5f6262b1169582e523707124b2b81ab9b396f8bb9b33e3d"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/lease.json",
+      "sha256": "fbbf7edf1db2d34bcf1f713a913496a1f2b65baf503bef35e94304d95d4aa66f"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/health-validation.json",
+      "sha256": "da19ba52cfd7a195750f0d159c486648c09b012b065bad650a5f51ca73b0eedf"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/mc-build-capture.json",
+      "sha256": "4d483c5608b5cc66f4113d3aa089bca29ddf2c976c1734b0bd3a53c6f3cf61fe"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/container-observation-summary.json",
+      "sha256": "818d802c7afb8d7034a523b13d097a49df9049de3413c012396d6508f099cb45"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/independent-final-audit.json",
+      "sha256": "2bac04aaa6ccd4e3d1e67b857818056cfbbd4181e1d970da4c5e1f7999d285ab"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/closed-result.json",
+      "sha256": "b44a1f14afb345003f297cc12ee63a15d1c4bf57f632baed38f4448816b9986c"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/closed-evidence-manifest.json",
+      "sha256": "81143e34a0773b62e04b6a8fa9c85178292cc1f6dd2d4a9b561eafacc882a97d"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/attempt-evidence-manifest.json",
+      "sha256": "cb20f73d6a029ffb5b5dbedf37140669bbcf23e43e1c3196cf31ca172311dbf2"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/preparation-temporary-helpers-cleanup.json",
+      "sha256": "53e05d20d68a1cfe3903e1d78bc1807cff97c0963083e6b177188a495f860b5b"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/temporary-helpers-cleanup.json",
+      "sha256": "36993674a4a5b0f8573f9c7a2109179ab9e5e2faee8daf11053d1284a1b9faab"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-26-full-go-race-retry/attempt01/attempt-evidence/verification.json",
+      "sha256": "b182689e81228f16b50d6e24c9d8f4c3ce47b893515897555cae75d3d4073f6c"
+    }
+  ],
+  "previous_failed_report": "docs/verification/p5-02-full-go-race-results.json",
+  "remaining_requirements": [
+    "Physical Android pair remains deferred.",
+    "Four-platform Task4/5 completion is not established by this local backend/tooling gate.",
+    "Customer and production acceptance have not been executed."
+  ],
+  "physical_devices": "deferred",
+  "customer_acceptance": false,
+  "production_acceptance": false,
+  "remote_actions": []
+}
